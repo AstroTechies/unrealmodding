@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 upak = { version = "0.1.0", path = "../upak" }
+clap = { version = "3.1.8", features = ["derive"] }
