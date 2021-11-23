@@ -27,9 +27,13 @@ header:
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Error};
+use std::io::{BufReader, Error, ErrorKind, Seek, SeekFrom};
+
+use byteorder::{BigEndian, ReadBytesExt};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+const UE4_PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
 
 #[derive(PartialEq, Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 #[repr(u32)]
@@ -85,6 +89,14 @@ impl<'file> PakFile<'file> {
     }
 
     pub fn load_records(&mut self) -> Result<(), Error> {
+        // seek to header at the bottom of the file
+        self.reader.seek(SeekFrom::End(-204))?;
+
+        // read and check magic bytes
+        if self.reader.read_u32::<BigEndian>()? != UE4_PAK_MAGIC {
+            return Err(Error::new(ErrorKind::Other, "File is not a valid pak file"));
+        }
+
         Ok(())
     }
 }
