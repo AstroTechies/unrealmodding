@@ -80,7 +80,7 @@ fn check_header(mut pak_file: upak::PakFile) -> upak::PakFile {
     match pak_file.load_records() {
         Ok(_) => println!("Header is ok"),
         Err(e) => {
-            eprintln!("Error reading header: {:?}", e);
+            eprintln!("Error reading header: {}", e);
             exit(1);
         }
     }
