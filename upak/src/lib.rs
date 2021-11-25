@@ -27,7 +27,7 @@ header:
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Error, ErrorKind, Read, Seek, SeekFrom};
+use std::io::{BufReader, Read, Seek, SeekFrom};
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use flate2::{read::ZlibDecoder};
@@ -283,5 +283,18 @@ impl<'file> PakFile<'file> {
         } else {
             return Err(UpakError::unsupported_pak_version(self.file_version));
         }
+    }
+
+    pub fn init_empty(&mut self, file_version: u32) -> Result<(), UpakError> {
+        if file_version == 8 {
+            self.file_version = file_version;
+            self.mount_point = b"../../../\0".iter().map(|&x| x).collect::<Vec<u8>>();
+            self.block_size = 0x10000;
+            self.records.clear();
+        } else {
+            return Err(UpakError::unsupported_pak_version(file_version));
+        }
+
+        Ok(())
     }
 }
