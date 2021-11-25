@@ -31,8 +31,10 @@ use std::io::{BufReader, Error, ErrorKind, Read, Seek, SeekFrom};
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use flate2::{read::ZlibDecoder};
-
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+mod error;
+use error::UpakError;
 
 const UE4_PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
 
@@ -89,22 +91,19 @@ impl<'file> PakFile<'file> {
         }
     }
 
-    pub fn load_records(&mut self) -> Result<(), Error> {
+    pub fn load_records(&mut self) -> Result<(), UpakError> {
         // seek to header at the bottom of the file
         self.reader.seek(SeekFrom::End(-204))?;
 
         // read and check magic bytes
         if self.reader.read_u32::<BigEndian>()? != UE4_PAK_MAGIC {
-            return Err(Error::new(ErrorKind::Other, "File is not a valid pak file"));
+            return Err(UpakError::invalid_pak_file());
         }
 
         // read and check file version
         let file_version = self.reader.read_u32::<LittleEndian>()?;
         if file_version != 8 {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("Unsupported file version {}", file_version),
-            ));
+            return Err(UpakError::unsupported_pak_version(file_version));
         }
         self.file_version = file_version;
 
@@ -130,11 +129,8 @@ impl<'file> PakFile<'file> {
                 self.reader.read_exact(&mut record_name_buf)?;
                 let mut record_name = match String::from_utf8(record_name_buf) {
                     Ok(record_name) => record_name,
-                    Err(err) => {
-                        return Err(Error::new(
-                            ErrorKind::Other,
-                            format!("Record name is not valid utf8: {:?}", err),
-                        ));
+                    Err(_) => {
+                        return Err(UpakError::invalid_pak_file());
                     }
                 };
                 record_name.pop();
@@ -147,8 +143,10 @@ impl<'file> PakFile<'file> {
                 let record_decompressed_size = self.reader.read_u64::<LittleEndian>()?;
                 // read record compression method
                 let record_compression_method =
-                    CompressionMethod::try_from_primitive(self.reader.read_u32::<LittleEndian>()?)
-                        .unwrap();
+                    match CompressionMethod::try_from_primitive(self.reader.read_u32::<LittleEndian>()?) {
+                        Ok(compression_method) => compression_method,
+                        Err(_) => CompressionMethod::Unknown,
+                    };
 
                 // seek over hash
                 self.reader.seek_relative(20)?;
@@ -180,24 +178,18 @@ impl<'file> PakFile<'file> {
                 );
             }
         } else {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("Unsupported file version {}", self.file_version),
-            ));
+            return Err(UpakError::unsupported_pak_version(self.file_version));
         }
 
         Ok(())
     }
 
-    pub fn read_record(&mut self, record_name: &String) -> Result<Vec<u8>, Error> {
+    pub fn read_record(&mut self, record_name: &String) -> Result<Vec<u8>, UpakError> {
         // find record
         let record = match self.records.get(record_name) {
             Some(record) => record,
             None => {
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    format!("Record {} not found", record_name),
-                ));
+                return Err(UpakError::record_not_found(record_name.clone()));
             }
         };
 
@@ -240,13 +232,7 @@ impl<'file> PakFile<'file> {
                 let is_encrypted = buf1[0] != 0;
                 // if is_encrypted return error
                 if is_encrypted {
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        format!(
-                            "Record {} is encrypted, enrcryption is not supported.",
-                            record_name
-                        ),
-                    ));
+                    return Err(UpakError::enrcryption_unsupported());
                 }
 
                 // read block size
@@ -290,21 +276,12 @@ impl<'file> PakFile<'file> {
 
                 return Ok(record_data);
             } else {
-                // we should never get here
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    format!(
-                        "Unsupported compression method {:?}",
-                        record.compression_method
-                    ),
+                return Err(UpakError::unsupported_compression(
+                    record.compression_method,
                 ));
             }
         } else {
-            // we should never get here
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("Unsupported file version {}", self.file_version),
-            ));
+            return Err(UpakError::unsupported_pak_version(self.file_version));
         }
     }
 }
