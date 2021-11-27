@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::path::Path;
 use std::io::Write;
+use std::path::Path;
 use std::process::exit;
 use std::time::SystemTime;
 
 use clap::{Parser, Subcommand};
+use walkdir::WalkDir;
 
 use upak;
 
@@ -41,6 +42,9 @@ enum Commands {
         pakfile: String,
         /// The directory to create the file from
         indir: String,
+        /// Whether to compress the file
+        #[clap(short, long)]
+        no_compression: bool,
     },
 }
 
@@ -90,11 +94,12 @@ fn main() {
             let output_folder: &Path = match outdir {
                 Some(ref outdir) => {
                     temp = outdir.clone();
-                    Path::new(&temp)},
+                    Path::new(&temp)
+                }
                 None => {
                     temp2 = path.parent().unwrap().join(path.file_stem().unwrap());
                     &temp2
-                },
+                }
             };
 
             println!("Extracting to {}", output_folder.display());
@@ -159,8 +164,64 @@ fn main() {
                 }
             }
         }
-        _ => {
-            eprintln!("Not implemented yet");
+        Commands::Create {
+            pakfile,
+            indir,
+            no_compression,
+        } => {
+            // clear file
+            OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&pakfile)
+                .unwrap();
+
+            let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
+
+            let mut pak = upak::PakFile::new(&file);
+            pak.init_empty(8).unwrap();
+
+            let compression_method = if no_compression {
+                upak::CompressionMethod::None
+            } else {
+                upak::CompressionMethod::Zlib
+            };
+
+            println!("Using compression method: {:?}", compression_method);
+
+            // Get all files and write them to the .pak file
+            for entry in WalkDir::new(&indir) {
+                let entry = entry.unwrap();
+                if entry.file_type().is_file() {
+                    let file_path = entry.path().to_str().unwrap().to_owned();
+
+                    let mut record_name = file_path[indir.len()..].to_owned();
+                    if record_name.starts_with("/") {
+                        record_name = record_name[1..].to_owned();
+                    }
+
+                    println!("Adding record: {}", record_name);
+
+                    let file_data = match std::fs::read(&file_path) {
+                        Ok(file_data) => file_data,
+                        Err(_) => {
+                            eprintln!("Error reading file! {}", file_path);
+                            exit(1);
+                        }
+                    };
+
+                    match pak.write_record(&record_name, &file_data, &compression_method) {
+                        Ok(_) => (),
+                        Err(_) => {
+                            eprintln!("Error writing record {}", record_name);
+                            exit(1);
+                        }
+                    }
+                }
+            }
+
+            pak.write_index_and_footer().unwrap();
         }
     }
 
@@ -180,13 +241,13 @@ fn open_file(path: &Path) -> File {
     }
 }
 
-fn check_header(pak_file: &mut upak::PakFile) {
-    match pak_file.load_records() {
+fn check_header(pak: &mut upak::PakFile) {
+    match pak.load_records() {
         Ok(_) => println!("Header is ok"),
         Err(e) => {
             eprintln!("Error reading header: {}", e);
             exit(1);
         }
     }
-    println!("Found {:?} records", pak_file.records.len());
+    println!("Found {:?} records", pak.records.len());
 }
