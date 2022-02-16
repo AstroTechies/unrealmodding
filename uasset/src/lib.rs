@@ -10,8 +10,11 @@ mod tests {
 //pub use crate::ue4version;
 
 pub mod uasset {
+    use std::collections::HashMap;
     use std::fmt::{Debug, Formatter};
     use std::io::{Cursor, Error, ErrorKind, Read, Seek, SeekFrom};
+
+    use byteorder::{ReadBytesExt, LittleEndian, BigEndian};
 
     pub mod ue4version;
 
@@ -79,6 +82,9 @@ pub mod uasset {
         world_tile_info_offset: i32,
         preload_dependency_count: i32,
         preload_dependency_offset: i32,
+
+        override_name_map_hashes: HashMap<String, u32>,
+        hashes: u32
     }
 
     impl Asset {
@@ -121,22 +127,20 @@ pub mod uasset {
                 world_tile_info_offset: 0,
                 preload_dependency_count: 0,
                 preload_dependency_offset: 0,
+                
+                override_name_map_hashes: HashMap::new(),
+                hashes: 0
             }
         }
 
-        pub fn parse_data(&mut self) -> Result<(), Error> {
-            println!("Parsing data...");
-
+        fn parse_header(&mut self) -> Result<(), Error> {
             // reuseable buffers for reading
-            let mut buf4 = [0u8; 4];
-            let mut buf8 = [0u8; 8];
 
             // seek to start
             self.cursor.seek(SeekFrom::Start(0))?;
 
             // read and check magic
-            self.cursor.read_exact(&mut buf4)?;
-            if u32::from_be_bytes(buf4) != UE4_ASSET_MAGIC {
+            if self.cursor.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
                     "File is not a valid uasset file",
@@ -144,17 +148,15 @@ pub mod uasset {
             }
 
             // read legacy version
-            self.cursor.read_exact(&mut buf4)?;
-            self.legacy_file_version = i32::from_le_bytes(buf4);
+            self.legacy_file_version = self.cursor.read_i32::<LittleEndian>()?;
             println!("Legacy file version: {}", self.legacy_file_version);
             if self.legacy_file_version != -4 {
                 // LegacyUE3Version for backwards-compatibility with UE3 games: always 864 in versioned assets, always 0 in unversioned assets
-                self.cursor.read_exact(&mut buf4)?;
+                self.cursor.read_exact(&mut [0u8; 4])?;
             }
 
             // read unreal version
-            self.cursor.read_exact(&mut buf4)?;
-            let file_version = i32::from_le_bytes(buf4);
+            let file_version = self.cursor.read_i32::<LittleEndian>()?;
             println!("File version: {}", file_version);
 
             self.unversioned = file_version == ue4version::UNKNOWN;
@@ -174,76 +176,58 @@ pub mod uasset {
             println!("Engine version: {}", self.engine_version);
 
             // read file license version
-            self.cursor.read_exact(&mut buf4)?;
-            self.file_license_version = i32::from_le_bytes(buf4);
+            self.file_license_version = self.cursor.read_i32::<LittleEndian>()?;
 
             // read custom versions container
             if self.legacy_file_version <= -2 {
                 // TODO: support for enum-based custom versions
 
                 // read custom version count
-                self.cursor.read_exact(&mut buf4)?;
-                let custom_versions_count = i32::from_le_bytes(buf4);
+                let custom_versions_count = self.cursor.read_i32::<LittleEndian>()?;
 
                 for _ in 0..custom_versions_count {
                     // read guid
                     let mut guid = [0u8; 16];
                     self.cursor.read_exact(&mut guid)?;
                     // read version
-                    self.cursor.read_exact(&mut buf4)?;
-                    let version = i32::from_le_bytes(buf4);
+                    let version = self.cursor.read_i32::<LittleEndian>()?;
 
                     self.custom_version.push(CustomVersion { guid, version });
                 }
             }
 
             // read header offset
-            self.cursor.read_exact(&mut buf4)?;
-            self.header_offset = i32::from_le_bytes(buf4);
+            self.header_offset = self.cursor.read_i32::<LittleEndian>()?;
 
             // read folder name
             self.folder_name = read_string(&mut self.cursor)?;
 
             // read package flags
-            self.cursor.read_exact(&mut buf4)?;
-            self.package_flags = u32::from_le_bytes(buf4);
+            self.package_flags = self.cursor.read_u32::<LittleEndian>()?;
 
             // read name count and offset
-            self.cursor.read_exact(&mut buf4)?;
-            self.name_count = i32::from_le_bytes(buf4);
-            self.cursor.read_exact(&mut buf4)?;
-            self.name_offset = i32::from_le_bytes(buf4);
+            self.name_count = self.cursor.read_i32::<LittleEndian>()?;
+            self.name_offset = self.cursor.read_i32::<LittleEndian>()?;
             // read text gatherable data
             if self.engine_version >= ue4version::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
-                self.cursor.read_exact(&mut buf4)?;
-                self.gatherable_text_data_count = i32::from_le_bytes(buf4);
-                self.cursor.read_exact(&mut buf4)?;
-                self.gatherable_text_data_offset = i32::from_le_bytes(buf4);
+                self.gatherable_text_data_count = self.cursor.read_i32::<LittleEndian>()?;
+                self.gatherable_text_data_offset = self.cursor.read_i32::<LittleEndian>()?;
             }
 
             // read count and offset for exports, imports, depends, soft package references, searchable names, thumbnail table
-            self.cursor.read_exact(&mut buf4)?;
-            self.export_count = i32::from_le_bytes(buf4);
-            self.cursor.read_exact(&mut buf4)?;
-            self.export_offset = i32::from_le_bytes(buf4);
-            self.cursor.read_exact(&mut buf4)?;
-            self.import_count = i32::from_le_bytes(buf4);
-            self.cursor.read_exact(&mut buf4)?;
-            self.import_offset = i32::from_le_bytes(buf4);
-            self.cursor.read_exact(&mut buf4)?;
-            self.depends_offset = i32::from_le_bytes(buf4);
+            self.export_count = self.cursor.read_i32::<LittleEndian>()?;
+            self.export_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.import_count = self.cursor.read_i32::<LittleEndian>()?;
+            self.import_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.depends_offset = self.cursor.read_i32::<LittleEndian>()?;
             if self.engine_version >= ue4version::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP {
-                self.cursor.read_exact(&mut buf4)?;
-                self.soft_package_reference_count = i32::from_le_bytes(buf4);
-                self.cursor.read_exact(&mut buf4)?;
-                self.soft_package_reference_offset = i32::from_le_bytes(buf4);
+                self.soft_package_reference_count = self.cursor.read_i32::<LittleEndian>()?;
+                self.soft_package_reference_offset = self.cursor.read_i32::<LittleEndian>()?;
             }
             if self.engine_version >= ue4version::VER_UE4_ADDED_SEARCHABLE_NAMES {
-                self.cursor.read_exact(&mut buf4)?;
-                self.searchable_names_offset = i32::from_le_bytes(buf4);
+                self.searchable_names_offset = self.cursor.read_i32::<LittleEndian>()?;
             }
-            self.cursor.read_exact(&mut buf4)?;
-            self.thumbnail_table_offset = i32::from_le_bytes(buf4);
+            self.thumbnail_table_offset = self.cursor.read_i32::<LittleEndian>()?;
 
             println!("Header offset: {}", self.header_offset);
 
@@ -253,13 +237,10 @@ pub mod uasset {
             println!("Package GUID: {:02X?}", self.package_guid);
 
             // raed generations
-            self.cursor.read_exact(&mut buf4)?;
-            let generations_count = i32::from_le_bytes(buf4);
+            let generations_count = self.cursor.read_i32::<LittleEndian>()?;
             for _ in 0..generations_count {
-                self.cursor.read_exact(&mut buf4)?;
-                let export_count = i32::from_le_bytes(buf4);
-                self.cursor.read_exact(&mut buf4)?;
-                let name_count = i32::from_le_bytes(buf4);
+                let export_count = self.cursor.read_i32::<LittleEndian>()?;
+                let name_count = self.cursor.read_i32::<LittleEndian>()?;
                 self.generations.push(GenerationInfo {
                     export_count,
                     name_count,
@@ -270,9 +251,8 @@ pub mod uasset {
             if self.engine_version >= ue4version::VER_UE4_ENGINE_VERSION_OBJECT {
                 self.engine_version_recorded = EngineVersion::read(&mut self.cursor)?;
             } else {
-                self.cursor.read_exact(&mut buf4)?;
                 self.engine_version_recorded =
-                    EngineVersion::new(4, 0, 0, u32::from_le_bytes(buf4), String::from(""));
+                    EngineVersion::new(4, 0, 0, self.cursor.read_u32::<LittleEndian>()?, String::from(""));
             }
             if self.engine_version
                 >= ue4version::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
@@ -283,10 +263,8 @@ pub mod uasset {
             }
 
             // read compression data
-            self.cursor.read_exact(&mut buf4)?;
-            self.compression_flags = u32::from_le_bytes(buf4);
-            self.cursor.read_exact(&mut buf4)?;
-            let compression_block_count = u32::from_le_bytes(buf4);
+            self.compression_flags = self.cursor.read_u32::<LittleEndian>()?;
+            let compression_block_count = self.cursor.read_u32::<LittleEndian>()?;
             if compression_block_count > 0 {
                 return Err(Error::new(
                     ErrorKind::Unsupported,
@@ -294,12 +272,10 @@ pub mod uasset {
                 ));
             }
 
-            self.cursor.read_exact(&mut buf4)?;
-            self.package_source = u32::from_le_bytes(buf4);
+            self.package_source = self.cursor.read_u32::<LittleEndian>()?;
 
             // some other old unsupported stuff
-            self.cursor.read_exact(&mut buf4)?;
-            let additional_to_cook = i32::from_le_bytes(buf4);
+            let additional_to_cook = self.cursor.read_i32::<LittleEndian>()?;
             if additional_to_cook != 0 {
                 return Err(Error::new(
                     ErrorKind::Unsupported,
@@ -307,8 +283,7 @@ pub mod uasset {
                 ));
             }
             if self.legacy_file_version > -7 {
-                self.cursor.read_exact(&mut buf4)?;
-                let texture_allocations_count = i32::from_le_bytes(buf4);
+                let texture_allocations_count = self.cursor.read_i32::<LittleEndian>()?;
                 if texture_allocations_count != 0 {
                     return Err(Error::new(
                         ErrorKind::Unsupported,
@@ -317,42 +292,49 @@ pub mod uasset {
                 }
             }
 
-            self.cursor.read_exact(&mut buf4)?;
-            self.asset_registry_data_offset = i32::from_le_bytes(buf4);
-            self.cursor.read_exact(&mut buf8)?;
-            self.bulk_data_start_offset = i64::from_le_bytes(buf8);
+            self.asset_registry_data_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.bulk_data_start_offset = self.cursor.read_i64::<LittleEndian>()?;
 
             if self.engine_version >= ue4version::VER_UE4_WORLD_LEVEL_INFO {
-                self.cursor.read_exact(&mut buf4)?;
-                self.world_tile_info_offset = i32::from_le_bytes(buf4);
+                self.world_tile_info_offset = self.cursor.read_i32::<LittleEndian>()?;
             }
 
             if self.engine_version >= ue4version::VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS
             {
-                self.cursor.read_exact(&mut buf4)?;
-                let chunk_id_count = i32::from_le_bytes(buf4);
+                let chunk_id_count = self.cursor.read_i32::<LittleEndian>()?;
 
                 for _ in 0..chunk_id_count {
-                    self.cursor.read_exact(&mut buf4)?;
-                    let chunk_id = i32::from_le_bytes(buf4);
+                    let chunk_id = self.cursor.read_i32::<LittleEndian>()?;
                     self.chunk_ids.push(chunk_id);
                 }
             } else if self.engine_version
                 >= ue4version::VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE
             {
                 self.chunk_ids = vec![];
-                self.cursor.read_exact(&mut buf4)?;
-                self.chunk_ids[0] = i32::from_le_bytes(buf4);
+                self.chunk_ids[0] = self.cursor.read_i32::<LittleEndian>()?;
             }
 
             if self.engine_version >= ue4version::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-                self.cursor.read_exact(&mut buf4)?;
-                self.preload_dependency_count = i32::from_le_bytes(buf4);
-                self.cursor.read_exact(&mut buf4)?;
-                self.preload_dependency_offset = i32::from_le_bytes(buf4);
+                self.preload_dependency_count = self.cursor.read_i32::<LittleEndian>()?;
+                self.preload_dependency_offset = self.cursor.read_i32::<LittleEndian>()?;
             }
+            Ok(())
+        }
 
-            // ------------------------------------------------------------
+        pub fn parse_data(&mut self) -> Result<(), Error> {
+            println!("Parsing data...");
+
+            self.parse_header()?;
+            // self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
+
+            // for i in 0..self.name_count {
+            //     let s = read_string(&mut self.cursor)?;
+
+            //     if self.engine_version >= ue4version::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
+            //         self.hashes = self.cursor.
+            //     }
+            // }
+            // // ------------------------------------------------------------
             // header end, main data start
             // ------------------------------------------------------------
 
@@ -476,15 +458,11 @@ pub mod uasset {
 
         fn read(cursor: &mut Cursor<Vec<u8>>) -> Result<Self, Error> {
             let mut buf2 = [0u8; 2];
-            cursor.read_exact(&mut buf2)?;
-            let major = u16::from_le_bytes(buf2);
-            cursor.read_exact(&mut buf2)?;
-            let minor = u16::from_le_bytes(buf2);
-            cursor.read_exact(&mut buf2)?;
-            let patch = u16::from_le_bytes(buf2);
+            let major = cursor.read_u16::<LittleEndian>()?;
+            let minor = cursor.read_u16::<LittleEndian>()?;
+            let patch = cursor.read_u16::<LittleEndian>()?;
             let mut buf4 = [0u8; 4];
-            cursor.read_exact(&mut buf4)?;
-            let build = u32::from_le_bytes(buf4);
+            let build = cursor.read_u32::<LittleEndian>()?;
             let branch = read_string(cursor)?;
 
             Ok(Self::new(major, minor, patch, build, branch))
