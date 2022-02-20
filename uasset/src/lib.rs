@@ -11,24 +11,45 @@ mod tests {
 
 pub mod uasset {
     use std::collections::HashMap;
+    use std::collections::hash_map::DefaultHasher;
     use std::fmt::{Debug, Formatter};
+    use std::hash::{Hash, Hasher};
     use std::io::{Cursor, Error, ErrorKind, Read, Seek, SeekFrom};
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian};
 
-    pub mod ue4version;
+    use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
 
-    pub type Guid = [u8; 16];
+    use self::cursor_ext::CursorExt;
+    use self::flags::{EPackageFlags, EObjectFlags};
+    use self::structs::world_tile::FWorldTileInfo;
+    use self::unreal_types::Guid;
+
+    pub mod flags;
+    pub mod ue4version;
+    pub mod types;
+    pub mod unreal_types;
+    pub mod cursor_ext;
+    pub mod structs;
+    pub mod properties;
+    pub mod exports;
+    use unreal_types::{FName, CustomVersion, GenerationInfo};
+
     #[derive(Debug)]
-    pub struct CustomVersion {
-        guid: Guid,
-        version: i32,
+    pub struct Import {
+        class_package: FName,
+        class_name: FName,
+        outer_index: i32,
+        object_name: FName
     }
-    #[derive(Debug)]
-    pub struct GenerationInfo {
-        export_count: i32,
-        name_count: i32,
+
+    impl Import {
+        pub fn new(class_package: FName, class_name: FName, outer_index: i32, object_name: FName) -> Self {
+            Import { class_package, class_name, object_name, outer_index }
+        }
     }
+
+
 
     const UE4_ASSET_MAGIC: u32 = u32::from_be_bytes([0xc1, 0x83, 0x2a, 0x9e]);
 
@@ -84,7 +105,14 @@ pub mod uasset {
         preload_dependency_offset: i32,
 
         override_name_map_hashes: HashMap<String, u32>,
-        hashes: u32
+        name_map_index_list: Vec<String>,
+        name_map_lookup: HashMap<u64, i32>,
+        imports: Vec<Import>,
+        exports: Vec<Export>,
+        depends_map: Option<Vec<Vec<i32>>>,
+        soft_package_reference_list: Option<Vec<String>>,
+        world_tile_info: Option<FWorldTileInfo>,
+        preload_dependencies: Option<Vec<i32>>
     }
 
     impl Asset {
@@ -200,7 +228,7 @@ pub mod uasset {
             self.header_offset = self.cursor.read_i32::<LittleEndian>()?;
 
             // read folder name
-            self.folder_name = read_string(&mut self.cursor)?;
+            self.folder_name = self.cursor.read_string()?;
 
             // read package flags
             self.package_flags = self.cursor.read_u32::<LittleEndian>()?;
@@ -321,19 +349,241 @@ pub mod uasset {
             Ok(())
         }
 
+        fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
+            let s = self.cursor.read_string()?;
+            let mut hashes = 0;
+            if self.engine_version >= ue4version::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
+                hashes = self.cursor.read_u32::<LittleEndian>()?;
+            }
+            Ok((hashes, s))
+        }
+
+        fn fix_name_map_lookup(&mut self) {
+            if self.name_map_index_list.len() > 0 && self.name_map_lookup.is_empty() {
+                for i in 0..self.name_map_index_list.len() {
+                    let mut s = DefaultHasher::new();
+                    self.name_map_index_list[i].hash(&mut s);
+                    self.name_map_lookup.insert(s.finish(), i as i32);
+                }
+            }
+        }
+
+        fn search_name_reference(&mut self, name: String) -> Option<i32> {
+            self.fix_name_map_lookup();
+            
+            let mut s = DefaultHasher::new();
+            name.hash(&mut s);
+            
+            match self.name_map_lookup.get(&s.finish()) {
+                Some(e) => Some(*e),
+                None => None
+            }
+        }
+
+        fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
+            self.fix_name_map_lookup();
+
+            if !force_add_duplicates {
+                let existing = self.search_name_reference(name);
+                if existing.is_some() {
+                    return existing.unwrap();
+                }
+            }
+
+            let mut s = DefaultHasher::new();
+            name.hash(&mut s);
+
+            self.name_map_index_list.push(name);
+            self.name_map_lookup.insert(s.finish(), self.name_map_lookup.len() as i32);
+            (self.name_map_lookup.len() - 1) as i32
+        }
+
+        fn get_name_reference(&mut self, index: i32) -> String {
+            self.fix_name_map_lookup();
+            if index < 0 {
+                return (-index).to_string(); // is this right even?
+            }
+            if index > self.name_map_index_list.len() as i32 {
+                return index.to_string();
+            }
+            self.name_map_index_list[index as usize]
+        }
+
+        fn read_fname(&mut self) -> Result<FName, Error> {
+            let name_map_pointer = self.cursor.read_i32::<LittleEndian>()?;
+            let number = self.cursor.read_i32::<LittleEndian>()?;
+
+            Ok(FName::new(self.get_name_reference(number), number))
+        }
+
+        fn get_import(self, index: i32) -> Option<Import> {
+            if !is_import(index) {
+                return None;
+            }
+
+            let index = -index - 1;
+            if index < 0 || index > self.imports.len() as i32 {
+                return None;
+            }
+
+            Some(self.imports[index as usize])
+        }
+
+        fn get_export(self, index: i32) -> Option<Export> {
+            if !is_export(index) {
+                return None;
+            }
+
+            let index = index - 1;
+
+            if index < 0 || index >= self.exports.len() as i32 {
+                return None;
+            }
+
+            Some(self.exports[index as usize])
+        }
+        
         pub fn parse_data(&mut self) -> Result<(), Error> {
             println!("Parsing data...");
 
             self.parse_header()?;
-            // self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
+            self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
 
-            // for i in 0..self.name_count {
-            //     let s = read_string(&mut self.cursor)?;
+            for i in 0..self.name_count {
+                let name_map = self.read_name_map_string()?;
+                if name_map.0 == 0 {
+                    if let Some(entry) = self.override_name_map_hashes.get_mut(&name_map.1) {
+                        *entry = 0u32;
+                    }
+                }
+                self.add_name_reference(name_map.1, true);
+            }
 
-            //     if self.engine_version >= ue4version::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
-            //         self.hashes = self.cursor.
-            //     }
-            // }
+            if self.import_offset > 0 {
+                self.cursor.seek(SeekFrom::Start(self.import_offset as u64));
+                for i in 0..self.import_count {
+                    self.imports.push(Import::new(self.read_fname()?, self.read_fname()?, self.cursor.read_i32::<LittleEndian>()?, self.read_fname()?));
+                }
+            }
+
+            if self.export_offset > 0 {
+                self.cursor.seek(SeekFrom::Start(self.export_offset as u64));
+                for i in 0..self.export_count {
+                    let mut export = Export::default();
+                    export.class_index = self.cursor.read_i32::<LittleEndian>()?;
+                    export.super_index = self.cursor.read_i32::<LittleEndian>()?;
+
+                    if(self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS) {
+                        export.template_index = self.cursor.read_i32::<LittleEndian>()?;
+                    }
+
+                    export.outer_index = self.cursor.read_i32::<LittleEndian>()?;
+                    export.object_name = self.read_fname()?;
+                    export.object_flags = self.cursor.read_u32::<LittleEndian>()?;
+                    
+                    if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
+                        export.serial_size = self.cursor.read_i32::<LittleEndian>()? as i64;
+                        export.serial_offset = self.cursor.read_i32::<LittleEndian>()? as i64;
+                    } else {
+                        export.serial_size = self.cursor.read_i64::<LittleEndian>()?;
+                        export.serial_offset = self.cursor.read_i64::<LittleEndian>()?;
+                    }
+                    
+                    export.forced_export = self.cursor.read_i32::<LittleEndian>()? == 1;
+                    export.not_for_client = self.cursor.read_i32::<LittleEndian>()? == 1;
+                    export.not_for_server = self.cursor.read_i32::<LittleEndian>()? == 1;
+                    self.cursor.read_exact(&mut self.package_guid)?;
+                    export.package_flags = self.cursor.read_u32::<LittleEndian>()?;
+
+                    if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
+                        export.not_always_loaded_for_editor_game = self.cursor.read_i32::<LittleEndian>()? == 1;
+                    }
+
+                    if self.engine_version >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
+                        export.is_asset = self.cursor.read_i32::<LittleEndian>()? == 1;
+                    }
+
+                    if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+                        export.first_export_dependency = self.cursor.read_i32::<LittleEndian>()?;
+                        export.serialization_before_serialization_dependencies = self.cursor.read_i32::<LittleEndian>()?;
+                        export.create_before_serialization_dependencies = self.cursor.read_i32::<LittleEndian>()?;
+                        export.serialization_before_create_dependencies = self.cursor.read_i32::<LittleEndian>()?;
+                        export.create_before_create_dependencies = self.cursor.read_i32::<LittleEndian>()?;
+                    }
+
+                    self.exports.push(export);
+                }
+            }
+
+            if self.depends_offset > 0 {
+                self.depends_map = Some(Vec::new());
+
+                self.cursor.seek(SeekFrom::Start(self.depends_offset as u64))?;
+
+                for i in 0..self.export_count {
+                    let size = self.cursor.read_i32::<LittleEndian>()?;
+                    let data: Vec<i32> = Vec::new();
+                    for j in 0..size {
+                        data.push(self.cursor.read_i32::<LittleEndian>()?);
+                    } 
+                    self.depends_map.unwrap().push(data);
+                }
+            } 
+
+            if self.soft_package_reference_offset > 0 {
+                self.soft_package_reference_list = Some(Vec::new());
+
+                self.cursor.seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
+                
+                for i in 0..self.soft_package_reference_count {
+                    self.soft_package_reference_list.unwrap().push(self.cursor.read_string()?);
+                }
+            }
+
+            // TODO: Asset registry data parsing should be here
+
+            if self.world_tile_info_offset > 0 {
+                self.cursor.seek(SeekFrom::Start(self.world_tile_info_offset as u64))?;
+                self.world_tile_info = Some(FWorldTileInfo::new(&mut self.cursor, self.engine_version)?);
+            }
+
+            if self.use_seperate_bulk_data_files {
+                self.cursor.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
+                self.preload_dependencies = Some(Vec::new());
+
+                for i in 0..self.preload_dependency_count {
+                    self.preload_dependencies.unwrap().push(self.cursor.read_i32::<LittleEndian>()?);
+                }
+            }
+
+            if self.header_offset > 0 && self.exports.len() > 0 {
+                for mut export in self.exports {
+                    self.cursor.seek(SeekFrom::Start(export.serial_offset as u64))?;
+
+                    //todo: implement skips
+
+                    //is nextstarting if needed?
+                    let next_starting = export.serial_offset;
+
+                    let export_class_type_name = match is_import(export.class_index) {
+                        true => self.get_import(export.class_index).map(|e| e.object_name).ok_or(Error::new(ErrorKind::Other, "Import not found"))?,
+                        false => FName::new(export.class_index.to_string(), 0)
+                    };
+
+                    let export_class_type = export_class_type_name.content;
+                    match export_class_type.as_str() {
+                        "Level" => {
+
+                        },
+                        _ => {
+
+                        }
+                    };
+
+                }
+            }
+            
+
             // // ------------------------------------------------------------
             // header end, main data start
             // ------------------------------------------------------------
@@ -421,20 +671,12 @@ pub mod uasset {
         }
     }
 
-    // read string of format <length u32><string><null>
-    fn read_string(cursor: &mut Cursor<Vec<u8>>) -> Result<String, Error> {
-        let mut buf = [0u8; 4];
-        cursor.read_exact(&mut buf)?;
-        let mut len = u32::from_le_bytes(buf);
+    fn is_import(index: i32) -> bool {
+        return index < 0;
+    }
 
-        if len == 0 {
-            return Ok(String::new());
-        }
-
-        let mut buf = vec![0u8; len as usize - 1];
-        cursor.read_exact(&mut buf)?;
-        cursor.seek(SeekFrom::Current(1))?;
-        Ok(String::from_utf8(buf).unwrap_or(String::from("None")))
+    fn is_export(index: i32) -> bool {
+        return index > 0;
     }
 
     #[derive(Debug, Clone)]
@@ -463,7 +705,7 @@ pub mod uasset {
             let patch = cursor.read_u16::<LittleEndian>()?;
             let mut buf4 = [0u8; 4];
             let build = cursor.read_u32::<LittleEndian>()?;
-            let branch = read_string(cursor)?;
+            let branch = cursor.read_string()?;
 
             Ok(Self::new(major, minor, patch, build, branch))
         }
