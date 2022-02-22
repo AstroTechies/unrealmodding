@@ -1,3 +1,5 @@
+use num_enum::IntoPrimitive;
+
 #[derive(Debug)]
 pub enum EObjectFlags
 {
@@ -282,5 +284,30 @@ pub enum EClassFlags
 impl Default for EClassFlags {
     fn default() -> Self {
         Self::CLASS_None
+    }
+}
+
+#[derive(Debug, IntoPrimitive)]
+#[repr(i8)]
+pub enum TextHistoryType {
+    None = -1,
+    Base = 0,
+    NamedFormat,
+    OrderedFormat,
+    ArgumentFormat,
+    AsNumber,
+    AsPercent,
+    AsCurrency,
+    AsDate,
+    AsTime,
+    AsDateTime,
+    Transform,
+    StringTableEntry,
+    TextGenerator
+}
+
+impl Default for TextHistoryType {
+    fn default() -> Self {
+        Self::None
     }
 }

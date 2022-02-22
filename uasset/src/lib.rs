@@ -26,6 +26,7 @@ pub mod uasset {
     use self::unreal_types::Guid;
 
     pub mod flags;
+    pub mod custom_version;
     pub mod ue4version;
     pub mod types;
     pub mod unreal_types;
@@ -33,7 +34,8 @@ pub mod uasset {
     pub mod structs;
     pub mod properties;
     pub mod exports;
-    use unreal_types::{FName, CustomVersion, GenerationInfo};
+    use custom_version::CustomVersion;
+    use unreal_types::{FName, GenerationInfo};
 
     #[derive(Debug)]
     pub struct Import {
@@ -220,7 +222,7 @@ pub mod uasset {
                     // read version
                     let version = self.cursor.read_i32::<LittleEndian>()?;
 
-                    self.custom_version.push(CustomVersion { guid, version });
+                    self.custom_version.push(CustomVersion::new(guid, version));
                 }
             }
 
@@ -347,6 +349,17 @@ pub mod uasset {
                 self.preload_dependency_offset = self.cursor.read_i32::<LittleEndian>()?;
             }
             Ok(())
+        }
+
+        fn get_custom_version(self, version_name: &str) -> Option<CustomVersion> {
+            for version in self.custom_version {
+                if let Some(friendly_name) = version.friendly_name {
+                    if &friendly_name == version_name {
+                        return Some(version);
+                    }
+                }
+            }
+            return None;
         }
 
         fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {

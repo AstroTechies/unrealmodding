@@ -14,7 +14,7 @@ pub trait CursorExt {
 
 impl CursorExt for Cursor<Vec<u8>> {
     // read string of format <length u32><string><null>
-    fn read_string(&mut self) -> Result<String, Error> {
+    fn read_string(&mut self) -> Result<String, Error> { // todo: unicode encoding
         let len = self.read_u32::<LittleEndian>()?;
 
         if len == 0 {

@@ -1,10 +1,15 @@
 
 pub type Guid = [u8; 16];
-#[derive(Debug)]
-pub struct CustomVersion {
-    guid: Guid,
-    version: i32,
+
+pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
+    [
+        a & 0xff, (a >> 8) & 0xff, (a >> 16) & 0xff, (a >> 24) & 0xff,
+        b & 0xff, (b >> 8) & 0xff, (b >> 16) & 0xff, (b >> 24) & 0xff,
+        c & 0xff, (c >> 8) & 0xff, (c >> 16) & 0xff, (c >> 24) & 0xff,
+        d & 0xff, (d >> 8) & 0xff, (d >> 16) & 0xff, (d >> 24) & 0xff
+    ]
 }
+
 #[derive(Debug)]
 pub struct GenerationInfo {
     export_count: i32,

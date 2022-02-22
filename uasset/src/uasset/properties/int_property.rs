@@ -35,6 +35,11 @@ pub struct ByteProperty {
     value: i64
 }
 
+pub struct BoolProperty {
+    property_guid: Option<Guid>,
+    value: bool
+}
+
 pub struct IntProperty {
     property_guid: Option<Guid>,
     value: i32
@@ -73,6 +78,18 @@ pub struct FloatProperty {
 pub struct DoubleProperty {
     property_guid: Option<Guid>,
     value: f64
+}
+
+impl BoolProperty {
+    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
+        let value = cursor.read_bool()?;
+        let property_guid = optional_guid!(cursor, include_header);
+
+        Ok(BoolProperty {
+            property_guid,
+            value
+        })
+    }
 }
 
 impl Int8Property {
