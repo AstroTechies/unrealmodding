@@ -31,7 +31,7 @@ impl CursorExt for Cursor<Vec<u8>> {
         let res = self.read_u8()?;
         Ok(res > 0)
     }
-
+    
     fn read_property_guid(&mut self) -> Result<Guid, Error> {
         let has_property_guid = self.read_bool()?;
         if has_property_guid {

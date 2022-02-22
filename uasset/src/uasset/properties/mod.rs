@@ -1,6 +1,8 @@
 pub mod int_property;
 pub mod str_property;
 pub mod object_property;
+pub mod guid_property;
+pub mod date_property;
 
 use std::io::{Error, Cursor};
 use byteorder::{ReadBytesExt, LittleEndian};
