@@ -13,6 +13,20 @@ impl<T> Vector<T> {
 }
 
 #[derive(Debug)]
+pub struct Vector4<T> {
+    x: T,
+    y: T,
+    z: T,
+    w: T
+}
+
+impl <T> Vector4<T> {
+    pub fn new(x: T, y: T, z: T, w: T) -> Self {
+        Vector4 { x, y, z, w}
+    }
+}
+
+#[derive(Debug)]
 pub struct Color<T> {
     r: T,
     g: T,
