@@ -72,7 +72,7 @@ pub enum Property {
 }
 
 impl Property {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: Asset, include_header: bool) -> Result<Option<Self>, Error> {
+    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &Asset, include_header: bool) -> Result<Option<Self>, Error> {
         let offset = cursor.position();
         let name = asset.read_fname()?; // probably should pass cursor instancce there
         if &name.content == "None" {
@@ -83,7 +83,11 @@ impl Property {
         let length = cursor.read_i32::<LittleEndian>()?;
         let duplication_index = cursor.read_i32::<LittleEndian>()?;
 
-        Ok(Some(Property{}))
+        Property::from_name(cursor, asset, include_header, length, 0)
+    }
+
+    pub fn from_name(cursor: &mut Cursor<Vec<u8>>, asset: &Asset, name: &FName, include_header: bool, length: i32, fallback_length: i32) -> Result<Option<Self>, Error> {
+        
     }
 
     pub fn has_custom_serialization(name: String) -> bool {

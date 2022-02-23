@@ -53,7 +53,7 @@ impl StructProperty {
         }
 
         if custom_serialization {
-            let property = Property::new(cursor, asset, false)?;
+            let property = Property::from_name(cursor, asset, struct_type.unwrap(), false, 0, 0)?;
             let value = match property {
                 Some(e) => vec![e],
                 None => Vec::new()
