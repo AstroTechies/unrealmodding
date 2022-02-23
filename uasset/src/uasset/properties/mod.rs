@@ -7,6 +7,7 @@ pub mod color_property;
 pub mod vector_property;
 pub mod struct_property;
 pub mod array_property;
+pub mod set_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
