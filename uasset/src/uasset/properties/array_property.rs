@@ -8,25 +8,26 @@ use super::Property;
 
 #[derive(Debug, Default)]
 pub struct ArrayProperty {
+    name: FName,
     property_guid: Option<Guid>,
     array_type: Option<FName>,
     value: Vec<Property>,
 }
 
 impl ArrayProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset, serialize_struct_differently: bool) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset, serialize_struct_differently: bool) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), Some(cursor.read_property_guid()?)),
             false => (None, None)
         };
-        ArrayProperty::new_no_header(cursor, include_header, length, engine_version, asset, serialize_struct_differently, array_type, property_guid)
+        ArrayProperty::new_no_header(name, cursor, include_header, length, engine_version, asset, serialize_struct_differently, array_type, property_guid)
     }
 
-    pub fn new_no_header(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
+    pub fn new_no_header(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
         let num_entries = cursor.read_i32()?;
         let mut value = None;
         let mut entries = Vec::new();
-        let mut name = None;
+        let mut name = name;
 
         let mut struct_length = None;
         let mut full_type = None;
@@ -34,7 +35,7 @@ impl ArrayProperty {
         
         if (array_type.is_some() && &array_type.unwrap().content == "StructProperty") && serialize_struct_differently {
             if engine_version >= VER_UE4_INNER_ARRAY_TAG_INFO {
-                name = Some(asset.read_fname()?);
+                name = asset.read_fname()?;
                 if &name.unwrap().content == "None" {
                     return Ok(ArrayProperty::default());
                 }
@@ -60,7 +61,7 @@ impl ArrayProperty {
                 
             // todo: dummy struct
             for i in 0..num_entries {
-                let data = Property::from_name(cursor, asset, full_type?, false, struct_length, 0)?;
+                let data = Property::from_type(cursor, asset, &full_type?, name, false, struct_length, 0)?;
                 if let Some(data) = data {
                     entries.push(data);
                 }
@@ -71,7 +72,7 @@ impl ArrayProperty {
                 let size_est_2 = (length - 4) / num_entries as i64;
 
                 for i in 0..num_entries {
-                    let entry = Property::from_name(cursor, asset, full_type?, false, size_est_1, size_est_2)?;
+                    let entry = Property::from_type(cursor, asset, &full_type?, FName::new(i.to_string(), i32::MIN), name, false, size_est_1, size_est_2)?;
                     if let Some(entry) = entry {
                         entries.push(entry);
                     }
@@ -80,6 +81,7 @@ impl ArrayProperty {
         }
 
         Ok(ArrayProperty {
+            name,
             property_guid,
             array_type,
             value: entries

@@ -8,6 +8,7 @@ use super::Property;
 
 #[derive(Debug)]
 pub struct StructProperty {
+    name: FName,
     struct_type: Option<FName>,
     struct_guid: Option<Guid>,
     property_guid: Option<Guid>,
@@ -16,7 +17,7 @@ pub struct StructProperty {
 }
 
 impl StructProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
         let mut property_guid = None;
@@ -44,6 +45,7 @@ impl StructProperty {
 
         if length == 0 {
             return Ok(StructProperty {
+                name,
                 struct_type,
                 struct_guid,
                 property_guid,
@@ -53,13 +55,14 @@ impl StructProperty {
         }
 
         if custom_serialization {
-            let property = Property::from_name(cursor, asset, struct_type.unwrap(), false, 0, 0)?;
+            let property = Property::from_type(cursor, asset, &struct_type.unwrap(), name, false, 0, 0)?;
             let value = match property {
                 Some(e) => vec![e],
                 None => Vec::new()
             };
 
             return Ok(StructProperty {
+                name,
                 struct_type,
                 struct_guid,
                 property_guid,
@@ -75,6 +78,7 @@ impl StructProperty {
             }
 
             return Ok(StructProperty {
+                name,
                 struct_type,
                 struct_guid,
                 property_guid,

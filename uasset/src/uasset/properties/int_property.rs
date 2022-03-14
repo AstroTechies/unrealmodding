@@ -2,15 +2,16 @@ use std::io::{Cursor, Error, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{uasset::{unreal_types::Guid, cursor_ext::CursorExt}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
 
 macro_rules! parse_int_property {
     ($property_type:ident, $read_func:ident) => {
-        pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
+        pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
             let property_guid = optional_guid!(cursor, include_header);
 
             Ok($property_type {
+                name,
                 property_guid,
                 value: cursor.$read_func::<LittleEndian>()?
             })
@@ -19,6 +20,7 @@ macro_rules! parse_int_property {
 }
 
 pub struct Int8Property {
+    name: FName,
     property_guid: Option<Guid>,
     value: i8
 }
@@ -29,6 +31,7 @@ pub enum ByteType {
 }
 
 pub struct ByteProperty {
+    name: FName,
     property_guid: Option<Guid>,
     enum_type: Option<i64>,
     byte_type: ByteType,
@@ -36,56 +39,66 @@ pub struct ByteProperty {
 }
 
 pub struct BoolProperty {
+    name: FName,
     property_guid: Option<Guid>,
     value: bool
 }
 
 pub struct IntProperty {
+    name: FName,
     property_guid: Option<Guid>,
     value: i32
 }
 
 pub struct Int16Property {
+    name: FName,
     property_guid: Option<Guid>,
     value: i16
 }
 
 pub struct Int64Property {
+    name: FName,
     property_guid: Option<Guid>,
     value: i64
 }
 
 pub struct UInt16Property {
+    name: FName,
     property_guid: Option<Guid>,
     value: u16
 }
 
 pub struct UInt32Property {
+    name: FName,
     property_guid: Option<Guid>,
     value: u32
 }
 
 pub struct UInt64Property {
+    name: FName,
     property_guid: Option<Guid>,
     value: u64
 }
 
 pub struct FloatProperty {
+    name: FName,
     property_guid: Option<Guid>,
     value: f32
 }
 
 pub struct DoubleProperty {
+    name: FName,
     property_guid: Option<Guid>,
     value: f64
 }
 
 impl BoolProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
         let value = cursor.read_bool()?;
         let property_guid = optional_guid!(cursor, include_header);
 
         Ok(BoolProperty {
+            name,
             property_guid,
             value
         })
@@ -93,9 +106,10 @@ impl BoolProperty {
 }
 
 impl Int8Property {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         Ok(Int8Property {
+            name,
             property_guid,
             value: cursor.read_i8()?
         })
@@ -113,7 +127,7 @@ impl ByteProperty {
         value.ok_or(Error::new(ErrorKind::Other, format!("Invalid length of {} for ByteProperty", length)))
     }
 
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, fallback_length: i64) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, fallback_length: i64) -> Result<Self, Error> {
         let (property_guid, enum_type) = match include_header {
             true => (Some(cursor.read_property_guid()?), Some(cursor.read_i64::<LittleEndian>()?)),
             false => (None, None)
@@ -122,6 +136,7 @@ impl ByteProperty {
         let (byte_type, value) = ByteProperty::read_byte(cursor, length).or(ByteProperty::read_byte(cursor, fallback_length))?;
 
         Ok(ByteProperty {
+            name,
             property_guid,
             enum_type,
             byte_type,

@@ -6,12 +6,14 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4vers
 
 #[derive(Debug)]
 pub struct StrProperty {
+    name: FName,
     property_guid: Option<Guid>,
     value: String
 }
 
 #[derive(Debug)]
 pub struct TextProperty {
+    name: FName,
     property_guid: Option<Guid>,
     culture_invariant_string: Option<String>,
     namespace: Option<String>,
@@ -23,16 +25,18 @@ pub struct TextProperty {
 
 #[derive(Debug)]
 pub struct NameProperty {
+    name: FName,
     property_guid: Option<Guid>,
     value: FName
 }
 
 
 impl StrProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
 
         Ok(StrProperty {
+            name,
             property_guid,
             value: cursor.read_string()?
         })
@@ -40,7 +44,7 @@ impl StrProperty {
 }
 
 impl TextProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
 
         let mut culture_invariant_string = None;
@@ -92,16 +96,18 @@ impl TextProperty {
         }
 
         Ok(TextProperty {
+            name,
             property_guid, culture_invariant_string, namespace, table_id, flags, history_type, value
         })
     }
 }
 
 impl NameProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let value = asset.read_fname()?;
         Ok(NameProperty {
+            name,
             property_guid,
             value
         })

@@ -8,13 +8,14 @@ pub mod vector_property;
 pub mod struct_property;
 pub mod array_property;
 pub mod set_property;
+pub mod map_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 
-use super::Asset;
+use super::{Asset, unreal_types::FName};
 
 #[macro_export]
 macro_rules! optional_guid {
@@ -22,7 +23,7 @@ macro_rules! optional_guid {
         match $include_header {
             true => Some($cursor.read_property_guid()?),
             false => None
-        };
+        }
     };
 }
 
@@ -84,10 +85,10 @@ impl Property {
         let length = cursor.read_i32::<LittleEndian>()?;
         let duplication_index = cursor.read_i32::<LittleEndian>()?;
 
-        Property::from_name(cursor, asset, include_header, length, 0)
+        Property::from_type(cursor, asset, property_type, name, include_header, length, 0)
     }
 
-    pub fn from_name(cursor: &mut Cursor<Vec<u8>>, asset: &Asset, name: &FName, include_header: bool, length: i32, fallback_length: i32) -> Result<Option<Self>, Error> {
+    pub fn from_type(cursor: &mut Cursor<Vec<u8>>, asset: &Asset, type_name: FName, name: FName, include_header: bool, length: i32, fallback_length: i32) -> Result<Option<Self>, Error> {
         
     }
 

@@ -114,7 +114,11 @@ pub mod uasset {
         depends_map: Option<Vec<Vec<i32>>>,
         soft_package_reference_list: Option<Vec<String>>,
         world_tile_info: Option<FWorldTileInfo>,
-        preload_dependencies: Option<Vec<i32>>
+        preload_dependencies: Option<Vec<i32>>,
+
+        //todo: fill out with defaults
+        map_key_override: HashMap<String, String>,
+        map_value_override: HashMap<String, String>
     }
 
     impl Asset {
