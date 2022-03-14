@@ -24,7 +24,7 @@ impl ArrayProperty {
     }
 
     pub fn new_no_header(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
-        let num_entries = cursor.read_i32()?;
+        let num_entries = cursor.read_i32::<LittleEndian>()?;
         let mut value = None;
         let mut entries = Vec::new();
         let mut name = name;

@@ -56,7 +56,7 @@ impl MapProperty {
             keys_to_remove[i] = MapProperty::map_type_to_class(type_1, name, cursor, 0, false, true, asset)?;
         }
 
-        let num_entries = cursor.read_i32()?;
+        let num_entries = cursor.read_i32::<LittleEndian>()?;
         let mut values = HashMap::new();
 
         for i in 0..num_entries {
