@@ -9,6 +9,7 @@ pub mod struct_property;
 pub mod array_property;
 pub mod set_property;
 pub mod map_property;
+pub mod unknown_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
