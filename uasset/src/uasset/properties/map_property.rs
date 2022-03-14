@@ -8,6 +8,8 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset},
 use super::{Property, struct_property::StructProperty};
 
 pub struct MapProperty {
+    name: FName,
+    property_guid: Guid,
     key_type: FName,
     value_type: FName,
     value: HashMap<Property, Property>
@@ -65,6 +67,8 @@ impl MapProperty {
         }
 
         Ok(MapProperty {
+            name,
+            property_guid: property_guid?,
             key_type: type_1,
             value_type: type_2,
             value: values
