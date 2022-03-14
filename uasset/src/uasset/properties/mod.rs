@@ -11,6 +11,7 @@ pub mod set_property;
 pub mod map_property;
 pub mod unknown_property;
 pub mod per_platform_property;
+pub mod material_input_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
