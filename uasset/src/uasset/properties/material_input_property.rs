@@ -14,6 +14,53 @@ pub struct MaterialExpression {
     expression_name: FName
 }
 
+pub struct ColorMaterialInputProperty {
+    name: FName,
+    property_guid: Option<Guid>,
+    material_expression: MaterialExpression,
+    value: ColorProperty
+}
+
+pub struct ScalarMaterialInputProperty {
+    name: FName,
+    property_guid: Option<Guid>,
+    material_expression: MaterialExpression,
+    value: f32
+}
+
+pub struct ShadingModelMaterialInputProperty {
+    name: FName,
+    property_guid: Option<Guid>,
+    material_expression: MaterialExpression,
+    value: u32
+}
+
+pub struct VectorMaterialInputProperty {
+    name: FName,
+    property_guid: Option<Guid>,
+    material_expression: MaterialExpression,
+    value: VectorProperty
+}
+
+pub struct Vector2MaterialInputProperty {
+    name: FName,
+    property_guid: Option<Guid>,
+    material_expression: MaterialExpression,
+    value: Vector2DProperty
+}
+
+pub struct ExpressionInputProperty {
+    name: FName,
+    property_guid: Option<Guid>,
+    material_expression: MaterialExpression
+}
+
+pub struct MaterialAttributesInputProperty {
+    name: FName,
+    property_guid: Option<Guid>,
+    material_expression: MaterialExpression
+}
+
 impl MaterialExpression {
     fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let output_index = cursor.raed_i32::<LittleEndian>()?;
@@ -30,13 +77,6 @@ impl MaterialExpression {
             expression_name
         })
     }
-}
-
-pub struct ColorMaterialInputProperty {
-    name: FName,
-    property_guid: Guid,
-    material_expression: MaterialExpression,
-    value: ColorProperty
 }
 
 impl ColorMaterialInputProperty {
@@ -56,13 +96,6 @@ impl ColorMaterialInputProperty {
     }
 }
 
-pub struct ScalarMaterialInputProperty {
-    name: FName,
-    property_guid: Guid,
-    material_expression: MaterialExpression,
-    value: f32
-}
-
 impl ScalarMaterialInputProperty {
     fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
@@ -78,13 +111,6 @@ impl ScalarMaterialInputProperty {
             value
         })
     }
-}
-
-pub struct ShadingModelMaterialInputProperty {
-    name: FName,
-    property_guid: Guid,
-    material_expression: MaterialExpression,
-    value: u32
 }
 
 impl ShadingModelMaterialInputProperty {
@@ -103,13 +129,6 @@ impl ShadingModelMaterialInputProperty {
     }
 }
 
-pub struct VectorMaterialInputProperty {
-    name: FName,
-    property_guid: Guid,
-    material_expression: MaterialExpression,
-    value: VectorProperty
-}
-
 impl VectorMaterialInputProperty {
     fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
@@ -126,13 +145,6 @@ impl VectorMaterialInputProperty {
     }
 }
 
-pub struct Vector2MaterialInputProperty {
-    name: FName,
-    property_guid: Guid,
-    material_expression: MaterialExpression,
-    value: Vector2DProperty
-}
-
 impl Vector2MaterialInputProperty {
     fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
@@ -145,6 +157,32 @@ impl Vector2MaterialInputProperty {
             property_guid,
             material_expression,
             value
+        })
+    }
+}
+
+impl ExpressionInputProperty {
+    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+        let property_guid = optional_guid!(cursor, include_header);
+        let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
+
+        Ok(ExpressionInputProperty {
+            name,
+            property_guid,
+            material_expression
+        })
+    }
+}
+
+impl MaterialAttributesInputProperty {
+    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+        let property_guid = optional_guid!(cursor, include_header);
+        let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
+
+        Ok(MaterialAttributesInputProperty {
+            name,
+            property_guid,
+            material_expression
         })
     }
 }

@@ -6,7 +6,7 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, option
 
 pub struct PerPlatformBoolProperty {
     name: FName,
-    property_guid: Guid,
+    property_guid: Option<Guid>,
     value: Vec<bool>
 }
 
@@ -31,7 +31,7 @@ impl PerPlatformBoolProperty {
 
 pub struct PerPlatformIntProperty {
     name: FName,
-    property_guid: Guid,
+    property_guid: Option<Guid>,
     value: Vec<i32>
 }
 
@@ -56,7 +56,7 @@ impl PerPlatformIntProperty {
 
 pub struct PerPlatformFloatProperty {
     name: FName,
-    property_guid: Guid,
+    property_guid: Option<Guid>,
     value: Vec<f32>
 }
 

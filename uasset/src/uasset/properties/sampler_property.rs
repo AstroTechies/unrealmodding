@@ -6,7 +6,7 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, option
 
 pub struct WeightedRandomSamplerProperty {
     name: FName,
-    property_guid: Guid,
+    property_guid: Option<Guid>,
     prob: Vec<f32>,
     alias: Vec<i32>,
     total_weight: f32
@@ -14,7 +14,7 @@ pub struct WeightedRandomSamplerProperty {
 
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     name: FName,
-    property_guid: Guid,
+    property_guid: Option<Guid>,
     sampler_property: WeightedRandomSamplerProperty
 }
 

@@ -9,7 +9,7 @@ use super::{Property, struct_property::StructProperty};
 
 pub struct MapProperty {
     name: FName,
-    property_guid: Guid,
+    property_guid: Option<Guid>,
     key_type: FName,
     value_type: FName,
     value: HashMap<Property, Property>

@@ -6,7 +6,7 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, option
 
 pub struct UnknownProperty {
     name: FName,
-    property_guid: Guid,
+    property_guid: Option<Guid>,
     value: Vec<u8>
 }
 
