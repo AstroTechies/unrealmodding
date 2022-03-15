@@ -2,7 +2,7 @@ use std::io::{Error, Cursor};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}};
+use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion};
 
 use super::{box_property::BoxProperty, int_point_property::IntPointProperty};
 
@@ -68,12 +68,14 @@ pub struct FWorldTileInfo {
 }
 
 impl FWorldTileInfo {
-    // instead of engine_version probably should do something else, but passing the whole asset structure here
-    // will make a circular dependency
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, engine_version: i32) -> Result<Self, Error> {
-        //todo: FFortniteMainBranchObjectVersion support
+    pub fn new(cursor: &mut Cursor<Vec<u8>>, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
+        let version: FFortniteMainBranchObjectVersion = asset.get_custom_version("FFortniteMainBranchObjectVersion").into()?;
 
-        let position = cursor.read_int_vector()?;
+        let position = match version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset {
+            true => Vector::new(cursor.read_i32::<LittleEndian>()?, cursor.read_i32::<LittleEndian>()?, 0),
+            false => cursor.read_int_vector()?
+        };
+
         let bounds = BoxProperty::new(cursor, false)?;
         let layer = FWorldTileLayer::new(cursor, engine_version)?;
 
