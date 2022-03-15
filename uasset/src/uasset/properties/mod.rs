@@ -16,6 +16,7 @@ pub mod enum_property;
 pub mod world_tile_property;
 pub mod sampler_property;
 pub mod soft_path_property;
+pub mod delegate_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
