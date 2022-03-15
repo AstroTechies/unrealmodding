@@ -20,6 +20,7 @@ pub mod delegate_property;
 pub mod rich_curve_key_property;
 pub mod view_target_blend_property;
 pub mod gameplay_tag_container_property;
+pub mod smart_name_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
