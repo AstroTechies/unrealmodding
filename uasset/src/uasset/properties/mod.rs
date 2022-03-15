@@ -19,6 +19,7 @@ pub mod soft_path_property;
 pub mod delegate_property;
 pub mod rich_curve_key_property;
 pub mod view_target_blend_property;
+pub mod gameplay_tag_container_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
