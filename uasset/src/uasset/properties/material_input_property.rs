@@ -2,9 +2,9 @@ use std::io::{Cursor, Error, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, structs::vector_property::VectorProperty}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
-use super::{color_property::ColorProperty, vector_property::Vector2DProperty};
+use super::{color_property::ColorProperty, vector_property::{Vector2DProperty, VectorProperty}};
 
 pub struct MaterialExpression {
     name: FName,

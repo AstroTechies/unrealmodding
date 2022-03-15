@@ -4,7 +4,8 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion};
 
-use super::{box_property::BoxProperty, int_point_property::IntPointProperty};
+use super::vector_property::{IntPointProperty, BoxProperty};
+
 
 pub struct FWorldTileLayer {
     name: String,

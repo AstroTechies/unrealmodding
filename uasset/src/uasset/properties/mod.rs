@@ -13,6 +13,7 @@ pub mod unknown_property;
 pub mod per_platform_property;
 pub mod material_input_property;
 pub mod enum_property;
+pub mod world_tile_property;
 
 use std::{io::{Error, Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
