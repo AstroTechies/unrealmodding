@@ -42,6 +42,6 @@ impl<T> Color<T> {
 
 impl Color<u8> {
     pub fn from_argb(argb: i32) -> Self {
-        Color::new((argb >> 24) & 0xff, (argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff)
+        Color::new(((argb >> 24) & 0xff) as u8, ((argb >> 16) & 0xff) as u8, ((argb >> 8) & 0xff) as u8, (argb & 0xff) as u8)
     }
 }

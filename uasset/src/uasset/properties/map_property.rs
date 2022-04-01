@@ -17,20 +17,18 @@ pub struct MapProperty {
 
 impl MapProperty {
 
-    fn map_type_to_class(type_name: FName, name: FName, cursor: &mut Cursor<Vec<u8>>, length: i32, include_header: bool, is_key: bool, asset: &Asset) -> Result<Property, Error> {
-        match type_name.content {
+    fn map_type_to_class(type_name: FName, name: FName, cursor: &mut Cursor<Vec<u8>>, length: i64, include_header: bool, is_key: bool, asset: &Asset) -> Result<Property, Error> {
+        match type_name.content.as_str() {
             "StructProperty" => {
                 let struct_type = match is_key {
-                    true => asset.map_key_override.get(name.content),
-                    false => asset.map_value_override.get(name.content)
-                }.unwrap_or("Generic");
+                    true => asset.map_key_override.get(&name.content).map(|s| s.to_owned()),
+                    false => asset.map_value_override.get(&name.content).map(|s| s.to_owned())
+                }.unwrap_or(String::from("Generic"));
 
-                let prop = Property::from_type(cursor, asset, struct_type, name, false, 1, 0)?.ok_or(Error::new(ErrorKind::Other, "No such property"))?;
-                prop
+                Property::from_type(cursor, asset, FName::new(struct_type.to_string(), 0), name, false, 1, 0)
             },
             _ => {
-                let prop = Property::from_type(cursor, asset, type_name, name, include_header, length, 0)?.ok_or(Error::new(ErrorKind::Other, "No such property"))?;
-                prop
+                Property::from_type(cursor, asset, type_name, name, include_header, length, 0)
             }
         }
     }
@@ -47,12 +45,12 @@ impl MapProperty {
         }
 
         let num_keys_to_remove = cursor.read_i32::<LittleEndian>()?;
-        let keys_to_remove = Vec::with_capacity(num_keys_to_remove);
+        let keys_to_remove = Vec::with_capacity(num_keys_to_remove as usize);
 
-        let type_1 = type_1?;
-        let type_2 = type_2?;
+        let type_1 = type_1.ok_or(Error::new(ErrorKind::Other, "No type1"))?;
+        let type_2 = type_2.ok_or(Error::new(ErrorKind::Other, "No type2"))?;
 
-        for i in 0..num_keys_to_remove {
+        for i in 0..num_keys_to_remove as usize {
             keys_to_remove[i] = MapProperty::map_type_to_class(type_1, name, cursor, 0, false, true, asset)?;
         }
 
@@ -68,7 +66,7 @@ impl MapProperty {
 
         Ok(MapProperty {
             name,
-            property_guid: property_guid?,
+            property_guid: property_guid,
             key_type: type_1,
             value_type: type_2,
             value: values

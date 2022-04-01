@@ -62,8 +62,8 @@ pub struct MaterialAttributesInputProperty {
 }
 
 impl MaterialExpression {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
-        let output_index = cursor.raed_i32::<LittleEndian>()?;
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+        let output_index = cursor.read_i32::<LittleEndian>()?;
         let input_name = asset.read_fname()?;
         let mut extras = [0u8; 20];
         cursor.read_exact(&mut extras)?;
@@ -73,17 +73,17 @@ impl MaterialExpression {
             name,
             output_index,
             input_name,
-            extras,
+            extras: extras.to_vec(),
             expression_name
         })
     }
 }
 
 impl ColorMaterialInputProperty {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
-        cursor.read_i32()?;
+        cursor.read_i32::<LittleEndian>()?;
 
         let value = ColorProperty::new(name, cursor, false)?;
 
@@ -97,10 +97,10 @@ impl ColorMaterialInputProperty {
 }
 
 impl ScalarMaterialInputProperty {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
-        cursor.read_i32()?;
+        cursor.read_i32::<LittleEndian>()?;
 
         let value = cursor.read_f32::<LittleEndian>()?;
 
@@ -114,7 +114,7 @@ impl ScalarMaterialInputProperty {
 }
 
 impl ShadingModelMaterialInputProperty {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
 
@@ -130,7 +130,7 @@ impl ShadingModelMaterialInputProperty {
 }
 
 impl VectorMaterialInputProperty {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
 
@@ -146,7 +146,7 @@ impl VectorMaterialInputProperty {
 }
 
 impl Vector2MaterialInputProperty {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
 
@@ -162,7 +162,7 @@ impl Vector2MaterialInputProperty {
 }
 
 impl ExpressionInputProperty {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
 
@@ -175,7 +175,7 @@ impl ExpressionInputProperty {
 }
 
 impl MaterialAttributesInputProperty {
-    fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let material_expression = MaterialExpression::new(name, cursor, false, asset)?;
 

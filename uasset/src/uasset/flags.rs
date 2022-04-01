@@ -1,4 +1,4 @@
-use num_enum::IntoPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug)]
 pub enum EObjectFlags
@@ -238,7 +238,7 @@ pub enum EClassFlags
     // Handle object configuration on a per-object basis, rather than per-class.
     CLASS_PerObjectConfig = 0x00000400,
     // Whether SetUpRuntimeReplicationData still needs to be called for this class
-    CLASS_ReplicationDataIsSetUp = 0x00000800u,
+    CLASS_ReplicationDataIsSetUp = 0x00000800,
     // Class can be constructed from editinline New button.
     CLASS_EditInlineNew = 0x00001000,
     // Display properties in the editor without using categories.
@@ -287,7 +287,7 @@ impl Default for EClassFlags {
     }
 }
 
-#[derive(Debug, IntoPrimitive)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(i8)]
 pub enum TextHistoryType {
     None = -1,

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 use num_enum::IntoPrimitive;
 use lazy_static::lazy_static;
@@ -7,9 +7,9 @@ use super::unreal_types::{Guid, new_guid};
 
 #[derive(Debug)]
 pub struct CustomVersion {
-    guid: Guid,
-    friendly_name: Option<String>,
-    version: i32,
+    pub guid: Guid,
+    pub friendly_name: Option<String>,
+    pub version: i32,
 }
 
 lazy_static! {
@@ -61,7 +61,7 @@ lazy_static! {
 
 impl CustomVersion {
     pub fn new(guid: Guid, version: i32) -> Self {
-        let friendly_name = GUID_TO_FRIENDLY_NAME.get(guid);
+        let friendly_name = GUID_TO_FRIENDLY_NAME.get(&guid).map(|e| e.to_owned());
         CustomVersion {
             guid, friendly_name, version
         }
@@ -263,7 +263,7 @@ pub enum FFortniteMainBranchObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
-    LatestVersion = (FFortniteMainBranchObjectVersion::VersionPlusOne as i32) - 1
+    LatestVersion = (FFortniteMainBranchObjectVersion::VersionPlusOne as i32) + 1
 }
 
 // 
@@ -428,7 +428,7 @@ pub enum FFrameworkObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
-    LatestVersion = (FFrameworkObjectVersion::VersionPlusOne as i32) - 1
+    LatestVersion = (FFrameworkObjectVersion::VersionPlusOne as i32) + 1
 }
 
 // 
@@ -456,7 +456,7 @@ pub enum FCoreObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
-    LatestVersion = (FCoreObjectVersion::VersionPlusOne as i32) - 1
+    LatestVersion = (FCoreObjectVersion::VersionPlusOne as i32) + 1
 }
 
 // 
@@ -632,7 +632,7 @@ pub enum FEditorObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
-    LatestVersion = (FEditorObjectVersion::VersionPlusOne as i32) - 1
+    LatestVersion = (FEditorObjectVersion::VersionPlusOne as i32) + 1
 }
 
 // 
@@ -716,7 +716,7 @@ pub enum FAnimPhysObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
-    LatestVersion = (FAnimPhysObjectVersion::VersionPlusOne as i32) - 1
+    LatestVersion = (FAnimPhysObjectVersion::VersionPlusOne as i32) + 1
 }
 
 // 
@@ -908,5 +908,5 @@ pub enum FReleaseObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
-    LatestVersion = (FReleaseObjectVersion::VersionPlusOne as i32) - 1
+    LatestVersion = (FReleaseObjectVersion::VersionPlusOne as i32) + 1
 }

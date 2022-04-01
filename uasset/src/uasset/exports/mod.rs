@@ -13,41 +13,41 @@ trait ExportTrait {}
 #[enum_dispatch(ExportTrait)]
 pub enum Export {
     UnknownExport,
-    LevelExport,
-    StringTableExport,
-    EnumExport,
-    FunctionExport,
-    DataTableExport,
-    ClassExport,
-    PropertyExport,
-    NormalExport
+    // LevelExport,
+    // StringTableExport,
+    // EnumExport,
+    // FunctionExport,
+    // DataTableExport,
+    // ClassExport,
+    // PropertyExport,
+    // NormalExport
 }
 
 impl Export {
     pub fn new(unk: UnknownExport) -> Self {
-        unk
+        Export::UnknownExport(unk)
     }
 
-    pub fn new(export_class_type: &str) -> Result<Self, Error> {
-        match export_class_type {
-            "Level" => {
+    // pub fn new(export_class_type: &str) -> Result<Self, Error> {
+    //     match export_class_type {
+    //         "Level" => {
 
-            },
-            "StringTable" => {
+    //         },
+    //         "StringTable" => {
 
-            },
-            "Enum" => {
+    //         },
+    //         "Enum" => {
 
-            },
-            "UserDefinedEnum" => {
+    //         },
+    //         "UserDefinedEnum" => {
 
-            },
-            "Function" => {
+    //         },
+    //         "Function" => {
 
-            },
-            _ => {
+    //         },
+    //         _ => {
 
-            }
-        }
-    }
+    //         }
+    //     }
+    // }
 }

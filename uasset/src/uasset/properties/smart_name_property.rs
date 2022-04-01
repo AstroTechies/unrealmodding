@@ -22,11 +22,12 @@ impl SmartNameProperty {
         let mut smart_name_id = None;
         let mut temp_guid = None;
 
-        let custom_version: FAnimPhysObjectVersion = asset.get_custom_version("FAnimPhysObjectVersion")?.into()?;
-        if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize {
-            smart_name_id = Some(cursor.read_u16()?);
+        let custom_version = asset.get_custom_version("FAnimPhysObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
+
+        if custom_version.version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
+            smart_name_id = Some(cursor.read_u16::<LittleEndian>()?);
         }
-        if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking {
+        if custom_version.version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32 {
             let mut guid = [0u8; 16];
             cursor.read_exact(&mut guid);
             temp_guid = Some(guid);

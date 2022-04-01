@@ -38,6 +38,7 @@ pub struct ByteProperty {
     value: i64
 }
 
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct BoolProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -119,8 +120,8 @@ impl Int8Property {
 impl ByteProperty {
     fn read_byte(cursor: &mut Cursor<Vec<u8>>, length: i64) -> Result<(ByteType, i64), Error> {
         let value = match length {
-            1 => Some((ByteProperty::Byte, cursor.read_i8()? as i64)),
-            0 | 8 => Some((ByteProperty::Long, cursor.read_i64::<LittleEndian>()?)),
+            1 => Some((ByteType::Byte, cursor.read_i8()? as i64)),
+            0 | 8 => Some((ByteType::Long, cursor.read_i64::<LittleEndian>()?)),
             _ => None
         };
 

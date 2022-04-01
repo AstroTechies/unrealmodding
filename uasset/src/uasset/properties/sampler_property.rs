@@ -23,14 +23,14 @@ impl WeightedRandomSamplerProperty {
         let property_guid = optional_guid!(cursor, include_header);
 
         let size = cursor.read_i32::<LittleEndian>()?;
-        let prob = Vec::with_capacity(size);
-        for i in 0..size {
+        let prob = Vec::with_capacity(size as usize);
+        for i in 0..size as usize {
             prob[i] = cursor.read_f32::<LittleEndian>()?;
         }
 
         let size = cursor.read_i32::<LittleEndian>()?;
-        let alias = Vec::with_capacity(size);
-        for i in 0..size {
+        let alias = Vec::with_capacity(size as usize);
+        for i in 0..size as usize {
             alias[i] = cursor.read_i32::<LittleEndian>()?;
         }
 

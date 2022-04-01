@@ -15,9 +15,9 @@ impl PerPlatformBoolProperty {
         let property_guid = optional_guid!(cursor, include_header);
 
         let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(num_entries);
+        let value = Vec::with_capacity(num_entries as usize);
 
-        for i in 0..num_entries {
+        for i in 0..num_entries as usize {
             value[i] = cursor.read_bool()?;
         }
 
@@ -40,10 +40,10 @@ impl PerPlatformIntProperty {
         let property_guid = optional_guid!(cursor, include_header);
 
         let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(num_entries);
+        let value = Vec::with_capacity(num_entries as usize);
 
-        for i in 0..num_entries {
-            value[i] = cursor.read_i32()?;
+        for i in 0..num_entries as usize {
+            value[i] = cursor.read_i32::<LittleEndian>()?;
         }
 
         Ok(PerPlatformIntProperty {
@@ -65,10 +65,10 @@ impl PerPlatformFloatProperty {
         let property_guid = optional_guid!(cursor, include_header);
 
         let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(num_entries);
+        let value = Vec::with_capacity(num_entries as usize);
 
-        for i in 0..num_entries {
-            value[i] = cursor.read_f32()?;
+        for i in 0..num_entries as usize {
+            value[i] = cursor.read_f32::<LittleEndian>()?;
         }
 
         Ok(PerPlatformFloatProperty {

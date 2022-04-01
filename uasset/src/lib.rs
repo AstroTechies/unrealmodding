@@ -21,8 +21,9 @@ pub mod uasset {
     use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
 
     use self::cursor_ext::CursorExt;
+    use self::exports::Export;
     use self::flags::{EPackageFlags, EObjectFlags};
-    use self::structs::world_tile::FWorldTileInfo;
+    use self::properties::world_tile_property::FWorldTileInfo;
     use self::unreal_types::Guid;
 
     pub mod flags;
@@ -31,7 +32,6 @@ pub mod uasset {
     pub mod types;
     pub mod unreal_types;
     pub mod cursor_ext;
-    pub mod structs;
     pub mod properties;
     pub mod exports;
     use custom_version::CustomVersion;
@@ -163,7 +163,16 @@ pub mod uasset {
                 preload_dependency_offset: 0,
                 
                 override_name_map_hashes: HashMap::new(),
-                hashes: 0
+                name_map_index_list: Vec::new(),
+                name_map_lookup: HashMap::new(),
+                imports: Vec::new(),
+                exports: Vec::new(),
+                depends_map: None,
+                soft_package_reference_list: None,
+                world_tile_info: None,
+                preload_dependencies: None,
+                map_key_override: HashMap::new(), // todo: preinit
+                map_value_override: HashMap::new()
             }
         }
 
@@ -561,7 +570,7 @@ pub mod uasset {
 
             if self.world_tile_info_offset > 0 {
                 self.cursor.seek(SeekFrom::Start(self.world_tile_info_offset as u64))?;
-                self.world_tile_info = Some(FWorldTileInfo::new(&mut self.cursor, self.engine_version)?);
+                self.world_tile_info = Some(FWorldTileInfo::new(&mut self.cursor, self.engine_version, self)?);
             }
 
             if self.use_seperate_bulk_data_files {

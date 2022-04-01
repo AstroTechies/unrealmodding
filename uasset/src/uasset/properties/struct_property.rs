@@ -6,7 +6,6 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, 
 
 use super::Property;
 
-#[derive(Debug)]
 pub struct StructProperty {
     name: FName,
     struct_type: Option<FName>,
@@ -55,11 +54,8 @@ impl StructProperty {
         }
 
         if custom_serialization {
-            let property = Property::from_type(cursor, asset, &struct_type.unwrap(), name, false, 0, 0)?;
-            let value = match property {
-                Some(e) => vec![e],
-                None => Vec::new()
-            };
+            let property = Property::from_type(cursor, asset, struct_type.unwrap(), name, false, 0, 0)?;
+            let value = vec![property];
 
             return Ok(StructProperty {
                 name,
@@ -73,7 +69,7 @@ impl StructProperty {
             let mut values = Vec::new();
             let mut property = Property::new(cursor, asset, true)?;
             while property.is_some() {
-                values.push(property);
+                values.push(property.unwrap());
                 property = Property::new(cursor, asset, true)?;
             }
 

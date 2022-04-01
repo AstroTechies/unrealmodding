@@ -1,8 +1,8 @@
-use std::io::{Error, Cursor};
+use std::{io::{Error, Cursor, ErrorKind}, str::FromStr};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion};
+use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion, unreal_types::FName};
 
 use super::vector_property::{IntPointProperty, BoxProperty};
 
@@ -19,7 +19,7 @@ impl FWorldTileLayer {
     pub fn new(cursor: &mut Cursor<Vec<u8>>, engine_version: i32) -> Result<Self, Error> {
         let name = cursor.read_string()?;
         let reserved_0 = cursor.read_i32::<LittleEndian>()?;
-        let reserved_1 = IntPointProperty::new(&mut cursor, false)?;
+        let reserved_1 = IntPointProperty::new(FName::default(), &mut cursor, false)?;
         
         let streaming_distance = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
             true => Some(cursor.read_i32::<LittleEndian>()?),
@@ -70,14 +70,14 @@ pub struct FWorldTileInfo {
 
 impl FWorldTileInfo {
     pub fn new(cursor: &mut Cursor<Vec<u8>>, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
-        let version: FFortniteMainBranchObjectVersion = asset.get_custom_version("FFortniteMainBranchObjectVersion").into()?;
+        let version = asset.get_custom_version("FFortniteMainBranchObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
 
-        let position = match version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset {
+        let position = match version.version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32 {
             true => Vector::new(cursor.read_i32::<LittleEndian>()?, cursor.read_i32::<LittleEndian>()?, 0),
             false => cursor.read_int_vector()?
         };
 
-        let bounds = BoxProperty::new(cursor, false)?;
+        let bounds = BoxProperty::new(FName::default(), cursor, false)?;
         let layer = FWorldTileLayer::new(cursor, engine_version)?;
 
         let mut hide_in_tile_view = None;

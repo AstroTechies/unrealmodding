@@ -1,8 +1,9 @@
 use std::io::{Cursor, Error, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use num_enum::TryFromPrimitiveError;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, flags::TextHistoryType, Asset, custom_version::FEditorObjectVersion}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, flags::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid};
 
 #[derive(Debug)]
 pub struct StrProperty {
@@ -20,7 +21,7 @@ pub struct TextProperty {
     table_id: Option<FName>,
     flags: u32,
     history_type: Option<i8>,
-    value: String
+    value: Option<String>
 }
 
 #[derive(Debug)]
@@ -66,15 +67,15 @@ impl TextProperty {
         let mut history_type = None;
         let mut table_id = None;
         if engine_version >= VER_UE4_FTEXT_HISTORY {
-            history_type = cursor.read_i8()?;
-            let history_type = history_type.into()?;
+            history_type = Some(cursor.read_i8()?);
+            let history_type: TextHistoryType = history_type.unwrap().try_into().map_err(|e: TryFromPrimitiveError<TextHistoryType>| Error::new(ErrorKind::Other, e.to_string()))?;
 
             match history_type {
                 TextHistoryType::None => {
                     value = None;
-                    let version: FEditorObjectVersion = asset.get_custom_version("FEditorObjectVersion").into()?;
-                    if version >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability {
-                        let has_culture_invariant_string = cursor.read_i32::<LittleEndian>() == 1;
+                    let version: CustomVersion = asset.get_custom_version("FEditorObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
+                    if version.version >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability as i32 {
+                        let has_culture_invariant_string = cursor.read_i32::<LittleEndian>()? == 1;
                         if has_culture_invariant_string {
                             culture_invariant_string = Some(cursor.read_string()?);
                         }
@@ -90,7 +91,7 @@ impl TextProperty {
                     value = Some(cursor.read_string()?);
                 }
                 _ => {
-                    return Error::new(ErrorKind::Other, format!("Unimplemented reader for {}", history_type));
+                    return Err(Error::new(ErrorKind::Other, format!("Unimplemented reader for {:?}", history_type)));
                 }
             }
         }

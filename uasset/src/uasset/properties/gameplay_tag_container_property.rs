@@ -15,8 +15,8 @@ impl GameplayTagContainerProperty {
         let property_guid = optional_guid!(cursor, include_header);
         
         let length = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(length);
-        for i in 0..length {
+        let value = Vec::with_capacity(length as usize);
+        for i in 0..length as usize {
             value[i] = asset.read_fname()?;
         }
 

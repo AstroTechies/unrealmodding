@@ -51,9 +51,9 @@ impl RichCurveKeyProperty {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
 
-        let interp_mode = RichCurveInterpMode::try_from(cursor.read_i8()?)?;
-        let tangent_mode = RichCurveTangentMode::try_from(cursor.read_i8()?)?;
-        let tangent_weight_mode = RichCurveTangentWeightMode::try_from(cursor.read_i8()?)?;
+        let interp_mode = RichCurveInterpMode::try_from(cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?; // todo: implement normal errors
+        let tangent_mode = RichCurveTangentMode::try_from(cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        let tangent_weight_mode = RichCurveTangentWeightMode::try_from(cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
         let time = cursor.read_f32::<LittleEndian>()?;
         let value = cursor.read_f32::<LittleEndian>()?;

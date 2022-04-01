@@ -32,12 +32,12 @@ pub struct ViewTargetBlendParamsProperty {
     lock_outgoing: bool
 }
 
-impl ViewTargetBlendFunction {
+impl ViewTargetBlendParamsProperty {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
 
         let blend_time = cursor.read_f32::<LittleEndian>()?;
-        let blend_function = ViewTargetBlendFunction::try_from(cursor.read_u8()?)?;
+        let blend_function = ViewTargetBlendFunction::try_from(cursor.read_u8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
         let blend_exp = cursor.read_f32::<LittleEndian>()?;
         let lock_outgoing = cursor.read_i32::<LittleEndian>()? != 0;
 
