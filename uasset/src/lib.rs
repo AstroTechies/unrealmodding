@@ -35,6 +35,7 @@ pub mod uasset {
     pub mod cursor_ext;
     pub mod properties;
     pub mod exports;
+    pub mod uproperty;
     use custom_version::CustomVersion;
     use unreal_types::{FName, GenerationInfo};
 

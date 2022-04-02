@@ -3,7 +3,8 @@ pub mod level_export;
 pub mod normal_export;
 pub mod string_table_export;
 pub mod enum_export;
-mod struct_export;
+pub mod struct_export;
+pub mod property_export;
 
 use std::io::Error;
 

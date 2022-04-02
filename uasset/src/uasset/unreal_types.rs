@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::{Error, ErrorKind};
 
 pub type Guid = [u8; 16];
 
@@ -57,6 +58,31 @@ impl StringTable {
         StringTable {
             namespace,
             value: HashMap::new()
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PackageIndex {
+    pub index: i32
+}
+
+impl PackageIndex {
+    pub fn new(index: i32) -> Self {
+        PackageIndex{ index }
+    }
+
+    pub fn from_import(import_index: i32) -> Result<Self, Error> {
+        match import_index < 0 {
+            true => Err(Error::new(ErrorKind::InvalidInput, "Import index must be bigger than zero")),
+            false => Ok(PackageIndex::new(-import_index - 1))
+        }
+    }
+
+    pub fn from_export(export_index: i32) -> Result<Self, Error> {
+        match export_index < 0 {
+            true => Err(Error::new(ErrorKind::InvalidInput, "Export index must be greater than zero")),
+            false => Ok(PackageIndex::new(export_index + 1))
         }
     }
 }
