@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 
 pub type Guid = [u8; 16];
 
@@ -16,7 +17,7 @@ pub struct GenerationInfo {
     pub name_count: i32,
 }
 
-#[derive(Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Hash, PartialEq, Eq, Clone)]
 pub struct FName {
     pub content: String,
     pub index: i32
@@ -41,6 +42,21 @@ impl NamespacedString {
         NamespacedString {
             namespace,
             value
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct StringTable {
+    pub namespace: String,
+    pub value: HashMap<String, String>
+}
+
+impl StringTable {
+    pub fn new(namespace: String) -> Self {
+        StringTable {
+            namespace,
+            value: HashMap::new()
         }
     }
 }

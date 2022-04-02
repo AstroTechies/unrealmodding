@@ -1,5 +1,9 @@
 pub mod unknown_export;
 pub mod level_export;
+pub mod normal_export;
+pub mod string_table_export;
+pub mod enum_export;
+mod struct_export;
 
 use std::io::Error;
 
@@ -24,7 +28,9 @@ pub enum Export {
 }
 
 impl Export {
+    pub fn from_unk(unk: &UnknownExport) -> Result<Self, Error> {
 
+    }
     // pub fn new(export_class_type: &str) -> Result<Self, Error> {
     //     match export_class_type {
     //         "Level" => {

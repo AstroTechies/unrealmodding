@@ -538,7 +538,7 @@ pub mod uasset {
                         export.create_before_create_dependencies = self.cursor.read_i32::<LittleEndian>()?;
                     }
 
-                    self.exports.push(Export::UnknownExport(export));
+                    self.exports.push(export.into());
                 }
             }
 
@@ -549,7 +549,7 @@ pub mod uasset {
 
                 for i in 0..self.export_count {
                     let size = self.cursor.read_i32::<LittleEndian>()?;
-                    let data: Vec<i32> = Vec::new();
+                    let mut data: Vec<i32> = Vec::new();
                     for j in 0..size {
                         data.push(self.cursor.read_i32::<LittleEndian>()?);
                     } 
@@ -584,29 +584,31 @@ pub mod uasset {
             }
 
             if self.header_offset > 0 && self.exports.len() > 0 {
-                for mut export in self.exports {
-                    self.cursor.seek(SeekFrom::Start(export.serial_offset as u64))?;
+                for mut map_export in self.exports {
+                    // every export is unknown at this point
+                    match map_export {
+                        Export::UnknownExport(export) => {
+                            self.cursor.seek(SeekFrom::Start(export.serial_offset as u64))?;
 
-                    //todo: implement skips
+                            //todo: implement skips
 
-                    //is nextstarting if needed?
-                    let next_starting = export.serial_offset;
+                            //is nextstarting if needed?
+                            let next_starting = export.serial_offset;
 
-                    let export_class_type_name = match is_import(export.class_index) {
-                        true => self.get_import(export.class_index).map(|e| e.object_name).ok_or(Error::new(ErrorKind::Other, "Import not found"))?,
-                        false => FName::new(export.class_index.to_string(), 0)
-                    };
+                            let export_class_type = export_class_type_name.content;
+                            match export_class_type.as_str() {
+                                "Level" => {
 
-                    let export_class_type = export_class_type_name.content;
-                    match export_class_type.as_str() {
-                        "Level" => {
+                                },
+                                _ => {
 
+                                }
+                            };
                         },
                         _ => {
-
+                            return Err(Error::new(ErrorKind::Other, "Export type known before type initialization"));
                         }
-                    };
-
+                    }
                 }
             }
             
