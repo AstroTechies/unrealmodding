@@ -44,7 +44,70 @@ pub trait UPropertyTrait {
 
 #[enum_dispatch(UPropertyTrait)]
 pub enum UProperty {
+    UGenericProperty,
+    UEnumProperty,
+    UArrayProperty,
+    USetProperty,
+    UObjectProperty,
+    USoftObjectProperty,
+    ULazyObjectProperty,
+    UClassProperty,
+    USoftClassProperty,
+    UDelegateProperty,
+    UMulticastDelegateProperty,
+    UMulticastInlineDelegateProperty,
+    UInterfaceProperty,
+    UMapProperty,
+    UBoolProperty,
+    UByteProperty,
+    UStructProperty,
+    UDoubleProperty,
+    UFloatProperty,
+    UIntProperty,
+    UInt8Property,
+    UInt16Property,
+    UInt64Property,
+    UUInt8Property,
+    UUInt16Property,
+    UUInt64Property,
+    UNameProperty,
+    UStrProperty,
+}
 
+impl UProperty {
+    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset, serialized_type: FName) -> Result<Self, Error> {
+        let prop: UProperty = match serialized_type.content.as_str() {
+            "UEnumProperty" => UEnumProperty::new(cursor, asset)?.into(),
+            "UArrayProperty" => UArrayProperty::new(cursor, asset)?.into(),
+            "USetProperty" => USetProperty::new(cursor, asset)?.into(),
+            "UObjectProperty" => UObjectProperty::new(cursor, asset)?.into(),
+            "USoftObjectProperty" => USoftObjectProperty::new(cursor, asset)?.into(),
+            "ULazyObjectProperty" => ULazyObjectProperty::new(cursor, asset)?.into(),
+            "UClassProperty" => UClassProperty::new(cursor, asset)?.into(),
+            "USoftClassProperty" => USoftClassProperty::new(cursor, asset)?.into(),
+            "UDelegateProperty" => UDelegateProperty::new(cursor, asset)?.into(),
+            "UMulticastDelegateProperty" => UMulticastDelegateProperty::new(cursor, asset)?.into(),
+            "UMulticastInlineDelegateProperty" => UMulticastInlineDelegateProperty::new(cursor, asset)?.into(),
+            "UInterfaceProperty" => UInterfaceProperty::new(cursor, asset)?.into(),
+            "UMapProperty" => UMapProperty::new(cursor, asset)?.into(),
+            "UByteProperty" => UByteProperty::new(cursor, asset)?.into(),
+            "UStructProperty" => UStructProperty::new(cursor, asset)?.into(),
+            "UDoubleProperty" => UDoubleProperty::new(cursor, asset)?.into(),
+            "UFloatProperty" => UFloatProperty::new(cursor, asset)?.into(),
+            "UIntProperty" => UIntProperty::new(cursor, asset)?.into(),
+            "UInt8Property" => UInt8Property::new(cursor, asset)?.into(),
+            "UInt16Property" => UInt16Property::new(cursor, asset)?.into(),
+            "UInt64Property" => UInt64Property::new(cursor, asset)?.into(),
+            "UUInt8Property" => UUInt8Property::new(cursor, asset)?.into(),
+            "UUInt16Property" => UUInt16Property::new(cursor, asset)?.into(),
+            "UUInt64Property" => UUInt64Property::new(cursor, asset)?.into(),
+            "UNameProperty" => UNameProperty::new(cursor, asset)?.into(),
+            "UStrProperty" => UStrProperty::new(cursor, asset)?.into(),
+            _ => UGenericProperty::new(cursor, asset)?.into()
+        };
+
+        Ok(prop)
+    }
 }
 
 pub struct UGenericProperty {
