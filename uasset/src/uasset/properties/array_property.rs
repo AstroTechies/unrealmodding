@@ -15,7 +15,7 @@ pub struct ArrayProperty {
 }
 
 impl ArrayProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset, serialize_struct_differently: bool) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &mut Asset, serialize_struct_differently: bool) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), Some(cursor.read_property_guid()?)),
             false => (None, None)
@@ -23,7 +23,7 @@ impl ArrayProperty {
         ArrayProperty::new_no_header(name, cursor, include_header, length, engine_version, asset, serialize_struct_differently, array_type, property_guid)
     }
 
-    pub fn new_no_header(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
+    pub fn new_no_header(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &mut Asset, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
         let num_entries = cursor.read_i32::<LittleEndian>()?;
         let mut entries = Vec::new();
         let mut name = name;

@@ -45,7 +45,7 @@ impl StrProperty {
 }
 
 impl TextProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, engine_version: i32, asset: &mut Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
 
         let mut culture_invariant_string = None;
@@ -104,7 +104,7 @@ impl TextProperty {
 }
 
 impl NameProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &mut Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let value = asset.read_fname()?;
         Ok(NameProperty {

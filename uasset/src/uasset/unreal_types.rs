@@ -12,8 +12,8 @@ pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
 
 #[derive(Debug)]
 pub struct GenerationInfo {
-    export_count: i32,
-    name_count: i32,
+    pub export_count: i32,
+    pub name_count: i32,
 }
 
 #[derive(Debug, Default, Hash, PartialEq, Eq)]

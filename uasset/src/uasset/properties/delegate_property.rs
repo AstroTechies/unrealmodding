@@ -24,7 +24,7 @@ impl MulticastDelegate {
 }
 
 impl MulticastDelegateProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, asset: &mut Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
 
         let length = cursor.read_i32::<LittleEndian>()?;

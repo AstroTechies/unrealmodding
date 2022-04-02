@@ -50,7 +50,7 @@ impl AssetObjectProperty {
 }
 
 impl SoftObjectProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &mut Asset) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let value = asset.read_fname()?;
         let id = cursor.read_u32::<LittleEndian>()?;

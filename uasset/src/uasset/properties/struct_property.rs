@@ -17,7 +17,7 @@ pub struct StructProperty {
 }
 
 impl StructProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &mut Asset) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
         let mut property_guid = None;

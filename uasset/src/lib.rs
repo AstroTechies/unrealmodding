@@ -18,6 +18,7 @@ pub mod uasset {
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian};
 
+    use crate::uasset::exports::unknown_export::UnknownExport;
     use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
 
     use self::cursor_ext::CursorExt;
@@ -121,7 +122,7 @@ pub mod uasset {
         map_value_override: HashMap<String, String>
     }
 
-    impl Asset {
+    impl<'a> Asset {
         pub fn new(raw_data: Vec<u8>) -> Self {
             Asset {
                 cursor: Cursor::new(raw_data),
@@ -364,11 +365,11 @@ pub mod uasset {
             Ok(())
         }
 
-        fn get_custom_version(self, version_name: &str) -> Option<CustomVersion> {
+        fn get_custom_version(self, version_name: &str) -> Option<&CustomVersion> {
             for version in self.custom_version {
                 if let Some(friendly_name) = version.friendly_name {
                     if &friendly_name == version_name {
-                        return Some(version);
+                        return Some(&version);
                     }
                 }
             }
@@ -419,7 +420,7 @@ pub mod uasset {
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
 
-            self.name_map_index_list.push(name);
+            self.name_map_index_list.push(name.to_owned());
             self.name_map_lookup.insert(s.finish(), self.name_map_lookup.len() as i32);
             (self.name_map_lookup.len() - 1) as i32
         }
@@ -432,7 +433,7 @@ pub mod uasset {
             if index > self.name_map_index_list.len() as i32 {
                 return index.to_string();
             }
-            self.name_map_index_list[index as usize]
+            self.name_map_index_list[index as usize].to_owned()
         }
 
         fn read_fname(&mut self) -> Result<FName, Error> {
@@ -442,7 +443,7 @@ pub mod uasset {
             Ok(FName::new(self.get_name_reference(number), number))
         }
 
-        fn get_import(self, index: i32) -> Option<Import> {
+        fn get_import(self, index: i32) -> Option<&'a Import> {
             if !is_import(index) {
                 return None;
             }
@@ -452,10 +453,10 @@ pub mod uasset {
                 return None;
             }
 
-            Some(self.imports[index as usize])
+            Some(&self.imports[index as usize])
         }
 
-        fn get_export(self, index: i32) -> Option<Export> {
+        fn get_export(self, index: i32) -> Option<&'a Export> {
             if !is_export(index) {
                 return None;
             }
@@ -466,7 +467,7 @@ pub mod uasset {
                 return None;
             }
 
-            Some(self.exports[index as usize])
+            Some(&self.exports[index as usize])
         }
         
         pub fn parse_data(&mut self) -> Result<(), Error> {
@@ -495,7 +496,7 @@ pub mod uasset {
             if self.export_offset > 0 {
                 self.cursor.seek(SeekFrom::Start(self.export_offset as u64));
                 for i in 0..self.export_count {
-                    let mut export = Export::default();
+                    let mut export = UnknownExport::default();
                     export.class_index = self.cursor.read_i32::<LittleEndian>()?;
                     export.super_index = self.cursor.read_i32::<LittleEndian>()?;
 
@@ -537,7 +538,7 @@ pub mod uasset {
                         export.create_before_create_dependencies = self.cursor.read_i32::<LittleEndian>()?;
                     }
 
-                    self.exports.push(export);
+                    self.exports.push(Export::UnknownExport(export));
                 }
             }
 

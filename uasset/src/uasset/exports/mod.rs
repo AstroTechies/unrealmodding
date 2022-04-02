@@ -24,9 +24,6 @@ pub enum Export {
 }
 
 impl Export {
-    pub fn new(unk: UnknownExport) -> Self {
-        Export::UnknownExport(unk)
-    }
 
     // pub fn new(export_class_type: &str) -> Result<Self, Error> {
     //     match export_class_type {

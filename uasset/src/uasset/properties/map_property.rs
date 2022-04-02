@@ -28,7 +28,7 @@ impl Hash for MapProperty {
 
 impl MapProperty {
 
-    fn map_type_to_class(type_name: FName, name: FName, cursor: &mut Cursor<Vec<u8>>, length: i64, include_header: bool, is_key: bool, asset: &Asset) -> Result<Property, Error> {
+    fn map_type_to_class(type_name: FName, name: FName, cursor: &mut Cursor<Vec<u8>>, length: i64, include_header: bool, is_key: bool, asset: &mut Asset) -> Result<Property, Error> {
         match type_name.content.as_str() {
             "StructProperty" => {
                 let struct_type = match is_key {
@@ -44,7 +44,7 @@ impl MapProperty {
         }
     }
 
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &Asset) -> Result<Self, Error> {
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &mut Asset) -> Result<Self, Error> {
         let mut type_1 = None;
         let mut type_2 = None;
         let mut property_guid = None;
