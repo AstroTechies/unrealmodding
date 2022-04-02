@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -29,6 +30,7 @@ impl PerPlatformBoolProperty {
     }
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -54,6 +56,7 @@ impl PerPlatformIntProperty {
     }
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
     name: FName,
     property_guid: Option<Guid>,

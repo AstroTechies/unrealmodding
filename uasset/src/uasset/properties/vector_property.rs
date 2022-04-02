@@ -4,14 +4,14 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::{Color, Vector, Vector4}}, optional_guid};
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct VectorProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: Vector<f32>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct IntPointProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -19,14 +19,14 @@ pub struct IntPointProperty {
     y: i32
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector4Property {
     name: FName,
     property_guid: Option<Guid>,
     value: Vector4<f32>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector2DProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -34,14 +34,14 @@ pub struct Vector2DProperty {
     y: f32
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct QuatProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: Vector4<f32>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct RotatorProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -146,7 +146,7 @@ impl RotatorProperty {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct BoxProperty {
     name: FName,
     property_guid: Option<Guid>,

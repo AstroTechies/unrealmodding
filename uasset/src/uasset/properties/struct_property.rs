@@ -6,6 +6,7 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, 
 
 use super::Property;
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct StructProperty {
     name: FName,
     struct_type: Option<FName>,

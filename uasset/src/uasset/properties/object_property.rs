@@ -4,21 +4,21 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: i32
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: String
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
     name: FName,
     property_guid: Option<Guid>,

@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct SoftPathProperty {
     name: FName,
     property_guid: Option<Guid>,

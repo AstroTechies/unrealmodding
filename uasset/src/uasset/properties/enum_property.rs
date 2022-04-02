@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct EnumProperty {
     name: FName,
     property_guid: Option<Guid>,

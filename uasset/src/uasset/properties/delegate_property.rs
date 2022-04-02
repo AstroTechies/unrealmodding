@@ -9,6 +9,7 @@ pub struct MulticastDelegate {
     delegate: FName
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct MulticastDelegateProperty {
     name: FName,
     property_guid: Option<Guid>,

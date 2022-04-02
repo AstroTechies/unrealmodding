@@ -4,14 +4,14 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct TimeSpanProperty {
     name: FName,
     property_guid: Option<Guid>,
     ticks: i64
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct DateTimeProperty {
     name: FName,
     property_guid: Option<Guid>,

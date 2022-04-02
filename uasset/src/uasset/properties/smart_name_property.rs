@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct SmartNameProperty {
     name: FName,
     property_guid: Option<Guid>,

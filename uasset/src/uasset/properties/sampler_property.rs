@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -12,6 +13,7 @@ pub struct WeightedRandomSamplerProperty {
     total_weight: f32
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     name: FName,
     property_guid: Option<Guid>,

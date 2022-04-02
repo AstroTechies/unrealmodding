@@ -19,6 +19,7 @@ macro_rules! parse_int_property {
     };
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct Int8Property {
     name: FName,
     property_guid: Option<Guid>,
@@ -30,6 +31,7 @@ pub enum ByteType {
     Long
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct ByteProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -39,54 +41,63 @@ pub struct ByteProperty {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq)]
 pub struct BoolProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: bool
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct IntProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: i32
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct Int16Property {
     name: FName,
     property_guid: Option<Guid>,
     value: i16
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct Int64Property {
     name: FName,
     property_guid: Option<Guid>,
     value: i64
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct UInt16Property {
     name: FName,
     property_guid: Option<Guid>,
     value: u16
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct UInt32Property {
     name: FName,
     property_guid: Option<Guid>,
     value: u32
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct UInt64Property {
     name: FName,
     property_guid: Option<Guid>,
     value: u64
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct FloatProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: f32
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct DoubleProperty {
     name: FName,
     property_guid: Option<Guid>,

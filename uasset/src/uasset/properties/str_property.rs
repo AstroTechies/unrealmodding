@@ -5,14 +5,14 @@ use num_enum::TryFromPrimitiveError;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, flags::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid};
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct StrProperty {
     name: FName,
     property_guid: Option<Guid>,
     value: String
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct TextProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -24,7 +24,7 @@ pub struct TextProperty {
     value: Option<String>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct NameProperty {
     name: FName,
     property_guid: Option<Guid>,

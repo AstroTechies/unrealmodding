@@ -6,6 +6,7 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset},
 
 use super::{Property, array_property::ArrayProperty};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct SetProperty {
     name: FName,
     property_guid: Option<Guid>,

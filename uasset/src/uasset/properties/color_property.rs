@@ -4,14 +4,14 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::Color}, optional_guid};
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct ColorProperty {
     name: FName,
     property_guid: Option<Guid>,
     color: Color<u8>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct LinearColorProperty {
     name: FName,
     property_guid: Option<Guid>,

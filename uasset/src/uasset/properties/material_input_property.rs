@@ -14,6 +14,7 @@ pub struct MaterialExpression {
     expression_name: FName
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct ColorMaterialInputProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -21,6 +22,7 @@ pub struct ColorMaterialInputProperty {
     value: ColorProperty
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct ScalarMaterialInputProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -28,6 +30,7 @@ pub struct ScalarMaterialInputProperty {
     value: f32
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct ShadingModelMaterialInputProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -35,6 +38,7 @@ pub struct ShadingModelMaterialInputProperty {
     value: u32
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct VectorMaterialInputProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -42,6 +46,7 @@ pub struct VectorMaterialInputProperty {
     value: VectorProperty
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct Vector2MaterialInputProperty {
     name: FName,
     property_guid: Option<Guid>,
@@ -49,12 +54,14 @@ pub struct Vector2MaterialInputProperty {
     value: Vector2DProperty
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct ExpressionInputProperty {
     name: FName,
     property_guid: Option<Guid>,
     material_expression: MaterialExpression
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct MaterialAttributesInputProperty {
     name: FName,
     property_guid: Option<Guid>,

@@ -7,6 +7,7 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset},
 
 use super::{Property, struct_property::StructProperty};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct MapProperty {
     name: FName,
     property_guid: Option<Guid>,
