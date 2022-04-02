@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct MulticastDelegate {
     number: i32,
     delegate: FName
@@ -11,9 +12,9 @@ pub struct MulticastDelegate {
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct MulticastDelegateProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vec<MulticastDelegate>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vec<MulticastDelegate>
 }
 
 impl MulticastDelegate {

@@ -6,9 +6,9 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset},
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct GameplayTagContainerProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vec<FName>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vec<FName>
 }
 
 impl GameplayTagContainerProperty {

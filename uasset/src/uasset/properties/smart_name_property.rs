@@ -6,12 +6,12 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, 
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SmartNameProperty {
-    name: FName,
-    property_guid: Option<Guid>,
+    pub name: FName,
+    pub property_guid: Option<Guid>,
     
-    display_name: FName,
-    smart_name_id: Option<u16>,
-    temp_guid: Option<Guid>
+    pub display_name: FName,
+    pub smart_name_id: Option<u16>,
+    pub temp_guid: Option<Guid>
 }
 
 impl SmartNameProperty {

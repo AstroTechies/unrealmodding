@@ -1,60 +1,61 @@
 use std::io::{Cursor, Error, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::{Color, Vector, Vector4}}, optional_guid};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct VectorProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vector<f32>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vector<OrderedFloat<f32>>
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct IntPointProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    x: i32,
-    y: i32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub x: i32,
+    pub y: i32
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector4Property {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vector4<f32>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vector4<OrderedFloat<f32>>
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector2DProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    x: f32,
-    y: f32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub x: OrderedFloat<f32>,
+    pub y: OrderedFloat<f32>
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct QuatProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vector4<f32>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vector4<OrderedFloat<f32>>
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct RotatorProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vector<f32>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vector<OrderedFloat<f32>>
 }
 
 impl VectorProperty {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let value = Vector::new(
-            cursor.read_f32::<LittleEndian>()?,
-            cursor.read_f32::<LittleEndian>()?,
-            cursor.read_f32::<LittleEndian>()?
+            OrderedFloat(cursor.read_f32::<LittleEndian>()?),
+            OrderedFloat(cursor.read_f32::<LittleEndian>()?),
+            OrderedFloat(cursor.read_f32::<LittleEndian>()?)
         );
         Ok(VectorProperty {
             name,
@@ -83,10 +84,10 @@ impl Vector4Property {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         
-        let x = cursor.read_f32::<LittleEndian>()?;
-        let y = cursor.read_f32::<LittleEndian>()?;
-        let z = cursor.read_f32::<LittleEndian>()?;
-        let w = cursor.read_f32::<LittleEndian>()?;
+        let x = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let y = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let z = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let w = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
         let value = Vector4::new(x, y, z, w);
         Ok(Vector4Property {
             name,
@@ -100,8 +101,8 @@ impl Vector2DProperty {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         
-        let x = cursor.read_f32::<LittleEndian>()?;
-        let y = cursor.read_f32::<LittleEndian>()?;
+        let x = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let y = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
 
         Ok(Vector2DProperty {
             name,
@@ -115,10 +116,10 @@ impl QuatProperty {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         
-        let x = cursor.read_f32::<LittleEndian>()?;
-        let y = cursor.read_f32::<LittleEndian>()?;
-        let z = cursor.read_f32::<LittleEndian>()?;
-        let w = cursor.read_f32::<LittleEndian>()?;
+        let x = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let y = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let z = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let w = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
         let value = Vector4::new(x, y, z, w);
 
         Ok(QuatProperty {
@@ -133,9 +134,9 @@ impl RotatorProperty {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         
-        let x = cursor.read_f32::<LittleEndian>()?;
-        let y = cursor.read_f32::<LittleEndian>()?;
-        let z = cursor.read_f32::<LittleEndian>()?;
+        let x = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let y = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let z = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
         let value = Vector::new(x, y, z);
 
         Ok(RotatorProperty {
@@ -148,11 +149,11 @@ impl RotatorProperty {
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct BoxProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    v1: VectorProperty,
-    v2: VectorProperty,
-    is_valid: bool
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub v1: VectorProperty,
+    pub v2: VectorProperty,
+    pub is_valid: bool
 }
 
 impl BoxProperty {

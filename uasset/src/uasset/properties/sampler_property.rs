@@ -1,23 +1,24 @@
 use std::io::{Cursor, Error, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    prob: Vec<f32>,
-    alias: Vec<i32>,
-    total_weight: f32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub prob: Vec<OrderedFloat<f32>>,
+    pub alias: Vec<i32>,
+    pub total_weight: OrderedFloat<f32>
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    sampler_property: WeightedRandomSamplerProperty
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub sampler_property: WeightedRandomSamplerProperty
 }
 
 impl WeightedRandomSamplerProperty {
@@ -27,7 +28,7 @@ impl WeightedRandomSamplerProperty {
         let size = cursor.read_i32::<LittleEndian>()?;
         let prob = Vec::with_capacity(size as usize);
         for i in 0..size as usize {
-            prob[i] = cursor.read_f32::<LittleEndian>()?;
+            prob[i] = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
         }
 
         let size = cursor.read_i32::<LittleEndian>()?;
@@ -36,7 +37,7 @@ impl WeightedRandomSamplerProperty {
             alias[i] = cursor.read_i32::<LittleEndian>()?;
         }
 
-        let total_weight = cursor.read_f32::<LittleEndian>()?;
+        let total_weight = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
 
         Ok(WeightedRandomSamplerProperty {
             name,

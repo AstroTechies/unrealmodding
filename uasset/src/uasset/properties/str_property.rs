@@ -7,28 +7,28 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4vers
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct StrProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: String
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: String
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct TextProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    culture_invariant_string: Option<String>,
-    namespace: Option<String>,
-    table_id: Option<FName>,
-    flags: u32,
-    history_type: Option<i8>,
-    value: Option<String>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub culture_invariant_string: Option<String>,
+    pub namespace: Option<String>,
+    pub table_id: Option<FName>,
+    pub flags: u32,
+    pub history_type: Option<i8>,
+    pub value: Option<String>
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct NameProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: FName
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: FName
 }
 
 

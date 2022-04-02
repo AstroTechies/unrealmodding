@@ -1,6 +1,7 @@
 use std::io::{Cursor, Error, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
@@ -21,11 +22,12 @@ macro_rules! parse_int_property {
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct Int8Property {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: i8
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: i8
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub enum ByteType {
     Byte,
     Long
@@ -33,75 +35,74 @@ pub enum ByteType {
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ByteProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    enum_type: Option<i64>,
-    byte_type: ByteType,
-    value: i64
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub enum_type: Option<i64>,
+    pub byte_type: ByteType,
+    pub value: i64
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
-#[derive(Hash, PartialEq, Eq)]
 pub struct BoolProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: bool
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: bool
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct IntProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: i32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: i32
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct Int16Property {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: i16
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: i16
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct Int64Property {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: i64
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: i64
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UInt16Property {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: u16
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: u16
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UInt32Property {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: u32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: u32
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UInt64Property {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: u64
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: u64
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct FloatProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: f32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: OrderedFloat<f32>
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct DoubleProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: f64
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: OrderedFloat<f64>
 }
 
 impl BoolProperty {
@@ -182,9 +183,25 @@ impl UInt64Property {
 }
 
 impl FloatProperty {
-    parse_int_property!(FloatProperty, read_f32);
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(cursor, include_header);
+
+        Ok(FloatProperty {
+            name,
+            property_guid,
+            value: OrderedFloat(cursor.read_f32::<LittleEndian>()?)
+        })
+    }
 }
 
 impl DoubleProperty {
-    parse_int_property!(DoubleProperty, read_f64);
+    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(cursor, include_header);
+
+        Ok(DoubleProperty {
+            name,
+            property_guid,
+            value: OrderedFloat(cursor.read_f64::<LittleEndian>()?)
+        })
+    }
 }

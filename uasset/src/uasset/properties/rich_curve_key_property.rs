@@ -2,10 +2,11 @@ use std::io::{Cursor, Error, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
-#[derive(IntoPrimitive, TryFromPrimitive)]
+#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
 #[repr(i8)]
 pub enum RichCurveInterpMode {
     Linear,
@@ -14,7 +15,7 @@ pub enum RichCurveInterpMode {
     None
 }
 
-#[derive(IntoPrimitive, TryFromPrimitive)]
+#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
 #[repr(i8)]
 pub enum RichCurveTangentMode {
     Auto,
@@ -23,7 +24,7 @@ pub enum RichCurveTangentMode {
     None
 }
 
-#[derive(IntoPrimitive, TryFromPrimitive)]
+#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
 #[repr(i8)]
 pub enum RichCurveTangentWeightMode {
     WeightedNone,
@@ -34,18 +35,18 @@ pub enum RichCurveTangentWeightMode {
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct RichCurveKeyProperty {
-    name: FName,
-    property_guid: Option<Guid>,
+    pub name: FName,
+    pub property_guid: Option<Guid>,
 
-    interp_mode: RichCurveInterpMode,
-    tangent_mode: RichCurveTangentMode,
-    tangent_weight_mode: RichCurveTangentWeightMode,
-    time: f32,
-    value: f32,
-    arrive_tangent: f32,
-    arrive_tangent_weight: f32,
-    leave_tangent: f32,
-    leave_tangent_weight: f32
+    pub interp_mode: RichCurveInterpMode,
+    pub tangent_mode: RichCurveTangentMode,
+    pub tangent_weight_mode: RichCurveTangentWeightMode,
+    pub time: OrderedFloat<f32>,
+    pub value: OrderedFloat<f32>,
+    pub arrive_tangent: OrderedFloat<f32>,
+    pub arrive_tangent_weight: OrderedFloat<f32>,
+    pub leave_tangent: OrderedFloat<f32>,
+    pub leave_tangent_weight: OrderedFloat<f32>
 }
 
 impl RichCurveKeyProperty {
@@ -56,12 +57,12 @@ impl RichCurveKeyProperty {
         let tangent_mode = RichCurveTangentMode::try_from(cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
         let tangent_weight_mode = RichCurveTangentWeightMode::try_from(cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
-        let time = cursor.read_f32::<LittleEndian>()?;
-        let value = cursor.read_f32::<LittleEndian>()?;
-        let arrive_tangent = cursor.read_f32::<LittleEndian>()?;
-        let arrive_tangent_weight = cursor.read_f32::<LittleEndian>()?;
-        let leave_tangent = cursor.read_f32::<LittleEndian>()?;
-        let leave_tangent_weight = cursor.read_f32::<LittleEndian>()?;
+        let time = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let value = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let arrive_tangent = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let arrive_tangent_weight = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let leave_tangent = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let leave_tangent_weight = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
 
         Ok(RichCurveKeyProperty {
             name,

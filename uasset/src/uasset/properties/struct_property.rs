@@ -8,12 +8,12 @@ use super::Property;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct StructProperty {
-    name: FName,
-    struct_type: Option<FName>,
-    struct_guid: Option<Guid>,
-    property_guid: Option<Guid>,
-    serialize_none: bool,
-    value: Vec<Property>
+    pub name: FName,
+    pub struct_type: Option<FName>,
+    pub struct_guid: Option<Guid>,
+    pub property_guid: Option<Guid>,
+    pub serialize_none: bool,
+    pub value: Vec<Property>
 }
 
 impl StructProperty {

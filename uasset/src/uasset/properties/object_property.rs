@@ -6,24 +6,24 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset},
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: i32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: i32
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: String
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: String
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: FName,
-    id: u32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: FName,
+    pub id: u32
 }
 
 impl ObjectProperty {

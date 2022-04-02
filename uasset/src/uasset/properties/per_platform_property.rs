@@ -1,14 +1,15 @@
 use std::io::{Cursor, Error, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vec<bool>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vec<bool>
 }
 
 impl PerPlatformBoolProperty {
@@ -32,9 +33,9 @@ impl PerPlatformBoolProperty {
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vec<i32>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vec<i32>
 }
 
 impl PerPlatformIntProperty {
@@ -58,9 +59,9 @@ impl PerPlatformIntProperty {
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vec<f32>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vec<OrderedFloat<f32>>
 }
 
 impl PerPlatformFloatProperty {
@@ -71,7 +72,7 @@ impl PerPlatformFloatProperty {
         let value = Vec::with_capacity(num_entries as usize);
 
         for i in 0..num_entries as usize {
-            value[i] = cursor.read_f32::<LittleEndian>()?;
+            value[i] = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
         }
 
         Ok(PerPlatformFloatProperty {

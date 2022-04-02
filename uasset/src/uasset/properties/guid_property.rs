@@ -6,9 +6,9 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, option
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct GuidProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Guid
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Guid
 }
 
 impl GuidProperty {

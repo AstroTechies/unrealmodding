@@ -1,11 +1,13 @@
 use std::io::{Cursor, Error, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 use super::{color_property::ColorProperty, vector_property::{Vector2DProperty, VectorProperty}};
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct MaterialExpression {
     name: FName,
     extras: Vec<u8>,
@@ -16,56 +18,56 @@ pub struct MaterialExpression {
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ColorMaterialInputProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    material_expression: MaterialExpression,
-    value: ColorProperty
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub material_expression: MaterialExpression,
+    pub value: ColorProperty
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ScalarMaterialInputProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    material_expression: MaterialExpression,
-    value: f32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub material_expression: MaterialExpression,
+    pub value: OrderedFloat<f32>
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ShadingModelMaterialInputProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    material_expression: MaterialExpression,
-    value: u32
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub material_expression: MaterialExpression,
+    pub value: u32
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct VectorMaterialInputProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    material_expression: MaterialExpression,
-    value: VectorProperty
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub material_expression: MaterialExpression,
+    pub value: VectorProperty
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct Vector2MaterialInputProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    material_expression: MaterialExpression,
-    value: Vector2DProperty
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub material_expression: MaterialExpression,
+    pub value: Vector2DProperty
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ExpressionInputProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    material_expression: MaterialExpression
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub material_expression: MaterialExpression
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct MaterialAttributesInputProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    material_expression: MaterialExpression
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub material_expression: MaterialExpression
 }
 
 impl MaterialExpression {
@@ -115,7 +117,7 @@ impl ScalarMaterialInputProperty {
             name,
             property_guid,
             material_expression,
-            value
+            value: OrderedFloat(value)
         })
     }
 }

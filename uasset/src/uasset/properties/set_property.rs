@@ -8,11 +8,11 @@ use super::{Property, array_property::ArrayProperty};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SetProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    array_type: Option<FName>,
-    value: Vec<Property>,
-    removed_items: Vec<Property>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub array_type: Option<FName>,
+    pub value: Vec<Property>,
+    pub removed_items: Vec<Property>
 }
 
 impl SetProperty {

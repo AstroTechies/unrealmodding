@@ -6,16 +6,16 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, option
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct TimeSpanProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    ticks: i64
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub ticks: i64
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct DateTimeProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    ticks: i64
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub ticks: i64
 }
 
 impl TimeSpanProperty {

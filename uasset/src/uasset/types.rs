@@ -1,5 +1,5 @@
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector<T> {
     x: T,
     y: T,
@@ -12,7 +12,7 @@ impl<T> Vector<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector4<T> {
     x: T,
     y: T,
@@ -26,7 +26,7 @@ impl <T> Vector4<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Color<T> {
     r: T,
     g: T,

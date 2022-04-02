@@ -6,10 +6,10 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset},
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct EnumProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    enum_type: Option<FName>,
-    value: FName
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub enum_type: Option<FName>,
+    pub value: FName
 }
 
 impl EnumProperty {

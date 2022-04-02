@@ -1,5 +1,5 @@
 use core::num;
-use std::{io::{Cursor, Error, ErrorKind}, collections::HashMap};
+use std::{io::{Cursor, Error, ErrorKind}, collections::HashMap, hash::Hash};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -7,13 +7,23 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset},
 
 use super::{Property, struct_property::StructProperty};
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct MapProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    key_type: FName,
-    value_type: FName,
-    value: HashMap<Property, Property>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub key_type: FName,
+    pub value_type: FName,
+    pub value: HashMap<Property, Property>
+}
+
+impl Hash for MapProperty {
+    //todo: probably do something with map
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.property_guid.hash(state);
+        self.key_type.hash(state);
+        self.value_type.hash(state);
+    }
 }
 
 impl MapProperty {

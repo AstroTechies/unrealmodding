@@ -6,11 +6,11 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, 
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SoftPathProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    asset_path_name: Option<FName>,
-    sub_path: Option<String>,
-    path: Option<String>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub asset_path_name: Option<FName>,
+    pub sub_path: Option<String>,
+    pub path: Option<String>
 }
 
 impl SoftPathProperty {

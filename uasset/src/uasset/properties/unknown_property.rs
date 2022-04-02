@@ -6,9 +6,9 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, option
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UnknownProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    value: Vec<u8>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub value: Vec<u8>
 }
 
 impl UnknownProperty {

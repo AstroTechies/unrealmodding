@@ -1,21 +1,22 @@
 use std::io::{Cursor, Error, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::Color}, optional_guid};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct ColorProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    color: Color<u8>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub color: Color<u8>
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct LinearColorProperty {
-    name: FName,
-    property_guid: Option<Guid>,
-    color: Color<f32>
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub color: Color<OrderedFloat<f32>>
 }
 
 impl ColorProperty {
@@ -34,10 +35,10 @@ impl LinearColorProperty {
     pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(cursor, include_header);
         let color = Color::new(
-            cursor.read_f32::<LittleEndian>()?,
-            cursor.read_f32::<LittleEndian>()?,
-            cursor.read_f32::<LittleEndian>()?,
-            cursor.read_f32::<LittleEndian>()?
+            OrderedFloat(cursor.read_f32::<LittleEndian>()?),
+            OrderedFloat(cursor.read_f32::<LittleEndian>()?),
+            OrderedFloat(cursor.read_f32::<LittleEndian>()?),
+            OrderedFloat(cursor.read_f32::<LittleEndian>()?)
         );
         Ok(LinearColorProperty {
             name,
