@@ -41,10 +41,10 @@ pub mod uasset {
 
     #[derive(Debug)]
     pub struct Import {
-        class_package: FName,
-        class_name: FName,
-        outer_index: i32,
-        object_name: FName
+        pub class_package: FName,
+        pub class_name: FName,
+        pub outer_index: i32,
+        pub object_name: FName
     }
 
     impl Import {
@@ -469,6 +469,13 @@ pub mod uasset {
             }
 
             Some(&self.exports[index as usize])
+        }
+
+        fn get_export_class_type(self, index: i32) -> Option<FName> {
+            match is_import(index) {
+                true => self.get_import(index).map(|e| e.object_name),
+                false => Some(FName::new(index.to_string(), 0))
+            }
         }
         
         pub fn parse_data(&mut self) -> Result<(), Error> {
