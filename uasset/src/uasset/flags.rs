@@ -109,6 +109,21 @@ pub enum EArrayDim {
 
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
+pub enum EBlueprintTextLiteralType {
+    // Text is an empty string. The bytecode contains no strings, and you should use FText::GetEmpty() to initialize the FText instance.
+    Empty,
+    // Text is localized. The bytecode will contain three strings - source, key, and namespace - and should be loaded via FInternationalization
+    LocalizedText,
+    // Text is culture invariant. The bytecode will contain one string, and you should use FText::AsCultureInvariant to initialize the FText instance.
+    InvariantText,
+    // Text is a literal FString. The bytecode will contain one string, and you should use FText::FromString to initialize the FText instance.
+    LiteralString,
+    // Text is from a string table. The bytecode will contain an object pointer (not used) and two strings - the table ID, and key - and should be found via FText::FromStringTable
+    StringTableEntry
+}
+
+#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[repr(u8)]
 pub enum ELifetimeCondition
 {
     // This property has no condition, and will send anytime it changes

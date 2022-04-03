@@ -1,8 +1,10 @@
-use std::io::{Cursor, Error};
+use std::io::{Cursor, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt};
 use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
 use crate::uasset::cursor_ext::CursorExt;
+use crate::uasset::flags::EBlueprintTextLiteralType;
+use crate::uasset::flags::EBlueprintTextLiteralType::LocalizedText;
 use crate::uasset::types::{Transform, Vector, Vector4};
 use crate::uasset::unreal_types::{FName, PackageIndex};
 
@@ -218,6 +220,60 @@ macro_rules! implement_value_expression {
     }
 }
 
+pub struct FScriptText {
+    text_literal_type: EBlueprintTextLiteralType,
+    localized_source: Option<KismetExpression>,
+    localized_key: Option<KismetExpression>,
+    localized_namespace: Option<KismetExpression>,
+    invariant_literal_string: Option<KismetExpression>,
+    literal_string: Option<KismetExpression>,
+    string_table_asset: Option<PackageIndex>,
+    string_table_id: Option<KismetExpression>,
+    string_table_key: Option<KismetExpression>
+}
+
+impl FScriptText {
+    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        let text_literal_type: EBlueprintTextLiteralType = cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid text literal type"))?;
+        let (mut localized_source, mut localized_key, mut localized_namespace,
+            mut invariant_literal_string, mut literal_string, mut string_table_asset,
+            mut string_table_id, mut string_table_key) =
+                        (None, None, None, None, None, None, None, None);
+
+        match text_literal_type {
+            EBlueprintTextLiteralType::LocalizedText => {
+                localized_source = Some(KismetExpression::new(cursor, asset)?);
+                localized_key = Some(KismetExpression::new(cursor, asset)?);
+                localized_namespace = Some(KismetExpression::new(cursor, asset)?);
+            },
+            EBlueprintTextLiteralType::InvariantText => {
+                invariant_literal_string = Some(KismetExpression::new(cursor, asset)?);
+            },
+            EBlueprintTextLiteralType::LiteralString => {
+                literal_string = Some(KismetExpression::new(cursor, asset)?);
+            },
+            EBlueprintTextLiteralType::StringTableEntry => {
+                string_table_asset = Some(PackageIndex::new(cursor.read_i32::<LittleEndian>()?));
+                string_table_id = Some(KismetExpression::new(cursor, asset)?);
+                string_table_key = Some(KismetExpression::new(cursor, asset)?);
+            }
+            _ => {}
+        };
+
+        Ok(FScriptText {
+            text_literal_type,
+            localized_source,
+            localized_key,
+            localized_namespace,
+            invariant_literal_string,
+            literal_string,
+            string_table_asset,
+            string_table_id,
+            string_table_key
+        })
+    }
+}
+
 #[enum_dispatch]
 pub trait KismetExpressionTrait {
 }
@@ -290,6 +346,15 @@ impl EX_VectorConst {
     }
 }
 
+pub struct EX_TextConst { value: Box<FScriptText> }
+impl EX_TextConst {
+    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        Ok(EX_TextConst {
+            value: Box::new(FScriptText::new(cursor, asset)?)
+        })
+    }
+}
+
 implement_expression!(EX_Breakpoint, EX_DeprecatedOp4A, EX_EndArray, EX_EndArrayConst, EX_EndFunctionParms,
     EX_EndMap, EX_EndMapConst, EX_EndOfScript, EX_EndParmValue, EX_EndSet, EX_EndSetConst,
     EX_EndStructConst, EX_False, EX_InstrumentationEvent, EX_IntOne, EX_IntZero,
@@ -303,4 +368,3 @@ implement_value_expression!(EX_SkipOffsetConst, u32, read_u32, LittleEndian);
 implement_value_expression!(EX_StringConst, String, read_string);
 implement_value_expression!(EX_UInt64Const, u64, read_u64, LittleEndian);
 implement_value_expression!(EX_UnicodeStringConst, String, read_string);
-
