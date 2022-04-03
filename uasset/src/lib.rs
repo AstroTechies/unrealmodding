@@ -36,6 +36,7 @@ pub mod uasset {
     pub mod properties;
     pub mod exports;
     pub mod uproperty;
+    pub mod fproperty;
     use custom_version::CustomVersion;
     use unreal_types::{FName, GenerationInfo};
 
