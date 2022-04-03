@@ -1,9 +1,9 @@
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector<T> {
-    x: T,
-    y: T,
-    z: T
+    pub x: T,
+    pub y: T,
+    pub z: T
 }
 
 impl<T> Vector<T> {
@@ -14,10 +14,10 @@ impl<T> Vector<T> {
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Vector4<T> {
-    x: T,
-    y: T,
-    z: T,
-    w: T
+    pub x: T,
+    pub y: T,
+    pub z: T,
+    pub w: T
 }
 
 impl <T> Vector4<T> {
@@ -28,10 +28,10 @@ impl <T> Vector4<T> {
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Color<T> {
-    r: T,
-    g: T,
-    b: T,
-    a: T
+    pub r: T,
+    pub g: T,
+    pub b: T,
+    pub a: T
 }
 
 impl<T> Color<T> {
@@ -43,5 +43,17 @@ impl<T> Color<T> {
 impl Color<u8> {
     pub fn from_argb(argb: i32) -> Self {
         Color::new(((argb >> 24) & 0xff) as u8, ((argb >> 16) & 0xff) as u8, ((argb >> 8) & 0xff) as u8, (argb & 0xff) as u8)
+    }
+}
+
+pub struct Transform<T> {
+    pub rotation: Vector4<T>,
+    pub translation: Vector<T>,
+    pub scale: Vector<T>
+}
+
+impl Transform<T> {
+    pub fn new(rotation: Vector4<T>, translation: Vector<T>, scale: Vector<T>) -> Self {
+        Transform { rotation, translation, scale }
     }
 }

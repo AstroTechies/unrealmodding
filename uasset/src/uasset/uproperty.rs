@@ -7,16 +7,6 @@ use crate::uasset::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersi
 use crate::uasset::flags::{EArrayDim, ELifetimeCondition, EPropertyFlags};
 use crate::uasset::unreal_types::{FName, PackageIndex};
 
-macro_rules! parse_next_index {
-    ($cursor:ident, $asset:ident) => {
-        match $asset.get_custom_version("FFrameworkObjectVersion").map(|e| e.version < FFrameworkObjectVersion::RemoveUField_Next as i32).unwrap_or(false) {
-            true => Some(PackageIndex::new($cursor.read_i32::<LittleEndian>()?)),
-            false => None
-        }
-    }
-}
-
-
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
         pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
@@ -110,8 +100,12 @@ impl UProperty {
     }
 }
 
+pub struct UField {
+    next: Option<PackageIndex>
+}
+
 pub struct UGenericProperty {
-    next: Option<PackageIndex>,
+    u_field: UField,
     array_dim: EArrayDim,
     property_flags: EPropertyFlags,
     rep_notify_func: FName,
@@ -215,9 +209,21 @@ pub struct UUInt64Property { generic_property: UGenericProperty }
 pub struct UNameProperty { generic_property: UGenericProperty }
 pub struct UStrProperty { generic_property: UGenericProperty }
 
+impl UField {
+    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        let next = match asset.get_custom_version("FFrameworkObjectVersion").map(|e| e.version < FFrameworkObjectVersion::RemoveUField_Next as i32).unwrap_or(false) {
+            true => Some(PackageIndex::new(cursor.read_i32::<LittleEndian>()?)),
+            false => None
+        };
+        Ok(UField {
+            next
+        })
+    }
+}
+
 impl UGenericProperty {
     pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let next = parse_next_index!(cursor, asset);
+        let u_field = UField::new(cursor, asset)?;
 
         let array_dim: EArrayDim = cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
         let property_flags: EPropertyFlags = cursor.read_u64::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid property flags"))?;
@@ -229,7 +235,7 @@ impl UGenericProperty {
         };
 
         Ok(UGenericProperty {
-            next,
+            u_field,
             array_dim,
             property_flags,
             rep_notify_func,
