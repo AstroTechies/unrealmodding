@@ -62,7 +62,7 @@ impl StringTable {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PackageIndex {
     pub index: i32
 }
@@ -87,3 +87,14 @@ impl PackageIndex {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct FieldPath {
+    pub path: Vec<FName>,
+    pub resolved_owner: PackageIndex
+}
+
+impl FieldPath {
+    pub fn new(path: Vec<FName>, resolved_owner: PackageIndex) -> Self {
+        FieldPath { path, resolved_owner }
+    }
+}
