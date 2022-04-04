@@ -1,13 +1,15 @@
+use std::collections::HashMap;
 use std::io::{Cursor, Error, Read, Seek, SeekFrom};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::uasset::Asset;
 use crate::uasset::custom_version::FCoreObjectVersion;
 use crate::uasset::exports::normal_export::NormalExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
+use crate::uasset::flags::EClassFlags;
 use crate::uasset::fproperty::FProperty;
 use crate::uasset::kismet::KismetExpression;
 use crate::uasset::ue4version::VER_UE4_16;
-use crate::uasset::unreal_types::PackageIndex;
+use crate::uasset::unreal_types::{FName, PackageIndex};
 use crate::uasset::uproperty::UField;
 
 pub struct StructExport {

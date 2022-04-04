@@ -5,6 +5,7 @@ pub mod string_table_export;
 pub mod enum_export;
 pub mod struct_export;
 pub mod property_export;
+pub mod class_export;
 
 use std::io::Error;
 

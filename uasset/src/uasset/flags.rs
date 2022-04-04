@@ -271,7 +271,8 @@ impl Default for EPropertyFlags {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[repr(u32)]
 pub enum EClassFlags
 {
     // No Flags
