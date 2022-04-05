@@ -7,7 +7,6 @@ use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::unreal_types::{FName, Guid, NamespacedString};
 
 
-#[derive(Debug, Default)]
 pub struct LevelExport {
     normal_export: NormalExport,
 
@@ -18,7 +17,7 @@ pub struct LevelExport {
 }
 
 impl LevelExport {
-    pub fn from_unk(unk: &UnknownExport, cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset, next_starting: i32) -> Result<Self, Error> {
+    pub fn from_unk(unk: &UnknownExport, cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset, next_starting: u64) -> Result<Self, Error> {
         let normal_export = NormalExport::from_unk(unk, cursor, asset)?;
 
         cursor.read_i32::<LittleEndian>()?;
@@ -37,7 +36,7 @@ impl LevelExport {
         cursor.read_i64::<LittleEndian>()?; // null
         let flags_probably = cursor.read_u64::<LittleEndian>()?;
         let mut misc_category_data = Vec::new();
-        while cursor.position() < next_starting as u64 - 1 {
+        while cursor.position() < next_starting - 1 {
             misc_category_data.push(cursor.read_i32::<LittleEndian>()?);
         }
         cursor.read_exact(&mut [0u8; 1])?;

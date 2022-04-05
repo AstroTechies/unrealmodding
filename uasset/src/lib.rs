@@ -10,6 +10,7 @@ mod tests {
 //pub use crate::ue4version;
 
 pub mod uasset {
+    use std::borrow::Borrow;
     use std::collections::HashMap;
     use std::collections::hash_map::DefaultHasher;
     use std::fmt::{Debug, Formatter};
@@ -18,6 +19,10 @@ pub mod uasset {
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian};
 
+    use crate::uasset::exports::enum_export::EnumExport;
+    use crate::uasset::exports::level_export::LevelExport;
+    use crate::uasset::exports::string_table_export::StringTableExport;
+    use crate::uasset::exports::struct_export::StructExport;
     use crate::uasset::exports::unknown_export::UnknownExport;
     use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
 
@@ -63,6 +68,7 @@ pub mod uasset {
     pub struct Asset {
         // raw data
         cursor: Cursor<Vec<u8>>,
+        data_length: u64,
 
         // parsed data
         pub info: String,
@@ -129,7 +135,7 @@ pub mod uasset {
         pub fn new(raw_data: Vec<u8>) -> Self {
             Asset {
                 cursor: Cursor::new(raw_data),
-
+                data_length: raw_data.len() as u64,
                 info: String::from("Serialized with unrealmodding/uasset"),
                 use_seperate_bulk_data_files: false,
                 engine_version: 0,
@@ -165,7 +171,7 @@ pub mod uasset {
                 world_tile_info_offset: 0,
                 preload_dependency_count: 0,
                 preload_dependency_offset: 0,
-                
+
                 override_name_map_hashes: HashMap::new(),
                 name_map_index_list: Vec::new(),
                 name_map_lookup: HashMap::new(),
@@ -400,10 +406,10 @@ pub mod uasset {
 
         fn search_name_reference(&mut self, name: String) -> Option<i32> {
             self.fix_name_map_lookup();
-            
+
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
-            
+
             match self.name_map_lookup.get(&s.finish()) {
                 Some(e) => Some(*e),
                 None => None
@@ -479,7 +485,7 @@ pub mod uasset {
                 false => Some(FName::new(index.to_string(), 0))
             }
         }
-        
+
         pub fn parse_data(&mut self) -> Result<(), Error> {
             println!("Parsing data...");
 
@@ -517,7 +523,7 @@ pub mod uasset {
                     export.outer_index = self.cursor.read_i32::<LittleEndian>()?;
                     export.object_name = self.read_fname()?;
                     export.object_flags = self.cursor.read_u32::<LittleEndian>()?;
-                    
+
                     if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
                         export.serial_size = self.cursor.read_i32::<LittleEndian>()? as i64;
                         export.serial_offset = self.cursor.read_i32::<LittleEndian>()? as i64;
@@ -525,7 +531,7 @@ pub mod uasset {
                         export.serial_size = self.cursor.read_i64::<LittleEndian>()?;
                         export.serial_offset = self.cursor.read_i64::<LittleEndian>()?;
                     }
-                    
+
                     export.forced_export = self.cursor.read_i32::<LittleEndian>()? == 1;
                     export.not_for_client = self.cursor.read_i32::<LittleEndian>()? == 1;
                     export.not_for_server = self.cursor.read_i32::<LittleEndian>()? == 1;
@@ -562,16 +568,16 @@ pub mod uasset {
                     let mut data: Vec<i32> = Vec::new();
                     for j in 0..size {
                         data.push(self.cursor.read_i32::<LittleEndian>()?);
-                    } 
+                    }
                     self.depends_map.unwrap().push(data);
                 }
-            } 
+            }
 
             if self.soft_package_reference_offset > 0 {
                 self.soft_package_reference_list = Some(Vec::new());
 
                 self.cursor.seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
-                
+
                 for i in 0..self.soft_package_reference_count {
                     self.soft_package_reference_list.unwrap().push(self.cursor.read_string()?);
                 }
@@ -594,34 +600,37 @@ pub mod uasset {
             }
 
             if self.header_offset > 0 && self.exports.len() > 0 {
-                for mut map_export in self.exports {
-                    // every export is unknown at this point
-                    match map_export {
-                        Export::UnknownExport(export) => {
-                            self.cursor.seek(SeekFrom::Start(export.serial_offset as u64))?;
-
-                            //todo: implement skips
-
-                            //is nextstarting if needed?
-                            let next_starting = export.serial_offset;
-
-                            let export_class_type = export_class_type_name.content;
-                            match export_class_type.as_str() {
-                                "Level" => {
-
-                                },
-                                _ => {
-
-                                }
-                            };
+                for i in 0..self.exports.len() {
+                    let Export::UnknownExport(unk_export) = &self.exports[i];
+                    
+                    let next_starting = match i < (self.exports.len() - 1) {
+                        true => {
+                            let Export::UnknownExport(next_export) = &self.exports[i + 1];
+                            next_export.serial_offset as u64
                         },
+                        false => self.data_length - 4
+                    };
+
+                    self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
+                            
+                    //todo: manual skips
+
+                    let export_class_type = self.get_export_class_type(i).ok_or(Error::new(ErrorKind::Other, "Unknown class type"))?;
+                    let export: Export = match export_class_type.content.as_str() {
+                        "Level" => LevelExport::from_unk(unk_export, &mut self.cursor, self, next_starting)?.into(),
+                        "StringTable" => StringTableExport::from_unk(unk_export, &mut self.cursor, self)?.into(),
+                        "Enum" | "UserDefinedEnum" => EnumExport::from_unk(unk_export, &mut self.cursor, self)?.into(),
+                        "Function" => StructExport::from_unk(unk_export, &mut self.cursor, self)?.into(),
                         _ => {
-                            return Err(Error::new(ErrorKind::Other, "Export type known before type initialization"));
+                            if export_class_type.content.ends_with("DataTable") {
+                                
+                            }
                         }
                     }
+
                 }
             }
-            
+
 
             // // ------------------------------------------------------------
             // header end, main data start
@@ -710,11 +719,11 @@ pub mod uasset {
         }
     }
 
-    fn is_import(index: i32) -> bool {
+    pub fn is_import(index: i32) -> bool {
         return index < 0;
     }
 
-    fn is_export(index: i32) -> bool {
+    pub fn is_export(index: i32) -> bool {
         return index > 0;
     }
 

@@ -32,6 +32,10 @@ impl StructProperty {
             property_guid = Some(cursor.read_property_guid()?);
         }
 
+        StructProperty::custom_header(name, cursor, length, asset, struct_type, struct_guid, property_guid)
+    }
+
+    pub fn custom_header(name: FName, cursor: &mut Cursor<Vec<u8>>, length: i64, asset: &mut Asset, struct_type: Option<FName>, struct_guid: Option<[u8; 16]>, property_guid: Option<[u8; 16]>) -> Result<Self, Error> {
         let mut custom_serialization = match struct_type {
             Some(ref e) => Property::has_custom_serialization(e.content),
             None => false
