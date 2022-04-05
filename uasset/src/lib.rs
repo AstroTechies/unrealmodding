@@ -39,6 +39,7 @@ pub mod uasset {
     use self::unreal_types::Guid;
 
     pub mod flags;
+    pub mod enums;
     pub mod custom_version;
     pub mod ue4version;
     pub mod types;
@@ -125,8 +126,8 @@ pub mod uasset {
         override_name_map_hashes: HashMap<String, u32>,
         name_map_index_list: Vec<String>,
         name_map_lookup: HashMap<u64, i32>,
-        imports: Vec<Import>,
-        exports: Vec<Export>,
+        pub imports: Vec<Import>,
+        pub exports: Vec<Export>,
         depends_map: Option<Vec<Vec<i32>>>,
         soft_package_reference_list: Option<Vec<String>>,
         world_tile_info: Option<FWorldTileInfo>,
@@ -455,7 +456,7 @@ pub mod uasset {
             let name_map_pointer = self.cursor.read_i32::<LittleEndian>()?;
             let number = self.cursor.read_i32::<LittleEndian>()?;
 
-            Ok(FName::new(self.get_name_reference(number), number))
+            Ok(FName::new(self.get_name_reference(name_map_pointer), number))
         }
 
         fn get_import(&'a self, index: i32) -> Option<&'a Import> {
@@ -576,7 +577,7 @@ pub mod uasset {
                     for j in 0..size {
                         data.push(self.cursor.read_i32::<LittleEndian>()?);
                     }
-                    depends_map[i] = data;
+                    depends_map.push(data);
                 }
                 self.depends_map = Some(depends_map);
             }
@@ -587,7 +588,7 @@ pub mod uasset {
                 self.cursor.seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
 
                 for i in 0..self.soft_package_reference_count as usize {
-                    soft_package_reference_list[i] = self.cursor.read_string()?;
+                    soft_package_reference_list.push(self.cursor.read_string()?);
                 }
                 self.soft_package_reference_list = Some(soft_package_reference_list);
             }
@@ -604,7 +605,7 @@ pub mod uasset {
                 let mut preload_dependencies = Vec::with_capacity(self.preload_dependency_count as usize);
 
                 for i in 0..self.preload_dependency_count as usize {
-                    preload_dependencies[i] = self.cursor.read_i32::<LittleEndian>()?;
+                    preload_dependencies.push(self.cursor.read_i32::<LittleEndian>()?);
                 }
                 self.preload_dependencies = Some(preload_dependencies);
             }
@@ -625,6 +626,7 @@ pub mod uasset {
                                 Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
                             }
                         };
+                        self.exports[i] = export?;
                     }
                 }
             }
@@ -660,7 +662,7 @@ pub mod uasset {
                     
             //todo: manual skips
 
-            let export_class_type = self.get_export_class_type(i as i32).ok_or(Error::new(ErrorKind::Other, "Unknown class type"))?;
+            let export_class_type = self.get_export_class_type(unk_export.class_index).ok_or(Error::new(ErrorKind::Other, "Unknown class type"))?;
             let mut export: Export = match export_class_type.content.as_str() {
                 "Level" => LevelExport::from_unk(unk_export, self, next_starting)?.into(),
                 "StringTable" => StringTableExport::from_unk(unk_export, self)?.into(),

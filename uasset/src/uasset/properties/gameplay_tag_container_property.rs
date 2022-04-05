@@ -18,7 +18,7 @@ impl GameplayTagContainerProperty {
         let length = asset.cursor.read_i32::<LittleEndian>()?;
         let mut value = Vec::with_capacity(length as usize);
         for i in 0..length as usize {
-            value[i] = asset.read_fname()?;
+            value.push(asset.read_fname()?);
         }
 
         Ok(GameplayTagContainerProperty {

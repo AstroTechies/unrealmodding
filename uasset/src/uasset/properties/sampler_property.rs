@@ -28,13 +28,13 @@ impl WeightedRandomSamplerProperty {
         let size = asset.cursor.read_i32::<LittleEndian>()?;
         let mut prob = Vec::with_capacity(size as usize);
         for i in 0..size as usize {
-            prob[i] = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
+            prob.push(OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?));
         }
 
         let size = asset.cursor.read_i32::<LittleEndian>()?;
         let mut alias = Vec::with_capacity(size as usize);
         for i in 0..size as usize {
-            alias[i] = asset.cursor.read_i32::<LittleEndian>()?;
+            alias.push(asset.cursor.read_i32::<LittleEndian>()?);
         }
 
         let total_weight = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);

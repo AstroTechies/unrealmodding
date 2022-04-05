@@ -39,7 +39,7 @@ impl StructExport {
         let num_index_entries = asset.cursor.read_i32::<LittleEndian>()?;
         let mut children = Vec::with_capacity(num_index_entries as usize);
         for i in 0..num_index_entries as usize {
-            children[i] = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+            children.push(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?));
         }
 
         let mut loaded_properties = match asset.get_custom_version("FCoreObjectVersion").map(|e| e.version >= FCoreObjectVersion::FProperties as i32).unwrap_or(false) {
@@ -47,7 +47,7 @@ impl StructExport {
                 let num_props = asset.cursor.read_i32::<LittleEndian>()?;
                 let mut props = Vec::with_capacity(num_props as usize);
                 for i in 0..num_props as usize {
-                    props[i] = FProperty::new(asset)?;
+                    props.push(FProperty::new(asset)?);
                 }
                 props
             },

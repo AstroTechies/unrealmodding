@@ -4,7 +4,8 @@ use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
 use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
-use crate::uasset::flags::{EArrayDim, ELifetimeCondition, EPropertyFlags};
+use crate::uasset::enums::{EArrayDim, ELifetimeCondition};
+use crate::uasset::flags::{EPropertyFlags};
 use crate::uasset::unreal_types::{FName, PackageIndex};
 
 macro_rules! parse_simple_property {
@@ -67,32 +68,32 @@ pub enum UProperty {
 impl UProperty {
     pub fn new(asset: &mut Asset, serialized_type: FName) -> Result<Self, Error> {
         let prop: UProperty = match serialized_type.content.as_str() {
-            "UEnumProperty" => UEnumProperty::new(asset)?.into(),
-            "UArrayProperty" => UArrayProperty::new(asset)?.into(),
-            "USetProperty" => USetProperty::new(asset)?.into(),
-            "UObjectProperty" => UObjectProperty::new(asset)?.into(),
-            "USoftObjectProperty" => USoftObjectProperty::new(asset)?.into(),
-            "ULazyObjectProperty" => ULazyObjectProperty::new(asset)?.into(),
-            "UClassProperty" => UClassProperty::new(asset)?.into(),
-            "USoftClassProperty" => USoftClassProperty::new(asset)?.into(),
-            "UDelegateProperty" => UDelegateProperty::new(asset)?.into(),
-            "UMulticastDelegateProperty" => UMulticastDelegateProperty::new(asset)?.into(),
-            "UMulticastInlineDelegateProperty" => UMulticastInlineDelegateProperty::new(asset)?.into(),
-            "UInterfaceProperty" => UInterfaceProperty::new(asset)?.into(),
-            "UMapProperty" => UMapProperty::new(asset)?.into(),
-            "UByteProperty" => UByteProperty::new(asset)?.into(),
-            "UStructProperty" => UStructProperty::new(asset)?.into(),
-            "UDoubleProperty" => UDoubleProperty::new(asset)?.into(),
-            "UFloatProperty" => UFloatProperty::new(asset)?.into(),
-            "UIntProperty" => UIntProperty::new(asset)?.into(),
-            "UInt8Property" => UInt8Property::new(asset)?.into(),
-            "UInt16Property" => UInt16Property::new(asset)?.into(),
-            "UInt64Property" => UInt64Property::new(asset)?.into(),
-            "UUInt8Property" => UUInt8Property::new(asset)?.into(),
-            "UUInt16Property" => UUInt16Property::new(asset)?.into(),
-            "UUInt64Property" => UUInt64Property::new(asset)?.into(),
-            "UNameProperty" => UNameProperty::new(asset)?.into(),
-            "UStrProperty" => UStrProperty::new(asset)?.into(),
+            "EnumProperty" => UEnumProperty::new(asset)?.into(),
+            "ArrayProperty" => UArrayProperty::new(asset)?.into(),
+            "SetProperty" => USetProperty::new(asset)?.into(),
+            "ObjectProperty" => UObjectProperty::new(asset)?.into(),
+            "SoftObjectProperty" => USoftObjectProperty::new(asset)?.into(),
+            "LazyObjectProperty" => ULazyObjectProperty::new(asset)?.into(),
+            "ClassProperty" => UClassProperty::new(asset)?.into(),
+            "SoftClassProperty" => USoftClassProperty::new(asset)?.into(),
+            "DelegateProperty" => UDelegateProperty::new(asset)?.into(),
+            "MulticastDelegateProperty" => UMulticastDelegateProperty::new(asset)?.into(),
+            "MulticastInlineDelegateProperty" => UMulticastInlineDelegateProperty::new(asset)?.into(),
+            "InterfaceProperty" => UInterfaceProperty::new(asset)?.into(),
+            "MapProperty" => UMapProperty::new(asset)?.into(),
+            "ByteProperty" => UByteProperty::new(asset)?.into(),
+            "StructProperty" => UStructProperty::new(asset)?.into(),
+            "DoubleProperty" => UDoubleProperty::new(asset)?.into(),
+            "FloatProperty" => UFloatProperty::new(asset)?.into(),
+            "IntProperty" => UIntProperty::new(asset)?.into(),
+            "Int8Property" => UInt8Property::new(asset)?.into(),
+            "Int16Property" => UInt16Property::new(asset)?.into(),
+            "Int64Property" => UInt64Property::new(asset)?.into(),
+            "UInt8Property" => UUInt8Property::new(asset)?.into(),
+            "UInt16Property" => UUInt16Property::new(asset)?.into(),
+            "UInt64Property" => UUInt64Property::new(asset)?.into(),
+            "NameProperty" => UNameProperty::new(asset)?.into(),
+            "StrProperty" => UStrProperty::new(asset)?.into(),
             _ => UGenericProperty::new(asset)?.into()
         };
 
@@ -227,7 +228,7 @@ impl UGenericProperty {
         let u_field = UField::new(asset)?;
 
         let array_dim: EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
-        let property_flags: EPropertyFlags = asset.cursor.read_u64::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid property flags"))?;
+        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid property flags"))?;
         let rep_notify_func = asset.read_fname()?;
 
         let blueprint_replication_condition: Option<ELifetimeCondition> = match asset.get_custom_version("FReleaseObjectVersion").map(|e| e.version < FReleaseObjectVersion::PropertiesSerializeRepCondition as i32).unwrap_or(false) {

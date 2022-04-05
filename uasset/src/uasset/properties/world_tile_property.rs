@@ -92,7 +92,7 @@ impl FWorldTileInfo {
             let num_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
             let mut list = Vec::with_capacity(num_entries);
             for i in 0..num_entries {
-                list[i] = FWorldTileLODInfo::new(asset)?;
+                list.push(FWorldTileLODInfo::new(asset)?);
             }
             lod_list = Some(list);
         }

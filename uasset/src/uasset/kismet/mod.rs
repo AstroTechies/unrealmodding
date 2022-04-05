@@ -5,8 +5,8 @@ use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
 use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::exports::property_export::PropertyExport;
-use crate::uasset::flags::EBlueprintTextLiteralType;
-use crate::uasset::flags::EBlueprintTextLiteralType::LocalizedText;
+use crate::uasset::enums::EBlueprintTextLiteralType;
+use crate::uasset::enums::EBlueprintTextLiteralType::LocalizedText;
 use crate::uasset::properties::Property;
 use crate::uasset::types::{Transform, Vector, Vector4};
 use crate::uasset::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETARRAY_BYTECODE};
@@ -324,7 +324,7 @@ impl KismetPropertyPointer {
             let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
             let mut names = Vec::with_capacity(num_entries as usize);
             for i in 0..num_entries as usize {
-                names[i] = asset.read_fname()?;
+                names.push(asset.read_fname()?);
             }
             let owner = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
             Ok(KismetPropertyPointer::from_new(FieldPath::new(names, owner)))
@@ -1185,7 +1185,7 @@ impl EX_SwitchValue {
             let term_a = KismetExpression::new(asset)?;
             let term_b = asset.cursor.read_u32::<LittleEndian>()?;
             let term_c = KismetExpression::new(asset)?;
-            cases[i] = KismetSwitchCase::new(term_a, term_b, term_c);
+            cases.push(KismetSwitchCase::new(term_a, term_b, term_c));
         }
         let default_term = Box::new(KismetExpression::new(asset)?);
         Ok(EX_SwitchValue {

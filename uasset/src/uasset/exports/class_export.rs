@@ -50,10 +50,10 @@ impl ClassExport {
             func_map.insert(name, function_export);
         }
 
-        let class_flags: EClassFlags = asset.cursor.read_u32::<LittleEndian>().map(|e| match asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
-            true => e ^ EClassFlags::CLASS_NotPlaceable as u32,
-            false => e
-        })?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid class flags"))?;
+        let mut class_flags = EClassFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid class flags"))?;
+        if asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
+            class_flags = class_flags ^ EClassFlags::CLASS_NotPlaceable
+        }
 
         let class_within = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
         let class_config_name = asset.read_fname()?;
@@ -75,7 +75,7 @@ impl ClassExport {
         let num_interfaces = asset.cursor.read_i32::<LittleEndian>()? as usize;
         let mut interfaces = Vec::with_capacity(num_interfaces);
         for i in 0..num_interfaces {
-            interfaces[i] = SerializedInterfaceReference::new(asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()? == 1);
+            interfaces.push(SerializedInterfaceReference::new(asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()? == 1));
         }
 
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {

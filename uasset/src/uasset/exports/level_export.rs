@@ -29,7 +29,7 @@ impl LevelExport {
         let num_index_entries = asset.cursor.read_i32::<LittleEndian>()?;
         let mut index_data = Vec::with_capacity(num_index_entries as usize);
         for i in 0..num_index_entries as usize {
-            index_data[i] = asset.cursor.read_i32::<LittleEndian>()?;
+            index_data.push(asset.cursor.read_i32::<LittleEndian>()?);
         }
 
         let nms = asset.cursor.read_string()?;

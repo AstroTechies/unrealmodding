@@ -3,7 +3,8 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
 use crate::uasset::cursor_ext::CursorExt;
-use crate::uasset::flags::{EArrayDim, ELifetimeCondition, EObjectFlags, EPropertyFlags};
+use crate::uasset::enums::{ELifetimeCondition, EArrayDim};
+use crate::uasset::flags::{EObjectFlags, EPropertyFlags};
 use crate::uasset::unreal_types::{FName, PackageIndex};
 
 macro_rules! parse_simple_property {
@@ -196,10 +197,10 @@ impl FGenericProperty {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         
         let name = asset.read_fname()?;
-        let flags: EObjectFlags = asset.cursor.read_u32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid object flags"))?;
+        let flags: EObjectFlags = EObjectFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid object flags"))?;
         let array_dim : EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
         let element_size = asset.cursor.read_i32::<LittleEndian>()?;
-        let property_flags: EPropertyFlags = asset.cursor.read_u64::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid property flags"))?;
+        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid property flags"))?;
         let rep_index = asset.cursor.read_u16::<LittleEndian>()?;
         let rep_notify_func = asset.read_fname()?;
         let blueprint_replication_condition: ELifetimeCondition = asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid blueprint replication condition"))?;

@@ -30,7 +30,7 @@ impl MulticastDelegateProperty {
         let length = asset.cursor.read_i32::<LittleEndian>()?;
         let mut value = Vec::with_capacity(length as usize);
         for i in 0..length as usize {
-            value[i] = MulticastDelegate::new(asset.cursor.read_i32::<LittleEndian>()?, asset.read_fname()?);
+            value.push(MulticastDelegate::new(asset.cursor.read_i32::<LittleEndian>()?, asset.read_fname()?));
         }
 
         Ok(MulticastDelegateProperty {

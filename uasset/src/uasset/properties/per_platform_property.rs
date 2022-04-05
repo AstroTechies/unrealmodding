@@ -20,7 +20,7 @@ impl PerPlatformBoolProperty {
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for i in 0..num_entries as usize {
-            value[i] = asset.cursor.read_bool()?;
+            value.push(asset.cursor.read_bool()?);
         }
 
         Ok(PerPlatformBoolProperty {
@@ -46,7 +46,7 @@ impl PerPlatformIntProperty {
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for i in 0..num_entries as usize {
-            value[i] = asset.cursor.read_i32::<LittleEndian>()?;
+            value.push(asset.cursor.read_i32::<LittleEndian>()?);
         }
 
         Ok(PerPlatformIntProperty {
@@ -72,7 +72,7 @@ impl PerPlatformFloatProperty {
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for i in 0..num_entries as usize {
-            value[i] = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
+            value.push(OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?));
         }
 
         Ok(PerPlatformFloatProperty {

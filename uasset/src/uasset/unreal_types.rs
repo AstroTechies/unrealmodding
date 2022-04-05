@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
 
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 pub type Guid = [u8; 16];
 
 pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {

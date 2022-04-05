@@ -62,7 +62,7 @@ impl MapProperty {
         let type_2 = type_2.ok_or(Error::new(ErrorKind::Other, "No type2"))?;
 
         for i in 0..num_keys_to_remove as usize {
-            keys_to_remove[i] = MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?;
+            keys_to_remove.push(MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?);
         }
 
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
