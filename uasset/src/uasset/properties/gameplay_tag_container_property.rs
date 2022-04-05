@@ -12,11 +12,11 @@ pub struct GameplayTagContainerProperty {
 }
 
 impl GameplayTagContainerProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, asset: &mut Asset) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
         
-        let length = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(length as usize);
+        let length = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut value = Vec::with_capacity(length as usize);
         for i in 0..length as usize {
             value[i] = asset.read_fname()?;
         }

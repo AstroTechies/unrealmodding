@@ -8,9 +8,9 @@ use crate::uasset::unreal_types::{FName, PackageIndex};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
-        pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        pub fn new(asset: &mut Asset) -> Result<Self, Error> {
             Ok($prop_name {
-                generic_property: FGenericProperty::new(cursor, asset)?
+                generic_property: FGenericProperty::new(asset)?
             })
         }
     }
@@ -18,11 +18,11 @@ macro_rules! parse_simple_property {
 
 macro_rules! parse_simple_property_index {
     ($prop_name:ident, $($index_name:ident),*) => {
-        pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        pub fn new(asset: &mut Asset) -> Result<Self, Error> {
             Ok($prop_name {
-                generic_property: FGenericProperty::new(cursor, asset)?,
+                generic_property: FGenericProperty::new(asset)?,
                 $(
-                    $index_name: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
+                    $index_name: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
                 )*
             })
         }
@@ -31,11 +31,11 @@ macro_rules! parse_simple_property_index {
 
 macro_rules! parse_simple_property_prop {
     ($prop_name:ident, $($prop:ident),*) => {
-        pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        pub fn new(asset: &mut Asset) -> Result<Self, Error> {
             Ok($prop_name {
-                generic_property: FGenericProperty::new(cursor, asset)?,
+                generic_property: FGenericProperty::new(asset)?,
                 $(
-                    $prop: Box::new(FProperty::new(cursor, asset)?),
+                    $prop: Box::new(FProperty::new(asset)?),
                 )*
             })
         }
@@ -68,26 +68,26 @@ pub enum FProperty {
 }
 
 impl FProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         let serialized_type = asset.read_fname()?;
         let res: FProperty = match serialized_type.content.as_str() {
-            "EnumProperty" => FEnumProperty::new(cursor, asset)?.into(),
-            "ArrayProperty" => FArrayProperty::new(cursor, asset)?.into(),
-            "SetProperty" => FSetProperty::new(cursor, asset)?.into(),
-            "ObjectProperty" => FObjectProperty::new(cursor, asset)?.into(),
-            "SoftObjectProperty" => FSoftObjectProperty::new(cursor, asset)?.into(),
-            "ClassProperty" => FClassProperty::new(cursor, asset)?.into(),
-            "SoftClassProperty" => FSoftClassProperty::new(cursor, asset)?.into(),
-            "DelegateProperty" => FDelegateProperty::new(cursor, asset)?.into(),
-            "MulticastDelegateProperty" => FMulticastDelegateProperty::new(cursor, asset)?.into(),
-            "MulticastInlineDelegateProperty" => FMulticastInlineDelegateProperty::new(cursor, asset)?.into(),
-            "InterfaceProperty" => FInterfaceProperty::new(cursor, asset)?.into(),
-            "MapProperty" => FMapProperty::new(cursor, asset)?.into(),
-            "BoolProperty" => FBoolProperty::new(cursor, asset)?.into(),
-            "ByteProperty" => FByteProperty::new(cursor, asset)?.into(),
-            "StructProperty" => FStructProperty::new(cursor, asset)?.into(),
-            "NumericProperty" => FNumericProperty::new(cursor, asset)?.into(),
-            _ => FGenericProperty::new(cursor, asset)?.into()
+            "EnumProperty" => FEnumProperty::new(asset)?.into(),
+            "ArrayProperty" => FArrayProperty::new(asset)?.into(),
+            "SetProperty" => FSetProperty::new(asset)?.into(),
+            "ObjectProperty" => FObjectProperty::new(asset)?.into(),
+            "SoftObjectProperty" => FSoftObjectProperty::new(asset)?.into(),
+            "ClassProperty" => FClassProperty::new(asset)?.into(),
+            "SoftClassProperty" => FSoftClassProperty::new(asset)?.into(),
+            "DelegateProperty" => FDelegateProperty::new(asset)?.into(),
+            "MulticastDelegateProperty" => FMulticastDelegateProperty::new(asset)?.into(),
+            "MulticastInlineDelegateProperty" => FMulticastInlineDelegateProperty::new(asset)?.into(),
+            "InterfaceProperty" => FInterfaceProperty::new(asset)?.into(),
+            "MapProperty" => FMapProperty::new(asset)?.into(),
+            "BoolProperty" => FBoolProperty::new(asset)?.into(),
+            "ByteProperty" => FByteProperty::new(asset)?.into(),
+            "StructProperty" => FStructProperty::new(asset)?.into(),
+            "NumericProperty" => FNumericProperty::new(asset)?.into(),
+            _ => FGenericProperty::new(asset)?.into()
         };
 
         Ok(res)
@@ -95,14 +95,14 @@ impl FProperty {
 }
 
 pub struct FGenericProperty {
-    name: FName,
-    flags: EObjectFlags,
-    array_dim: EArrayDim,
-    element_size: i32,
-    property_flags: EPropertyFlags,
-    rep_index: u16,
-    rep_notify_func: FName,
-    blueprint_replication_condition: ELifetimeCondition
+    pub name: FName,
+    pub flags: EObjectFlags,
+    pub array_dim: EArrayDim,
+    pub element_size: i32,
+    pub property_flags: EPropertyFlags,
+    pub rep_index: u16,
+    pub rep_notify_func: FName,
+    pub blueprint_replication_condition: ELifetimeCondition
 }
 
 pub struct FEnumProperty {
@@ -164,9 +164,9 @@ pub struct FInterfaceProperty {
 }
 
 pub struct FMapProperty {
-    generic_property: FGenericProperty,
-    key_prop: Box<FProperty>,
-    value_prop: Box<FProperty>
+    pub generic_property: FGenericProperty,
+    pub key_prop: Box<FProperty>,
+    pub value_prop: Box<FProperty>
 }
 
 pub struct FBoolProperty {
@@ -186,22 +186,23 @@ pub struct FByteProperty {
 }
 
 pub struct FStructProperty {
-    generic_property: FGenericProperty,
-    struct_value: PackageIndex
+    pub generic_property: FGenericProperty,
+    pub struct_value: PackageIndex
 }
 
 pub struct FNumericProperty { generic_property: FGenericProperty }
 
 impl FGenericProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        
         let name = asset.read_fname()?;
-        let flags: EObjectFlags = cursor.read_u32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid object flags"))?;
-        let array_dim : EArrayDim = cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
-        let element_size = cursor.read_i32::<LittleEndian>()?;
-        let property_flags: EPropertyFlags = cursor.read_u64::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid property flags"))?;
-        let rep_index = cursor.read_u16::<LittleEndian>()?;
+        let flags: EObjectFlags = asset.cursor.read_u32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid object flags"))?;
+        let array_dim : EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
+        let element_size = asset.cursor.read_i32::<LittleEndian>()?;
+        let property_flags: EPropertyFlags = asset.cursor.read_u64::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid property flags"))?;
+        let rep_index = asset.cursor.read_u16::<LittleEndian>()?;
         let rep_notify_func = asset.read_fname()?;
-        let blueprint_replication_condition: ELifetimeCondition = cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid blueprint replication condition"))?;
+        let blueprint_replication_condition: ELifetimeCondition = asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid blueprint replication condition"))?;
 
         Ok(FGenericProperty {
             name,
@@ -217,10 +218,10 @@ impl FGenericProperty {
 }
 
 impl FEnumProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let generic_property = FGenericProperty::new(cursor, asset)?;
-        let enum_value = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
-        let underlying_prop = FProperty::new(cursor, asset)?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let generic_property = FGenericProperty::new(asset)?;
+        let enum_value = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let underlying_prop = FProperty::new(asset)?;
 
         Ok(FEnumProperty {
             generic_property,
@@ -231,14 +232,14 @@ impl FEnumProperty {
 }
 
 impl FBoolProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let generic_property = FGenericProperty::new(cursor, asset)?;
-        let field_size = cursor.read_u8()?;
-        let byte_offset = cursor.read_u8()?;
-        let byte_mask = cursor.read_u8()?;
-        let field_mask = cursor.read_u8()?;
-        let native_bool = cursor.read_bool()?;
-        let value = cursor.read_bool()?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let generic_property = FGenericProperty::new(asset)?;
+        let field_size = asset.cursor.read_u8()?;
+        let byte_offset = asset.cursor.read_u8()?;
+        let byte_mask = asset.cursor.read_u8()?;
+        let field_mask = asset.cursor.read_u8()?;
+        let native_bool = asset.cursor.read_bool()?;
+        let value = asset.cursor.read_bool()?;
 
         Ok(FBoolProperty {
             generic_property,

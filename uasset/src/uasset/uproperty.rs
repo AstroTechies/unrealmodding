@@ -9,19 +9,19 @@ use crate::uasset::unreal_types::{FName, PackageIndex};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
-        pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        pub fn new(asset: &mut Asset) -> Result<Self, Error> {
             Ok($prop_name {
-                generic_property: UGenericProperty::new(cursor, asset)?
+                generic_property: UGenericProperty::new(asset)?
             })
         }
     };
 
     ($prop_name:ident, $($field_name:ident),*) => {
-        pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+        pub fn new(asset: &mut Asset) -> Result<Self, Error> {
             Ok($prop_name {
-                generic_property: UGenericProperty::new(cursor, asset)?,
+                generic_property: UGenericProperty::new(asset)?,
                 $(
-                    $field_name: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
+                    $field_name: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
                 )*
             })
         }
@@ -65,35 +65,35 @@ pub enum UProperty {
 }
 
 impl UProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset, serialized_type: FName) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, serialized_type: FName) -> Result<Self, Error> {
         let prop: UProperty = match serialized_type.content.as_str() {
-            "UEnumProperty" => UEnumProperty::new(cursor, asset)?.into(),
-            "UArrayProperty" => UArrayProperty::new(cursor, asset)?.into(),
-            "USetProperty" => USetProperty::new(cursor, asset)?.into(),
-            "UObjectProperty" => UObjectProperty::new(cursor, asset)?.into(),
-            "USoftObjectProperty" => USoftObjectProperty::new(cursor, asset)?.into(),
-            "ULazyObjectProperty" => ULazyObjectProperty::new(cursor, asset)?.into(),
-            "UClassProperty" => UClassProperty::new(cursor, asset)?.into(),
-            "USoftClassProperty" => USoftClassProperty::new(cursor, asset)?.into(),
-            "UDelegateProperty" => UDelegateProperty::new(cursor, asset)?.into(),
-            "UMulticastDelegateProperty" => UMulticastDelegateProperty::new(cursor, asset)?.into(),
-            "UMulticastInlineDelegateProperty" => UMulticastInlineDelegateProperty::new(cursor, asset)?.into(),
-            "UInterfaceProperty" => UInterfaceProperty::new(cursor, asset)?.into(),
-            "UMapProperty" => UMapProperty::new(cursor, asset)?.into(),
-            "UByteProperty" => UByteProperty::new(cursor, asset)?.into(),
-            "UStructProperty" => UStructProperty::new(cursor, asset)?.into(),
-            "UDoubleProperty" => UDoubleProperty::new(cursor, asset)?.into(),
-            "UFloatProperty" => UFloatProperty::new(cursor, asset)?.into(),
-            "UIntProperty" => UIntProperty::new(cursor, asset)?.into(),
-            "UInt8Property" => UInt8Property::new(cursor, asset)?.into(),
-            "UInt16Property" => UInt16Property::new(cursor, asset)?.into(),
-            "UInt64Property" => UInt64Property::new(cursor, asset)?.into(),
-            "UUInt8Property" => UUInt8Property::new(cursor, asset)?.into(),
-            "UUInt16Property" => UUInt16Property::new(cursor, asset)?.into(),
-            "UUInt64Property" => UUInt64Property::new(cursor, asset)?.into(),
-            "UNameProperty" => UNameProperty::new(cursor, asset)?.into(),
-            "UStrProperty" => UStrProperty::new(cursor, asset)?.into(),
-            _ => UGenericProperty::new(cursor, asset)?.into()
+            "UEnumProperty" => UEnumProperty::new(asset)?.into(),
+            "UArrayProperty" => UArrayProperty::new(asset)?.into(),
+            "USetProperty" => USetProperty::new(asset)?.into(),
+            "UObjectProperty" => UObjectProperty::new(asset)?.into(),
+            "USoftObjectProperty" => USoftObjectProperty::new(asset)?.into(),
+            "ULazyObjectProperty" => ULazyObjectProperty::new(asset)?.into(),
+            "UClassProperty" => UClassProperty::new(asset)?.into(),
+            "USoftClassProperty" => USoftClassProperty::new(asset)?.into(),
+            "UDelegateProperty" => UDelegateProperty::new(asset)?.into(),
+            "UMulticastDelegateProperty" => UMulticastDelegateProperty::new(asset)?.into(),
+            "UMulticastInlineDelegateProperty" => UMulticastInlineDelegateProperty::new(asset)?.into(),
+            "UInterfaceProperty" => UInterfaceProperty::new(asset)?.into(),
+            "UMapProperty" => UMapProperty::new(asset)?.into(),
+            "UByteProperty" => UByteProperty::new(asset)?.into(),
+            "UStructProperty" => UStructProperty::new(asset)?.into(),
+            "UDoubleProperty" => UDoubleProperty::new(asset)?.into(),
+            "UFloatProperty" => UFloatProperty::new(asset)?.into(),
+            "UIntProperty" => UIntProperty::new(asset)?.into(),
+            "UInt8Property" => UInt8Property::new(asset)?.into(),
+            "UInt16Property" => UInt16Property::new(asset)?.into(),
+            "UInt64Property" => UInt64Property::new(asset)?.into(),
+            "UUInt8Property" => UUInt8Property::new(asset)?.into(),
+            "UUInt16Property" => UUInt16Property::new(asset)?.into(),
+            "UUInt64Property" => UUInt64Property::new(asset)?.into(),
+            "UNameProperty" => UNameProperty::new(asset)?.into(),
+            "UStrProperty" => UStrProperty::new(asset)?.into(),
+            _ => UGenericProperty::new(asset)?.into()
         };
 
         Ok(prop)
@@ -210,9 +210,10 @@ pub struct UNameProperty { generic_property: UGenericProperty }
 pub struct UStrProperty { generic_property: UGenericProperty }
 
 impl UField {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        
         let next = match asset.get_custom_version("FFrameworkObjectVersion").map(|e| e.version < FFrameworkObjectVersion::RemoveUField_Next as i32).unwrap_or(false) {
-            true => Some(PackageIndex::new(cursor.read_i32::<LittleEndian>()?)),
+            true => Some(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)),
             false => None
         };
         Ok(UField {
@@ -222,15 +223,15 @@ impl UField {
 }
 
 impl UGenericProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let u_field = UField::new(cursor, asset)?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let u_field = UField::new(asset)?;
 
-        let array_dim: EArrayDim = cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
-        let property_flags: EPropertyFlags = cursor.read_u64::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid property flags"))?;
+        let array_dim: EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
+        let property_flags: EPropertyFlags = asset.cursor.read_u64::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid property flags"))?;
         let rep_notify_func = asset.read_fname()?;
 
         let blueprint_replication_condition: Option<ELifetimeCondition> = match asset.get_custom_version("FReleaseObjectVersion").map(|e| e.version < FReleaseObjectVersion::PropertiesSerializeRepCondition as i32).unwrap_or(false) {
-            true => Some(cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid blueprint replication condition"))?),
+            true => Some(asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid blueprint replication condition"))?),
             false => None
         };
 
@@ -245,11 +246,12 @@ impl UGenericProperty {
 }
 
 impl UBoolProperty {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let generic_property = UGenericProperty::new(cursor, asset)?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        
+        let generic_property = UGenericProperty::new(asset)?;
 
-        let element_size = cursor.read_u8()?;
-        let native_bool = cursor.read_bool()?;
+        let element_size = asset.cursor.read_u8()?;
+        let native_bool = asset.cursor.read_bool()?;
 
         Ok(UBoolProperty {
             generic_property,

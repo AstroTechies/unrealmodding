@@ -3,7 +3,7 @@ use std::io::{Cursor, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ordered_float::OrderedFloat;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
@@ -22,22 +22,22 @@ pub struct SkeletalMeshSamplingLODBuiltDataProperty {
 }
 
 impl WeightedRandomSamplerProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
-        let size = cursor.read_i32::<LittleEndian>()?;
-        let prob = Vec::with_capacity(size as usize);
+        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut prob = Vec::with_capacity(size as usize);
         for i in 0..size as usize {
-            prob[i] = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+            prob[i] = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
         }
 
-        let size = cursor.read_i32::<LittleEndian>()?;
-        let alias = Vec::with_capacity(size as usize);
+        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut alias = Vec::with_capacity(size as usize);
         for i in 0..size as usize {
-            alias[i] = cursor.read_i32::<LittleEndian>()?;
+            alias[i] = asset.cursor.read_i32::<LittleEndian>()?;
         }
 
-        let total_weight = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+        let total_weight = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
 
         Ok(WeightedRandomSamplerProperty {
             name,
@@ -50,9 +50,9 @@ impl WeightedRandomSamplerProperty {
 }
 
 impl SkeletalMeshSamplingLODBuiltDataProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
-        let sampler_property = WeightedRandomSamplerProperty::new(name, cursor, false, 0)?;
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+        let sampler_property = WeightedRandomSamplerProperty::new(asset, name.clone(), false, 0)?;
 
         Ok(SkeletalMeshSamplingLODBuiltDataProperty {
             name,

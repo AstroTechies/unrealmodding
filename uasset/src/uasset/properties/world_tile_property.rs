@@ -16,18 +16,18 @@ pub struct FWorldTileLayer {
 }
 
 impl FWorldTileLayer {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, engine_version: i32) -> Result<Self, Error> {
-        let name = cursor.read_string()?;
-        let reserved_0 = cursor.read_i32::<LittleEndian>()?;
-        let reserved_1 = IntPointProperty::new(FName::default(), &mut cursor, false)?;
+    pub fn new(asset: &mut Asset, engine_version: i32) -> Result<Self, Error> {
+        let name = asset.cursor.read_string()?;
+        let reserved_0 = asset.cursor.read_i32::<LittleEndian>()?;
+        let reserved_1 = IntPointProperty::new(asset, FName::default(), false)?;
         
         let streaming_distance = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
-            true => Some(cursor.read_i32::<LittleEndian>()?),
+            true => Some(asset.cursor.read_i32::<LittleEndian>()?),
             false => None
         };
 
         let distance_streaming_enabled = match engine_version >= VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING {
-            true => Some(cursor.read_i32::<LittleEndian>()? == 1),
+            true => Some(asset.cursor.read_i32::<LittleEndian>()? == 1),
             false => None
         };
 
@@ -46,13 +46,13 @@ pub struct FWorldTileLODInfo {
 }
 
 impl FWorldTileLODInfo {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(FWorldTileLODInfo {
-            relative_streaming_distance: cursor.read_i32::<LittleEndian>()?,
-            reserved_0: cursor.read_f32::<LittleEndian>()?,
-            reserved_1: cursor.read_f32::<LittleEndian>()?,
-            reserved_2: cursor.read_i32::<LittleEndian>()?,
-            reserved_3: cursor.read_i32::<LittleEndian>()?
+            relative_streaming_distance: asset.cursor.read_i32::<LittleEndian>()?,
+            reserved_0: asset.cursor.read_f32::<LittleEndian>()?,
+            reserved_1: asset.cursor.read_f32::<LittleEndian>()?,
+            reserved_2: asset.cursor.read_i32::<LittleEndian>()?,
+            reserved_3: asset.cursor.read_i32::<LittleEndian>()?
         })
     }
 }
@@ -69,35 +69,36 @@ pub struct FWorldTileInfo {
 }
 
 impl FWorldTileInfo {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, engine_version: i32, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, engine_version: i32) -> Result<Self, Error> {
         let version = asset.get_custom_version("FFortniteMainBranchObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
 
         let position = match version.version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32 {
-            true => Vector::new(cursor.read_i32::<LittleEndian>()?, cursor.read_i32::<LittleEndian>()?, 0),
-            false => cursor.read_int_vector()?
+            true => Vector::new(asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()?, 0),
+            false => asset.cursor.read_int_vector()?
         };
 
-        let bounds = BoxProperty::new(FName::default(), cursor, false)?;
-        let layer = FWorldTileLayer::new(cursor, engine_version)?;
+        let bounds = BoxProperty::new(asset, FName::default(), false)?;
+        let layer = FWorldTileLayer::new(asset, engine_version)?;
 
         let mut hide_in_tile_view = None;
         let mut parent_tile_package_name = None;
         if engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
-            hide_in_tile_view = Some(cursor.read_i32::<LittleEndian>()? == 1);
-            parent_tile_package_name = Some(cursor.read_string()?);
+            hide_in_tile_view = Some(asset.cursor.read_i32::<LittleEndian>()? == 1);
+            parent_tile_package_name = Some(asset.cursor.read_string()?);
         }
 
         let mut lod_list = None;
         if engine_version >= VER_UE4_WORLD_LEVEL_INFO_LOD_LIST {
-            let num_entries = cursor.read_i32::<LittleEndian>()?;
-            lod_list = Some(Vec::new());
+            let num_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
+            let mut list = Vec::with_capacity(num_entries);
             for i in 0..num_entries {
-                lod_list.unwrap().push(FWorldTileLODInfo::new(cursor)?);
+                list[i] = FWorldTileLODInfo::new(asset)?;
             }
+            lod_list = Some(list);
         }
 
         let z_order = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_ZORDER {
-            true => Some(cursor.read_i32::<LittleEndian>()?),
+            true => Some(asset.cursor.read_i32::<LittleEndian>()?),
             false => None
         };
 

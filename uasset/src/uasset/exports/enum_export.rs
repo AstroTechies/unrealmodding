@@ -1,5 +1,6 @@
 use std::io::{Cursor, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt};
+use crate::implement_get;
 use crate::uasset::Asset;
 use crate::uasset::custom_version::FCoreObjectVersion;
 use crate::uasset::exports::normal_export::NormalExport;
@@ -7,6 +8,8 @@ use crate::uasset::ue4version::{VER_UE4_ENUM_CLASS_SUPPORT, VER_UE4_TIGHTLY_PACK
 use crate::uasset::unreal_types::FName;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::uasset::exports::unknown_export::UnknownExport;
+
+use super::ExportNormalTrait;
 
 #[derive(IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
@@ -22,11 +25,11 @@ pub struct Enum {
 }
 
 impl Enum {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         let mut names = Vec::new();
 
         if asset.engine_version < VER_UE4_TIGHTLY_PACKED_ENUMS {
-            let num_entries = cursor.read_i32::<LittleEndian>()?;
+            let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
             for i in 0..num_entries {
                 let name = asset.read_fname()?;
                 names.push((name, i as i64));
@@ -37,17 +40,17 @@ impl Enum {
                 None => false
             };
             if custom_version {
-                let num_entries = cursor.read_i32::<LittleEndian>()?;
+                let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
                 for i in 0..num_entries {
                     let name = asset.read_fname()?;
-                    let index = cursor.read_u8()?;
+                    let index = asset.cursor.read_u8()?;
                     names.push((name, index as i64));
                 }
             } else {
-                let num_entries = cursor.read_i32::<LittleEndian>()?;
+                let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
                 for i in 0..num_entries {
                     let name = asset.read_fname()?;
-                    let index = cursor.read_i64::<LittleEndian>()?;
+                    let index = asset.cursor.read_i64::<LittleEndian>()?;
                     names.push((name, index));
                 }
             }
@@ -55,13 +58,13 @@ impl Enum {
 
         let cpp_form = match asset.engine_version < VER_UE4_ENUM_CLASS_SUPPORT {
             true => {
-                let is_namespace = cursor.read_i32::<LittleEndian>()? == 1;
+                let is_namespace = asset.cursor.read_i32::<LittleEndian>()? == 1;
                 match is_namespace {
                     true => ECppForm::Namespaced,
                     false => ECppForm::Regular
                 }
             }
-            false => cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Unknown cppform"))?
+            false => asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Unknown cppform"))?
         };
 
         Ok(Enum {
@@ -77,12 +80,15 @@ pub struct EnumExport {
     pub value: Enum
 }
 
-impl EnumExport {
-    pub fn from_unk(unk: &UnknownExport, cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let normal_export = NormalExport::from_unk(unk, cursor, asset)?;
-        cursor.read_i32::<LittleEndian>()?;
+implement_get!(EnumExport);
 
-        let value = Enum::new(cursor, asset)?;
+impl EnumExport {
+    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
+        let mut cursor = &mut asset.cursor;
+        let normal_export = NormalExport::from_unk(unk, asset)?;
+        asset.cursor.read_i32::<LittleEndian>()?;
+
+        let value = Enum::new(asset)?;
         Ok(EnumExport {
             normal_export,
             value

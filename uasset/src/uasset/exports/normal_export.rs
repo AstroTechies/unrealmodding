@@ -4,6 +4,8 @@ use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::properties::Property;
 use crate::uasset::unreal_types::{FName, Guid};
 
+use super::ExportNormalTrait;
+
 pub struct NormalExport {
     pub class_index: i32,
     pub super_index: i32,
@@ -25,15 +27,29 @@ pub struct NormalExport {
     pub create_before_serialization_dependencies: i32,
     pub serialization_before_create_dependencies: i32,
     pub create_before_create_dependencies: i32,
+    pub extras: Vec<u8>,
 
     pub properties: Vec<Property>
 }
 
+impl ExportNormalTrait for NormalExport {
+    fn get_normal_export< 'a>(&'a self) -> Option<& 'a NormalExport> {
+        Some(&self)
+    }
+
+
+    fn get_normal_export_mut< 'a>(&'a mut self) -> Option<& 'a mut NormalExport> {
+        Some(self)
+    }
+
+}
+
 impl NormalExport {
-    pub fn from_unk(unk: &UnknownExport, cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
+        let mut cursor = &mut asset.cursor;
         let mut properties = Vec::new();
 
-        while let Some(e) = Property::new(cursor, asset, true)? {
+        while let Some(e) = Property::new(asset, true)? {
             properties.push(e);
         }
 
@@ -58,6 +74,7 @@ impl NormalExport {
             create_before_serialization_dependencies: unk.create_before_serialization_dependencies,
             serialization_before_create_dependencies: unk.serialization_before_create_dependencies,
             create_before_create_dependencies: unk.create_before_create_dependencies,
+            extras: Vec::new(),
 
             properties
         })

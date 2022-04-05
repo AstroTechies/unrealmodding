@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use super::unreal_types::{Guid, new_guid};
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CustomVersion {
     pub guid: Guid,
     pub friendly_name: Option<String>,

@@ -19,15 +19,21 @@ pub mod uasset {
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian};
 
+    use crate::uasset::exports::class_export::ClassExport;
+    use crate::uasset::exports::data_table_export::DataTableExport;
     use crate::uasset::exports::enum_export::EnumExport;
     use crate::uasset::exports::level_export::LevelExport;
+    use crate::uasset::exports::normal_export::NormalExport;
+    use crate::uasset::exports::property_export::PropertyExport;
+    use crate::uasset::exports::raw_export::RawExport;
     use crate::uasset::exports::string_table_export::StringTableExport;
     use crate::uasset::exports::struct_export::StructExport;
     use crate::uasset::exports::unknown_export::UnknownExport;
+    use crate::uasset::fproperty::FProperty;
     use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
 
     use self::cursor_ext::CursorExt;
-    use self::exports::Export;
+    use self::exports::{Export, ExportNormalTrait};
     use self::flags::{EPackageFlags, EObjectFlags};
     use self::properties::world_tile_property::FWorldTileInfo;
     use self::unreal_types::Guid;
@@ -67,7 +73,7 @@ pub mod uasset {
     //#[derive(Debug)]
     pub struct Asset {
         // raw data
-        cursor: Cursor<Vec<u8>>,
+        pub(crate) cursor: Cursor<Vec<u8>>,
         data_length: u64,
 
         // parsed data
@@ -134,8 +140,8 @@ pub mod uasset {
     impl<'a> Asset {
         pub fn new(raw_data: Vec<u8>) -> Self {
             Asset {
-                cursor: Cursor::new(raw_data),
                 data_length: raw_data.len() as u64,
+                cursor: Cursor::new(raw_data),
                 info: String::from("Serialized with unrealmodding/uasset"),
                 use_seperate_bulk_data_files: false,
                 engine_version: 0,
@@ -374,11 +380,11 @@ pub mod uasset {
             Ok(())
         }
 
-        fn get_custom_version(self, version_name: &str) -> Option<&CustomVersion> {
-            for version in self.custom_version {
-                if let Some(friendly_name) = version.friendly_name {
-                    if &friendly_name == version_name {
-                        return Some(&version);
+        fn get_custom_version(&'a self, version_name: &str) -> Option<&'a CustomVersion> {
+            for i in 0..self.custom_version.len() {
+                if let Some(friendly_name) = &self.custom_version[i].friendly_name {
+                    if friendly_name.as_str() == version_name {
+                        return Some(&self.custom_version[i])
                     }
                 }
             }
@@ -404,7 +410,7 @@ pub mod uasset {
             }
         }
 
-        fn search_name_reference(&mut self, name: String) -> Option<i32> {
+        fn search_name_reference(&mut self, name: &String) -> Option<i32> {
             self.fix_name_map_lookup();
 
             let mut s = DefaultHasher::new();
@@ -420,7 +426,7 @@ pub mod uasset {
             self.fix_name_map_lookup();
 
             if !force_add_duplicates {
-                let existing = self.search_name_reference(name);
+                let existing = self.search_name_reference(&name);
                 if existing.is_some() {
                     return existing.unwrap();
                 }
@@ -452,7 +458,7 @@ pub mod uasset {
             Ok(FName::new(self.get_name_reference(number), number))
         }
 
-        fn get_import(self, index: i32) -> Option<&'a Import> {
+        fn get_import(&'a self, index: i32) -> Option<&'a Import> {
             if !is_import(index) {
                 return None;
             }
@@ -465,7 +471,7 @@ pub mod uasset {
             Some(&self.imports[index as usize])
         }
 
-        fn get_export(self, index: i32) -> Option<&'a Export> {
+        fn get_export(&'a self, index: i32) -> Option<&'a Export> {
             if !is_export(index) {
                 return None;
             }
@@ -479,9 +485,9 @@ pub mod uasset {
             Some(&self.exports[index as usize])
         }
 
-        fn get_export_class_type(self, index: i32) -> Option<FName> {
+        fn get_export_class_type(&'a self, index: i32) -> Option<FName> {
             match is_import(index) {
-                true => self.get_import(index).map(|e| e.object_name),
+                true => self.get_import(index).map(|e| e.object_name.clone()),
                 false => Some(FName::new(index.to_string(), 0))
             }
         }
@@ -505,7 +511,8 @@ pub mod uasset {
             if self.import_offset > 0 {
                 self.cursor.seek(SeekFrom::Start(self.import_offset as u64));
                 for i in 0..self.import_count {
-                    self.imports.push(Import::new(self.read_fname()?, self.read_fname()?, self.cursor.read_i32::<LittleEndian>()?, self.read_fname()?));
+                    let import = Import::new(self.read_fname()?, self.read_fname()?, self.cursor.read_i32::<LittleEndian>()?, self.read_fname()?);
+                    self.imports.push(import);
                 }
             }
 
@@ -559,75 +566,66 @@ pub mod uasset {
             }
 
             if self.depends_offset > 0 {
-                self.depends_map = Some(Vec::new());
+                let mut depends_map = Vec::with_capacity(self.export_count as usize);
 
                 self.cursor.seek(SeekFrom::Start(self.depends_offset as u64))?;
 
-                for i in 0..self.export_count {
+                for i in 0..self.export_count as usize {
                     let size = self.cursor.read_i32::<LittleEndian>()?;
                     let mut data: Vec<i32> = Vec::new();
                     for j in 0..size {
                         data.push(self.cursor.read_i32::<LittleEndian>()?);
                     }
-                    self.depends_map.unwrap().push(data);
+                    depends_map[i] = data;
                 }
+                self.depends_map = Some(depends_map);
             }
 
             if self.soft_package_reference_offset > 0 {
-                self.soft_package_reference_list = Some(Vec::new());
+                let mut soft_package_reference_list = Vec::with_capacity(self.soft_package_reference_count as usize);
 
                 self.cursor.seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
 
-                for i in 0..self.soft_package_reference_count {
-                    self.soft_package_reference_list.unwrap().push(self.cursor.read_string()?);
+                for i in 0..self.soft_package_reference_count as usize {
+                    soft_package_reference_list[i] = self.cursor.read_string()?;
                 }
+                self.soft_package_reference_list = Some(soft_package_reference_list);
             }
 
             // TODO: Asset registry data parsing should be here
 
             if self.world_tile_info_offset > 0 {
                 self.cursor.seek(SeekFrom::Start(self.world_tile_info_offset as u64))?;
-                self.world_tile_info = Some(FWorldTileInfo::new(&mut self.cursor, self.engine_version, self)?);
+                self.world_tile_info = Some(FWorldTileInfo::new(self, self.engine_version)?);
             }
 
             if self.use_seperate_bulk_data_files {
                 self.cursor.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
-                self.preload_dependencies = Some(Vec::new());
+                let mut preload_dependencies = Vec::with_capacity(self.preload_dependency_count as usize);
 
-                for i in 0..self.preload_dependency_count {
-                    self.preload_dependencies.unwrap().push(self.cursor.read_i32::<LittleEndian>()?);
+                for i in 0..self.preload_dependency_count as usize {
+                    preload_dependencies[i] = self.cursor.read_i32::<LittleEndian>()?;
                 }
+                self.preload_dependencies = Some(preload_dependencies);
             }
 
             if self.header_offset > 0 && self.exports.len() > 0 {
                 for i in 0..self.exports.len() {
-                    let Export::UnknownExport(unk_export) = &self.exports[i];
-                    
-                    let next_starting = match i < (self.exports.len() - 1) {
-                        true => {
-                            let Export::UnknownExport(next_export) = &self.exports[i + 1];
-                            next_export.serial_offset as u64
-                        },
-                        false => self.data_length - 4
+                    let unk_export = match &self.exports[i] {
+                        Export::UnknownExport(export) => Some(export.clone()),
+                        _ => None
                     };
 
-                    self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
-                            
-                    //todo: manual skips
-
-                    let export_class_type = self.get_export_class_type(i).ok_or(Error::new(ErrorKind::Other, "Unknown class type"))?;
-                    let export: Export = match export_class_type.content.as_str() {
-                        "Level" => LevelExport::from_unk(unk_export, &mut self.cursor, self, next_starting)?.into(),
-                        "StringTable" => StringTableExport::from_unk(unk_export, &mut self.cursor, self)?.into(),
-                        "Enum" | "UserDefinedEnum" => EnumExport::from_unk(unk_export, &mut self.cursor, self)?.into(),
-                        "Function" => StructExport::from_unk(unk_export, &mut self.cursor, self)?.into(),
-                        _ => {
-                            if export_class_type.content.ends_with("DataTable") {
-                                
+                    if let Some(unk_export) = unk_export {
+                        let export: Result<Export, Error> = match self.read_export(&unk_export, i) {
+                            Ok(e) => Ok(e),
+                            Err(_) => {
+                                //todo: warning?
+                                self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
+                                Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
                             }
-                        }
+                        };
                     }
-
                 }
             }
 
@@ -645,6 +643,82 @@ pub mod uasset {
             println!("Cursor offset: {:02X?}", self.cursor.position());
 
             Ok(())
+        }
+
+        fn read_export(&mut self, unk_export: &UnknownExport, i: usize) -> Result<Export, Error> {
+            let next_starting = match i < (self.exports.len() - 1) {
+                true => {
+                    match &self.exports[i + 1] {
+                        Export::UnknownExport(next_export) => next_export.serial_offset as u64,
+                        _ => self.data_length - 4
+                    }
+                },
+                false => self.data_length - 4
+            };
+
+            self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
+                    
+            //todo: manual skips
+
+            let export_class_type = self.get_export_class_type(i as i32).ok_or(Error::new(ErrorKind::Other, "Unknown class type"))?;
+            let mut export: Export = match export_class_type.content.as_str() {
+                "Level" => LevelExport::from_unk(unk_export, self, next_starting)?.into(),
+                "StringTable" => StringTableExport::from_unk(unk_export, self)?.into(),
+                "Enum" | "UserDefinedEnum" => EnumExport::from_unk(unk_export, self)?.into(),
+                "Function" => StructExport::from_unk(unk_export, self)?.into(),
+                _ => {
+                    if export_class_type.content.ends_with("DataTable") {
+                        DataTableExport::from_unk(unk_export, self)?.into()
+                    } else if export_class_type.content.ends_with("BlueprintGeneratedClass") {
+                        let class_export = ClassExport::from_unk(unk_export, self)?;
+
+                        for entry in &class_export.struct_export.loaded_properties {
+                            if let FProperty::FMapProperty(map) = entry {
+                                let key_override = match &*map.key_prop {
+                                    FProperty::FStructProperty(struct_property) => match is_import(struct_property.struct_value.index) {
+                                        true => self.get_import(struct_property.struct_value.index).map(|e| e.object_name.content.to_owned()),
+                                        false => None
+                                    },
+                                    _ => None
+                                };
+                                if let Some(key) = key_override {
+                                    self.map_key_override.insert(map.generic_property.name.content.to_owned(), key);
+                                }
+
+                                let value_override = match &*map.key_prop {
+                                    FProperty::FStructProperty(struct_property) => match is_import(struct_property.struct_value.index) {
+                                        true => self.get_import(struct_property.struct_value.index).map(|e| e.object_name.content.to_owned()),
+                                        false => None
+                                    },
+                                    _ => None
+                                };
+                                
+                                if let Some(value) = value_override {
+                                    self.map_value_override.insert(map.generic_property.name.content.to_owned(), value);
+                                }
+                            }
+                        }
+                        class_export.into()
+                    } else if export_class_type.content.ends_with("Property") {
+                        PropertyExport::from_unk(unk_export, self)?.into()
+                    } else {
+                        NormalExport::from_unk(unk_export, self)?.into()
+                    }
+                }
+            };
+
+            let extras_len = (next_starting as i64 - self.cursor.position() as i64);
+            if extras_len < 0 {
+                // todo: warning?
+            } else {
+                if let Some(normal_export) = export.get_normal_export_mut() {
+                    let mut extras = Vec::with_capacity(extras_len as usize);
+                    self.cursor.read_exact(&mut extras)?;
+                    normal_export.extras = extras;
+                }
+            }
+
+            Ok(export)
         }
     }
 

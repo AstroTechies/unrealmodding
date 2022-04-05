@@ -24,13 +24,13 @@ impl MulticastDelegate {
 }
 
 impl MulticastDelegateProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, asset: &mut Asset) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
-        let length = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(length as usize);
+        let length = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut value = Vec::with_capacity(length as usize);
         for i in 0..length as usize {
-            value[i] = MulticastDelegate::new(cursor.read_i32::<LittleEndian>()?, asset.read_fname()?);
+            value[i] = MulticastDelegate::new(asset.cursor.read_i32::<LittleEndian>()?, asset.read_fname()?);
         }
 
         Ok(MulticastDelegateProperty {

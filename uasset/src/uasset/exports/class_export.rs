@@ -9,10 +9,12 @@ use crate::uasset::flags::EClassFlags;
 use crate::uasset::ue4version::{VER_UE4_ADD_COOKED_TO_UCLASS, VER_UE4_CLASS_NOTPLACEABLE_ADDED, VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING};
 use crate::uasset::unreal_types::{FName, PackageIndex};
 
+use super::ExportNormalTrait;
+
 pub struct SerializedInterfaceReference {
-    class: i32,
-    pointer_offset: i32,
-    implemented_by_k2: bool
+    pub class: i32,
+    pub pointer_offset: i32,
+    pub implemented_by_k2: bool
 }
 
 impl SerializedInterfaceReference {
@@ -22,73 +24,73 @@ impl SerializedInterfaceReference {
 }
 
 pub struct ClassExport {
-    struct_export: StructExport,
+    pub struct_export: StructExport,
 
-    func_map: HashMap<FName, PackageIndex>,
-    class_flags: EClassFlags,
-    class_within: PackageIndex,
-    class_config_name: FName,
-    interfaces: Vec<SerializedInterfaceReference>,
-    class_generated_by: PackageIndex,
-    deprecated_force_script_order: bool,
-    cooked: Option<bool>,
-    class_default_object: PackageIndex
+    pub func_map: HashMap<FName, PackageIndex>,
+    pub class_flags: EClassFlags,
+    pub class_within: PackageIndex,
+    pub class_config_name: FName,
+    pub interfaces: Vec<SerializedInterfaceReference>,
+    pub class_generated_by: PackageIndex,
+    pub deprecated_force_script_order: bool,
+    pub cooked: Option<bool>,
+    pub class_default_object: PackageIndex
 }
 
 impl ClassExport {
-    pub fn from_unk(unk: &UnknownExport, cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let struct_export = StructExport::from_unk(unk, cursor, asset)?;
+    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
+        let struct_export = StructExport::from_unk(unk, asset)?;
 
-        let num_func_index_entries = cursor.read_i32::<LittleEndian>()? as usize;
+        let num_func_index_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
         let mut func_map = HashMap::with_capacity(num_func_index_entries);
         for i in 0..num_func_index_entries {
             let name = asset.read_fname()?;
-            let function_export = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
+            let function_export = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
 
             func_map.insert(name, function_export);
         }
 
-        let class_flags: EClassFlags = cursor.read_u32::<LittleEndian>().map(|e| match asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
+        let class_flags: EClassFlags = asset.cursor.read_u32::<LittleEndian>().map(|e| match asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
             true => e ^ EClassFlags::CLASS_NotPlaceable as u32,
             false => e
         })?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid class flags"))?;
 
-        let class_within = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
+        let class_within = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
         let class_config_name = asset.read_fname()?;
         asset.add_name_reference(class_config_name.content.to_owned(), true);
 
         let mut interfaces_start = None;
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            interfaces_start = Some(cursor.position());
-            let num_interfaces = cursor.read_i32::<LittleEndian>()?;
-            cursor.seek(SeekFrom::Start(interfaces_start.unwrap() + size_of::<i32>() as u64 + num_interfaces as u64 * (size_of::<i32>() as u64 * 3)));
+            interfaces_start = Some(asset.cursor.position());
+            let num_interfaces = asset.cursor.read_i32::<LittleEndian>()?;
+            asset.cursor.seek(SeekFrom::Start(interfaces_start.unwrap() + size_of::<i32>() as u64 + num_interfaces as u64 * (size_of::<i32>() as u64 * 3)));
         }
 
-        let class_generated_by = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
-        let current_offset = cursor.position();
+        let class_generated_by = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let current_offset = asset.cursor.position();
 
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            cursor.seek(SeekFrom::Start(interfaces_start.unwrap()));
+            asset.cursor.seek(SeekFrom::Start(interfaces_start.unwrap()));
         }
-        let num_interfaces = cursor.read_i32::<LittleEndian>()? as usize;
+        let num_interfaces = asset.cursor.read_i32::<LittleEndian>()? as usize;
         let mut interfaces = Vec::with_capacity(num_interfaces);
         for i in 0..num_interfaces {
-            interfaces[i] = SerializedInterfaceReference::new(cursor.read_i32::<LittleEndian>()?, cursor.read_i32::<LittleEndian>()?, cursor.read_i32::<LittleEndian>()? == 1);
+            interfaces[i] = SerializedInterfaceReference::new(asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()? == 1);
         }
 
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            cursor.seek(SeekFrom::Start(current_offset));
+            asset.cursor.seek(SeekFrom::Start(current_offset));
         }
 
-        let deprecated_force_script_order = cursor.read_i32::<LittleEndian>()? == 1;
-        cursor.read_i64()?; // none
+        let deprecated_force_script_order = asset.cursor.read_i32::<LittleEndian>()? == 1;
+        asset.cursor.read_i64::<LittleEndian>()?; // none
 
         let cooked = match asset.engine_version >= VER_UE4_ADD_COOKED_TO_UCLASS {
-            true => Some(cursor.read_i32::<LittleEndian>()? == 1),
+            true => Some(asset.cursor.read_i32::<LittleEndian>()? == 1),
             false => None
         };
 
-        let class_default_object = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
+        let class_default_object = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
 
         Ok(ClassExport {
             struct_export,
@@ -103,5 +105,16 @@ impl ClassExport {
             cooked,
             class_default_object
         })
+    }
+}
+
+impl ExportNormalTrait for ClassExport {
+    fn get_normal_export< 'a>(&'a self) -> Option<& 'a super::normal_export::NormalExport> {
+        Some(&self.struct_export.normal_export)
+    }
+
+
+    fn get_normal_export_mut< 'a>(&'a mut self) -> Option<& 'a mut super::normal_export::NormalExport> {
+        Some(&mut self.struct_export.normal_export)
     }
 }

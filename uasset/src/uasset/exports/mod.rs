@@ -13,15 +13,36 @@ use std::io::{Error, Cursor};
 
 use enum_dispatch::enum_dispatch;
 
-use self::{unknown_export::UnknownExport, class_export::ClassExport, enum_export::EnumExport, level_export::LevelExport, normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport, string_table_export::StringTableExport, struct_export::StructExport};
+use self::{unknown_export::UnknownExport, class_export::ClassExport, enum_export::EnumExport, level_export::LevelExport, normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport, string_table_export::StringTableExport, struct_export::StructExport, data_table_export::DataTableExport};
 
 use super::Asset;
 
+#[enum_dispatch]
+pub trait ExportNormalTrait {
+    fn get_normal_export<'a>(&'a self) -> Option<&'a NormalExport>;
+    fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut NormalExport>;
+}
+
+#[macro_export]
+macro_rules! implement_get {
+    ($name:ident) => {
+        impl ExportNormalTrait for $name {
+            fn get_normal_export<'a>(&'a self) -> Option<&'a NormalExport> {
+                Some(&self.normal_export)
+            }
+
+            fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut NormalExport> {
+                Some(&mut self.normal_export)
+            }
+        }
+    };
+}
 
 #[enum_dispatch]
-trait ExportTrait {}
+trait ExportTrait {
+}
 
-#[enum_dispatch(ExportTrait)]
+#[enum_dispatch(ExportTrait, ExportNormalTrait)]
 pub enum Export {
     UnknownExport,
     ClassExport,
@@ -31,7 +52,8 @@ pub enum Export {
     PropertyExport,
     RawExport,
     StringTableExport,
-    StructExport
+    StructExport,
+    DataTableExport
 }
 
 impl Export {

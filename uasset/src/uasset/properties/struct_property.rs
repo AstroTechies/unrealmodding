@@ -2,7 +2,7 @@ use std::io::{Cursor, Error, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, optional_guid};
 
 use super::Property;
 
@@ -17,7 +17,7 @@ pub struct StructProperty {
 }
 
 impl StructProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
         let mut property_guid = None;
@@ -26,23 +26,23 @@ impl StructProperty {
             struct_type = Some(asset.read_fname()?);
             if engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 let mut guid = [0u8; 16];
-                cursor.read_exact(&mut guid)?;
+                asset.cursor.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
             }
-            property_guid = Some(cursor.read_property_guid()?);
+            property_guid = Some(asset.cursor.read_property_guid()?);
         }
 
-        StructProperty::custom_header(name, cursor, length, asset, struct_type, struct_guid, property_guid)
+        StructProperty::custom_header(asset, name, length, struct_type, struct_guid, property_guid)
     }
 
-    pub fn custom_header(name: FName, cursor: &mut Cursor<Vec<u8>>, length: i64, asset: &mut Asset, struct_type: Option<FName>, struct_guid: Option<[u8; 16]>, property_guid: Option<[u8; 16]>) -> Result<Self, Error> {
+    pub fn custom_header(asset: &mut Asset, name: FName, length: i64, struct_type: Option<FName>, struct_guid: Option<[u8; 16]>, property_guid: Option<[u8; 16]>) -> Result<Self, Error> {
         let mut custom_serialization = match struct_type {
-            Some(ref e) => Property::has_custom_serialization(e.content),
+            Some(ref e) => Property::has_custom_serialization(&e.content),
             None => false
         };
 
-        if let Some(e) = struct_type {
-            if &e.content == "RichCurveKey" && engine_version < VER_UE4_SERIALIZE_RICH_CURVE_KEY {
+        if let Some(ref e) = struct_type {
+            if e.content.as_str() == "RichCurveKey" && asset.engine_version < VER_UE4_SERIALIZE_RICH_CURVE_KEY {
                 custom_serialization = false;
             }
         }
@@ -59,7 +59,7 @@ impl StructProperty {
         }
 
         if custom_serialization {
-            let property = Property::from_type(cursor, asset, struct_type.unwrap(), name, false, 0, 0)?;
+            let property = Property::from_type(asset, struct_type.as_ref().unwrap(), name.clone(), false, 0, 0)?;
             let value = vec![property];
 
             return Ok(StructProperty {
@@ -72,10 +72,10 @@ impl StructProperty {
             });
         } else {
             let mut values = Vec::new();
-            let mut property = Property::new(cursor, asset, true)?;
+            let mut property = Property::new(asset, true)?;
             while property.is_some() {
                 values.push(property.unwrap());
-                property = Property::new(cursor, asset, true)?;
+                property = Property::new(asset, true)?;
             }
 
             return Ok(StructProperty {

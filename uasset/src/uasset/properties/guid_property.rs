@@ -2,7 +2,7 @@ use std::io::{Cursor, Error, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct GuidProperty {
@@ -12,10 +12,10 @@ pub struct GuidProperty {
 }
 
 impl GuidProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
         let mut value = [0u8; 16];
-        cursor.read_exact(&mut value)?;
+        asset.cursor.read_exact(&mut value)?;
         Ok(GuidProperty {
             name,
             property_guid,

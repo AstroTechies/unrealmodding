@@ -3,7 +3,7 @@ use std::io::{Cursor, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ordered_float::OrderedFloat;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
@@ -13,14 +13,14 @@ pub struct PerPlatformBoolProperty {
 }
 
 impl PerPlatformBoolProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(num_entries as usize);
+        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut value = Vec::with_capacity(num_entries as usize);
 
         for i in 0..num_entries as usize {
-            value[i] = cursor.read_bool()?;
+            value[i] = asset.cursor.read_bool()?;
         }
 
         Ok(PerPlatformBoolProperty {
@@ -39,14 +39,14 @@ pub struct PerPlatformIntProperty {
 }
 
 impl PerPlatformIntProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(num_entries as usize);
+        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut value = Vec::with_capacity(num_entries as usize);
 
         for i in 0..num_entries as usize {
-            value[i] = cursor.read_i32::<LittleEndian>()?;
+            value[i] = asset.cursor.read_i32::<LittleEndian>()?;
         }
 
         Ok(PerPlatformIntProperty {
@@ -65,14 +65,14 @@ pub struct PerPlatformFloatProperty {
 }
 
 impl PerPlatformFloatProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let value = Vec::with_capacity(num_entries as usize);
+        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut value = Vec::with_capacity(num_entries as usize);
 
         for i in 0..num_entries as usize {
-            value[i] = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
+            value[i] = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
         }
 
         Ok(PerPlatformFloatProperty {

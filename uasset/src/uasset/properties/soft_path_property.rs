@@ -14,18 +14,18 @@ pub struct SoftPathProperty {
 }
 
 impl SoftPathProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, asset: &mut Asset) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
         
         let mut path = None;
         let mut asset_path_name = None;
         let mut sub_path = None;
 
         if asset.engine_version < VER_UE4_ADDED_SOFT_OBJECT_PATH {
-            path = Some(cursor.read_string()?);
+            path = Some(asset.cursor.read_string()?);
         } else {
             asset_path_name = Some(asset.read_fname()?);
-            sub_path = Some(cursor.read_string()?);
+            sub_path = Some(asset.cursor.read_string()?);
         }
 
         Ok(SoftPathProperty {

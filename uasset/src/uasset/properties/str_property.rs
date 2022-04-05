@@ -33,62 +33,62 @@ pub struct NameProperty {
 
 
 impl StrProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
         Ok(StrProperty {
             name,
             property_guid,
-            value: cursor.read_string()?
+            value: asset.cursor.read_string()?
         })
     }
 }
 
 impl TextProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, engine_version: i32, asset: &mut Asset) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, engine_version: i32) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
         let mut culture_invariant_string = None;
         let mut namespace = None;
         let mut value = None;
 
         if engine_version < VER_UE4_FTEXT_HISTORY {
-            culture_invariant_string = Some(cursor.read_string()?);
+            culture_invariant_string = Some(asset.cursor.read_string()?);
             if engine_version >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
-                namespace = Some(cursor.read_string()?);
-                value = Some(cursor.read_string()?);
+                namespace = Some(asset.cursor.read_string()?);
+                value = Some(asset.cursor.read_string()?);
             } else {
                 namespace = None;
-                value = Some(cursor.read_string()?);
+                value = Some(asset.cursor.read_string()?);
             }
         }
 
-        let flags = cursor.read_u32::<LittleEndian>()?;
+        let flags = asset.cursor.read_u32::<LittleEndian>()?;
         let mut history_type = None;
         let mut table_id = None;
         if engine_version >= VER_UE4_FTEXT_HISTORY {
-            history_type = Some(cursor.read_i8()?);
+            history_type = Some(asset.cursor.read_i8()?);
             let history_type: TextHistoryType = history_type.unwrap().try_into().map_err(|e: TryFromPrimitiveError<TextHistoryType>| Error::new(ErrorKind::Other, e.to_string()))?;
 
             match history_type {
                 TextHistoryType::None => {
                     value = None;
-                    let version: CustomVersion = asset.get_custom_version("FEditorObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
+                    let version: &CustomVersion = asset.get_custom_version("FEditorObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
                     if version.version >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability as i32 {
-                        let has_culture_invariant_string = cursor.read_i32::<LittleEndian>()? == 1;
+                        let has_culture_invariant_string = asset.cursor.read_i32::<LittleEndian>()? == 1;
                         if has_culture_invariant_string {
-                            culture_invariant_string = Some(cursor.read_string()?);
+                            culture_invariant_string = Some(asset.cursor.read_string()?);
                         }
                     }
                 }
                 TextHistoryType::Base => {
-                    namespace = Some(cursor.read_string()?);
-                    value = Some(cursor.read_string()?);
-                    culture_invariant_string = Some(cursor.read_string()?);
+                    namespace = Some(asset.cursor.read_string()?);
+                    value = Some(asset.cursor.read_string()?);
+                    culture_invariant_string = Some(asset.cursor.read_string()?);
                 }
                 TextHistoryType::StringTableEntry => {
                     table_id = Some(asset.read_fname()?);
-                    value = Some(cursor.read_string()?);
+                    value = Some(asset.cursor.read_string()?);
                 }
                 _ => {
                     return Err(Error::new(ErrorKind::Other, format!("Unimplemented reader for {:?}", history_type)));
@@ -104,8 +104,8 @@ impl TextProperty {
 }
 
 impl NameProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &mut Asset) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
         let value = asset.read_fname()?;
         Ok(NameProperty {
             name,

@@ -197,7 +197,7 @@ macro_rules! declare_expression {
         }
 
         impl KismetExpressionEnumEqTrait for $name {
-            fn enum_eq(self, token: &EExprToken) -> bool { self.token == *token }
+            fn enum_eq(&self, token: &EExprToken) -> bool { self.token == *token }
         }
     }
 }
@@ -208,11 +208,11 @@ macro_rules! implement_expression {
             pub struct $name { pub token: EExprToken }
 
             impl KismetExpressionEnumEqTrait for $name {
-                fn enum_eq(self, token: &EExprToken) -> bool { self.token == *token }
+                fn enum_eq(&self, token: &EExprToken) -> bool { self.token == *token }
             }
 
             impl $name {
-                pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+                pub fn new(asset: &mut Asset) -> Result<Self, Error> {
                     Ok($name {
                         token: EExprToken::$name
                     })
@@ -226,10 +226,10 @@ macro_rules! implement_value_expression {
     ($name:ident, $param:ident, $read_func:ident) => {
         declare_expression!($name, value: $param);
         impl $name {
-            pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
                 Ok($name {
                     token: EExprToken::$name,
-                    value: cursor.$read_func()?
+                    value: asset.cursor.$read_func()?
                 })
             }
         }
@@ -238,10 +238,10 @@ macro_rules! implement_value_expression {
     ($name:ident, $param:ident, $read_func:ident, $endianness:ident) => {
         declare_expression!($name, value: $param);
         impl $name {
-            pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
                 Ok($name {
                     token: EExprToken::$name,
-                    value: cursor.$read_func::<$endianness>()?
+                    value: asset.cursor.$read_func::<$endianness>()?
                 })
             }
         }
@@ -261,8 +261,9 @@ pub struct FScriptText {
 }
 
 impl FScriptText {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let text_literal_type: EBlueprintTextLiteralType = cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid text literal type"))?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let mut cursor = &mut asset.cursor;
+        let text_literal_type: EBlueprintTextLiteralType = asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid text literal type"))?;
         let (mut localized_source, mut localized_key, mut localized_namespace,
             mut invariant_literal_string, mut literal_string, mut string_table_asset,
             mut string_table_id, mut string_table_key) =
@@ -270,20 +271,20 @@ impl FScriptText {
 
         match text_literal_type {
             EBlueprintTextLiteralType::LocalizedText => {
-                localized_source = Some(KismetExpression::new(cursor, asset)?);
-                localized_key = Some(KismetExpression::new(cursor, asset)?);
-                localized_namespace = Some(KismetExpression::new(cursor, asset)?);
+                localized_source = Some(KismetExpression::new(asset)?);
+                localized_key = Some(KismetExpression::new(asset)?);
+                localized_namespace = Some(KismetExpression::new(asset)?);
             },
             EBlueprintTextLiteralType::InvariantText => {
-                invariant_literal_string = Some(KismetExpression::new(cursor, asset)?);
+                invariant_literal_string = Some(KismetExpression::new(asset)?);
             },
             EBlueprintTextLiteralType::LiteralString => {
-                literal_string = Some(KismetExpression::new(cursor, asset)?);
+                literal_string = Some(KismetExpression::new(asset)?);
             },
             EBlueprintTextLiteralType::StringTableEntry => {
-                string_table_asset = Some(PackageIndex::new(cursor.read_i32::<LittleEndian>()?));
-                string_table_id = Some(KismetExpression::new(cursor, asset)?);
-                string_table_key = Some(KismetExpression::new(cursor, asset)?);
+                string_table_asset = Some(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?));
+                string_table_id = Some(KismetExpression::new(asset)?);
+                string_table_key = Some(KismetExpression::new(asset)?);
             }
             _ => {}
         };
@@ -317,17 +318,18 @@ impl KismetPropertyPointer {
         KismetPropertyPointer { old: None, new: Some(new) }
     }
 
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let mut cursor = &mut asset.cursor;
         if asset.engine_version >= VER_UE4_ADDED_PACKAGE_OWNER {
-            let num_entries = cursor.read_i32::<LittleEndian>()?;
+            let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
             let mut names = Vec::with_capacity(num_entries as usize);
             for i in 0..num_entries as usize {
                 names[i] = asset.read_fname()?;
             }
-            let owner = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
+            let owner = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
             Ok(KismetPropertyPointer::from_new(FieldPath::new(names, owner)))
         } else {
-            Ok(KismetPropertyPointer::from_old(PackageIndex::new(cursor.read_i32::<LittleEndian>()?)))
+            Ok(KismetPropertyPointer::from_old(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)))
         }
     }
 }
@@ -350,7 +352,7 @@ pub trait KismetExpressionTrait {
 
 #[enum_dispatch]
 pub trait KismetExpressionEnumEqTrait {
-    fn enum_eq(self, token: &EExprToken) -> bool;
+    fn enum_eq(&self, token: &EExprToken) -> bool;
 }
 
 #[derive(PartialEq, Eq)]
@@ -452,115 +454,115 @@ pub enum KismetExpression {
 }
 
 impl KismetExpression {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let token: EExprToken = cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid kismet token"))?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let token: EExprToken = asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid kismet token"))?;
         let expr: Result<Self, Error> = match token {
-            EExprToken::EX_LocalVariable => Ok(EX_LocalVariable::new(cursor, asset)?.into()),
-            EExprToken::EX_InstanceVariable => Ok(EX_InstanceVariable::new(cursor, asset)?.into()),
-            EExprToken::EX_DefaultVariable => Ok(EX_DefaultVariable::new(cursor, asset)?.into()),
-            EExprToken::EX_Return => Ok(EX_Return::new(cursor, asset)?.into()),
-            EExprToken::EX_Jump => Ok(EX_Jump::new(cursor, asset)?.into()),
-            EExprToken::EX_JumpIfNot => Ok(EX_JumpIfNot::new(cursor, asset)?.into()),
-            EExprToken::EX_Assert => Ok(EX_Assert::new(cursor, asset)?.into()),
-            EExprToken::EX_Nothing => Ok(EX_Nothing::new(cursor, asset)?.into()),
-            EExprToken::EX_Let => Ok(EX_Let::new(cursor, asset)?.into()),
-            EExprToken::EX_ClassContext => Ok(EX_ClassContext::new(cursor, asset)?.into()),
-            EExprToken::EX_MetaCast => Ok(EX_MetaCast::new(cursor, asset)?.into()),
-            EExprToken::EX_LetBool => Ok(EX_LetBool::new(cursor, asset)?.into()),
-            EExprToken::EX_EndParmValue => Ok(EX_EndParmValue::new(cursor, asset)?.into()),
-            EExprToken::EX_EndFunctionParms => Ok(EX_EndFunctionParms::new(cursor, asset)?.into()),
-            EExprToken::EX_Self => Ok(EX_Self::new(cursor, asset)?.into()),
-            EExprToken::EX_Skip => Ok(EX_Skip::new(cursor, asset)?.into()),
-            EExprToken::EX_Context => Ok(EX_Context::new(cursor, asset)?.into()),
-            EExprToken::EX_Context_FailSilent => Ok(EX_Context_FailSilent::new(cursor, asset)?.into()),
-            EExprToken::EX_VirtualFunction => Ok(EX_VirtualFunction::new(cursor, asset)?.into()),
-            EExprToken::EX_FinalFunction => Ok(EX_FinalFunction::new(cursor, asset)?.into()),
-            EExprToken::EX_IntConst => Ok(EX_IntConst::new(cursor, asset)?.into()),
-            EExprToken::EX_FloatConst => Ok(EX_FloatConst::new(cursor, asset)?.into()),
-            EExprToken::EX_StringConst => Ok(EX_StringConst::new(cursor, asset)?.into()),
-            EExprToken::EX_ObjectConst => Ok(EX_ObjectConst::new(cursor, asset)?.into()),
-            EExprToken::EX_NameConst => Ok(EX_NameConst::new(cursor, asset)?.into()),
-            EExprToken::EX_RotationConst => Ok(EX_RotationConst::new(cursor, asset)?.into()),
-            EExprToken::EX_VectorConst => Ok(EX_VectorConst::new(cursor, asset)?.into()),
-            EExprToken::EX_ByteConst => Ok(EX_ByteConst::new(cursor, asset)?.into()),
-            EExprToken::EX_IntZero => Ok(EX_IntZero::new(cursor, asset)?.into()),
-            EExprToken::EX_IntOne => Ok(EX_IntOne::new(cursor, asset)?.into()),
-            EExprToken::EX_True => Ok(EX_True::new(cursor, asset)?.into()),
-            EExprToken::EX_False => Ok(EX_False::new(cursor, asset)?.into()),
-            EExprToken::EX_TextConst => Ok(EX_TextConst::new(cursor, asset)?.into()),
-            EExprToken::EX_NoObject => Ok(EX_NoObject::new(cursor, asset)?.into()),
-            EExprToken::EX_TransformConst => Ok(EX_TransformConst::new(cursor, asset)?.into()),
-            EExprToken::EX_IntConstByte => Ok(EX_IntConstByte::new(cursor, asset)?.into()),
-            EExprToken::EX_NoInterface => Ok(EX_NoInterface::new(cursor, asset)?.into()),
-            EExprToken::EX_DynamicCast => Ok(EX_DynamicCast::new(cursor, asset)?.into()),
-            EExprToken::EX_StructConst => Ok(EX_StructConst::new(cursor, asset)?.into()),
-            EExprToken::EX_EndStructConst => Ok(EX_EndStructConst::new(cursor, asset)?.into()),
-            EExprToken::EX_SetArray => Ok(EX_SetArray::new(cursor, asset)?.into()),
-            EExprToken::EX_EndArray => Ok(EX_EndArray::new(cursor, asset)?.into()),
-            EExprToken::EX_PropertyConst => Ok(EX_PropertyConst::new(cursor, asset)?.into()),
-            EExprToken::EX_UnicodeStringConst => Ok(EX_UnicodeStringConst::new(cursor, asset)?.into()),
-            EExprToken::EX_Int64Const => Ok(EX_Int64Const::new(cursor, asset)?.into()),
-            EExprToken::EX_UInt64Const => Ok(EX_UInt64Const::new(cursor, asset)?.into()),
-            EExprToken::EX_PrimitiveCast => Ok(EX_PrimitiveCast::new(cursor, asset)?.into()),
-            EExprToken::EX_SetSet => Ok(EX_SetSet::new(cursor, asset)?.into()),
-            EExprToken::EX_EndSet => Ok(EX_EndSet::new(cursor, asset)?.into()),
-            EExprToken::EX_SetMap => Ok(EX_SetMap::new(cursor, asset)?.into()),
-            EExprToken::EX_EndMap => Ok(EX_EndMap::new(cursor, asset)?.into()),
-            EExprToken::EX_SetConst => Ok(EX_SetConst::new(cursor, asset)?.into()),
-            EExprToken::EX_EndSetConst => Ok(EX_EndSetConst::new(cursor, asset)?.into()),
-            EExprToken::EX_MapConst => Ok(EX_MapConst::new(cursor, asset)?.into()),
-            EExprToken::EX_EndMapConst => Ok(EX_EndMapConst::new(cursor, asset)?.into()),
-            EExprToken::EX_StructMemberContext => Ok(EX_StructMemberContext::new(cursor, asset)?.into()),
-            EExprToken::EX_LetMulticastDelegate => Ok(EX_LetMulticastDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_LetDelegate => Ok(EX_LetDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_LocalVirtualFunction => Ok(EX_LocalVirtualFunction::new(cursor, asset)?.into()),
-            EExprToken::EX_LocalFinalFunction => Ok(EX_LocalFinalFunction::new(cursor, asset)?.into()),
-            EExprToken::EX_LocalOutVariable => Ok(EX_LocalOutVariable::new(cursor, asset)?.into()),
-            EExprToken::EX_DeprecatedOp4A => Ok(EX_DeprecatedOp4A::new(cursor, asset)?.into()),
-            EExprToken::EX_InstanceDelegate => Ok(EX_InstanceDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_PushExecutionFlow => Ok(EX_PushExecutionFlow::new(cursor, asset)?.into()),
-            EExprToken::EX_PopExecutionFlow => Ok(EX_PopExecutionFlow::new(cursor, asset)?.into()),
-            EExprToken::EX_ComputedJump => Ok(EX_ComputedJump::new(cursor, asset)?.into()),
-            EExprToken::EX_PopExecutionFlowIfNot => Ok(EX_PopExecutionFlowIfNot::new(cursor, asset)?.into()),
-            EExprToken::EX_Breakpoint => Ok(EX_Breakpoint::new(cursor, asset)?.into()),
-            EExprToken::EX_InterfaceContext => Ok(EX_InterfaceContext::new(cursor, asset)?.into()),
-            EExprToken::EX_ObjToInterfaceCast => Ok(EX_ObjToInterfaceCast::new(cursor, asset)?.into()),
-            EExprToken::EX_EndOfScript => Ok(EX_EndOfScript::new(cursor, asset)?.into()),
-            EExprToken::EX_CrossInterfaceCast => Ok(EX_CrossInterfaceCast::new(cursor, asset)?.into()),
-            EExprToken::EX_InterfaceToObjCast => Ok(EX_InterfaceToObjCast::new(cursor, asset)?.into()),
-            EExprToken::EX_WireTracepoint => Ok(EX_WireTracepoint::new(cursor, asset)?.into()),
-            EExprToken::EX_SkipOffsetConst => Ok(EX_SkipOffsetConst::new(cursor, asset)?.into()),
-            EExprToken::EX_AddMulticastDelegate => Ok(EX_AddMulticastDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_ClearMulticastDelegate => Ok(EX_ClearMulticastDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_Tracepoint => Ok(EX_Tracepoint::new(cursor, asset)?.into()),
-            EExprToken::EX_LetObj => Ok(EX_LetObj::new(cursor, asset)?.into()),
-            EExprToken::EX_LetWeakObjPtr => Ok(EX_LetWeakObjPtr::new(cursor, asset)?.into()),
-            EExprToken::EX_BindDelegate => Ok(EX_BindDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_RemoveMulticastDelegate => Ok(EX_RemoveMulticastDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_CallMulticastDelegate => Ok(EX_CallMulticastDelegate::new(cursor, asset)?.into()),
-            EExprToken::EX_LetValueOnPersistentFrame => Ok(EX_LetValueOnPersistentFrame::new(cursor, asset)?.into()),
-            EExprToken::EX_ArrayConst => Ok(EX_ArrayConst::new(cursor, asset)?.into()),
-            EExprToken::EX_EndArrayConst => Ok(EX_EndArrayConst::new(cursor, asset)?.into()),
-            EExprToken::EX_SoftObjectConst => Ok(EX_SoftObjectConst::new(cursor, asset)?.into()),
-            EExprToken::EX_CallMath => Ok(EX_CallMath::new(cursor, asset)?.into()),
-            EExprToken::EX_SwitchValue => Ok(EX_SwitchValue::new(cursor, asset)?.into()),
-            EExprToken::EX_InstrumentationEvent => Ok(EX_InstrumentationEvent::new(cursor, asset)?.into()),
-            EExprToken::EX_ArrayGetByRef => Ok(EX_ArrayGetByRef::new(cursor, asset)?.into()),
-            EExprToken::EX_ClassSparseDataVariable => Ok(EX_ClassSparseDataVariable::new(cursor, asset)?.into()),
-            EExprToken::EX_FieldPathConst => Ok(EX_FieldPathConst::new(cursor, asset)?.into()),
+            EExprToken::EX_LocalVariable => Ok(EX_LocalVariable::new(asset)?.into()),
+            EExprToken::EX_InstanceVariable => Ok(EX_InstanceVariable::new(asset)?.into()),
+            EExprToken::EX_DefaultVariable => Ok(EX_DefaultVariable::new(asset)?.into()),
+            EExprToken::EX_Return => Ok(EX_Return::new(asset)?.into()),
+            EExprToken::EX_Jump => Ok(EX_Jump::new(asset)?.into()),
+            EExprToken::EX_JumpIfNot => Ok(EX_JumpIfNot::new(asset)?.into()),
+            EExprToken::EX_Assert => Ok(EX_Assert::new(asset)?.into()),
+            EExprToken::EX_Nothing => Ok(EX_Nothing::new(asset)?.into()),
+            EExprToken::EX_Let => Ok(EX_Let::new(asset)?.into()),
+            EExprToken::EX_ClassContext => Ok(EX_ClassContext::new(asset)?.into()),
+            EExprToken::EX_MetaCast => Ok(EX_MetaCast::new(asset)?.into()),
+            EExprToken::EX_LetBool => Ok(EX_LetBool::new(asset)?.into()),
+            EExprToken::EX_EndParmValue => Ok(EX_EndParmValue::new(asset)?.into()),
+            EExprToken::EX_EndFunctionParms => Ok(EX_EndFunctionParms::new(asset)?.into()),
+            EExprToken::EX_Self => Ok(EX_Self::new(asset)?.into()),
+            EExprToken::EX_Skip => Ok(EX_Skip::new(asset)?.into()),
+            EExprToken::EX_Context => Ok(EX_Context::new(asset)?.into()),
+            EExprToken::EX_Context_FailSilent => Ok(EX_Context_FailSilent::new(asset)?.into()),
+            EExprToken::EX_VirtualFunction => Ok(EX_VirtualFunction::new(asset)?.into()),
+            EExprToken::EX_FinalFunction => Ok(EX_FinalFunction::new(asset)?.into()),
+            EExprToken::EX_IntConst => Ok(EX_IntConst::new(asset)?.into()),
+            EExprToken::EX_FloatConst => Ok(EX_FloatConst::new(asset)?.into()),
+            EExprToken::EX_StringConst => Ok(EX_StringConst::new(asset)?.into()),
+            EExprToken::EX_ObjectConst => Ok(EX_ObjectConst::new(asset)?.into()),
+            EExprToken::EX_NameConst => Ok(EX_NameConst::new(asset)?.into()),
+            EExprToken::EX_RotationConst => Ok(EX_RotationConst::new(asset)?.into()),
+            EExprToken::EX_VectorConst => Ok(EX_VectorConst::new(asset)?.into()),
+            EExprToken::EX_ByteConst => Ok(EX_ByteConst::new(asset)?.into()),
+            EExprToken::EX_IntZero => Ok(EX_IntZero::new(asset)?.into()),
+            EExprToken::EX_IntOne => Ok(EX_IntOne::new(asset)?.into()),
+            EExprToken::EX_True => Ok(EX_True::new(asset)?.into()),
+            EExprToken::EX_False => Ok(EX_False::new(asset)?.into()),
+            EExprToken::EX_TextConst => Ok(EX_TextConst::new(asset)?.into()),
+            EExprToken::EX_NoObject => Ok(EX_NoObject::new(asset)?.into()),
+            EExprToken::EX_TransformConst => Ok(EX_TransformConst::new(asset)?.into()),
+            EExprToken::EX_IntConstByte => Ok(EX_IntConstByte::new(asset)?.into()),
+            EExprToken::EX_NoInterface => Ok(EX_NoInterface::new(asset)?.into()),
+            EExprToken::EX_DynamicCast => Ok(EX_DynamicCast::new(asset)?.into()),
+            EExprToken::EX_StructConst => Ok(EX_StructConst::new(asset)?.into()),
+            EExprToken::EX_EndStructConst => Ok(EX_EndStructConst::new(asset)?.into()),
+            EExprToken::EX_SetArray => Ok(EX_SetArray::new(asset)?.into()),
+            EExprToken::EX_EndArray => Ok(EX_EndArray::new(asset)?.into()),
+            EExprToken::EX_PropertyConst => Ok(EX_PropertyConst::new(asset)?.into()),
+            EExprToken::EX_UnicodeStringConst => Ok(EX_UnicodeStringConst::new(asset)?.into()),
+            EExprToken::EX_Int64Const => Ok(EX_Int64Const::new(asset)?.into()),
+            EExprToken::EX_UInt64Const => Ok(EX_UInt64Const::new(asset)?.into()),
+            EExprToken::EX_PrimitiveCast => Ok(EX_PrimitiveCast::new(asset)?.into()),
+            EExprToken::EX_SetSet => Ok(EX_SetSet::new(asset)?.into()),
+            EExprToken::EX_EndSet => Ok(EX_EndSet::new(asset)?.into()),
+            EExprToken::EX_SetMap => Ok(EX_SetMap::new(asset)?.into()),
+            EExprToken::EX_EndMap => Ok(EX_EndMap::new(asset)?.into()),
+            EExprToken::EX_SetConst => Ok(EX_SetConst::new(asset)?.into()),
+            EExprToken::EX_EndSetConst => Ok(EX_EndSetConst::new(asset)?.into()),
+            EExprToken::EX_MapConst => Ok(EX_MapConst::new(asset)?.into()),
+            EExprToken::EX_EndMapConst => Ok(EX_EndMapConst::new(asset)?.into()),
+            EExprToken::EX_StructMemberContext => Ok(EX_StructMemberContext::new(asset)?.into()),
+            EExprToken::EX_LetMulticastDelegate => Ok(EX_LetMulticastDelegate::new(asset)?.into()),
+            EExprToken::EX_LetDelegate => Ok(EX_LetDelegate::new(asset)?.into()),
+            EExprToken::EX_LocalVirtualFunction => Ok(EX_LocalVirtualFunction::new(asset)?.into()),
+            EExprToken::EX_LocalFinalFunction => Ok(EX_LocalFinalFunction::new(asset)?.into()),
+            EExprToken::EX_LocalOutVariable => Ok(EX_LocalOutVariable::new(asset)?.into()),
+            EExprToken::EX_DeprecatedOp4A => Ok(EX_DeprecatedOp4A::new(asset)?.into()),
+            EExprToken::EX_InstanceDelegate => Ok(EX_InstanceDelegate::new(asset)?.into()),
+            EExprToken::EX_PushExecutionFlow => Ok(EX_PushExecutionFlow::new(asset)?.into()),
+            EExprToken::EX_PopExecutionFlow => Ok(EX_PopExecutionFlow::new(asset)?.into()),
+            EExprToken::EX_ComputedJump => Ok(EX_ComputedJump::new(asset)?.into()),
+            EExprToken::EX_PopExecutionFlowIfNot => Ok(EX_PopExecutionFlowIfNot::new(asset)?.into()),
+            EExprToken::EX_Breakpoint => Ok(EX_Breakpoint::new(asset)?.into()),
+            EExprToken::EX_InterfaceContext => Ok(EX_InterfaceContext::new(asset)?.into()),
+            EExprToken::EX_ObjToInterfaceCast => Ok(EX_ObjToInterfaceCast::new(asset)?.into()),
+            EExprToken::EX_EndOfScript => Ok(EX_EndOfScript::new(asset)?.into()),
+            EExprToken::EX_CrossInterfaceCast => Ok(EX_CrossInterfaceCast::new(asset)?.into()),
+            EExprToken::EX_InterfaceToObjCast => Ok(EX_InterfaceToObjCast::new(asset)?.into()),
+            EExprToken::EX_WireTracepoint => Ok(EX_WireTracepoint::new(asset)?.into()),
+            EExprToken::EX_SkipOffsetConst => Ok(EX_SkipOffsetConst::new(asset)?.into()),
+            EExprToken::EX_AddMulticastDelegate => Ok(EX_AddMulticastDelegate::new(asset)?.into()),
+            EExprToken::EX_ClearMulticastDelegate => Ok(EX_ClearMulticastDelegate::new(asset)?.into()),
+            EExprToken::EX_Tracepoint => Ok(EX_Tracepoint::new(asset)?.into()),
+            EExprToken::EX_LetObj => Ok(EX_LetObj::new(asset)?.into()),
+            EExprToken::EX_LetWeakObjPtr => Ok(EX_LetWeakObjPtr::new(asset)?.into()),
+            EExprToken::EX_BindDelegate => Ok(EX_BindDelegate::new(asset)?.into()),
+            EExprToken::EX_RemoveMulticastDelegate => Ok(EX_RemoveMulticastDelegate::new(asset)?.into()),
+            EExprToken::EX_CallMulticastDelegate => Ok(EX_CallMulticastDelegate::new(asset)?.into()),
+            EExprToken::EX_LetValueOnPersistentFrame => Ok(EX_LetValueOnPersistentFrame::new(asset)?.into()),
+            EExprToken::EX_ArrayConst => Ok(EX_ArrayConst::new(asset)?.into()),
+            EExprToken::EX_EndArrayConst => Ok(EX_EndArrayConst::new(asset)?.into()),
+            EExprToken::EX_SoftObjectConst => Ok(EX_SoftObjectConst::new(asset)?.into()),
+            EExprToken::EX_CallMath => Ok(EX_CallMath::new(asset)?.into()),
+            EExprToken::EX_SwitchValue => Ok(EX_SwitchValue::new(asset)?.into()),
+            EExprToken::EX_InstrumentationEvent => Ok(EX_InstrumentationEvent::new(asset)?.into()),
+            EExprToken::EX_ArrayGetByRef => Ok(EX_ArrayGetByRef::new(asset)?.into()),
+            EExprToken::EX_ClassSparseDataVariable => Ok(EX_ClassSparseDataVariable::new(asset)?.into()),
+            EExprToken::EX_FieldPathConst => Ok(EX_FieldPathConst::new(asset)?.into()),
             _ => Err(Error::new(ErrorKind::Other, "Unknown kismet expression"))
         };
         expr
     }
 
-    pub fn read_arr(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset, end_token: EExprToken) -> Result<Vec<Self>, Error> {
+    pub fn read_arr(asset: &mut Asset, end_token: EExprToken) -> Result<Vec<Self>, Error> {
         let mut data = Vec::new();
         let mut current_expr: Option<KismetExpression> = None;
-        while current_expr.is_none() || current_expr.unwrap().enum_eq(&end_token) {
+        while current_expr.is_none() || current_expr.as_ref().unwrap().enum_eq(&end_token) {
             if let Some(expr) = current_expr {
                 data.push(expr);
             }
-            current_expr = KismetExpression::new(cursor, asset).ok();
+            current_expr = KismetExpression::new(asset).ok();
         }
         Ok(data)
     }
@@ -568,16 +570,16 @@ impl KismetExpression {
 
 declare_expression!(EX_FieldPathConst, value: Box<KismetExpression>);
 impl EX_FieldPathConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_FieldPathConst {
             token: EExprToken::EX_FieldPathConst,
-            value: Box::new(KismetExpression::new(cursor, asset)?)
+            value: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_NameConst, value: FName);
 impl EX_NameConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_NameConst {
             token: EExprToken::EX_NameConst,
             value: asset.read_fname()?
@@ -586,28 +588,29 @@ impl EX_NameConst {
 }
 declare_expression!(EX_ObjectConst, value: PackageIndex);
 impl EX_ObjectConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ObjectConst {
             token: EExprToken::EX_ObjectConst,
-            value: PackageIndex::new(cursor.read_i32::<LittleEndian>()?)
+            value: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)
         })
     }
 }
 declare_expression!(EX_SoftObjectConst, value: Box<KismetExpression>);
 impl EX_SoftObjectConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_SoftObjectConst {
             token: EExprToken::EX_SoftObjectConst,
-            value: Box::new(KismetExpression::new(cursor, asset)?)
+            value: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_TransformConst, value: Transform<f32>);
 impl EX_TransformConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let rotation = Vector4::new(cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?);
-        let translation = Vector::new(cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?);
-        let scale = Vector::new(cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?);
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let mut cursor = &mut asset.cursor;
+        let rotation = Vector4::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?);
+        let translation = Vector::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?);
+        let scale = Vector::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?);
         Ok(EX_TransformConst {
             token: EExprToken::EX_TransformConst,
             value: Transform::new(rotation, translation, scale)
@@ -617,210 +620,211 @@ impl EX_TransformConst {
 
 declare_expression!(EX_VectorConst, value: Vector<f32>);
 impl EX_VectorConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let mut cursor = &mut asset.cursor;
         Ok(EX_VectorConst {
             token: EExprToken::EX_VectorConst,
-            value: Vector::new(cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?, cursor.read_f32::<LittleEndian>()?)
+            value: Vector::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?)
         })
     }
 }
 
 declare_expression!(EX_TextConst, value: Box<FScriptText>);
 impl EX_TextConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_TextConst {
             token: EExprToken::EX_TextConst,
-            value: Box::new(FScriptText::new(cursor, asset)?)
+            value: Box::new(FScriptText::new(asset)?)
         })
     }
 }
 
 declare_expression!(EX_AddMulticastDelegate, delegate: Box<KismetExpression>, delegate_to_add: Box<KismetExpression>);
 impl EX_AddMulticastDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_AddMulticastDelegate {
             token: EExprToken::EX_AddMulticastDelegate,
-            delegate: Box::new(KismetExpression::new(cursor, asset)?),
-            delegate_to_add: Box::new(KismetExpression::new(cursor, asset)?)
+            delegate: Box::new(KismetExpression::new(asset)?),
+            delegate_to_add: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_ArrayConst, inner_property: PackageIndex, elements: Vec<KismetExpression>);
 impl EX_ArrayConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ArrayConst {
             token: EExprToken::EX_AddMulticastDelegate,
-            inner_property: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            elements: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndArrayConst)?
+            inner_property: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            elements: KismetExpression::read_arr(asset, EExprToken::EX_EndArrayConst)?
         })
     }
 }
 declare_expression!(EX_ArrayGetByRef, array_variable: Box<KismetExpression>, array_index: Box<KismetExpression>);
 impl EX_ArrayGetByRef {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ArrayGetByRef {
             token: EExprToken::EX_ArrayGetByRef,
-            array_variable: Box::new(KismetExpression::new(cursor, asset)?),
-            array_index: Box::new(KismetExpression::new(cursor, asset)?)
+            array_variable: Box::new(KismetExpression::new(asset)?),
+            array_index: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_Assert, line_number: u16, debug_mode: bool, assert_expression: Box<KismetExpression>);
 impl EX_Assert {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_Assert {
             token: EExprToken::EX_Assert,
-            line_number: cursor.read_u16::<LittleEndian>()?,
-            debug_mode: cursor.read_bool()?,
-            assert_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            line_number: asset.cursor.read_u16::<LittleEndian>()?,
+            debug_mode: asset.cursor.read_bool()?,
+            assert_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_BindDelegate, function_name: FName, delegate: Box<KismetExpression>, object_term: Box<KismetExpression>);
 impl EX_BindDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_BindDelegate {
             token: EExprToken::EX_BindDelegate,
             function_name: asset.read_fname()?,
-            delegate: Box::new(KismetExpression::new(cursor, asset)?),
-            object_term: Box::new(KismetExpression::new(cursor, asset)?)
+            delegate: Box::new(KismetExpression::new(asset)?),
+            object_term: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_CallMath, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
 impl EX_CallMath {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_CallMath {
             token: EExprToken::EX_CallMath,
-            stack_node: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            parameters: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndFunctionParms)?
+            stack_node: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
     }
 }
 declare_expression!(EX_CallMulticastDelegate, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
 impl EX_CallMulticastDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_CallMulticastDelegate {
             token: EExprToken::EX_CallMulticastDelegate,
-            stack_node: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            parameters: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndFunctionParms)?
+            stack_node: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
     }
 }
 declare_expression!(EX_ClassContext, object_expression: Box<KismetExpression>, offset: u32, r_value_pointer: KismetPropertyPointer, context_expression: Box<KismetExpression>);
 impl EX_ClassContext {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ClassContext {
             token: EExprToken::EX_ClassContext,
-            object_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            offset: cursor.read_u32::<LittleEndian>()?,
-            r_value_pointer: KismetPropertyPointer::new(cursor, asset)?,
-            context_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            object_expression: Box::new(KismetExpression::new(asset)?),
+            offset: asset.cursor.read_u32::<LittleEndian>()?,
+            r_value_pointer: KismetPropertyPointer::new(asset)?,
+            context_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_ClassSparseDataVariable, variable: KismetPropertyPointer);
 impl EX_ClassSparseDataVariable {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ClassSparseDataVariable {
             token: EExprToken::EX_ClassSparseDataVariable,
-            variable: KismetPropertyPointer::new(cursor, asset)?
+            variable: KismetPropertyPointer::new(asset)?
         })
     }
 }
 declare_expression!(EX_ClearMulticastDelegate, delegate_to_clear: Box<KismetExpression>);
 impl EX_ClearMulticastDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ClearMulticastDelegate {
             token: EExprToken::EX_ClearMulticastDelegate,
-            delegate_to_clear: Box::new(KismetExpression::new(cursor, asset)?)
+            delegate_to_clear: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_ComputedJump, code_offset_expression: Box<KismetExpression>);
 impl EX_ComputedJump {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ComputedJump {
             token: EExprToken::EX_ComputedJump,
-            code_offset_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            code_offset_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_Context, object_expression: Box<KismetExpression>, offset: u32, r_value_pointer: KismetPropertyPointer, context_expression: Box<KismetExpression>);
 impl EX_Context {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_Context {
             token: EExprToken::EX_Context,
-            object_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            offset: cursor.read_u32::<LittleEndian>()?,
-            r_value_pointer: KismetPropertyPointer::new(cursor, asset)?,
-            context_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            object_expression: Box::new(KismetExpression::new(asset)?),
+            offset: asset.cursor.read_u32::<LittleEndian>()?,
+            r_value_pointer: KismetPropertyPointer::new(asset)?,
+            context_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_Context_FailSilent, object_expression: Box<KismetExpression>, offset: u32, r_value_pointer: KismetPropertyPointer, context_expression: Box<KismetExpression>);
 impl EX_Context_FailSilent {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_Context_FailSilent {
             token: EExprToken::EX_Context_FailSilent,
-            object_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            offset: cursor.read_u32::<LittleEndian>()?,
-            r_value_pointer: KismetPropertyPointer::new(cursor, asset)?,
-            context_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            object_expression: Box::new(KismetExpression::new(asset)?),
+            offset: asset.cursor.read_u32::<LittleEndian>()?,
+            r_value_pointer: KismetPropertyPointer::new(asset)?,
+            context_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_CrossInterfaceCast, class_ptr: PackageIndex, target: Box<KismetExpression>);
 impl EX_CrossInterfaceCast {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_CrossInterfaceCast {
             token: EExprToken::EX_CrossInterfaceCast,
-            class_ptr: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            target: Box::new(KismetExpression::new(cursor, asset)?)
+            class_ptr: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            target: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_DefaultVariable, variable: KismetPropertyPointer);
 impl EX_DefaultVariable {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_DefaultVariable {
             token: EExprToken::EX_DefaultVariable,
-            variable: KismetPropertyPointer::new(cursor, asset)?
+            variable: KismetPropertyPointer::new(asset)?
         })
     }
 }
 declare_expression!(EX_DynamicCast, class_ptr: PackageIndex, target_expression: Box<KismetExpression>);
 impl EX_DynamicCast {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_DynamicCast {
             token: EExprToken::EX_DynamicCast,
-            class_ptr: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            target_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            class_ptr: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            target_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_FinalFunction, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
 impl EX_FinalFunction {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_FinalFunction {
             token: EExprToken::EX_FinalFunction,
-            stack_node: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            parameters: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndFunctionParms)?
+            stack_node: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
     }
 }
 declare_expression!(EX_FloatConst, value: f32);
 impl EX_FloatConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_FloatConst {
             token: EExprToken::EX_FloatConst,
-            value: cursor.read_f32::<LittleEndian>()?
+            value: asset.cursor.read_f32::<LittleEndian>()?
         })
     }
 }
 declare_expression!(EX_InstanceDelegate, function_name: FName);
 impl EX_InstanceDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_InstanceDelegate {
             token: EExprToken::EX_InstanceDelegate,
             function_name: asset.read_fname()?
@@ -829,166 +833,166 @@ impl EX_InstanceDelegate {
 }
 declare_expression!(EX_InstanceVariable, variable: KismetPropertyPointer);
 impl EX_InstanceVariable {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_InstanceVariable {
             token: EExprToken::EX_InstanceVariable,
-            variable: KismetPropertyPointer::new(cursor, asset)?
+            variable: KismetPropertyPointer::new(asset)?
         })
     }
 }
 declare_expression!(EX_InterfaceContext, interface_value: Box<KismetExpression>);
 impl EX_InterfaceContext {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_InterfaceContext {
             token: EExprToken::EX_InterfaceContext,
-            interface_value: Box::new(KismetExpression::new(cursor, asset)?)
+            interface_value: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_InterfaceToObjCast, class_ptr: PackageIndex, target: Box<KismetExpression>);
 impl EX_InterfaceToObjCast {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_InterfaceToObjCast {
             token: EExprToken::EX_InterfaceToObjCast,
-            class_ptr: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            target: Box::new(KismetExpression::new(cursor, asset)?)
+            class_ptr: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            target: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_Jump, code_offset: u32);
 impl EX_Jump {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_Jump {
             token: EExprToken::EX_Jump,
-            code_offset: cursor.read_u32::<LittleEndian>()?
+            code_offset: asset.cursor.read_u32::<LittleEndian>()?
         })
     }
 }
 declare_expression!(EX_JumpIfNot, code_offset: u32, boolean_expression: Box<KismetExpression>);
 impl EX_JumpIfNot {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_JumpIfNot {
             token: EExprToken::EX_JumpIfNot,
-            code_offset: cursor.read_u32::<LittleEndian>()?,
-            boolean_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            code_offset: asset.cursor.read_u32::<LittleEndian>()?,
+            boolean_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_Let, value: KismetPropertyPointer);
 impl EX_Let {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_Let {
             token: EExprToken::EX_Let,
-            value: KismetPropertyPointer::new(cursor, asset)?
+            value: KismetPropertyPointer::new(asset)?
         })
     }
 }
 declare_expression!(EX_LetBool, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetBool {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LetBool {
             token: EExprToken::EX_LetBool,
-            variable_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            assignment_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            variable_expression: Box::new(KismetExpression::new(asset)?),
+            assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_LetDelegate, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LetDelegate {
             token: EExprToken::EX_LetDelegate,
-            variable_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            assignment_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            variable_expression: Box::new(KismetExpression::new(asset)?),
+            assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_LetMulticastDelegate, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetMulticastDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LetMulticastDelegate {
             token: EExprToken::EX_LetMulticastDelegate,
-            variable_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            assignment_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            variable_expression: Box::new(KismetExpression::new(asset)?),
+            assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_LetObj, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetObj {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LetObj {
             token: EExprToken::EX_LetObj,
-            variable_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            assignment_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            variable_expression: Box::new(KismetExpression::new(asset)?),
+            assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_LetValueOnPersistentFrame, destination_property: KismetPropertyPointer, assignment_expression: Box<KismetExpression>);
 impl EX_LetValueOnPersistentFrame {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LetValueOnPersistentFrame {
             token: EExprToken::EX_LetValueOnPersistentFrame,
-            destination_property: KismetPropertyPointer::new(cursor, asset)?,
-            assignment_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            destination_property: KismetPropertyPointer::new(asset)?,
+            assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_LetWeakObjPtr, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetWeakObjPtr {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LetWeakObjPtr {
             token: EExprToken::EX_LetWeakObjPtr,
-            variable_expression: Box::new(KismetExpression::new(cursor, asset)?),
-            assignment_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            variable_expression: Box::new(KismetExpression::new(asset)?),
+            assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_LocalFinalFunction, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
 impl EX_LocalFinalFunction {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LocalFinalFunction {
             token: EExprToken::EX_LocalFinalFunction,
-            stack_node: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            parameters: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndFunctionParms)?
+            stack_node: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
     }
 }
 declare_expression!(EX_LocalOutVariable, variable: KismetPropertyPointer);
 impl EX_LocalOutVariable {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LocalOutVariable {
             token: EExprToken::EX_LocalOutVariable,
-            variable: KismetPropertyPointer::new(cursor, asset)?
+            variable: KismetPropertyPointer::new(asset)?
         })
     }
 }
 declare_expression!(EX_LocalVariable, variable: KismetPropertyPointer);
 impl EX_LocalVariable {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LocalVariable {
             token: EExprToken::EX_LocalVariable,
-            variable: KismetPropertyPointer::new(cursor, asset)?
+            variable: KismetPropertyPointer::new(asset)?
         })
     }
 }
 declare_expression!(EX_LocalVirtualFunction, virtual_function_name: FName, parameters: Vec<KismetExpression>);
 impl EX_LocalVirtualFunction {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_LocalVirtualFunction {
             token: EExprToken::EX_LocalVirtualFunction,
             virtual_function_name: asset.read_fname()?,
-            parameters: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndFunctionParms)?
+            parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
     }
 }
 declare_expression!(EX_MapConst, key_property: PackageIndex, value_property: PackageIndex, elements: Vec<KismetExpression>);
 impl EX_MapConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
 
-        let key_property = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
-        let value_property = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
-        let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let elements = KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndMapConst)?;
+        let key_property = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let value_property = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let elements = KismetExpression::read_arr(asset, EExprToken::EX_EndMapConst)?;
         Ok(EX_MapConst {
             token: EExprToken::EX_MapConst,
             key_property,
@@ -999,112 +1003,112 @@ impl EX_MapConst {
 }
 declare_expression!(EX_MetaCast, class_ptr: PackageIndex, target_expression: Box<KismetExpression>);
 impl EX_MetaCast {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_MetaCast {
             token: EExprToken::EX_MetaCast,
-            class_ptr: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            target_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            class_ptr: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            target_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_ObjToInterfaceCast, class_ptr: PackageIndex, target: Box<KismetExpression>);
 impl EX_ObjToInterfaceCast {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_ObjToInterfaceCast {
             token: EExprToken::EX_ObjToInterfaceCast,
-            class_ptr: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            target: Box::new(KismetExpression::new(cursor, asset)?)
+            class_ptr: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            target: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_PopExecutionFlowIfNot, boolean_expression: Box<KismetExpression>);
 impl EX_PopExecutionFlowIfNot {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_PopExecutionFlowIfNot {
             token: EExprToken::EX_PopExecutionFlowIfNot,
-            boolean_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            boolean_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_PrimitiveCast, conversion_type: EExprToken, target: Box<KismetExpression>);
 impl EX_PrimitiveCast {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_PrimitiveCast {
             token: EExprToken::EX_PrimitiveCast,
-            conversion_type: cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid expr token"))?,
-            target: Box::new(KismetExpression::new(cursor, asset)?)
+            conversion_type: asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid expr token"))?,
+            target: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_PropertyConst, property: KismetPropertyPointer);
 impl EX_PropertyConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_PropertyConst {
             token: EExprToken::EX_PropertyConst,
-            property: KismetPropertyPointer::new(cursor, asset)?
+            property: KismetPropertyPointer::new(asset)?
         })
     }
 }
 declare_expression!(EX_PushExecutionFlow, pushing_address: u32);
 impl EX_PushExecutionFlow {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_PushExecutionFlow {
             token: EExprToken::EX_PushExecutionFlow,
-            pushing_address: cursor.read_u32::<LittleEndian>()?
+            pushing_address: asset.cursor.read_u32::<LittleEndian>()?
         })
     }
 }
 declare_expression!(EX_RemoveMulticastDelegate, delegate: Box<KismetExpression>, delegate_to_add: Box<KismetExpression>);
 impl EX_RemoveMulticastDelegate {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_RemoveMulticastDelegate {
             token: EExprToken::EX_RemoveMulticastDelegate,
-            delegate: Box::new(KismetExpression::new(cursor, asset)?),
-            delegate_to_add: Box::new(KismetExpression::new(cursor, asset)?)
+            delegate: Box::new(KismetExpression::new(asset)?),
+            delegate_to_add: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_Return, return_expression: Box<KismetExpression>);
 impl EX_Return {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_Return {
             token: EExprToken::EX_Return,
-            return_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            return_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_RotationConst, pitch: i32, yaw: i32, roll: i32);
 impl EX_RotationConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_RotationConst {
             token: EExprToken::EX_RotationConst,
-            pitch: cursor.read_i32::<LittleEndian>()?,
-            yaw: cursor.read_i32::<LittleEndian>()?,
-            roll: cursor.read_i32::<LittleEndian>()?
+            pitch: asset.cursor.read_i32::<LittleEndian>()?,
+            yaw: asset.cursor.read_i32::<LittleEndian>()?,
+            roll: asset.cursor.read_i32::<LittleEndian>()?
         })
     }
 }
 declare_expression!(EX_SetArray, assigning_property: Option<Box<KismetExpression>>, array_inner_prop: Option<PackageIndex>, elements: Vec<KismetExpression>);
 impl EX_SetArray {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         let (assigning_property, array_inner_prop) = match asset.engine_version >= VER_UE4_CHANGE_SETARRAY_BYTECODE {
-            true => (Some(Box::new(KismetExpression::new(cursor, asset)?)), None),
-            false => (None, Some(PackageIndex::new(cursor.read_i32::<LittleEndian>()?)))
+            true => (Some(Box::new(KismetExpression::new(asset)?)), None),
+            false => (None, Some(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)))
         };
         Ok(EX_SetArray {
             token: EExprToken::EX_SetArray,
             assigning_property,
             array_inner_prop,
-            elements: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndArray)?
+            elements: KismetExpression::read_arr(asset, EExprToken::EX_EndArray)?
         })
     }
 }
 declare_expression!(EX_SetConst, inner_property: PackageIndex, elements: Vec<KismetExpression>);
 impl EX_SetConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let inner_property = PackageIndex::new(cursor.read_i32::<LittleEndian>()?);
-        let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let elements = KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndSetConst)?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let inner_property = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let elements = KismetExpression::read_arr(asset, EExprToken::EX_EndSetConst)?;
         Ok(EX_SetConst {
             token: EExprToken::EX_SetConst,
             inner_property,
@@ -1114,10 +1118,10 @@ impl EX_SetConst {
 }
 declare_expression!(EX_SetMap, map_property: Box<KismetExpression>, elements: Vec<KismetExpression>);
 impl EX_SetMap {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let map_property = Box::new(KismetExpression::new(cursor, asset)?);
-        let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let elements = KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndMap)?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let map_property = Box::new(KismetExpression::new(asset)?);
+        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let elements = KismetExpression::read_arr(asset, EExprToken::EX_EndMap)?;
         Ok(EX_SetMap {
             token: EExprToken::EX_SetMap,
             map_property,
@@ -1127,10 +1131,10 @@ impl EX_SetMap {
 }
 declare_expression!(EX_SetSet, set_property: Box<KismetExpression>, elements: Vec<KismetExpression>);
 impl EX_SetSet {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let set_property = Box::new(KismetExpression::new(cursor, asset)?);
-        let num_entries = cursor.read_i32::<LittleEndian>()?;
-        let elements = KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndSet)?;
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let set_property = Box::new(KismetExpression::new(asset)?);
+        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let elements = KismetExpression::read_arr(asset, EExprToken::EX_EndSet)?;
         Ok(EX_SetSet {
             token: EExprToken::EX_SetSet,
             set_property,
@@ -1140,50 +1144,50 @@ impl EX_SetSet {
 }
 declare_expression!(EX_Skip, code_offset: u32, skip_expression: Box<KismetExpression>);
 impl EX_Skip {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_Skip {
             token: EExprToken::EX_Skip,
-            code_offset: cursor.read_u32::<LittleEndian>()?,
-            skip_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            code_offset: asset.cursor.read_u32::<LittleEndian>()?,
+            skip_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_StructConst, struct_value: PackageIndex, struct_size: i32, value: Vec<KismetExpression>);
 impl EX_StructConst {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_StructConst {
             token: EExprToken::EX_StructConst,
-            struct_value: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            struct_size: cursor.read_i32::<LittleEndian>()?,
-            value: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndStructConst)?
+            struct_value: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            struct_size: asset.cursor.read_i32::<LittleEndian>()?,
+            value: KismetExpression::read_arr(asset, EExprToken::EX_EndStructConst)?
         })
     }
 }
 declare_expression!(EX_StructMemberContext, struct_member_expression: PackageIndex, struct_expression: Box<KismetExpression>);
 impl EX_StructMemberContext {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_StructMemberContext {
             token: EExprToken::EX_StructMemberContext,
-            struct_member_expression: PackageIndex::new(cursor.read_i32::<LittleEndian>()?),
-            struct_expression: Box::new(KismetExpression::new(cursor, asset)?)
+            struct_member_expression: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+            struct_expression: Box::new(KismetExpression::new(asset)?)
         })
     }
 }
 declare_expression!(EX_SwitchValue, end_goto_offset: u32, index_term: Box<KismetExpression>, default_term: Box<KismetExpression>, cases: Vec<KismetSwitchCase>);
 impl EX_SwitchValue {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
-        let num_cases = cursor.read_u16::<LittleEndian>()?;
-        let end_goto_offset = cursor.read_u32::<LittleEndian>()?;
-        let index_term = Box::new(KismetExpression::new(cursor, asset)?);
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let num_cases = asset.cursor.read_u16::<LittleEndian>()?;
+        let end_goto_offset = asset.cursor.read_u32::<LittleEndian>()?;
+        let index_term = Box::new(KismetExpression::new(asset)?);
 
         let mut cases = Vec::with_capacity(num_cases as usize);
         for i in 0..num_cases as usize {
-            let term_a = KismetExpression::new(cursor, asset)?;
-            let term_b = cursor.read_u32::<LittleEndian>()?;
-            let term_c = KismetExpression::new(cursor, asset)?;
+            let term_a = KismetExpression::new(asset)?;
+            let term_b = asset.cursor.read_u32::<LittleEndian>()?;
+            let term_c = KismetExpression::new(asset)?;
             cases[i] = KismetSwitchCase::new(term_a, term_b, term_c);
         }
-        let default_term = Box::new(KismetExpression::new(cursor, asset)?);
+        let default_term = Box::new(KismetExpression::new(asset)?);
         Ok(EX_SwitchValue {
             token: EExprToken::EX_SwitchValue,
             end_goto_offset,
@@ -1195,11 +1199,11 @@ impl EX_SwitchValue {
 }
 declare_expression!(EX_VirtualFunction, virtual_function_name: FName, parameters: Vec<KismetExpression>);
 impl EX_VirtualFunction {
-    pub fn new(cursor: &mut Cursor<Vec<u8>>, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_VirtualFunction {
             token: EExprToken::EX_VirtualFunction,
             virtual_function_name: asset.read_fname()?,
-            parameters: KismetExpression::read_arr(cursor, asset, EExprToken::EX_EndFunctionParms)?
+            parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
     }
 }

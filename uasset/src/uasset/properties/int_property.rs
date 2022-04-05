@@ -3,18 +3,18 @@ use std::io::{Cursor, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ordered_float::OrderedFloat;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 
 macro_rules! parse_int_property {
     ($property_type:ident, $read_func:ident) => {
-        pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-            let property_guid = optional_guid!(cursor, include_header);
+        pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+            let property_guid = optional_guid!(asset, include_header);
 
             Ok($property_type {
                 name,
                 property_guid,
-                value: cursor.$read_func::<LittleEndian>()?
+                value: asset.cursor.$read_func::<LittleEndian>()?
             })
         }
     };
@@ -106,9 +106,9 @@ pub struct DoubleProperty {
 }
 
 impl BoolProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let value = cursor.read_bool()?;
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let value = asset.cursor.read_bool()?;
+        let property_guid = optional_guid!(asset, include_header);
 
         Ok(BoolProperty {
             name,
@@ -119,34 +119,34 @@ impl BoolProperty {
 }
 
 impl Int8Property {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
         Ok(Int8Property {
             name,
             property_guid,
-            value: cursor.read_i8()?
+            value: asset.cursor.read_i8()?
         })
     }
 }
 
 impl ByteProperty {
-    fn read_byte(cursor: &mut Cursor<Vec<u8>>, length: i64) -> Result<(ByteType, i64), Error> {
+    fn read_byte(asset: &mut Asset, length: i64) -> Result<(ByteType, i64), Error> {
         let value = match length {
-            1 => Some((ByteType::Byte, cursor.read_i8()? as i64)),
-            0 | 8 => Some((ByteType::Long, cursor.read_i64::<LittleEndian>()?)),
+            1 => Some((ByteType::Byte, asset.cursor.read_i8()? as i64)),
+            0 | 8 => Some((ByteType::Long, asset.cursor.read_i64::<LittleEndian>()?)),
             _ => None
         };
 
         value.ok_or(Error::new(ErrorKind::Other, format!("Invalid length of {} for ByteProperty", length)))
     }
 
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, fallback_length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, fallback_length: i64) -> Result<Self, Error> {
         let (property_guid, enum_type) = match include_header {
-            true => (Some(cursor.read_property_guid()?), Some(cursor.read_i64::<LittleEndian>()?)),
+            true => (Some(asset.cursor.read_property_guid()?), Some(asset.cursor.read_i64::<LittleEndian>()?)),
             false => (None, None)
         };
 
-        let (byte_type, value) = ByteProperty::read_byte(cursor, length).or(ByteProperty::read_byte(cursor, fallback_length))?;
+        let (byte_type, value) = ByteProperty::read_byte(asset, length).or(ByteProperty::read_byte(asset, fallback_length))?;
 
         Ok(ByteProperty {
             name,
@@ -183,25 +183,25 @@ impl UInt64Property {
 }
 
 impl FloatProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
         Ok(FloatProperty {
             name,
             property_guid,
-            value: OrderedFloat(cursor.read_f32::<LittleEndian>()?)
+            value: OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?)
         })
     }
 }
 
 impl DoubleProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
         Ok(DoubleProperty {
             name,
             property_guid,
-            value: OrderedFloat(cursor.read_f64::<LittleEndian>()?)
+            value: OrderedFloat(asset.cursor.read_f64::<LittleEndian>()?)
         })
     }
 }

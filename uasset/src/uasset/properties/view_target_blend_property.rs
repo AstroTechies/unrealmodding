@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
 #[repr(u8)]
@@ -35,13 +35,13 @@ pub struct ViewTargetBlendParamsProperty {
 }
 
 impl ViewTargetBlendParamsProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
 
-        let blend_time = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
-        let blend_function = ViewTargetBlendFunction::try_from(cursor.read_u8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
-        let blend_exp = OrderedFloat(cursor.read_f32::<LittleEndian>()?);
-        let lock_outgoing = cursor.read_i32::<LittleEndian>()? != 0;
+        let blend_time = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
+        let blend_function = ViewTargetBlendFunction::try_from(asset.cursor.read_u8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        let blend_exp = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
+        let lock_outgoing = asset.cursor.read_i32::<LittleEndian>()? != 0;
 
         Ok(ViewTargetBlendParamsProperty {
             name,

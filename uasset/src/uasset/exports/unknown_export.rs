@@ -1,7 +1,9 @@
 use crate::uasset::unreal_types::{FName, Guid};
 
+use super::ExportNormalTrait;
 
-#[derive(Debug, Default)]
+
+#[derive(Debug, Default, Clone)]
 pub struct UnknownExport {
     pub class_index: i32,
     pub super_index: i32,
@@ -23,4 +25,16 @@ pub struct UnknownExport {
     pub create_before_serialization_dependencies: i32,
     pub serialization_before_create_dependencies: i32,
     pub create_before_create_dependencies: i32
+}
+
+impl ExportNormalTrait for UnknownExport {
+    fn get_normal_export< 'a>(&'a self) -> Option<& 'a super::normal_export::NormalExport> {
+        None
+    }
+
+
+    fn get_normal_export_mut< 'a>(&'a mut self) -> Option<& 'a mut super::normal_export::NormalExport> {
+        None
+    }
+
 }

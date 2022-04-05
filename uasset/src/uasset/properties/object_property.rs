@@ -27,9 +27,9 @@ pub struct SoftObjectProperty {
 }
 
 impl ObjectProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
-        let value = cursor.read_i32::<LittleEndian>()?;
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+        let value = asset.cursor.read_i32::<LittleEndian>()?;
         Ok(ObjectProperty {
             name,
             property_guid,
@@ -38,9 +38,9 @@ impl ObjectProperty {
     }
 }
 impl AssetObjectProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
-        let value = cursor.read_string()?;
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+        let value = asset.cursor.read_string()?;
         Ok(AssetObjectProperty {
             name,
             property_guid,
@@ -50,10 +50,10 @@ impl AssetObjectProperty {
 }
 
 impl SoftObjectProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, asset: &mut Asset) -> Result<Self, Error> {
-        let property_guid = optional_guid!(cursor, include_header);
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
         let value = asset.read_fname()?;
-        let id = cursor.read_u32::<LittleEndian>()?;
+        let id = asset.cursor.read_u32::<LittleEndian>()?;
         Ok(SoftObjectProperty {
             name,
             property_guid,

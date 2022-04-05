@@ -13,9 +13,9 @@ pub struct EnumProperty {
 }
 
 impl EnumProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
         let (enum_type, property_guid) = match include_header {
-            true => (Some(asset.read_fname()?), Some(cursor.read_property_guid()?)),
+            true => (Some(asset.read_fname()?), Some(asset.cursor.read_property_guid()?)),
             false => (None, None)
         };
         let value = asset.read_fname()?;

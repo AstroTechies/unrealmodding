@@ -16,31 +16,29 @@ pub struct SetProperty {
 }
 
 impl SetProperty {
-    pub fn new(name: FName, cursor: &mut Cursor<Vec<u8>>, include_header: bool, length: i64, engine_version: i32, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
-            true => (Some(asset.read_fname()?), Some(cursor.read_property_guid()?)),
+            true => (Some(asset.read_fname()?), Some(asset.cursor.read_property_guid()?)),
             false => (None, None)
         };
 
         let removed_items = ArrayProperty::new_no_header(
-            name,
-            cursor, 
+            asset,
+            name.clone(),
             false, 
             length, 
-            engine_version, 
-            asset, 
+            engine_version,
             false, 
-            array_type, property_guid).map(|e| e.value)?;
+            array_type.clone(), property_guid).map(|e| e.value)?;
         
         let items = ArrayProperty::new_no_header(
-            name,
-            cursor, 
+            asset,
+            name.clone(),
             false, 
             length, 
-            engine_version, 
-            asset, 
+            engine_version,  
             false, 
-            array_type, 
+            array_type.clone(), 
             property_guid).map(|e| e.value)?;
         
         Ok(SetProperty {

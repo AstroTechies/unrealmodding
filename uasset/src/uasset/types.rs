@@ -20,7 +20,7 @@ pub struct Vector4<T> {
     pub w: T
 }
 
-impl <T> Vector4<T> {
+impl<T> Vector4<T> {
     pub fn new(x: T, y: T, z: T, w: T) -> Self {
         Vector4 { x, y, z, w}
     }
@@ -52,7 +52,7 @@ pub struct Transform<T> {
     pub scale: Vector<T>
 }
 
-impl Transform<T> {
+impl<T> Transform<T> {
     pub fn new(rotation: Vector4<T>, translation: Vector<T>, scale: Vector<T>) -> Self {
         Transform { rotation, translation, scale }
     }
