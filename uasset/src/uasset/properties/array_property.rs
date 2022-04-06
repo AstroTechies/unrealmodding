@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO}, optional_guid};
 
-use super::Property;
+use super::{Property, struct_property::StructProperty};
 
 #[derive(Default, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
@@ -61,8 +61,8 @@ impl ArrayProperty {
                 
             // todo: dummy struct
             for i in 0..num_entries {
-                let data = Property::from_type(asset, &full_type, name.clone(), false, struct_length, 0)?;
-                entries.push(data);
+                let data = StructProperty::custom_header(asset, name.clone(), struct_length, Some(full_type.clone()), struct_guid, None)?;
+                entries.push(data.into());
             }
         } else {
             if num_entries > 0 {
