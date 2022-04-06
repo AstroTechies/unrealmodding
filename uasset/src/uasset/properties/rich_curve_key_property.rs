@@ -1,9 +1,9 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor,};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
-
+use crate::uasset::error::Error;
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
@@ -53,9 +53,9 @@ impl RichCurveKeyProperty {
     pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let interp_mode = RichCurveInterpMode::try_from(asset.cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?; // todo: implement normal errors
-        let tangent_mode = RichCurveTangentMode::try_from(asset.cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
-        let tangent_weight_mode = RichCurveTangentWeightMode::try_from(asset.cursor.read_i8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        let interp_mode = RichCurveInterpMode::try_from(asset.cursor.read_i8()?)?; // todo: implement normal errors
+        let tangent_mode = RichCurveTangentMode::try_from(asset.cursor.read_i8()?)?;
+        let tangent_weight_mode = RichCurveTangentWeightMode::try_from(asset.cursor.read_i8()?)?;
 
         let time = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
         let value = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);

@@ -1,7 +1,8 @@
-use std::io::{Cursor, Error, ErrorKind, Read};
+use std::io::{Cursor, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
+use crate::uasset::error::Error;
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, optional_guid};
 
 use super::Property;

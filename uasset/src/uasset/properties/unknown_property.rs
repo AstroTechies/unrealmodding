@@ -1,7 +1,8 @@
-use std::io::{Cursor, Error, ErrorKind, Read};
+use std::io::{Cursor, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
+use crate::uasset::error::Error;
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 #[derive(Hash, PartialEq, Eq)]

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::io::{Cursor, Error};
+use std::io::{Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::implement_get;
+use crate::uasset::error::Error;
 use crate::uasset::Asset;
 use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::exports::normal_export::NormalExport;

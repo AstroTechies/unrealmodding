@@ -1,5 +1,6 @@
-use std::io::{Cursor, Error, Read};
+use std::io::{Cursor, Read};
 use crate::uasset::Asset;
+use crate::uasset::error::Error;
 use crate::uasset::exports::unknown_export::UnknownExport;
 
 use super::ExportNormalTrait;

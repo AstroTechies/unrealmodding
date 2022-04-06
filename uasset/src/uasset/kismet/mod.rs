@@ -1,8 +1,9 @@
-use std::io::{Cursor, Error, ErrorKind, Read};
+use std::io::{Cursor, Read};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use byteorder::{LittleEndian, ReadBytesExt};
 use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
+use crate::uasset::Error;
 use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::exports::property_export::PropertyExport;
 use crate::uasset::enums::EBlueprintTextLiteralType;
@@ -11,6 +12,8 @@ use crate::uasset::properties::Property;
 use crate::uasset::types::{Transform, Vector, Vector4};
 use crate::uasset::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETARRAY_BYTECODE};
 use crate::uasset::unreal_types::{FieldPath, FName, PackageIndex};
+
+use super::error::KismetError;
 
 #[derive(PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
@@ -187,6 +190,7 @@ pub enum EExprToken {
     EX_Max = 0xff,
 }
 
+
 macro_rules! declare_expression {
     ($name:ident, $($v:ident: $t:ty),*) => {
         pub struct $name {
@@ -263,7 +267,7 @@ pub struct FScriptText {
 impl FScriptText {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         let mut cursor = &mut asset.cursor;
-        let text_literal_type: EBlueprintTextLiteralType = asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid text literal type"))?;
+        let text_literal_type: EBlueprintTextLiteralType = asset.cursor.read_u8()?.try_into()?;
         let (mut localized_source, mut localized_key, mut localized_namespace,
             mut invariant_literal_string, mut literal_string, mut string_table_asset,
             mut string_table_id, mut string_table_key) =
@@ -455,7 +459,7 @@ pub enum KismetExpression {
 
 impl KismetExpression {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-        let token: EExprToken = asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid kismet token"))?;
+        let token: EExprToken = asset.cursor.read_u8()?.try_into()?;
         let expr: Result<Self, Error> = match token {
             EExprToken::EX_LocalVariable => Ok(EX_LocalVariable::new(asset)?.into()),
             EExprToken::EX_InstanceVariable => Ok(EX_InstanceVariable::new(asset)?.into()),
@@ -550,7 +554,7 @@ impl KismetExpression {
             EExprToken::EX_ArrayGetByRef => Ok(EX_ArrayGetByRef::new(asset)?.into()),
             EExprToken::EX_ClassSparseDataVariable => Ok(EX_ClassSparseDataVariable::new(asset)?.into()),
             EExprToken::EX_FieldPathConst => Ok(EX_FieldPathConst::new(asset)?.into()),
-            _ => Err(Error::new(ErrorKind::Other, "Unknown kismet expression"))
+            _ => Err(KismetError::expression(format!("Unknown kismet expression {}", token as i32)).into())
         };
         expr
     }
@@ -1035,7 +1039,7 @@ impl EX_PrimitiveCast {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(EX_PrimitiveCast {
             token: EExprToken::EX_PrimitiveCast,
-            conversion_type: asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid expr token"))?,
+            conversion_type: asset.cursor.read_u8()?.try_into()?,
             target: Box::new(KismetExpression::new(asset)?)
         })
     }

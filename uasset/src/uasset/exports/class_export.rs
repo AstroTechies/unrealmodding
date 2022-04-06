@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::mem::size_of;
-use std::io::{Cursor, Error, ErrorKind, Seek, SeekFrom};
+use std::io::{Cursor, ErrorKind, Seek, SeekFrom};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::uasset::Asset;
+use crate::uasset::error::Error;
 use crate::uasset::exports::struct_export::StructExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::flags::EClassFlags;
@@ -50,7 +51,7 @@ impl ClassExport {
             func_map.insert(name, function_export);
         }
 
-        let mut class_flags = EClassFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid class flags"))?;
+        let mut class_flags = EClassFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?).ok_or(Error::invalid_file("Invalid class flags".to_string()))?;
         if asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
             class_flags = class_flags ^ EClassFlags::CLASS_NotPlaceable
         }

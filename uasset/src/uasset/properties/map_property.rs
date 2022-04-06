@@ -1,10 +1,10 @@
 use core::num;
-use std::{io::{Cursor, Error, ErrorKind}, collections::HashMap, hash::Hash};
+use std::{io::{Cursor, ErrorKind}, collections::HashMap, hash::Hash};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
-
+use crate::uasset::error::Error;
 use super::{Property, struct_property::StructProperty};
 
 #[derive(PartialEq, Eq)]
@@ -57,9 +57,9 @@ impl MapProperty {
 
         let num_keys_to_remove = asset.cursor.read_i32::<LittleEndian>()?;
         let mut keys_to_remove = Vec::with_capacity(num_keys_to_remove as usize);
-
-        let type_1 = type_1.ok_or(Error::new(ErrorKind::Other, "No type1"))?;
-        let type_2 = type_2.ok_or(Error::new(ErrorKind::Other, "No type2"))?;
+        
+        let type_1 = type_1.ok_or(Error::invalid_file("No type1".to_string()))?;
+        let type_2 = type_2.ok_or(Error::invalid_file("No type2".to_string()))?;
 
         for i in 0..num_keys_to_remove as usize {
             keys_to_remove.push(MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?);

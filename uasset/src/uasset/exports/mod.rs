@@ -9,12 +9,12 @@ pub mod class_export;
 pub mod raw_export;
 pub mod data_table_export;
 
-use std::io::{Error, Cursor};
+use std::io::{Cursor};
 
 use enum_dispatch::enum_dispatch;
 
 use self::{unknown_export::UnknownExport, class_export::ClassExport, enum_export::EnumExport, level_export::LevelExport, normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport, string_table_export::StringTableExport, struct_export::StructExport, data_table_export::DataTableExport};
-
+use super::error::Error;
 use super::Asset;
 
 #[enum_dispatch]

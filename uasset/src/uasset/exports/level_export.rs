@@ -1,4 +1,4 @@
-use std::io::{Cursor, Error, Read};
+use std::io::{Cursor, Read};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::implement_get;
 use crate::uasset::Asset;
@@ -6,7 +6,7 @@ use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::exports::normal_export::NormalExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::unreal_types::{FName, Guid, NamespacedString};
-
+use crate::uasset::error::Error;
 use super::ExportNormalTrait;
 
 pub struct LevelExport {

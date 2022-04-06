@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::io::{Error, ErrorKind};
+use std::io::ErrorKind;
+use crate::uasset::error::Error;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -76,14 +77,14 @@ impl PackageIndex {
 
     pub fn from_import(import_index: i32) -> Result<Self, Error> {
         match import_index < 0 {
-            true => Err(Error::new(ErrorKind::InvalidInput, "Import index must be bigger than zero")),
+            true => Err(Error::invalid_package_index("Import index must be bigger than zero".to_string())),
             false => Ok(PackageIndex::new(-import_index - 1))
         }
     }
 
     pub fn from_export(export_index: i32) -> Result<Self, Error> {
         match export_index < 0 {
-            true => Err(Error::new(ErrorKind::InvalidInput, "Export index must be greater than zero")),
+            true => Err(Error::invalid_package_index("Export index must be greater than zero".to_string())),
             false => Ok(PackageIndex::new(export_index + 1))
         }
     }

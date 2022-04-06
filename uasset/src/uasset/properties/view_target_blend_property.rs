@@ -1,9 +1,10 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
+use crate::uasset::error::Error;
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
@@ -39,7 +40,7 @@ impl ViewTargetBlendParamsProperty {
         let property_guid = optional_guid!(asset, include_header);
 
         let blend_time = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
-        let blend_function = ViewTargetBlendFunction::try_from(asset.cursor.read_u8()?).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        let blend_function = ViewTargetBlendFunction::try_from(asset.cursor.read_u8()?)?;
         let blend_exp = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
         let lock_outgoing = asset.cursor.read_i32::<LittleEndian>()? != 0;
 

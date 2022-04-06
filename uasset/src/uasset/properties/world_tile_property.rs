@@ -1,9 +1,9 @@
-use std::{io::{Error, Cursor, ErrorKind}, str::FromStr};
+use std::{io::{Cursor, ErrorKind}, str::FromStr};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion, unreal_types::FName};
-
+use crate::uasset::error::Error;
 use super::vector_property::{IntPointProperty, BoxProperty};
 
 

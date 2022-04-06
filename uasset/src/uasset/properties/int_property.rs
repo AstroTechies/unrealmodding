@@ -1,10 +1,10 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor,};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
-
+use crate::uasset::error::Error;
 
 macro_rules! parse_int_property {
     ($property_type:ident, $read_func:ident) => {
@@ -137,7 +137,7 @@ impl ByteProperty {
             _ => None
         };
 
-        value.ok_or(Error::new(ErrorKind::Other, format!("Invalid length of {} for ByteProperty", length)))
+        value.ok_or(Error::invalid_file(format!("Invalid length of {} for ByteProperty", length)))
     }
 
     pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, fallback_length: i64) -> Result<Self, Error> {

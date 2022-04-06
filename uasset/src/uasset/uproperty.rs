@@ -1,7 +1,8 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor,};
 use byteorder::{LittleEndian, ReadBytesExt};
 use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
+use crate::uasset::Error;
 use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
 use crate::uasset::enums::{EArrayDim, ELifetimeCondition};
@@ -227,8 +228,8 @@ impl UGenericProperty {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         let u_field = UField::new(asset)?;
 
-        let array_dim: EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
-        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid property flags"))?;
+        let array_dim: EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into()?;
+        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?).ok_or(Error::invalid_file("Invalid property flags".to_string()))?;
         let rep_notify_func = asset.read_fname()?;
 
         let blueprint_replication_condition: Option<ELifetimeCondition> = match asset.get_custom_version::<FReleaseObjectVersion>().version >= FReleaseObjectVersion::PropertiesSerializeRepCondition as i32 {

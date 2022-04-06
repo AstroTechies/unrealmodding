@@ -22,13 +22,13 @@ pub mod view_target_blend_property;
 pub mod gameplay_tag_container_property;
 pub mod smart_name_property;
 
-use std::{io::{Error, Cursor}, collections::HashMap};
+use std::{io::{Cursor}, collections::HashMap};
 use byteorder::{ReadBytesExt, LittleEndian};
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 
 use self::{unknown_property::UnknownProperty, int_property::{BoolProperty, UInt16Property, UInt32Property, UInt64Property, FloatProperty, Int16Property, Int64Property, Int8Property, IntProperty, ByteProperty, DoubleProperty}, str_property::{NameProperty, StrProperty, TextProperty}, object_property::{ObjectProperty, AssetObjectProperty, SoftObjectProperty}, vector_property::{IntPointProperty, VectorProperty, Vector4Property, Vector2DProperty, QuatProperty, RotatorProperty, BoxProperty}, color_property::{LinearColorProperty, ColorProperty}, date_property::DateTimeProperty, guid_property::GuidProperty, struct_property::StructProperty, set_property::SetProperty, array_property::ArrayProperty, map_property::MapProperty, per_platform_property::{PerPlatformBoolProperty, PerPlatformIntProperty, PerPlatformFloatProperty}, material_input_property::{MaterialAttributesInputProperty, ExpressionInputProperty, ColorMaterialInputProperty, ScalarMaterialInputProperty, ShadingModelMaterialInputProperty, VectorMaterialInputProperty, Vector2MaterialInputProperty}, enum_property::EnumProperty, sampler_property::{WeightedRandomSamplerProperty, SkeletalMeshSamplingLODBuiltDataProperty}, soft_path_property::SoftPathProperty, delegate_property::MulticastDelegateProperty, rich_curve_key_property::RichCurveKeyProperty, view_target_blend_property::ViewTargetBlendParamsProperty, gameplay_tag_container_property::GameplayTagContainerProperty, smart_name_property::SmartNameProperty};
-
+use super::error::Error;
 use super::{Asset, unreal_types::FName};
 
 #[macro_export]

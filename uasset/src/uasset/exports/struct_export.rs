@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{Cursor, Error, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::implement_get;
 use crate::uasset::Asset;
@@ -12,7 +12,7 @@ use crate::uasset::kismet::KismetExpression;
 use crate::uasset::ue4version::VER_UE4_16;
 use crate::uasset::unreal_types::{FName, PackageIndex};
 use crate::uasset::uproperty::UField;
-
+use crate::uasset::error::Error;
 use super::ExportNormalTrait;
 
 pub struct StructExport {

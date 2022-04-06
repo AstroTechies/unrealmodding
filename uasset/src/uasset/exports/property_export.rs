@@ -1,7 +1,8 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor,};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::implement_get;
 use crate::uasset::Asset;
+use crate::uasset::Error;
 use crate::uasset::exports::normal_export::NormalExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::uproperty::UProperty;
@@ -22,7 +23,7 @@ impl PropertyExport {
 
         asset.cursor.read_i32::<LittleEndian>()?;
 
-        let export_class_type = asset.get_export_class_type(normal_export.class_index).ok_or(Error::new(ErrorKind::Other, "No such class type"))?;
+        let export_class_type = asset.get_export_class_type(normal_export.class_index).ok_or(Error::invalid_package_index("No such class type".to_string()))?;
         let property = UProperty::new(asset, export_class_type)?;
 
         Ok(PropertyExport {

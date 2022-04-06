@@ -1,7 +1,8 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor,};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::implement_get;
 use crate::uasset::Asset;
+use crate::uasset::Error;
 use crate::uasset::custom_version::FCoreObjectVersion;
 use crate::uasset::exports::normal_export::NormalExport;
 use crate::uasset::ue4version::{VER_UE4_ENUM_CLASS_SUPPORT, VER_UE4_TIGHTLY_PACKED_ENUMS};
@@ -61,7 +62,7 @@ impl Enum {
                     false => ECppForm::Regular
                 }
             }
-            false => asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Unknown cppform"))?
+            false => asset.cursor.read_u8()?.try_into()?
         };
 
         Ok(Enum {

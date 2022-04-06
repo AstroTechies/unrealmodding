@@ -1,9 +1,10 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor,};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitiveError;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, enums::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid};
+use crate::uasset::error::Error;
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct StrProperty {
@@ -68,7 +69,7 @@ impl TextProperty {
         let mut table_id = None;
         if engine_version >= VER_UE4_FTEXT_HISTORY {
             history_type = Some(asset.cursor.read_i8()?);
-            let history_type: TextHistoryType = history_type.unwrap().try_into().map_err(|e: TryFromPrimitiveError<TextHistoryType>| Error::new(ErrorKind::Other, e.to_string()))?;
+            let history_type: TextHistoryType = history_type.unwrap().try_into()?;
 
             match history_type {
                 TextHistoryType::None => {
@@ -91,7 +92,7 @@ impl TextProperty {
                     value = Some(asset.cursor.read_string()?);
                 }
                 _ => {
-                    return Err(Error::new(ErrorKind::Other, format!("Unimplemented reader for {:?}", history_type)));
+                    return Err(Error::unimplemented(format!("Unimplemented reader for {:?}", history_type)));
                 }
             }
         }

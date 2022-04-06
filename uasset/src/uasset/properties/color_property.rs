@@ -1,8 +1,9 @@
-use std::io::{Cursor, Error, ErrorKind, Read};
+use std::io::{Cursor, ErrorKind, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use ordered_float::OrderedFloat;
 
+use crate::uasset::error::Error;
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::Color, Asset}, optional_guid};
 
 #[derive(Debug, Hash, PartialEq, Eq)]

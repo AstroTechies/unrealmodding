@@ -15,7 +15,7 @@ pub mod uasset {
     use std::collections::hash_map::DefaultHasher;
     use std::fmt::{Debug, Formatter};
     use std::hash::{Hash, Hasher};
-    use std::io::{Cursor, Error, ErrorKind, Read, Seek, SeekFrom};
+    use std::io::{Cursor, Read, Seek, SeekFrom};
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian};
 
@@ -32,6 +32,7 @@ pub mod uasset {
     use crate::uasset::fproperty::FProperty;
     use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
 
+    use self::error::Error;
     use self::cursor_ext::CursorExt;
     use self::custom_version::CustomVersionTrait;
     use self::exports::{Export, ExportNormalTrait};
@@ -39,6 +40,7 @@ pub mod uasset {
     use self::properties::world_tile_property::FWorldTileInfo;
     use self::unreal_types::Guid;
 
+    pub mod error;
     pub mod flags;
     pub mod enums;
     pub mod custom_version;
@@ -211,10 +213,7 @@ pub mod uasset {
 
             // read and check magic
             if self.cursor.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {
-                return Err(Error::new(
-                    ErrorKind::InvalidData,
-                    "File is not a valid uasset file",
-                ));
+                return Err(Error::invalid_file("File is not a valid uasset file".to_string()));
             }
 
             // read legacy version
@@ -234,10 +233,7 @@ pub mod uasset {
 
             if self.unversioned {
                 if self.engine_version == ue4version::UNKNOWN {
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        "Cannot begin serialization of an unversioned asset before an engine version is manually specified",
-                    ));
+                    return Err(Error::invalid_file("Cannot begin serialization of an unversioned asset before an engine version is manually specified".to_string()));
                 }
             } else {
                 self.engine_version = file_version;
@@ -336,9 +332,8 @@ pub mod uasset {
             self.compression_flags = self.cursor.read_u32::<LittleEndian>()?;
             let compression_block_count = self.cursor.read_u32::<LittleEndian>()?;
             if compression_block_count > 0 {
-                return Err(Error::new(
-                    ErrorKind::Unsupported,
-                    "Compression block count is not zero",
+                return Err(Error::invalid_file(
+                    "Compression block count is not zero".to_string()
                 ));
             }
 
@@ -347,17 +342,15 @@ pub mod uasset {
             // some other old unsupported stuff
             let additional_to_cook = self.cursor.read_i32::<LittleEndian>()?;
             if additional_to_cook != 0 {
-                return Err(Error::new(
-                    ErrorKind::Unsupported,
-                    "Additional to cook is not zero",
+                return Err(Error::invalid_file(
+                    "Additional to cook is not zero".to_string()
                 ));
             }
             if self.legacy_file_version > -7 {
                 let texture_allocations_count = self.cursor.read_i32::<LittleEndian>()?;
                 if texture_allocations_count != 0 {
-                    return Err(Error::new(
-                        ErrorKind::Unsupported,
-                        "Texture allocations count is not zero",
+                    return Err(Error::invalid_file(
+                        "Texture allocations count is not zero".to_string()
                     ));
                 }
             }
@@ -690,8 +683,7 @@ pub mod uasset {
             self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
                     
             //todo: manual skips
-
-            let export_class_type = self.get_export_class_type(unk_export.class_index).ok_or(Error::new(ErrorKind::Other, "Unknown class type"))?;
+            let export_class_type = self.get_export_class_type(unk_export.class_index).ok_or(Error::invalid_package_index("Unknown class type".to_string()))?;
             let mut export: Export = match export_class_type.content.as_str() {
                 "Level" => LevelExport::from_unk(unk_export, self, next_starting)?.into(),
                 "StringTable" => StringTableExport::from_unk(unk_export, self)?.into(),

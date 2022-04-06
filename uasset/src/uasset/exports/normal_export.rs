@@ -1,8 +1,9 @@
-use std::io::{Cursor, Error};
+use std::io::{Cursor};
 use crate::uasset::Asset;
 use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::properties::Property;
 use crate::uasset::unreal_types::{FName, Guid};
+use crate::uasset::error::Error;
 
 use super::ExportNormalTrait;
 

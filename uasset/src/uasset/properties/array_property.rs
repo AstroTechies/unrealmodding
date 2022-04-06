@@ -1,8 +1,9 @@
-use std::io::{Cursor, Error, ErrorKind, Read};
+use std::io::{Cursor, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO}, optional_guid};
+use crate::uasset::error::Error;
 
 use super::{Property, struct_property::StructProperty};
 
@@ -46,7 +47,7 @@ impl ArrayProperty {
                 }
 
                 if this_array_type.content != array_type.as_ref().unwrap().content.as_str() {
-                    return Err(Error::new(ErrorKind::Other, format!("Invalid array type {} vs {}", this_array_type.content, array_type.as_ref().unwrap().content)));
+                    return Err(Error::invalid_file(format!("Invalid array type {} vs {}", this_array_type.content, array_type.as_ref().unwrap().content)));
                 }
 
                 struct_length = asset.cursor.read_i64::<LittleEndian>()?;
@@ -68,7 +69,7 @@ impl ArrayProperty {
             if num_entries > 0 {
                 let size_est_1 = length / num_entries as i64;
                 let size_est_2 = (length - 4) / num_entries as i64;
-                let array_type = array_type.as_ref().ok_or(Error::new(ErrorKind::Other, "Unknown array type"))?;
+                let array_type = array_type.as_ref().ok_or(Error::invalid_file("Unknown array type".to_string()))?;
                 for i in 0..num_entries {
                     let entry = Property::from_type(asset, array_type, FName::new(i.to_string(), i32::MIN), false, size_est_1, size_est_2)?;
                     entries.push(entry);

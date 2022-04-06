@@ -1,7 +1,8 @@
-use std::io::{Cursor, Error, ErrorKind};
+use std::io::{Cursor,};
 use byteorder::{LittleEndian, ReadBytesExt};
 use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
+use crate::uasset::error::Error;
 use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::enums::{ELifetimeCondition, EArrayDim};
 use crate::uasset::flags::{EObjectFlags, EPropertyFlags};
@@ -197,13 +198,13 @@ impl FGenericProperty {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         
         let name = asset.read_fname()?;
-        let flags: EObjectFlags = EObjectFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid object flags"))?;
-        let array_dim : EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid array dim"))?;
+        let flags: EObjectFlags = EObjectFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?).ok_or(Error::invalid_file("Invalid object flags".to_string()))?; // todo: maybe other error type than invalid_file?
+        let array_dim : EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into()?;
         let element_size = asset.cursor.read_i32::<LittleEndian>()?;
-        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid property flags"))?;
+        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?).ok_or(Error::invalid_file("Invalid property flags".to_string()))?;
         let rep_index = asset.cursor.read_u16::<LittleEndian>()?;
         let rep_notify_func = asset.read_fname()?;
-        let blueprint_replication_condition: ELifetimeCondition = asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid blueprint replication condition"))?;
+        let blueprint_replication_condition: ELifetimeCondition = asset.cursor.read_u8()?.try_into()?;
 
         Ok(FGenericProperty {
             name,

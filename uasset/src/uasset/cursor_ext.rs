@@ -1,8 +1,8 @@
-use std::io::{Error, Cursor, Read, SeekFrom, Seek, ErrorKind};
-
+use std::io::{Cursor, Read, SeekFrom, Seek, ErrorKind};
 use byteorder::{ReadBytesExt, LittleEndian};
 
 use super::{unreal_types::Guid, types::Vector};
+use super::error::Error;
 
 pub trait CursorExt {
     fn read_string(&mut self) -> Result<String, Error>;
