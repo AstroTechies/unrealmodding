@@ -31,7 +31,7 @@ pub mod uasset {
     use crate::uasset::exports::struct_export::StructExport;
     use crate::uasset::exports::unknown_export::UnknownExport;
     use crate::uasset::fproperty::FProperty;
-    use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP, VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION, VER_UE4_WORLD_LEVEL_INFO, VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE};
+    use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP, VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION, VER_UE4_WORLD_LEVEL_INFO, VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE, VER_UE4_NAME_HASHES_SERIALIZED};
 
     use self::error::Error;
     use self::cursor_ext::CursorExt;
@@ -54,6 +54,7 @@ pub mod uasset {
     pub mod uproperty;
     pub mod fproperty;
     pub mod kismet;
+    mod crc;
     use custom_version::CustomVersion;
     use unreal_types::{FName, GenerationInfo};
 
@@ -858,7 +859,25 @@ pub mod uasset {
         }
 
         pub fn write_data(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            self.write_header(cursor)?;
 
+            for name in self.name_map_index_list {
+                cursor.write_string(&name)?;
+
+                if self.engine_version >= VER_UE4_NAME_HASHES_SERIALIZED {
+                    match self.override_name_map_hashes.get(&name) {
+                        Some(e) => cursor.write_u32::<LittleEndian>(*e)?,
+                        None => {
+
+                        }
+                    }
+                    if self.override_name_map_hashes.contains_key(&name) {
+                        cursor.write_u32::<LittleEndian>(self.override_name_map_hashes.get(&name).unwrap())
+                    }
+                }
+            }
+
+            Ok(())
         }
     }
 
