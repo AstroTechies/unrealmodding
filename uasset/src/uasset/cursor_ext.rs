@@ -1,5 +1,5 @@
-use std::io::{Cursor, Read, SeekFrom, Seek, ErrorKind};
-use byteorder::{ReadBytesExt, LittleEndian};
+use std::io::{Cursor, Read, SeekFrom, Seek, ErrorKind, Write};
+use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 
 use super::{unreal_types::Guid, types::Vector};
 use super::error::Error;
@@ -9,6 +9,8 @@ pub trait CursorExt {
     fn read_bool(&mut self) -> Result<bool, Error>;
     fn read_vector(&mut self) -> Result<Vector<f32>, Error>;
     fn read_int_vector(&mut self) -> Result<Vector<i32>, Error>;
+
+    fn write_string(&mut self, string: &String) -> Result<(), Error>;
 }
 
 impl CursorExt for Cursor<Vec<u8>> {
@@ -49,5 +51,16 @@ impl CursorExt for Cursor<Vec<u8>> {
                 self.read_i32::<LittleEndian>()?
             )
         )
+    }
+
+    fn write_string(&mut self, string: &String) -> Result<(), Error> {
+        let is_unicode = string.len() != string.chars().count();
+        match is_unicode {
+            true => self.write_i32::<LittleEndian>(-(string.len() as i32) + 1),
+            false => self.write_i32::<LittleEndian>(string.len() as i32 + 1)
+        };
+        self.write(&string.into_bytes())?;
+        self.write(&[0u8; 1]);
+        Ok(())
     }
 }

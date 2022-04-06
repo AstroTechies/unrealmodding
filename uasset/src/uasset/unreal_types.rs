@@ -21,6 +21,12 @@ pub struct GenerationInfo {
     pub name_count: i32,
 }
 
+impl GenerationInfo {
+    pub fn new(export_count: i32, name_count: i32) -> Self {
+        GenerationInfo { export_count, name_count }
+    }
+}
+
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone)]
 pub struct FName {
     pub content: String,

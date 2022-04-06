@@ -13,11 +13,12 @@ pub mod uasset {
     use std::borrow::Borrow;
     use std::collections::HashMap;
     use std::collections::hash_map::DefaultHasher;
+    use std::env::split_paths;
     use std::fmt::{Debug, Formatter};
     use std::hash::{Hash, Hasher};
-    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
-    use byteorder::{ReadBytesExt, LittleEndian, BigEndian};
+    use byteorder::{ReadBytesExt, LittleEndian, BigEndian, WriteBytesExt};
 
     use crate::uasset::exports::class_export::ClassExport;
     use crate::uasset::exports::data_table_export::DataTableExport;
@@ -30,7 +31,7 @@ pub mod uasset {
     use crate::uasset::exports::struct_export::StructExport;
     use crate::uasset::exports::unknown_export::UnknownExport;
     use crate::uasset::fproperty::FProperty;
-    use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
+    use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP, VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION, VER_UE4_WORLD_LEVEL_INFO, VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE};
 
     use self::error::Error;
     use self::cursor_ext::CursorExt;
@@ -747,6 +748,118 @@ pub mod uasset {
 
             Ok(export)
         }
+
+        fn write_header(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            cursor.write_u32::<LittleEndian>(UE4_ASSET_MAGIC)?;
+            cursor.write_i32::<LittleEndian>(self.legacy_file_version)?;
+
+            if self.legacy_file_version != 4 {
+                match self.unversioned {
+                    true => cursor.write_i32::<LittleEndian>(0)?,
+                    false => cursor.write_i32::<LittleEndian>(864)?
+                };
+            }
+
+            match self.unversioned {
+                true => cursor.write_i32::<LittleEndian>(0)?,
+                false => cursor.write_i32::<LittleEndian>(self.engine_version)?
+            };
+
+            cursor.write_i32::<LittleEndian>(self.file_license_version)?;
+            if self.legacy_file_version <= -2 {
+                match self.unversioned {
+                    true => cursor.write_i32::<LittleEndian>(0)?,
+                    false => {
+                        cursor.write_i32::<LittleEndian>(self.custom_version.len() as i32)?;
+                        for custom_version in self.custom_version {
+                            cursor.write(&custom_version.guid)?;
+                            cursor.write_i32::<LittleEndian>(custom_version.version)?;
+                        }
+                    }
+                };
+            }
+
+            cursor.write_i32::<LittleEndian>(self.header_offset)?;
+            cursor.write_string(&self.folder_name)?;
+            cursor.write_u32::<LittleEndian>(self.package_flags)?;
+            cursor.write_i32::<LittleEndian>(self.name_count)?;
+            cursor.write_i32::<LittleEndian>(self.name_offset)?;
+
+            if self.engine_version >= VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
+                cursor.write_i32::<LittleEndian>(self.gatherable_text_data_count)?;
+                cursor.write_i32::<LittleEndian>(self.gatherable_text_data_offset)?;
+            }
+
+            cursor.write_i32::<LittleEndian>(self.export_count)?;
+            cursor.write_i32::<LittleEndian>(self.export_offset)?;
+            cursor.write_i32::<LittleEndian>(self.import_count)?;
+            cursor.write_i32::<LittleEndian>(self.import_offset)?;
+            cursor.write_i32::<LittleEndian>(self.depends_offset)?;
+
+            if self.engine_version >= VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP {
+                cursor.write_i32::<LittleEndian>(self.soft_package_reference_count)?;
+                cursor.write_i32::<LittleEndian>(self.soft_package_reference_offset)?;
+            }
+
+            if self.engine_version >= VER_UE4_ADDED_SEARCHABLE_NAMES {
+                cursor.write_i32::<LittleEndian>(self.searchable_names_offset)?;
+            }
+
+            cursor.write_i32::<LittleEndian>(self.thumbnail_table_offset)?;
+            cursor.write(&self.package_guid)?;
+            cursor.write_i32::<LittleEndian>(self.generations.len() as i32);
+
+            for i in 0..self.generations {
+                cursor.write_i32::<LittleEndian>(self.export_count)?;
+                cursor.write_i32::<LittleEndian>(self.name_count)?;
+            }
+
+            if self.engine_version >= VER_UE4_ENGINE_VERSION_OBJECT {
+                self.engine_version_recorded.write(cursor)?;
+            } else {
+                cursor.write_u32::<LittleEndian>(self.engine_version_recorded.build)?;
+            }
+
+            if self.engine_version >= VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION {
+                self.engine_version_recorded.write(cursor)?;
+            }
+
+            cursor.write_u32::<LittleEndian>(self.compression_flags)?;
+            cursor.write_i32::<LittleEndian>(0)?; // numCompressedChunks
+            cursor.write_u32::<LittleEndian>(self.package_source)?;
+            cursor.write_i32::<LittleEndian>(0)?; // numAdditionalPackagesToCook
+
+            if self.legacy_file_version > -7 {
+                cursor.write_i32::<LittleEndian>(0)?; // numTextureallocations
+            }
+
+            cursor.write_i32::<LittleEndian>(self.asset_registry_data_offset)?;
+            cursor.write_i64::<LittleEndian>(self.bulk_data_start_offset)?;
+
+            if self.engine_version >= VER_UE4_WORLD_LEVEL_INFO {
+                cursor.write_i32::<LittleEndian>(self.world_tile_info_offset)?;
+            }
+
+            if self.engine_version >= VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS {
+                cursor.write_i32::<LittleEndian>(self.chunk_ids.len() as i32)?;
+                for chunk_id in self.chunk_ids {
+                    cursor.write_i32::<LittleEndian>(chunk_id)?;
+                }
+            } else if self.engine_version >= VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE {
+                cursor.write_i32::<LittleEndian>(self.chunk_ids[0])?;
+            }
+
+            if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+                cursor.write_i32::<LittleEndian>(self.preload_dependency_count)?;
+                cursor.write_i32::<LittleEndian>(self.preload_dependency_offset)?;
+            }
+
+            Ok(())
+        }
+
+        pub fn write_data(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+
+        }
     }
 
     // custom debug implementation to not print the whole data buffer
@@ -848,15 +961,22 @@ pub mod uasset {
         }
 
         fn read(cursor: &mut Cursor<Vec<u8>>) -> Result<Self, Error> {
-            let mut buf2 = [0u8; 2];
             let major = cursor.read_u16::<LittleEndian>()?;
             let minor = cursor.read_u16::<LittleEndian>()?;
             let patch = cursor.read_u16::<LittleEndian>()?;
-            let mut buf4 = [0u8; 4];
             let build = cursor.read_u32::<LittleEndian>()?;
             let branch = cursor.read_string()?;
 
             Ok(Self::new(major, minor, patch, build, branch))
+        }
+
+        fn write(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            cursor.write_u16::<LittleEndian>(self.major)?;
+            cursor.write_u16::<LittleEndian>(self.minor)?;
+            cursor.write_u16::<LittleEndian>(self.patch)?;
+            cursor.write_u32::<LittleEndian>(self.build)?;
+            cursor.write_string(&self.branch)?;
+            Ok(())
         }
 
         fn unknown() -> Self {
