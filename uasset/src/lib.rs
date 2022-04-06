@@ -140,12 +140,21 @@ pub mod uasset {
     }
 
     impl<'a> Asset {
-        pub fn new(raw_data: Vec<u8>) -> Self {
+        pub fn new(asset_data: Vec<u8>, bulk_data: Option<Vec<u8>>) -> Self {
+            let raw_data = match &bulk_data {
+                Some(e) => {
+                    let mut data = asset_data.clone();
+                    data.extend(e);
+                    data
+                },
+                None => asset_data
+            };
+
             Asset {
                 data_length: raw_data.len() as u64,
                 cursor: Cursor::new(raw_data),
                 info: String::from("Serialized with unrealmodding/uasset"),
-                use_seperate_bulk_data_files: false,
+                use_seperate_bulk_data_files: bulk_data.is_some(),
                 engine_version: 0,
                 legacy_file_version: 0,
                 unversioned: true,
