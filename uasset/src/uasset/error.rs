@@ -1,4 +1,4 @@
-use std::{io, fmt::Display};
+use std::{io, fmt::Display, error};
 
 use num_enum::{TryFromPrimitiveError, TryFromPrimitive};
 
@@ -79,6 +79,9 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.code, f)
     }
+}
+
+impl error::Error for Error {
 }
 
 impl Display for ErrorCode {
