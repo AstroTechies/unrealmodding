@@ -17,7 +17,7 @@ pub struct ArrayProperty {
 impl ArrayProperty {
     pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32, serialize_struct_differently: bool) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
-            true => (Some(asset.read_fname()?), Some(asset.cursor.read_property_guid()?)),
+            true => (Some(asset.read_fname()?), asset.read_property_guid()?),
             false => (None, None)
         };
         ArrayProperty::new_no_header(asset, name, include_header, length, engine_version, serialize_struct_differently, array_type, property_guid)
@@ -30,10 +30,10 @@ impl ArrayProperty {
         let mut name = name;
 
         let mut struct_length = 1;
-        let mut full_type = FName::new(String::from("Generic"), 0);
         let mut struct_guid = None;
         
         if (array_type.is_some() && array_type.as_ref().unwrap().content.as_str() == "StructProperty") && serialize_struct_differently {
+            let mut full_type = FName::new(String::from("Generic"), 0);
             if engine_version >= VER_UE4_INNER_ARRAY_TAG_INFO {
                 name = asset.read_fname()?;
                 if &name.content == "None" {
@@ -55,7 +55,7 @@ impl ArrayProperty {
                 let mut guid = [0u8; 16];
                 asset.cursor.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
-                asset.cursor.read_property_guid()?;
+                asset.read_property_guid()?;
             }
 
                 
@@ -68,9 +68,9 @@ impl ArrayProperty {
             if num_entries > 0 {
                 let size_est_1 = length / num_entries as i64;
                 let size_est_2 = (length - 4) / num_entries as i64;
-
+                let array_type = array_type.as_ref().ok_or(Error::new(ErrorKind::Other, "Unknown array type"))?;
                 for i in 0..num_entries {
-                    let entry = Property::from_type(asset, &full_type, FName::new(i.to_string(), i32::MIN), false, size_est_1, size_est_2)?;
+                    let entry = Property::from_type(asset, array_type, FName::new(i.to_string(), i32::MIN), false, size_est_1, size_est_2)?;
                     entries.push(entry);
                 }
             }

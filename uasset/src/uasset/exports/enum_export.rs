@@ -35,11 +35,8 @@ impl Enum {
                 names.push((name, i as i64));
             }
         } else {
-            let custom_version = match asset.get_custom_version("FCoreObjectVersion").map(|e| e.version < FCoreObjectVersion::EnumProperties as i32) {
-                Some(e) => e,
-                None => false
-            };
-            if custom_version {
+            let custom_version = asset.get_custom_version::<FCoreObjectVersion>();
+            if custom_version.version < FCoreObjectVersion::EnumProperties as i32 {
                 let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
                 for i in 0..num_entries {
                     let name = asset.read_fname()?;

@@ -35,7 +35,7 @@ use super::{Asset, unreal_types::FName};
 macro_rules! optional_guid {
     ($asset:ident, $include_header:ident) => {
         match $include_header {
-            true => Some($asset.cursor.read_property_guid()?),
+            true => $asset.read_property_guid()?,
             false => None
         }
     };

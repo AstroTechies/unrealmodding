@@ -29,7 +29,7 @@ impl StructProperty {
                 asset.cursor.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
             }
-            property_guid = Some(asset.cursor.read_property_guid()?);
+            property_guid = asset.read_property_guid()?;
         }
 
         StructProperty::custom_header(asset, name, length, struct_type, struct_guid, property_guid)

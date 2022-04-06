@@ -159,7 +159,7 @@ pub struct BoxProperty {
 impl BoxProperty {
     pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
         let property_guid = match include_header {
-            true => Some(asset.cursor.read_property_guid()?),
+            true => asset.read_property_guid()?,
             false => None
         };
 

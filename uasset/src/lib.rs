@@ -33,6 +33,7 @@ pub mod uasset {
     use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS};
 
     use self::cursor_ext::CursorExt;
+    use self::custom_version::CustomVersionTrait;
     use self::exports::{Export, ExportNormalTrait};
     use self::flags::{EPackageFlags, EObjectFlags};
     use self::properties::world_tile_property::FWorldTileInfo;
@@ -381,15 +382,20 @@ pub mod uasset {
             Ok(())
         }
 
-        fn get_custom_version(&'a self, version_name: &str) -> Option<&'a CustomVersion> {
+        fn get_custom_version<T>(&self) -> CustomVersion 
+            where T : CustomVersionTrait + Into<i32>
+        {
+            let version_friendly_name = T::friendly_name();
             for i in 0..self.custom_version.len() {
                 if let Some(friendly_name) = &self.custom_version[i].friendly_name {
-                    if friendly_name.as_str() == version_name {
-                        return Some(&self.custom_version[i])
+                    if friendly_name.as_str() == version_friendly_name {
+                        return self.custom_version[i].clone();
                     }
                 }
             }
-            return None;
+
+            let guess = T::from_engine_version(self.engine_version);
+            CustomVersion::from_version(guess)
         }
 
         fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
@@ -409,6 +415,19 @@ pub mod uasset {
                     self.name_map_lookup.insert(s.finish(), i as i32);
                 }
             }
+        }
+
+        
+        pub fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
+            if self.engine_version >= ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+                let has_property_guid = self.cursor.read_bool()?;
+                if has_property_guid {
+                    let mut guid = [0u8; 16];
+                    self.cursor.read_exact(&mut guid)?;
+                    return Ok(Some(guid));
+                }
+            }
+            Ok(None)
         }
 
         fn search_name_reference(&mut self, name: &String) -> Option<i32> {
@@ -620,8 +639,9 @@ pub mod uasset {
                     if let Some(unk_export) = unk_export {
                         let export: Result<Export, Error> = match self.read_export(&unk_export, i) {
                             Ok(e) => Ok(e),
-                            Err(_) => {
+                            Err(e) => {
                                 //todo: warning?
+                                println!("{:?}", e);
                                 self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
                                 Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
                             }
@@ -711,7 +731,11 @@ pub mod uasset {
 
             let extras_len = (next_starting as i64 - self.cursor.position() as i64);
             if extras_len < 0 {
+                println!("{:?}", self.cursor.position());
                 // todo: warning?
+                
+                self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
+                return Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
             } else {
                 if let Some(normal_export) = export.get_normal_export_mut() {
                     let mut extras = Vec::with_capacity(extras_len as usize);

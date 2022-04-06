@@ -73,7 +73,7 @@ impl TextProperty {
             match history_type {
                 TextHistoryType::None => {
                     value = None;
-                    let version: &CustomVersion = asset.get_custom_version("FEditorObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
+                    let version: CustomVersion = asset.get_custom_version::<FEditorObjectVersion>();
                     if version.version >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability as i32 {
                         let has_culture_invariant_string = asset.cursor.read_i32::<LittleEndian>()? == 1;
                         if has_culture_invariant_string {

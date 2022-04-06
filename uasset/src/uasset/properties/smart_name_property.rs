@@ -23,7 +23,7 @@ impl SmartNameProperty {
         let mut smart_name_id = None;
         let mut temp_guid = None;
 
-        let custom_version = asset.get_custom_version("FAnimPhysObjectVersion").map(|e| e.version).ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
+        let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
 
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
             smart_name_id = Some(asset.cursor.read_u16::<LittleEndian>()?);

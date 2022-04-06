@@ -52,7 +52,7 @@ impl MapProperty {
         if include_header {
             type_1 = Some(asset.read_fname()?);
             type_2 = Some(asset.read_fname()?);
-            property_guid = Some(asset.cursor.read_property_guid()?);
+            property_guid = asset.read_property_guid()?;
         }
 
         let num_keys_to_remove = asset.cursor.read_i32::<LittleEndian>()?;

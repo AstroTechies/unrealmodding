@@ -70,7 +70,7 @@ pub struct FWorldTileInfo {
 
 impl FWorldTileInfo {
     pub fn new(asset: &mut Asset, engine_version: i32) -> Result<Self, Error> {
-        let version = asset.get_custom_version("FFortniteMainBranchObjectVersion").ok_or(Error::new(ErrorKind::Other, "Unknown custom version"))?;
+        let version = asset.get_custom_version::<FFortniteMainBranchObjectVersion>();
 
         let position = match version.version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32 {
             true => Vector::new(asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()?, 0),

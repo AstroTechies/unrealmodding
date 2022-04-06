@@ -142,7 +142,7 @@ impl ByteProperty {
 
     pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, fallback_length: i64) -> Result<Self, Error> {
         let (property_guid, enum_type) = match include_header {
-            true => (Some(asset.cursor.read_property_guid()?), Some(asset.cursor.read_i64::<LittleEndian>()?)),
+            true => (asset.read_property_guid()?, Some(asset.cursor.read_i64::<LittleEndian>()?)),
             false => (None, None)
         };
 

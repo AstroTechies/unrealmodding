@@ -213,7 +213,7 @@ pub struct UStrProperty { generic_property: UGenericProperty }
 impl UField {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         
-        let next = match asset.get_custom_version("FFrameworkObjectVersion").map(|e| e.version < FFrameworkObjectVersion::RemoveUField_Next as i32).unwrap_or(false) {
+        let next = match asset.get_custom_version::<FFrameworkObjectVersion>().version < FFrameworkObjectVersion::RemoveUField_Next as i32 {
             true => Some(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)),
             false => None
         };
@@ -231,8 +231,8 @@ impl UGenericProperty {
         let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?).ok_or(Error::new(ErrorKind::Other, "Invalid property flags"))?;
         let rep_notify_func = asset.read_fname()?;
 
-        let blueprint_replication_condition: Option<ELifetimeCondition> = match asset.get_custom_version("FReleaseObjectVersion").map(|e| e.version < FReleaseObjectVersion::PropertiesSerializeRepCondition as i32).unwrap_or(false) {
-            true => Some(asset.cursor.read_u8()?.try_into().map_err(|e| Error::new(ErrorKind::Other, "Invalid blueprint replication condition"))?),
+        let blueprint_replication_condition: Option<ELifetimeCondition> = match asset.get_custom_version::<FReleaseObjectVersion>().version >= FReleaseObjectVersion::PropertiesSerializeRepCondition as i32 {
+            true => asset.cursor.read_u8()?.try_into().ok(),
             false => None
         };
 

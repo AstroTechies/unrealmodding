@@ -42,7 +42,7 @@ impl StructExport {
             children.push(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?));
         }
 
-        let mut loaded_properties = match asset.get_custom_version("FCoreObjectVersion").map(|e| e.version >= FCoreObjectVersion::FProperties as i32).unwrap_or(false) {
+        let mut loaded_properties = match asset.get_custom_version::<FCoreObjectVersion>().version >= FCoreObjectVersion::FProperties as i32 {
             true => {
                 let num_props = asset.cursor.read_i32::<LittleEndian>()?;
                 let mut props = Vec::with_capacity(num_props as usize);

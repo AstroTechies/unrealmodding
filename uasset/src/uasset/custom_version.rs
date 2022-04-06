@@ -2,7 +2,7 @@ use std::{collections::HashMap};
 
 use num_enum::IntoPrimitive;
 use lazy_static::lazy_static;
-use super::unreal_types::{Guid, new_guid};
+use super::{unreal_types::{Guid, new_guid}, ue4version};
 
 
 #[derive(Debug, Clone)]
@@ -17,9 +17,6 @@ lazy_static! {
         ( new_guid(0, 0, 0, 0xF99D40C1), String::from("UnusedCustomVersionKey") ),
         ( new_guid(0xB0D832E4, 0x1F894F0D, 0xACCF7EB7, 0x36FD4AA2), String::from("FBlueprintsObjectVersion") ),
         ( new_guid(0xE1C64328, 0xA22C4D53, 0xA36C8E86, 0x6417BD8C), String::from("FBuildObjectVersion") ),
-        ( new_guid(0x375EC13C, 0x06E448FB, 0xB50084F0, 0x262A717E), String::from("FCoreObjectVersion") ),
-        ( new_guid(0xE4B068ED, 0xF49442E9, 0xA231DA0B, 0x2E46BB41), String::from("FEditorObjectVersion") ),
-        ( new_guid(0xCFFC743F, 0x43B04480, 0x939114DF, 0x171D2073), String::from("FFrameworkObjectVersion") ),
         ( new_guid(0xB02B49B5, 0xBB2044E9, 0xA30432B7, 0x52E40360), String::from("FMobileObjectVersion") ),
         ( new_guid(0xA4E4105C, 0x59A149B5, 0xA7C540C4, 0x547EDFEE), String::from("FNetworkingObjectVersion") ),
         ( new_guid(0x39C831C9, 0x5AE647DC, 0x9A449C17, 0x3E1C8E7C), String::from("FOnlineObjectVersion") ),
@@ -30,11 +27,10 @@ lazy_static! {
         ( new_guid(0xD7296918, 0x1DD64BDD, 0x9DE264A8, 0x3CC13884), String::from("FVRObjectVersion") ),
         ( new_guid(0xC2A15278, 0xBFE74AFE, 0x6C1790FF, 0x531DF755), String::from("FLoadTimesObjectVersion") ),
         ( new_guid(0x6EACA3D4, 0x40EC4CC1, 0xb7868BED, 0x9428FC5), String::from("FGeometryObjectVersion") ),
-        ( new_guid(0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA), String::from("FAnimPhysObjectVersion") ),
+        ( new_guid(0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA), String::from("FAnimPhysObjectVersion") ), //
         ( new_guid(0xAF43A65D, 0x7FD34947, 0x98733E8E, 0xD9C1BB05), String::from("FAnimObjectVersion") ),
         ( new_guid(0x6B266CEC, 0x1EC74B8F, 0xA30BE4D9, 0x0942FC07), String::from("FReflectionCaptureObjectVersion") ),
         ( new_guid(0x0DF73D61, 0xA23F47EA, 0xB72789E9, 0x0C41499A), String::from("FAutomationObjectVersion") ),
-        ( new_guid(0x601D1886, 0xAC644F84, 0xAA16D3DE, 0x0DEAC7D6), String::from("FFortniteMainBranchObjectVersion") ),
         ( new_guid(0x9DFFBCD6, 0x494F0158, 0xE2211282, 0x3C92A888), String::from("FEnterpriseObjectVersion") ),
         ( new_guid(0xF2AED0AC, 0x9AFE416F, 0x8664AA7F, 0xFA26D6FC), String::from("FNiagaraObjectVersion") ),
         ( new_guid(0x174F1F0B, 0xB4C645A5, 0xB13F2EE8, 0xD0FB917D), String::from("FDestructionObjectVersion") ),
@@ -48,7 +44,6 @@ lazy_static! {
         ( new_guid(0x2EB5FDBD, 0x01AC4D10, 0x8136F38F, 0x3393A5DA), String::from("FAnimationCustomVersion") ),
         ( new_guid(0x717F9EE7, 0xE9B0493A, 0x88B39132, 0x1B388107), String::from("FAssetRegistryVersion") ),
         ( new_guid(0xFB680AF2, 0x59EF4BA3, 0xBAA819B5, 0x73C8443D), String::from("FClothingAssetCustomVersion") ),
-        ( new_guid(0x9C54D522, 0xA8264FBE, 0x94210746, 0x61B482D0), String::from("FReleaseObjectVersion") ),
         ( new_guid(0x4A56EB40, 0x10F511DC, 0x92D3347E, 0xB2C96AE7), String::from("FParticleSystemCustomVersion") ),
         ( new_guid(0xD78A4A00, 0xE8584697, 0xBAA819B5, 0x487D46B4), String::from("FSkeletalMeshCustomVersion") ),
         ( new_guid(0x5579F886, 0x933A4C1F, 0x83BA087B, 0x6361B92F), String::from("FRecomputeTangentCustomVersion") ),
@@ -56,6 +51,12 @@ lazy_static! {
         ( new_guid(0x430C4D19, 0x71544970, 0x87699B69, 0xDF90B0E5), String::from("FFoliageCustomVersion") ),
         ( new_guid(0xaafe32bd, 0x53954c14, 0xb66a5e25, 0x1032d1dd), String::from("FProceduralFoliageCustomVersion") ),
         ( new_guid(0xab965196, 0x45d808fc, 0xb7d7228d, 0x78ad569e), String::from("FLiveLinkCustomVersion") ),
+        
+        ( FCoreObjectVersion::guid(), String::from(FCoreObjectVersion::friendly_name()) ),
+        ( FEditorObjectVersion::guid(), String::from(FEditorObjectVersion::friendly_name()) ),
+        ( FFrameworkObjectVersion::guid(), String::from(FFrameworkObjectVersion::friendly_name()) ),
+        ( FFortniteMainBranchObjectVersion::guid(), String::from(FFortniteMainBranchObjectVersion::friendly_name()) ),
+        ( FReleaseObjectVersion::guid(), String::from(FReleaseObjectVersion::friendly_name()) )
     ]);
 }
 
@@ -64,6 +65,42 @@ impl CustomVersion {
         let friendly_name = GUID_TO_FRIENDLY_NAME.get(&guid).map(|e| e.to_owned());
         CustomVersion {
             guid, friendly_name, version
+        }
+    }
+
+    pub fn from_version<T>(version: T) -> Self 
+        where T : CustomVersionTrait + Into<i32>
+    {
+        CustomVersion { guid: T::guid(), friendly_name: Some(String::from(T::friendly_name())), version: version.into() }
+    }
+}
+
+pub trait CustomVersionTrait {
+    fn from_engine_version(version: i32) -> Self;
+    fn friendly_name() -> &'static str;
+    fn guid() -> Guid;
+}
+
+macro_rules! impl_custom_version_trait {
+    ($enum_name:ident, $friendly_name:expr, $guid:expr, $($ver_name:ident : $ver:ident),*) => {
+        impl CustomVersionTrait for $enum_name {
+            fn from_engine_version(version: i32) -> Self {
+                $(
+                    if version >= ue4version::$ver_name {
+                        return $enum_name::$ver;
+                    }
+                )*
+
+                return $enum_name::BeforeCustomVersionWasAdded;
+            }
+
+            fn friendly_name() -> &'static str {
+                $friendly_name
+            }
+
+            fn guid() -> Guid {
+                $guid
+            }
         }
     }
 }
@@ -266,6 +303,18 @@ pub enum FFortniteMainBranchObjectVersion
     LatestVersion = (FFortniteMainBranchObjectVersion::VersionPlusOne as i32) + 1
 }
 
+impl_custom_version_trait!(FFortniteMainBranchObjectVersion, "FFortniteMainBranchObjectVersion", new_guid(0x601D1886, 0xAC644F84, 0xAA16D3DE, 0x0DEAC7D6),
+    VER_UE4_AUTOMATIC_VERSION: LatestVersion,
+    VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
+    VER_UE4_CORRECT_LICENSEE_FLAG: RemoveLandscapeWaterInfo,
+    VER_UE4_ASSETREGISTRY_DEPENDENCYFLAGS: ChaosSolverPropertiesMoved,
+    VER_UE4_NON_OUTER_PACKAGE_IMPORT: LevelsetSerializationSupportForBodySetup,
+    VER_UE4_SKINWEIGHT_PROFILE_DATA_LAYOUT_CHANGES: SupportMultipleWaterBodiesPerExclusionVolume,
+    VER_UE4_ADDED_PACKAGE_OWNER: AnimLayerGuidConformation,
+    VER_UE4_FIX_WIDE_STRING_CRC: ReplaceLakeCollision,
+    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: FoliageLazyObjPtrToSoftObjPtr,
+    VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded);
+
 // 
 // Custom serialization version for changes made in Dev-Framework stream.
 
@@ -431,6 +480,25 @@ pub enum FFrameworkObjectVersion
     LatestVersion = (FFrameworkObjectVersion::VersionPlusOne as i32) + 1
 }
 
+impl_custom_version_trait!(FFrameworkObjectVersion, "FFrameworkObjectVersion", new_guid(0xCFFC743F, 0x43B04480, 0x939114DF, 0x171D2073),
+    VER_UE4_AUTOMATIC_VERSION: LatestVersion,
+    VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
+    VER_UE4_ADDED_PACKAGE_OWNER: StoringUCSSerializationIndex,
+    VER_UE4_FIX_WIDE_STRING_CRC: BlueprintGeneratedClassIsAlwaysAuthoritative,
+    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: EditableEventsUseConstRefParameters,
+    VER_UE4_POINTLIGHT_SOURCE_ORIENTATION: UserDefinedStructsStoreDefaultInstance,
+    VER_UE4_ADDED_SOFT_OBJECT_PATH: PinsStoreFName,
+    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: LocalVariablesBlueprintVisible,
+    VER_UE4_64BIT_EXPORTMAP_SERIALSIZES: HardSoundReferences,
+    VER_UE4_ADDED_SEARCHABLE_NAMES: ChangeAudioComponentOverrideSubtitlePriorityDefault,
+    VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS: GeometryCacheMissingMaterials,
+    VER_UE4_COMPRESSED_SHADER_RESOURCES: MoveCurveTypesToSkeleton,
+    VER_UE4_INSTANCED_STEREO_UNIFORM_REFACTOR: WheelOffsetIsFromWheel,
+    VER_UE4_NAME_HASHES_SERIALIZED: AddSourceReferenceSkeletonToRig,
+    VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG: AnimBlueprintSubgraphFix,
+    VER_UE4_STREAMABLE_TEXTURE_AABB: UseBodySetupCollisionProfile,
+    VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded);
+
 // 
 // Custom serialization version for changes made in Dev-Core stream.
 #[derive(IntoPrimitive)]
@@ -458,6 +526,15 @@ pub enum FCoreObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
     LatestVersion = (FCoreObjectVersion::VersionPlusOne as i32) + 1
 }
+
+impl_custom_version_trait!(FCoreObjectVersion, "FCoreObjectVersion", new_guid(0x375EC13C, 0x06E448FB, 0xB50084F0, 0x262A717E),
+    VER_UE4_AUTOMATIC_VERSION: LatestVersion,
+    VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
+    VER_UE4_ADDED_PACKAGE_OWNER: FProperties,
+    VER_UE4_FIX_WIDE_STRING_CRC: SkeletalMaterialEditorDataStripping,
+    VER_UE4_ADDED_SEARCHABLE_NAMES: EnumProperties,
+    VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG: MaterialInputNativeSerialize,
+    VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded);
 
 // 
 // Custom serialization version for changes made in Dev-Editor stream.
@@ -635,6 +712,24 @@ pub enum FEditorObjectVersion
     LatestVersion = (FEditorObjectVersion::VersionPlusOne as i32) + 1
 }
 
+impl_custom_version_trait!(FEditorObjectVersion, "FEditorObjectVersion", new_guid(0xE4B068ED, 0xF49442E9, 0xA231DA0B, 0x2E46BB41),
+    VER_UE4_AUTOMATIC_VERSION: LatestVersion,
+    VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
+    VER_UE4_NON_OUTER_PACKAGE_IMPORT: SkeletalMeshSourceDataSupport16bitOfMaterialNumber,
+    VER_UE4_ADDED_PACKAGE_OWNER: SkeletalMeshMoveEditorSourceDataToPrivateAsset,
+    VER_UE4_FIX_WIDE_STRING_CRC: MeshDescriptionTriangles,
+    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: MeshDescriptionNewAttributeFormat,
+    VER_UE4_ADDED_SOFT_OBJECT_PATH: AddedAlwaysSignNumberFormattingOption,
+    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: GatheredTextEditorOnlyPackageLocId,
+    VER_UE4_64BIT_EXPORTMAP_SERIALSIZES: MaterialThumbnailRenderingChanges,
+    VER_UE4_ADDED_SEARCHABLE_NAMES: UPropertryForMeshSectionSerialize,
+    VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS: AddedFontFaceAssets,
+    VER_UE4_COMPRESSED_SHADER_RESOURCES: RefactorMeshEditorMaterials,
+    VER_UE4_INSTANCED_STEREO_UNIFORM_REFACTOR: SplineComponentCurvesInStruct,
+    VER_UE4_NAME_HASHES_SERIALIZED: GatheredTextPackageCacheFixesV1,
+    VER_UE4_STREAMABLE_TEXTURE_AABB: GatheredTextProcessVersionFlagging,
+    VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded);
+
 // 
 // Custom serialization version for changes made in Dev-AnimPhys stream
 #[derive(IntoPrimitive)]
@@ -718,6 +813,15 @@ pub enum FAnimPhysObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
     LatestVersion = (FAnimPhysObjectVersion::VersionPlusOne as i32) + 1
 }
+
+impl_custom_version_trait!(FAnimPhysObjectVersion, "FAnimPhysObjectVersion", new_guid(0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA),
+    VER_UE4_AUTOMATIC_VERSION: LatestVersion,
+    VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
+    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: GeometryCacheAssetDeprecation,
+    VER_UE4_POINTLIGHT_SOURCE_ORIENTATION: SaveEditorOnlyFullPoseForPoseAsset,
+    VER_UE4_ADDED_SOFT_OBJECT_PATH: AllowMultipleAudioPluginSettings,
+    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: CacheClothMeshInfluences,
+    VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded);
 
 // 
 // Custom serialization version for changes made in Release streams.
@@ -910,3 +1014,19 @@ pub enum FReleaseObjectVersion
     // Introduced: UE4Version.VER_UE4_AUTOMATIC_VERSION
     LatestVersion = (FReleaseObjectVersion::VersionPlusOne as i32) + 1
 }
+
+impl_custom_version_trait!(FReleaseObjectVersion, "FReleaseObjectVersion", new_guid(0x9C54D522, 0xA8264FBE, 0x94210746, 0x61B482D0),
+    VER_UE4_AUTOMATIC_VERSION: LatestVersion,
+    VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
+    VER_UE4_CORRECT_LICENSEE_FLAG: GeometryCollectionCacheRemovesMassToLocal,
+    VER_UE4_ASSETREGISTRY_DEPENDENCYFLAGS: StructureDataAddedToConvex,
+    VER_UE4_SKINWEIGHT_PROFILE_DATA_LAYOUT_CHANGES: ReleaseObjectVersionFixup,
+    VER_UE4_ADDED_PACKAGE_OWNER: FFieldPathOwnerSerialization,
+    VER_UE4_FIX_WIDE_STRING_CRC: Unused_SoundClass2DReverbSend,
+    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: TrailNodeBlendVariableNameChange,
+    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: RenameNoTwistToAllowTwistInTwoBoneIK,
+    VER_UE4_ADDED_SEARCHABLE_NAMES: SpeedTreeBillboardSectionInfoFixup,
+    VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS: AddComponentNodeTemplateUniqueNames,
+    VER_UE4_INSTANCED_STEREO_UNIFORM_REFACTOR: LevelTransArrayConvertedToTArray,
+    VER_UE4_NAME_HASHES_SERIALIZED: StaticMeshExtendedBoundsFix,
+    VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded);
