@@ -1,9 +1,10 @@
-use std::io::{Cursor, ErrorKind, Read};
+use std::io::{Cursor, ErrorKind, Read, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::uasset::error::Error;
+use crate::uasset::error::{Error, PropertyError};
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, optional_guid};
+use crate::uasset::properties::PropertyTrait;
 
 use super::Property;
 
@@ -18,6 +19,10 @@ pub struct StructProperty {
 }
 
 impl StructProperty {
+    pub fn dummy(name: FName, struct_type: FName, struct_guid: Option<Guid>) -> Self {
+        StructProperty { name, struct_type: Some(struct_type), struct_guid, property_guid: None, serialize_none: true, value: Vec::new() }
+    }
+
     pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
@@ -87,6 +92,45 @@ impl StructProperty {
                 serialize_none: true,
                 value: values
             });
+        }
+    }
+}
+
+impl PropertyTrait for StructProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        if include_header {
+            asset.write_fname(cursor, self.struct_type.as_ref().ok_or(PropertyError::headerless().into())?)?;
+            if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+                cursor.write(&self.struct_guid.ok_or(PropertyError::headerless().into())?)?;
+            }
+            asset.write_property_guid(cursor, &self.property_guid)?;
+        }
+
+        let mut has_custom_serialization = match self.struct_type {
+            Some(ref e) => Property::has_custom_serialization(&e.content),
+            None => false
+        };
+
+        if (self.struct_type.is_some() && self.struct_type.as_ref().unwrap().content.as_str() == "RichCurveKey") && asset.engine_version < VER_UE4_SERIALIZE_RICH_CURVE_KEY {
+            has_custom_serialization = false;
+        }
+
+        if has_custom_serialization {
+            if self.value.len() != 1 {
+                return Err(PropertyError::invalid_struct(format!("Structs with type {} must have exactly 1 entry",
+                                                                 self.struct_type.map(|e|
+                                                                     e.content.to_owned()).unwrap_or("Generic".to_string()))).into())
+            }
+            return self.value[0].write(asset, cursor, false);
+        } else if self.value.len() == 0 && !self.serialize_none {
+            return Ok(0);
+        } else {
+            let begin = cursor.position();
+            for entry in &self.value {
+                entry.write(asset, cursor, true)?;
+            }
+            asset.write_fname(cursor, &FName::from_slice("None"))?;
+            return Ok((cursor.position() - begin) as usize);
         }
     }
 }

@@ -15,6 +15,10 @@ pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     ]
 }
 
+pub fn default_guid() -> Guid {
+    new_guid(0, 0, 0, 0)
+}
+
 #[derive(Debug)]
 pub struct GenerationInfo {
     pub export_count: i32,
@@ -37,6 +41,13 @@ impl FName {
     pub fn new(content: String, index: i32) -> Self {
         FName {
             content, index
+        }
+    }
+
+    pub fn from_slice(content: &str) -> Self {
+        FName {
+            content: content.to_string(),
+            index: 0
         }
     }
 }

@@ -1,6 +1,7 @@
 use crate::uasset::unreal_types::{FName, Guid};
 
 use super::ExportNormalTrait;
+use super::ExportUnknownTrait;
 
 
 #[derive(Debug, Default, Clone)]
@@ -36,5 +37,14 @@ impl ExportNormalTrait for UnknownExport {
     fn get_normal_export_mut< 'a>(&'a mut self) -> Option<& 'a mut super::normal_export::NormalExport> {
         None
     }
+}
 
+impl ExportUnknownTrait for UnknownExport {
+    fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport {
+        &self
+    }
+
+    fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
+        &mut self
+    }
 }

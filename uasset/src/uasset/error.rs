@@ -1,4 +1,5 @@
 use std::{io, fmt::Display, error};
+use std::fmt::Formatter;
 
 use num_enum::{TryFromPrimitiveError, TryFromPrimitive};
 
@@ -27,6 +28,43 @@ impl Display for KismetError {
     }
 }
 
+#[derive(Debug)]
+pub enum PropertyError {
+    HeaderlessProperty,
+    InvalidStruct(Box<str>),
+    InvalidArrayType(Box<str>),
+    Other(Box<str>)
+}
+
+impl PropertyError {
+    pub fn headerless() -> Self {
+        PropertyError::HeaderlessProperty
+    }
+
+    pub fn invalid_struct(msg: String) -> Self {
+        PropertyError::invalid_struct(msg.into_boxed_str())
+    }
+
+    pub fn invalid_array(msg: String) -> Self {
+        PropertyError::InvalidArrayType(msg.into_boxed_str())
+    }
+
+    pub fn other(msg: String) -> Self {
+        PropertyError::Other(msg.into_boxed_str())
+    }
+}
+
+impl Display for PropertyError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            PropertyError::HeaderlessProperty => write!(f, "include_header: true on headerless property"),
+            PropertyError::InvalidStruct(ref err) => f.write_str(err),
+            PropertyError::InvalidArrayType(ref err) => f.write_str(err),
+            PropertyError::Other(ref err) => f.write_str(err)
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub enum ErrorCode {
@@ -35,7 +73,8 @@ pub enum ErrorCode {
     InvalidPackageIndex(Box<str>),
     InvalidEnumValue(Box<str>),
     Unimplemented(Box<str>),
-    Kismet(KismetError)
+    Kismet(KismetError),
+    Property(PropertyError)
 }
 
 #[derive(Debug)]
@@ -75,6 +114,12 @@ impl From<KismetError> for Error {
     }
 }
 
+impl From<PropertyError> for Error {
+    fn from(e: PropertyError) -> Self {
+        Error { code: ErrorCode::Property(e) }
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.code, f)
@@ -92,7 +137,8 @@ impl Display for ErrorCode {
             ErrorCode::InvalidPackageIndex(ref err) => f.write_str(err),
             ErrorCode::InvalidEnumValue(ref err) => f.write_str(err),
             ErrorCode::Unimplemented(ref err) => f.write_str(err),
-            ErrorCode::Kismet(ref err) => Display::fmt(err, f)
+            ErrorCode::Kismet(ref err) => Display::fmt(err, f),
+            ErrorCode::Property(ref err) => Display::fmt(err, f)
         }
     }
 }

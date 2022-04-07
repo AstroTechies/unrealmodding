@@ -16,6 +16,15 @@ pub struct WeightedRandomSamplerProperty {
 }
 
 #[derive(Hash, PartialEq, Eq)]
+pub struct SkeletalMeshAreaWeightedTriangleSampler {
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub prob: Vec<OrderedFloat<f32>>,
+    pub alias: Vec<i32>,
+    pub total_weight: OrderedFloat<f32>
+}
+
+#[derive(Hash, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -41,6 +50,34 @@ impl WeightedRandomSamplerProperty {
         let total_weight = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
 
         Ok(WeightedRandomSamplerProperty {
+            name,
+            property_guid,
+            prob,
+            alias,
+            total_weight
+        })
+    }
+}
+
+impl SkeletalMeshAreaWeightedTriangleSampler {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+
+        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut prob = Vec::with_capacity(size as usize);
+        for i in 0..size as usize {
+            prob.push(OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?));
+        }
+
+        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let mut alias = Vec::with_capacity(size as usize);
+        for i in 0..size as usize {
+            alias.push(asset.cursor.read_i32::<LittleEndian>()?);
+        }
+
+        let total_weight = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
+
+        Ok(SkeletalMeshAreaWeightedTriangleSampler {
             name,
             property_guid,
             prob,

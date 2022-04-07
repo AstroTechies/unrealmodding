@@ -11,6 +11,7 @@ pub trait CursorExt {
     fn read_int_vector(&mut self) -> Result<Vector<i32>, Error>;
 
     fn write_string(&mut self, string: &String) -> Result<(), Error>;
+    fn write_bool(&mut self, value: bool) -> Result<(), Error>;
 }
 
 impl CursorExt for Cursor<Vec<u8>> {
@@ -61,6 +62,14 @@ impl CursorExt for Cursor<Vec<u8>> {
         };
         self.write(&string.into_bytes())?;
         self.write(&[0u8; 1]);
+        Ok(())
+    }
+
+    fn write_bool(&mut self, value: bool) -> Result<(), Error> {
+        self.write_u8(match value {
+            true => 1,
+            false => 0
+        })?;
         Ok(())
     }
 }

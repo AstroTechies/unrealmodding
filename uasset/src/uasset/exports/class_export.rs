@@ -4,6 +4,7 @@ use std::io::{Cursor, ErrorKind, Seek, SeekFrom};
 use byteorder::{LittleEndian, ReadBytesExt};
 use crate::uasset::Asset;
 use crate::uasset::error::Error;
+use crate::uasset::exports::ExportUnknownTrait;
 use crate::uasset::exports::struct_export::StructExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::flags::EClassFlags;
@@ -117,5 +118,15 @@ impl ExportNormalTrait for ClassExport {
 
     fn get_normal_export_mut< 'a>(&'a mut self) -> Option<& 'a mut super::normal_export::NormalExport> {
         Some(&mut self.struct_export.normal_export)
+    }
+}
+
+impl ExportUnknownTrait for ClassExport {
+    fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport {
+        &self.struct_export.normal_export.unknown_export
+    }
+
+    fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
+        &mut self.struct_export.normal_export.unknown_export
     }
 }

@@ -1,9 +1,11 @@
 use std::io::{Cursor, ErrorKind};
+use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::uasset::error::Error;
+use crate::uasset::error::{Error, PropertyError};
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct EnumProperty {
@@ -27,5 +29,17 @@ impl EnumProperty {
             enum_type,
             value
         })
+    }
+}
+
+impl PropertyTrait for EnumProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        if include_header {
+            asset.write_fname(cursor, self.enum_type.as_ref().ok_or(PropertyError::headerless().into())?)?;
+            asset.write_property_guid(cursor, &self.property_guid)?;
+        }
+        asset.write_fname(cursor, &self.value)?;
+
+        Ok(size_of::<i32>() * 2)
     }
 }

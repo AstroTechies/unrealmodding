@@ -1,10 +1,12 @@
 use std::io::{Cursor, ErrorKind, Read};
+use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::Color, Asset}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::Color, Asset}, optional_guid, optional_guid_write};
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct ColorProperty {
@@ -32,6 +34,14 @@ impl ColorProperty {
     }
 }
 
+impl PropertyTrait for ColorProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(asset, cursor, include_header);
+        cursor.write_i32::<LittleEndian>(self.color.to_argb())?;
+        Ok(size_of::<i32>())
+    }
+}
+
 impl LinearColorProperty {
     pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
@@ -46,5 +56,16 @@ impl LinearColorProperty {
             property_guid,
             color
         })
+    }
+}
+
+impl PropertyTrait for LinearColorProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(asset, cursor, include_header);
+        cursor.write_f32::<LittleEndian>(self.color.r.0)?;
+        cursor.write_f32::<LittleEndian>(self.color.g.0)?;
+        cursor.write_f32::<LittleEndian>(self.color.b.0)?;
+        cursor.write_f32::<LittleEndian>(self.color.a.0)?;
+        Ok(size_of::<f32>() * 4)
     }
 }

@@ -44,6 +44,10 @@ impl Color<u8> {
     pub fn from_argb(argb: i32) -> Self {
         Color::new(((argb >> 24) & 0xff) as u8, ((argb >> 16) & 0xff) as u8, ((argb >> 8) & 0xff) as u8, (argb & 0xff) as u8)
     }
+
+    pub fn to_argb(&self) -> i32 {
+        (r << 24) | (g << 16) | (b << 8) | a
+    }
 }
 
 pub struct Transform<T> {

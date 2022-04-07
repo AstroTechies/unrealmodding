@@ -23,6 +23,12 @@ pub trait ExportNormalTrait {
     fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut NormalExport>;
 }
 
+#[enum_dispatch]
+pub trait ExportUnknownTrait {
+    fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport;
+    fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport;
+}
+
 #[macro_export]
 macro_rules! implement_get {
     ($name:ident) => {
@@ -35,11 +41,22 @@ macro_rules! implement_get {
                 Some(&mut self.normal_export)
             }
         }
+
+        impl ExportUnknownTrait for $name {
+            fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport {
+                &self.normal_export.unknown_export
+            }
+
+            fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
+                &mut self.normal_exportunknown_export
+            }
+        }
     };
 }
 
 #[enum_dispatch]
 trait ExportTrait {
+    fn write_header(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
 }
 
 #[enum_dispatch(ExportTrait, ExportNormalTrait)]

@@ -1,6 +1,6 @@
 use std::{io::{Cursor, ErrorKind}, str::FromStr};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion, unreal_types::FName};
 use crate::uasset::error::Error;
@@ -105,5 +105,19 @@ impl FWorldTileInfo {
         Ok(FWorldTileInfo {
             position, bounds, layer, hide_in_tile_view, parent_tile_package_name, lod_list, z_order
         })
+    }
+
+    pub fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        if asset.get_custom_version::<FFortniteMainBranchObjectVersion>().version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32 {
+            cursor.write_i32::<LittleEndian>(self.position.x);
+            cursor.write_i32::<LittleEndian>(self.position.y);
+        } else {
+            cursor.write_i32::<LittleEndian>(self.position.x);
+            cursor.write_i32::<LittleEndian>(self.position.y);
+            cursor.write_i32::<LittleEndian>(self.position.z);
+        }
+
+
+        Ok(())
     }
 }

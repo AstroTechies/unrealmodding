@@ -3,7 +3,8 @@ use std::io::{Cursor, ErrorKind, Read};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, simple_property_write};
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct TimeSpanProperty {
@@ -31,6 +32,8 @@ impl TimeSpanProperty {
     }
 }
 
+simple_property_write!(TimeSpanProperty, write_i64, ticks, i64);
+
 impl DateTimeProperty {
     pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
@@ -42,3 +45,5 @@ impl DateTimeProperty {
         })
     }
 }
+
+simple_property_write!(DateTimeProperty, write_i64, ticks, i64);

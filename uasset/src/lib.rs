@@ -31,7 +31,7 @@ pub mod uasset {
     use crate::uasset::exports::struct_export::StructExport;
     use crate::uasset::exports::unknown_export::UnknownExport;
     use crate::uasset::fproperty::FProperty;
-    use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP, VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION, VER_UE4_WORLD_LEVEL_INFO, VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE, VER_UE4_NAME_HASHES_SERIALIZED};
+    use crate::uasset::ue4version::{VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS, VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT, VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP, VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION, VER_UE4_WORLD_LEVEL_INFO, VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE, VER_UE4_NAME_HASHES_SERIALIZED, VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG};
 
     use self::error::Error;
     use self::cursor_ext::CursorExt;
@@ -434,16 +434,23 @@ pub mod uasset {
             Ok(None)
         }
 
+        pub fn write_property_guid(&self, cursor: &mut Cursor<Vec<u8>>, guid: &Option<Guid>) -> Result<(), Error> {
+            if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+                cursor.write_bool(guid.is_some())?;
+                if let Some(ref data) = guid {
+                    cursor.write(data)?;
+                }
+            }
+            Ok(())
+        }
+
         fn search_name_reference(&mut self, name: &String) -> Option<i32> {
             self.fix_name_map_lookup();
 
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
 
-            match self.name_map_lookup.get(&s.finish()) {
-                Some(e) => Some(*e),
-                None => None
-            }
+            self.name_map_lookup.get(&s.finish()).map(|e| *e)
         }
 
         fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
@@ -480,6 +487,12 @@ pub mod uasset {
             let number = self.cursor.read_i32::<LittleEndian>()?;
 
             Ok(FName::new(self.get_name_reference(name_map_pointer), number))
+        }
+
+        fn write_fname(&mut self, cursor: &mut Cursor<Vec<u8>>, fname: &FName) -> Result<(), Error> {
+            cursor.write_i32::<LittleEndian>(self.search_name_reference(&fname.content)?)?;
+            cursor.write_i32::<LittleEndian>(fname.index)?;
+            Ok(())
         }
 
         fn get_import(&'a self, index: i32) -> Option<&'a Import> {
@@ -858,7 +871,7 @@ pub mod uasset {
             Ok(())
         }
 
-        pub fn write_data(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        pub fn write_data(&mut self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
             self.write_header(cursor)?;
 
             for name in self.name_map_index_list {
@@ -867,14 +880,102 @@ pub mod uasset {
                 if self.engine_version >= VER_UE4_NAME_HASHES_SERIALIZED {
                     match self.override_name_map_hashes.get(&name) {
                         Some(e) => cursor.write_u32::<LittleEndian>(*e)?,
-                        None => {
+                        None => cursor.write_u32::<LittleEndian>(crc::generate_hash(&name))
+                    };
+                }
+            }
 
+            for import in self.imports {
+                self.write_fname(cursor, &import.class_package)?;
+                self.write_fname(cursor, &import.class_name)?;
+                cursor.write_i32::<LittleEndian>(import.outer_index)?;
+                self.write_fname(cursor, &import.object_name)?;
+            }
+
+            for export in self.exports {
+                let unk: UnknownExport = export.get_unknown_export();
+                cursor.write_i32::<LittleEndian>(unk.class_index)?;
+                cursor.write_i32::<LittleEndian>(unk.super_index)?;
+
+                if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
+                    cursor.write_i32::<LittleEndian>(unk.template_index)?;
+                }
+
+                cursor.write_i32::<LittleEndian>(unk.outer_index)?;
+                self.write_fname(cursor, &unk.object_name)?;
+                cursor.write_u32::<LittleEndian>(unk.object_flags)?;
+
+                if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
+                    cursor.write_i32::<LittleEndian>(unk.serial_size as i32)?;
+                    cursor.write_i32::<LittleEndian>(unk.serial_offset as i32)?;
+                } else {
+                    cursor.write_i64::<LittleEndian>(unk.serial_size)?;
+                    cursor.write_i64::<LittleEndian>(unk.serial_offset)?;
+                }
+
+                cursor.write_i32::<LittleEndian>(match unk.forced_export {
+                    true => 1,
+                    false => 0
+                })?;
+                cursor.write_i32::<LittleEndian>(match unk.not_for_client {
+                    true => 1,
+                    false => 0
+                })?;
+                cursor.write_i32::<LittleEndian>(match unk.not_for_server {
+                    true => 1,
+                    false => 0
+                })?;
+                cursor.write(&unk.package_guid)?;
+                cursor.write_u32::<LittleEndian>(self.package_flags)?;
+
+                if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
+                    cursor.write_i32::<LittleEndian>(match unk.not_always_loaded_for_editor_game {
+                        true => 1,
+                        false => 0
+                    });
+                }
+
+                if self.engine_version >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
+                    cursor.write_i32::<LittleEndian>(match unk.is_asset {
+                        true => 1,
+                        false => 0
+                    })?;
+                }
+
+                if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+                    cursor.write_i32::<LittleEndian>(unk.first_export_dependency)?;
+                    cursor.write_i32::<LittleEndian>(unk.serialization_before_serialization_dependencies)?;
+                    cursor.write_i32::<LittleEndian>(unk.create_before_serialization_dependencies)?;
+                    cursor.write_i32::<LittleEndian>(unk.serialization_before_create_dependencies)?;
+                    cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies)?;
+                }
+
+                if let Some(ref mut map) = self.depends_map {
+                    for i in 0..self.exports.len() {
+                        if i >= map.len() {
+                            map.push(Vec::new());
+                        }
+
+                        let current_data = &map[i];
+                        cursor.write_i32::<LittleEndian>(current_data.len() as i32)?;
+                        for i in current_data {
+                            cursor.write_i32::<LittleEndian>(i)?;
                         }
                     }
-                    if self.override_name_map_hashes.contains_key(&name) {
-                        cursor.write_u32::<LittleEndian>(self.override_name_map_hashes.get(&name).unwrap())
+                }
+
+                if let Some(ref package_references) = self.soft_package_reference_list {
+                    for reference in package_references {
+                        cursor.write_string(reference)?;
                     }
                 }
+
+                // todo: asset registry data support
+
+                if let Some(ref world_tile_info) = self.world_tile_info {
+
+                }
+
             }
 
             Ok(())
