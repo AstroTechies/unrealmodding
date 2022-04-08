@@ -37,6 +37,10 @@ pub struct FName {
     pub index: i32
 }
 
+pub trait ToFName {
+    fn to_fname(&self) -> FName;
+}
+
 impl FName {
     pub fn new(content: String, index: i32) -> Self {
         FName {
@@ -82,7 +86,7 @@ impl StringTable {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct PackageIndex {
     pub index: i32
 }

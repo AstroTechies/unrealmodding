@@ -23,13 +23,14 @@ pub mod gameplay_tag_container_property;
 pub mod smart_name_property;
 
 use std::{io::{Cursor}, collections::HashMap};
-use byteorder::{ReadBytesExt, LittleEndian};
+use std::io::{Seek, SeekFrom};
+use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 use crate::uasset::properties::date_property::TimeSpanProperty;
 use crate::uasset::properties::sampler_property::SkeletalMeshAreaWeightedTriangleSampler;
 use crate::uasset::properties::soft_path_property::{SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty};
-use crate::uasset::unreal_types::Guid;
+use crate::uasset::unreal_types::{Guid, ToFName};
 
 use self::{unknown_property::UnknownProperty, int_property::{BoolProperty, UInt16Property, UInt32Property, UInt64Property, FloatProperty, Int16Property, Int64Property, Int8Property, IntProperty, ByteProperty, DoubleProperty}, str_property::{NameProperty, StrProperty, TextProperty}, object_property::{ObjectProperty, AssetObjectProperty, SoftObjectProperty}, vector_property::{IntPointProperty, VectorProperty, Vector4Property, Vector2DProperty, QuatProperty, RotatorProperty, BoxProperty}, color_property::{LinearColorProperty, ColorProperty}, date_property::DateTimeProperty, guid_property::GuidProperty, struct_property::StructProperty, set_property::SetProperty, array_property::ArrayProperty, map_property::MapProperty, per_platform_property::{PerPlatformBoolProperty, PerPlatformIntProperty, PerPlatformFloatProperty}, material_input_property::{MaterialAttributesInputProperty, ExpressionInputProperty, ColorMaterialInputProperty, ScalarMaterialInputProperty, ShadingModelMaterialInputProperty, VectorMaterialInputProperty, Vector2MaterialInputProperty}, enum_property::EnumProperty, sampler_property::{WeightedRandomSamplerProperty, SkeletalMeshSamplingLODBuiltDataProperty}, delegate_property::MulticastDelegateProperty, rich_curve_key_property::RichCurveKeyProperty, view_target_blend_property::ViewTargetBlendParamsProperty, gameplay_tag_container_property::GameplayTagContainerProperty, smart_name_property::SmartNameProperty};
 use super::error::Error;
@@ -277,80 +278,92 @@ impl Property {
 
             "StructProperty" => StructProperty::new(asset, name, include_header, length, duplication_index, asset.engine_version)?.into(),
             "EnumProperty" => EnumProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            _ => UnknownProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            _ => UnknownProperty::with_serialized_type(asset, name, include_header, length, duplication_index, Some(type_name.clone()))?.into()
         };
         
         Ok(res)
     }
 
-    // fn write(property: &Property, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Self {
-    //
-    // }
+    pub fn write(property: &Property, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        asset.write_fname(cursor, &property.get_name())?;
+        asset.write_fname(cursor, &property.to_fname())?;
+
+        let begin = cursor.position();
+        cursor.write_i32::<LittleEndian>(0)?; // initial length
+        cursor.write_i32::<LittleEndian>(property.get_duplication_index())?;
+        let len = property.write(asset, cursor, include_header)?;
+        let end = cursor.position();
+
+        cursor.seek(SeekFrom::Start(begin))?;
+        cursor.write_i32::<LittleEndian>(len as i32)?;
+        cursor.seek(SeekFrom::Start(end))?;
+        Ok(begin as usize)
+    }
 
     pub fn has_custom_serialization(name: &String) -> bool {
         CUSTOM_SERIALIZATION.contains(name)
     }
 }
 
-impl ToString for Property {
-    fn to_string(&self) -> String {
-        match *self {
-            Property::SkeletalMeshSamplingLODBuiltDataProperty(_) => "SkeletalMeshSamplingLODBuiltData".to_string(),
-            Property::SkeletalMeshAreaWeightedTriangleSampler(_) => "SkeletalMeshAreaWeightedTriangleSampler".to_string(),
-            Property::SmartNameProperty(_) => "SmartName".to_string(),
-            Property::SoftObjectPathProperty(_) => "SoftObjectPath".to_string(),
-            Property::WeightedRandomSamplerProperty(_) => "WeightedRandomSampler".to_string(),
-            Property::SoftClassPathProperty(_) => "SoftClassPath".to_string(),
-            Property::ColorProperty(_) => "Color".to_string(),
-            Property::ExpressionInputProperty(_) => "ExpressionInput".to_string(),
-            Property::MaterialAttributesInputProperty(_) => "MaterialAttributesInput".to_string(),
-            Property::ColorMaterialInputProperty(_) => "ColorMaterialInput".to_string(),
-            Property::ScalarMaterialInputProperty(_) => "ScalarMaterialInput".to_string(),
-            Property::ShadingModelMaterialInputProperty(_) => "ShadingModelMaterialInput".to_string(),
-            Property::VectorMaterialInputProperty(_) => "VectorMaterialInput".to_string(),
-            Property::Vector2MaterialInputProperty(_) => "Vector2MaterialInput".to_string(),
-            Property::GameplayTagContainerProperty(_) => "GameplayTagContainer".to_string(),
-            Property::PerPlatformBoolProperty(_) => "PerPlatformBool".to_string(),
-            Property::PerPlatformIntProperty(_) => "PerPlatformInt".to_string(),
-            Property::RichCurveKeyProperty(_) => "RichCurveKey".to_string(),
-            Property::SoftAssetPathProperty(_) => "SoftAssetPath".to_string(),
-            Property::TimeSpanProperty(_) => "Timespan".to_string(),
-            Property::DateTimeProperty(_) => "DateTime".to_string(),
-            Property::GuidProperty(_) => "Guid".to_string(),
-            Property::IntPointProperty(_) => "IntPoint".to_string(),
-            Property::LinearColorProperty(_) => "LinearColor".to_string(),
-            Property::QuatProperty(_) => "Quat".to_string(),
-            Property::RotatorProperty(_) => "Rotator".to_string(),
-            Property::StructProperty(_) => "StructProperty".to_string(),
-            Property::Vector2DProperty(_) => "Vector2D".to_string(),
-            Property::BoxProperty(_) => "Box".to_string(),
-            Property::PerPlatformFloatProperty(_) => "PerPlatformFloat".to_string(),
-            Property::Vector4Property(_) => "Vector4".to_string(),
-            Property::VectorProperty(_) => "Vector".to_string(),
-            Property::ViewTargetBlendParamsProperty(_) => "ViewTargetBlendParams".to_string(),
-            Property::DoubleProperty(_) => "DoubleProperty".to_string(),
-            Property::ArrayProperty(_) => "ArrayProperty".to_string(),
-            Property::SetProperty(_) => "SetProperty".to_string(),
-            Property::BoolProperty(_) => "BoolProperty".to_string(),
-            Property::ByteProperty(_) => "ByteProperty".to_string(),
-            Property::UnknownProperty(_) => "UnknownProperty".to_string(),
-            Property::EnumProperty(_) => "EnumProperty".to_string(),
-            Property::FloatProperty(_) => "FloatProperty".to_string(),
-            Property::Int16Property(_) => "Int16Property".to_string(),
-            Property::Int64Property(_) => "Int64Property".to_string(),
-            Property::Int8Property(_) => "Int8Property".to_string(),
-            Property::IntProperty(_) => "IntProperty".to_string(),
-            Property::MapProperty(_) => "MapProperty".to_string(),
-            Property::MulticastDelegateProperty(_) => "MulticastDelegateProperty".to_string(),
-            Property::NameProperty(_) => "NameProperty".to_string(),
-            Property::ObjectProperty(_) => "ObjectProperty".to_string(),
-            Property::AssetObjectProperty(_) => "AssetObjectProperty".to_string(),
-            Property::SoftObjectProperty(_) => "SoftObjectProperty".to_string(),
-            Property::StrProperty(_) => "StrProperty".to_string(),
-            Property::TextProperty(_) => "TextProperty".to_string(),
-            Property::UInt16Property(_) => "UInt16Property".to_string(),
-            Property::UInt32Property(_) => "UInt32Property".to_string(),
-            Property::UInt64Property(_) => "UInt64Property".to_string(),
+impl ToFName for Property {
+    fn to_fname(&self) -> FName {
+        match self {
+            Property::SkeletalMeshSamplingLODBuiltDataProperty(_) => FName::from_slice("SkeletalMeshSamplingLODBuiltData"),
+            Property::SkeletalMeshAreaWeightedTriangleSampler(_) => FName::from_slice("SkeletalMeshAreaWeightedTriangleSampler"),
+            Property::SmartNameProperty(_) => FName::from_slice("SmartName"),
+            Property::SoftObjectPathProperty(_) => FName::from_slice("SoftObjectPath"),
+            Property::WeightedRandomSamplerProperty(_) => FName::from_slice("WeightedRandomSampler"),
+            Property::SoftClassPathProperty(_) => FName::from_slice("SoftClassPath"),
+            Property::ColorProperty(_) => FName::from_slice("Color"),
+            Property::ExpressionInputProperty(_) => FName::from_slice("ExpressionInput"),
+            Property::MaterialAttributesInputProperty(_) => FName::from_slice("MaterialAttributesInput"),
+            Property::ColorMaterialInputProperty(_) => FName::from_slice("ColorMaterialInput"),
+            Property::ScalarMaterialInputProperty(_) => FName::from_slice("ScalarMaterialInput"),
+            Property::ShadingModelMaterialInputProperty(_) => FName::from_slice("ShadingModelMaterialInput"),
+            Property::VectorMaterialInputProperty(_) => FName::from_slice("VectorMaterialInput"),
+            Property::Vector2MaterialInputProperty(_) => FName::from_slice("Vector2MaterialInput"),
+            Property::GameplayTagContainerProperty(_) => FName::from_slice("GameplayTagContainer"),
+            Property::PerPlatformBoolProperty(_) => FName::from_slice("PerPlatformBool"),
+            Property::PerPlatformIntProperty(_) => FName::from_slice("PerPlatformInt"),
+            Property::RichCurveKeyProperty(_) => FName::from_slice("RichCurveKey"),
+            Property::SoftAssetPathProperty(_) => FName::from_slice("SoftAssetPath"),
+            Property::TimeSpanProperty(_) => FName::from_slice("Timespan"),
+            Property::DateTimeProperty(_) => FName::from_slice("DateTime"),
+            Property::GuidProperty(_) => FName::from_slice("Guid"),
+            Property::IntPointProperty(_) => FName::from_slice("IntPoint"),
+            Property::LinearColorProperty(_) => FName::from_slice("LinearColor"),
+            Property::QuatProperty(_) => FName::from_slice("Quat"),
+            Property::RotatorProperty(_) => FName::from_slice("Rotator"),
+            Property::StructProperty(_) => FName::from_slice("StructProperty"),
+            Property::Vector2DProperty(_) => FName::from_slice("Vector2D"),
+            Property::BoxProperty(_) => FName::from_slice("Box"),
+            Property::PerPlatformFloatProperty(_) => FName::from_slice("PerPlatformFloat"),
+            Property::Vector4Property(_) => FName::from_slice("Vector4"),
+            Property::VectorProperty(_) => FName::from_slice("Vector"),
+            Property::ViewTargetBlendParamsProperty(_) => FName::from_slice("ViewTargetBlendParams"),
+            Property::DoubleProperty(_) => FName::from_slice("DoubleProperty"),
+            Property::ArrayProperty(_) => FName::from_slice("ArrayProperty"),
+            Property::SetProperty(_) => FName::from_slice("SetProperty"),
+            Property::BoolProperty(_) => FName::from_slice("BoolProperty"),
+            Property::ByteProperty(_) => FName::from_slice("ByteProperty"),
+            Property::EnumProperty(_) => FName::from_slice("EnumProperty"),
+            Property::FloatProperty(_) => FName::from_slice("FloatProperty"),
+            Property::Int16Property(_) => FName::from_slice("Int16Property"),
+            Property::Int64Property(_) => FName::from_slice("Int64Property"),
+            Property::Int8Property(_) => FName::from_slice("Int8Property"),
+            Property::IntProperty(_) => FName::from_slice("IntProperty"),
+            Property::MapProperty(_) => FName::from_slice("MapProperty"),
+            Property::MulticastDelegateProperty(_) => FName::from_slice("MulticastDelegateProperty"),
+            Property::NameProperty(_) => FName::from_slice("NameProperty"),
+            Property::ObjectProperty(_) => FName::from_slice("ObjectProperty"),
+            Property::AssetObjectProperty(_) => FName::from_slice("AssetObjectProperty"),
+            Property::SoftObjectProperty(_) => FName::from_slice("SoftObjectProperty"),
+            Property::StrProperty(_) => FName::from_slice("StrProperty"),
+            Property::TextProperty(_) => FName::from_slice("TextProperty"),
+            Property::UInt16Property(_) => FName::from_slice("UInt16Property"),
+            Property::UInt32Property(_) => FName::from_slice("UInt32Property"),
+            Property::UInt64Property(_) => FName::from_slice("UInt64Property"),
+            Property::UnknownProperty(unk) => unk.serialized_type.as_ref().map(|e| e.clone()).unwrap_or(FName::from_slice("Generic")),
         }
     }
 }

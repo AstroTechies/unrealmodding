@@ -6,7 +6,7 @@ use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, 
 use crate::uasset::error::{Error, PropertyError};
 use crate::uasset::properties::{PropertyDataTrait, PropertyTrait};
 use crate::uasset::ue4version::{VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
-use crate::uasset::unreal_types::default_guid;
+use crate::uasset::unreal_types::{default_guid, ToFName};
 
 use super::{Property, struct_property::StructProperty};
 
@@ -110,7 +110,7 @@ impl ArrayProperty {
 
     pub fn write_full(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool, serialize_structs_differently: bool) -> Result<usize, Error> {
         let array_type = match self.value.len() > 0 {
-            true => Some(FName::new(self.value[0].to_string(), 0)),
+            true => Some(self.value[0].to_fname()),
             false => self.array_type.clone()
         };
 
@@ -126,7 +126,7 @@ impl ArrayProperty {
             let property: &StructProperty = match self.value.len() > 0 {
                 true => match &self.value[0] {
                     Property::StructProperty(ref e) => Ok(e),
-                    _ => Err(PropertyError::invalid_array(format!("expected StructProperty got {}", self.value[0].to_string())))
+                    _ => Err(PropertyError::invalid_array(format!("expected StructProperty got {}", self.value[0].to_fname().content)))
                 },
                 false => match self.dummy_property {
                     Some(ref e) => Ok(e),
@@ -152,7 +152,7 @@ impl ArrayProperty {
             for property in &self.value {
                 let struct_property: &StructProperty = match property {
                     Property::StructProperty(e) => Ok(e),
-                    _ => Err(PropertyError::invalid_array(format!("expected StructProperty got {}", property.to_string())))
+                    _ => Err(PropertyError::invalid_array(format!("expected StructProperty got {}", property.to_fname().content)))
                 }?;
                 struct_property.write(asset, cursor, false)?;
             }

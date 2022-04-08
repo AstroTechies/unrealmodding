@@ -1,7 +1,7 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 
-#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum EArrayDim {
     NotAnArray = 0,
@@ -9,7 +9,7 @@ pub enum EArrayDim {
     CArray = 2
 }
 
-#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ELifetimeCondition
 {
@@ -62,7 +62,7 @@ pub enum EBlueprintTextLiteralType {
     StringTableEntry
 }
 
-#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
 #[repr(i8)]
 pub enum TextHistoryType {
     None = -1,

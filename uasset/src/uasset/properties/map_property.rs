@@ -6,6 +6,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
 use crate::uasset::error::Error;
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::uasset::unreal_types::ToFName;
 use super::{Property, struct_property::StructProperty};
 
 #[derive(PartialEq, Eq)]
@@ -96,9 +97,9 @@ impl PropertyTrait for MapProperty {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         if include_header {
             if let Some(key) = self.value.keys().next() {
-                asset.write_fname(cursor, &FName::new(key.to_string(), 0))?;
+                asset.write_fname(cursor, &key.to_fname())?;
                 let value = self.value.values().next().unwrap();
-                asset.write_fname(cursor, &FName::new(value.to_string(), 0))?;
+                asset.write_fname(cursor, &value.to_fname())?;
             } else {
                 asset.write_fname(cursor, &self.key_type)?;
                 asset.write_fname(cursor, &self.value_type)?

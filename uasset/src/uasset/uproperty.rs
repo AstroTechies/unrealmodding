@@ -1,5 +1,5 @@
 use std::io::{Cursor,};
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
 use crate::uasset::Error;
@@ -11,27 +11,60 @@ use crate::uasset::unreal_types::{FName, PackageIndex};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
-        pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-            Ok($prop_name {
-                generic_property: UGenericProperty::new(asset)?
-            })
+        pub struct $prop_name {
+            pub generic_property: UGenericProperty
+        }
+
+        impl $prop_name {
+            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+                Ok($prop_name {
+                    generic_property: UGenericProperty::new(asset)?
+                })
+            }
+        }
+
+        impl UPropertyTrait for $prop_name {
+            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+                self.generic_property.write(asset, cursor)?;
+                Ok(())
+            }
         }
     };
 
     ($prop_name:ident, $($field_name:ident),*) => {
-        pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-            Ok($prop_name {
-                generic_property: UGenericProperty::new(asset)?,
+        pub struct $prop_name {
+            pub generic_property: UGenericProperty,
+            $(
+                pub $field_name: PackageIndex,
+            )*
+        }
+
+        impl $prop_name {
+            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+                Ok($prop_name {
+                    generic_property: UGenericProperty::new(asset)?,
+                    $(
+                        $field_name: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+                    )*
+                })
+            }
+        }
+
+        impl UPropertyTrait for $prop_name {
+            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+                self.generic_property.write(asset, cursor)?;
                 $(
-                    $field_name: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+                    cursor.write_i32::<LittleEndian>(self.$field_name.index)?;
                 )*
-            })
+                Ok(())
+            }
         }
     }
 }
 
 #[enum_dispatch]
 pub trait UPropertyTrait {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
 }
 
 #[enum_dispatch(UPropertyTrait)]
@@ -103,117 +136,25 @@ impl UProperty {
 }
 
 pub struct UField {
-    next: Option<PackageIndex>
+    pub next: Option<PackageIndex>
 }
 
 pub struct UGenericProperty {
-    u_field: UField,
-    array_dim: EArrayDim,
-    property_flags: EPropertyFlags,
-    rep_notify_func: FName,
-    blueprint_replication_condition: Option<ELifetimeCondition>
-}
-
-pub struct UEnumProperty {
-    generic_property: UGenericProperty,
-    value: PackageIndex,
-    underlying_prop: PackageIndex
-}
-
-pub struct UArrayProperty {
-    generic_property: UGenericProperty,
-    inner: PackageIndex
-}
-
-pub struct USetProperty {
-    generic_property: UGenericProperty,
-    element_prop: PackageIndex
-}
-
-pub struct UObjectProperty {
-    generic_property: UGenericProperty,
-    property_class: PackageIndex
-}
-
-pub struct USoftObjectProperty {
-    generic_property: UGenericProperty,
-    property_class: PackageIndex
-}
-
-pub struct ULazyObjectProperty {
-    generic_property: UGenericProperty,
-    property_class: PackageIndex
-}
-
-pub struct UClassProperty {
-    generic_property: UGenericProperty,
-    property_class: PackageIndex,
-    meta_class: PackageIndex
-}
-
-pub struct USoftClassProperty {
-    generic_property: UGenericProperty,
-    property_class: PackageIndex,
-    meta_class: PackageIndex
-}
-
-pub struct UDelegateProperty {
-    generic_property: UGenericProperty,
-    signature_function: PackageIndex
-}
-
-pub struct UMulticastDelegateProperty {
-    generic_property: UGenericProperty,
-    signature_function: PackageIndex
-}
-
-pub struct UMulticastInlineDelegateProperty {
-    generic_property: UGenericProperty,
-    signature_function: PackageIndex
-}
-
-pub struct UInterfaceProperty {
-    generic_property: UGenericProperty,
-    interface_class: PackageIndex
-}
-
-pub struct UMapProperty {
-    generic_property: UGenericProperty,
-    key_prop: PackageIndex,
-    value_prop: PackageIndex
+    pub u_field: UField,
+    pub array_dim: EArrayDim,
+    pub property_flags: EPropertyFlags,
+    pub rep_notify_func: FName,
+    pub blueprint_replication_condition: Option<ELifetimeCondition>
 }
 
 pub struct UBoolProperty {
-    generic_property: UGenericProperty,
-    element_size: u8,
-    native_bool: bool
+    pub generic_property: UGenericProperty,
+    pub element_size: u8,
+    pub native_bool: bool
 }
-
-pub struct UByteProperty {
-    generic_property: UGenericProperty,
-    enum_value: PackageIndex
-}
-
-pub struct UStructProperty {
-    generic_property: UGenericProperty,
-    struct_value: PackageIndex
-}
-
-pub struct UDoubleProperty { generic_property: UGenericProperty }
-pub struct UFloatProperty { generic_property: UGenericProperty }
-pub struct UIntProperty { generic_property: UGenericProperty }
-pub struct UInt8Property { generic_property: UGenericProperty }
-pub struct UInt16Property { generic_property: UGenericProperty }
-pub struct UInt64Property { generic_property: UGenericProperty }
-pub struct UUInt8Property { generic_property: UGenericProperty }
-pub struct UUInt16Property { generic_property: UGenericProperty }
-pub struct UUInt64Property { generic_property: UGenericProperty }
-pub struct UNameProperty { generic_property: UGenericProperty }
-pub struct UStrProperty { generic_property: UGenericProperty }
 
 impl UField {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-        
         let next = match asset.get_custom_version::<FFrameworkObjectVersion>().version < FFrameworkObjectVersion::RemoveUField_Next as i32 {
             true => Some(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)),
             false => None
@@ -221,6 +162,13 @@ impl UField {
         Ok(UField {
             next
         })
+    }
+
+    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        if asset.get_custom_version::<FFrameworkObjectVersion>().version < FFrameworkObjectVersion::RemoveUField_Next as i32 {
+            cursor.write_i32::<LittleEndian>(self.next.ok_or(Error::no_data("FFrameworkObjectVersion < RemoveUField_Next but no next index present".to_string()))?.index)?;
+        }
+        Ok(())
     }
 }
 
@@ -247,6 +195,20 @@ impl UGenericProperty {
     }
 }
 
+impl UPropertyTrait for UGenericProperty {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        self.u_field.write(asset, cursor)?;
+        cursor.write_i32::<LittleEndian>(self.array_dim.into())?;
+        cursor.write_u64::<LittleEndian>(self.property_flags.bits())?;
+        asset.write_fname(cursor, &self.rep_notify_func)?;
+
+        if asset.get_custom_version::<FReleaseObjectVersion>().version >= FReleaseObjectVersion::PropertiesSerializeRepCondition as i32 {
+            cursor.write_u8(self.blueprint_replication_condition.ok_or(Error::no_data("FReleaseObjectVersion >= PropertiesSerializeRepCondition but no blueprint_replication_condition found".to_string()))?.into())?;
+        }
+        Ok(())
+    }
+}
+
 impl UBoolProperty {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         
@@ -263,30 +225,39 @@ impl UBoolProperty {
     }
 }
 
-impl UEnumProperty { parse_simple_property!(UEnumProperty, value, underlying_prop); }
-impl UArrayProperty { parse_simple_property!(UArrayProperty, inner); }
-impl USetProperty { parse_simple_property!(USetProperty, element_prop); }
-impl UObjectProperty { parse_simple_property!(UObjectProperty, property_class); }
-impl USoftObjectProperty { parse_simple_property!(USoftObjectProperty, property_class); }
-impl ULazyObjectProperty { parse_simple_property!(ULazyObjectProperty, property_class); }
-impl UClassProperty { parse_simple_property!(UClassProperty, property_class, meta_class); }
-impl USoftClassProperty { parse_simple_property!(USoftClassProperty, property_class, meta_class); }
-impl UDelegateProperty { parse_simple_property!(UDelegateProperty, signature_function); }
-impl UMulticastDelegateProperty { parse_simple_property!(UMulticastDelegateProperty, signature_function); }
-impl UMulticastInlineDelegateProperty { parse_simple_property!(UMulticastInlineDelegateProperty, signature_function); }
-impl UInterfaceProperty { parse_simple_property!(UInterfaceProperty, interface_class); }
-impl UMapProperty { parse_simple_property!(UMapProperty, key_prop, value_prop); }
-impl UByteProperty { parse_simple_property!(UByteProperty, enum_value); }
-impl UStructProperty { parse_simple_property!(UStructProperty, struct_value); }
+impl UPropertyTrait for UBoolProperty {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        self.generic_property.write(asset, cursor)?;
+        cursor.write_u8(self.element_size)?;
+        cursor.write_bool(self.native_bool)?;
+        Ok(())
+    }
+}
 
-impl UDoubleProperty { parse_simple_property!(UDoubleProperty); }
-impl UFloatProperty { parse_simple_property!(UFloatProperty); }
-impl UIntProperty { parse_simple_property!(UIntProperty); }
-impl UInt8Property { parse_simple_property!(UInt8Property); }
-impl UInt16Property { parse_simple_property!(UInt16Property); }
-impl UInt64Property { parse_simple_property!(UInt64Property); }
-impl UUInt8Property { parse_simple_property!(UUInt8Property); }
-impl UUInt16Property { parse_simple_property!(UUInt16Property); }
-impl UUInt64Property { parse_simple_property!(UUInt64Property); }
-impl UNameProperty { parse_simple_property!(UNameProperty); }
-impl UStrProperty { parse_simple_property!(UStrProperty); }
+parse_simple_property!(UEnumProperty, value, underlying_prop);
+parse_simple_property!(UArrayProperty, inner);
+parse_simple_property!(USetProperty, element_prop);
+parse_simple_property!(UObjectProperty, property_class);
+parse_simple_property!(USoftObjectProperty, property_class);
+parse_simple_property!(ULazyObjectProperty, property_class);
+parse_simple_property!(UClassProperty, property_class, meta_class);
+parse_simple_property!(USoftClassProperty, property_class, meta_class);
+parse_simple_property!(UDelegateProperty, signature_function);
+parse_simple_property!(UMulticastDelegateProperty, signature_function);
+parse_simple_property!(UMulticastInlineDelegateProperty, signature_function);
+parse_simple_property!(UInterfaceProperty, interface_class);
+parse_simple_property!(UMapProperty, key_prop, value_prop);
+parse_simple_property!(UByteProperty, enum_value);
+parse_simple_property!(UStructProperty, struct_value);
+
+parse_simple_property!(UDoubleProperty);
+parse_simple_property!(UFloatProperty);
+parse_simple_property!(UIntProperty);
+parse_simple_property!(UInt8Property);
+parse_simple_property!(UInt16Property);
+parse_simple_property!(UInt64Property);
+parse_simple_property!(UUInt8Property);
+parse_simple_property!(UUInt16Property);
+parse_simple_property!(UUInt64Property);
+parse_simple_property!(UNameProperty);
+parse_simple_property!(UStrProperty);

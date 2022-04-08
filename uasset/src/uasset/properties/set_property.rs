@@ -5,6 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use crate::uasset::error::{Error, PropertyError};
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::uasset::unreal_types::ToFName;
 
 use super::{Property, array_property::ArrayProperty};
 
@@ -61,7 +62,7 @@ impl SetProperty {
 impl PropertyTrait for SetProperty {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         let array_type = match self.value.value.len() > 0 {
-            true => Some(FName::new(self.value.value[0].to_string(), 0)),
+            true => Some(self.value.value[0].to_fname()),
             false => self.array_type.clone()
         };
 
