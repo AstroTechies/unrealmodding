@@ -28,7 +28,7 @@ impl GuidProperty {
 
 impl PropertyTrait for GuidProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
-        optional_guid_write!(asset, cursor, include_header);
+        optional_guid_write!(self, asset, cursor, include_header);
         cursor.write(&self.value)?;
         Ok(16)
     }

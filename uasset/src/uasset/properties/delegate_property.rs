@@ -45,7 +45,7 @@ impl MulticastDelegateProperty {
 
 impl PropertyTrait for MulticastDelegateProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
-        optional_guid_write!(asset, cursor, include_header);
+        optional_guid_write!(self, asset, cursor, include_header);
 
         cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
         for entry in &self.value {

@@ -2,8 +2,9 @@ use std::io::{Cursor, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid};
+use crate::uasset::error::{Error, PropertyError};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid, optional_guid_write};
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
@@ -56,6 +57,21 @@ macro_rules! impl_soft_path_property {
                     sub_path,
                     path
                 })
+            }
+        }
+
+        impl PropertyTrait for $property_name {
+            fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+                optional_guid_write!(self, asset, cursor, include_header);
+                let begin = cursor.position();
+                if asset.engine_version < VER_UE4_ADDED_SOFT_OBJECT_PATH {
+                    cursor.write_string(self.path.as_ref().ok_or(PropertyError::property_field_none("path", "String"))?)?;
+                } else {
+                    asset.write_fname(cursor, self.asset_path_name.as_ref().ok_or(PropertyError::property_field_none("asset_path_name", "FName"))?)?;
+                    cursor.write_string(self.sub_path.as_ref().ok_or(PropertyError::property_field_none("sub_path", "String"))?)?;
+                }
+
+                Ok((cursor.position() - begin) as usize)
             }
         }
     }

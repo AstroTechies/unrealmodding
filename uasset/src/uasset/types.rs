@@ -46,7 +46,7 @@ impl Color<u8> {
     }
 
     pub fn to_argb(&self) -> i32 {
-        (r << 24) | (g << 16) | (b << 8) | a
+        ((self.r as i32) << 24) | ((self.g as i32) << 16) | ((self.b as i32) << 8) | self.a as i32
     }
 }
 

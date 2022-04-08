@@ -45,6 +45,6 @@ impl ExportUnknownTrait for UnknownExport {
     }
 
     fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
-        &mut self
+        self
     }
 }

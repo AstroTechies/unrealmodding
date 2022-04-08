@@ -48,7 +48,7 @@ macro_rules! implement_get {
             }
 
             fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
-                &mut self.normal_exportunknown_export
+                &mut self.normal_export.unknown_export
             }
         }
     };
@@ -56,10 +56,9 @@ macro_rules! implement_get {
 
 #[enum_dispatch]
 trait ExportTrait {
-    fn write_header(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
 }
 
-#[enum_dispatch(ExportTrait, ExportNormalTrait)]
+#[enum_dispatch(ExportTrait, ExportNormalTrait, ExportUnknownTrait)]
 pub enum Export {
     UnknownExport,
     ClassExport,

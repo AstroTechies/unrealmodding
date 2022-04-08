@@ -35,7 +35,7 @@ impl EnumProperty {
 impl PropertyTrait for EnumProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         if include_header {
-            asset.write_fname(cursor, self.enum_type.as_ref().ok_or(PropertyError::headerless().into())?)?;
+            asset.write_fname(cursor, self.enum_type.as_ref().ok_or(PropertyError::headerless())?)?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
         asset.write_fname(cursor, &self.value)?;

@@ -34,7 +34,7 @@ impl GameplayTagContainerProperty {
 
 impl PropertyTrait for GameplayTagContainerProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
-        optional_guid_write!(asset, cursor, include_header);
+        optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
 
         let mut total_size = size_of::<i32>();

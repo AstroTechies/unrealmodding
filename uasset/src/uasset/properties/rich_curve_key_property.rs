@@ -1,12 +1,14 @@
 use std::io::{Cursor,};
+use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
+use crate::uasset::properties::PropertyTrait;
 
-#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
+#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveInterpMode {
     Linear,
@@ -15,7 +17,7 @@ pub enum RichCurveInterpMode {
     None
 }
 
-#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
+#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveTangentMode {
     Auto,
@@ -24,7 +26,7 @@ pub enum RichCurveTangentMode {
     None
 }
 
-#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq)]
+#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveTangentWeightMode {
     WeightedNone,
@@ -77,5 +79,21 @@ impl RichCurveKeyProperty {
             leave_tangent,
             leave_tangent_weight
         })
+    }
+}
+
+impl PropertyTrait for RichCurveKeyProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_i8(self.interp_mode.into())?;
+        cursor.write_i8(self.tangent_mode.into())?;
+        cursor.write_i8(self.tangent_weight_mode.into())?;
+        cursor.write_f32::<LittleEndian>(self.time.0)?;
+        cursor.write_f32::<LittleEndian>(self.value.0)?;
+        cursor.write_f32::<LittleEndian>(self.arrive_tangent.0)?;
+        cursor.write_f32::<LittleEndian>(self.arrive_tangent_weight.0)?;
+        cursor.write_f32::<LittleEndian>(self.leave_tangent.0)?;
+        cursor.write_f32::<LittleEndian>(self.leave_tangent_weight.0)?;
+        Ok(size_of::<f32>() * 6 + size_of::<i8>() * 3)
     }
 }

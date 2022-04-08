@@ -36,7 +36,7 @@ impl ColorProperty {
 
 impl PropertyTrait for ColorProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
-        optional_guid_write!(asset, cursor, include_header);
+        optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i32::<LittleEndian>(self.color.to_argb())?;
         Ok(size_of::<i32>())
     }
@@ -61,7 +61,7 @@ impl LinearColorProperty {
 
 impl PropertyTrait for LinearColorProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
-        optional_guid_write!(asset, cursor, include_header);
+        optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f32::<LittleEndian>(self.color.r.0)?;
         cursor.write_f32::<LittleEndian>(self.color.g.0)?;
         cursor.write_f32::<LittleEndian>(self.color.b.0)?;

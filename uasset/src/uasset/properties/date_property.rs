@@ -1,9 +1,11 @@
 use std::io::{Cursor, ErrorKind, Read};
+use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, simple_property_write};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, simple_property_write};
 use crate::uasset::properties::PropertyTrait;
 
 #[derive(Debug, Hash, PartialEq, Eq)]

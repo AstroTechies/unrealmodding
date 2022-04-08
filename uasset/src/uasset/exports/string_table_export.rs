@@ -10,6 +10,7 @@ use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::unreal_types::StringTable;
 
 use super::ExportNormalTrait;
+use super::ExportUnknownTrait;
 
 pub struct StringTableExport {
     normal_export: NormalExport,

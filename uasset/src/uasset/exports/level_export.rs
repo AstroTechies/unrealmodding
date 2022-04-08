@@ -8,6 +8,7 @@ use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::unreal_types::{FName, Guid, NamespacedString};
 use crate::uasset::error::Error;
 use super::ExportNormalTrait;
+use super::ExportUnknownTrait;
 
 pub struct LevelExport {
     normal_export: NormalExport,

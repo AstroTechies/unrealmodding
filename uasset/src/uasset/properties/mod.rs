@@ -46,9 +46,9 @@ macro_rules! optional_guid {
 
 #[macro_export]
 macro_rules! optional_guid_write {
-    ($asset:ident, $cursor:ident, $include_header:ident) => {
+    ($self:ident, $asset:ident, $cursor:ident, $include_header:ident) => {
         if $include_header {
-            $asset.write_property_guid($cursor, &self.property_guid)?;
+            $asset.write_property_guid($cursor, &$self.property_guid)?;
         }
     }
 }
@@ -58,7 +58,7 @@ macro_rules! simple_property_write {
     ($property_name:ident, $write_func:ident, $value_name:ident, $value_type:ty) => {
         impl PropertyTrait for $property_name {
             fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
-                optional_guid_write(asset, cursor, include_header);
+                optional_guid_write!(self, asset, cursor, include_header);
                 cursor.$write_func::<LittleEndian>(self.$value_name)?;
                 Ok(size_of::<$value_type>())
             }
@@ -73,7 +73,7 @@ lazy_static! {
         String::from("SmartName"),
         String::from("SoftObjectPath"),
         String::from("WeightedRandomSampler"),
-        String::from("SoftClassPath"),/
+        String::from("SoftClassPath"),
         String::from("Color"),
         String::from("ExpressionInput"),
         String::from("MaterialAttributesInput"),
@@ -264,62 +264,62 @@ impl Property {
 impl ToString for Property {
     fn to_string(&self) -> String {
         match *self {
-            Property::SkeletalMeshSamplingLODBuiltDataProperty => "SkeletalMeshSamplingLODBuiltData".to_string(),
-            Property::SkeletalMeshAreaWeightedTriangleSampler => "SkeletalMeshAreaWeightedTriangleSampler".to_string(),
-            Property::SmartNameProperty => "SmartName".to_string(),
-            Property::SoftObjectPathProperty => "SoftObjectPath".to_string(),
-            Property::WeightedRandomSamplerProperty => "WeightedRandomSampler".to_string(),
-            Property::SoftClassPathProperty => "SoftClassPath".to_string(),
-            Property::ColorProperty => "Color".to_string(),
-            Property::ExpressionInputProperty => "ExpressionInput".to_string(),
-            Property::MaterialAttributesInputProperty => "MaterialAttributesInput".to_string(),
-            Property::ColorMaterialInputProperty => "ColorMaterialInput".to_string(),
-            Property::ScalarMaterialInputProperty => "ScalarMaterialInput".to_string(),
-            Property::ShadingModelMaterialInputProperty => "ShadingModelMaterialInput".to_string(),
-            Property::VectorMaterialInputProperty => "VectorMaterialInput".to_string(),
-            Property::Vector2MaterialInputProperty => "Vector2MaterialInput".to_string(),
-            Property::GameplayTagContainerProperty => "GameplayTagContainer".to_string(),
-            Property::PerPlatformBoolProperty => "PerPlatformBool".to_string(),
-            Property::PerPlatformIntProperty => "PerPlatformInt".to_string(),
-            Property::RichCurveKeyProperty => "RichCurveKey".to_string(),
-            Property::SoftAssetPathProperty => "SoftAssetPath".to_string(),
-            Property::TimeSpanProperty => "Timespan".to_string(),
-            Property::DateTimeProperty => "DateTime".to_string(),
-            Property::GuidProperty => "Guid".to_string(),
-            Property::IntPointProperty => "IntPoint".to_string(),
-            Property::LinearColorProperty => "LinearColor".to_string(),
-            Property::QuatProperty => "Quat".to_string(),
-            Property::RotatorProperty => "Rotator".to_string(),
-            Property::StructProperty => "StructProperty".to_string(),
-            Property::Vector2DProperty => "Vector2D".to_string(),
-            Property::BoxProperty => "Box".to_string(),
-            Property::PerPlatformFloatProperty => "PerPlatformFloat".to_string(),
-            Property::Vector4Property => "Vector4".to_string(),
-            Property::VectorProperty => "Vector".to_string(),
-            Property::ViewTargetBlendParamsProperty => "ViewTargetBlendParams".to_string(),
-            Property::DoubleProperty => "DoubleProperty".to_string(),
-            Property::ArrayProperty => "ArrayProperty".to_string(),
-            Property::SetProperty => "SetProperty".to_string(),
-            Property::BoolProperty => "BoolProperty".to_string(),
-            Property::ByteProperty => "ByteProperty".to_string(),
-            Property::UnknownProperty => "UnknownProperty".to_string(),
-            Property::EnumProperty => "EnumProperty".to_string(),
-            Property::FloatProperty => "FloatProperty".to_string(),
-            Property::Int16Property => "Int16Property".to_string(),
-            Property::Int64Property => "Int64Property".to_string(),
-            Property::Int8Property => "Int8Property".to_string(),
-            Property::IntProperty => "IntProperty".to_string(),
-            Property::MapProperty => "MapProperty".to_string(),
-            Property::MulticastDelegateProperty => "MulticastDelegateProperty".to_string(),
-            Property::NameProperty => "NameProperty".to_string(),
-            Property::ObjectProperty => "ObjectProperty".to_string(),
-            Property::AssetObjectProperty => "AssetObjectProperty".to_string(),
-            Property::SoftObjectProperty => "SoftObjectProperty".to_string(),
-            Property::StrProperty => "StrProperty".to_string(),
-            Property::TextProperty => "TextProperty".to_string(),
-            Property::UInt16Property => "UInt16Property".to_string(),
-            Property::UInt32Property => "UInt32Property".to_string(),
-            Property::UInt64Property => "UInt64Property".to_string(),
+            Property::SkeletalMeshSamplingLODBuiltDataProperty(_) => "SkeletalMeshSamplingLODBuiltData".to_string(),
+            Property::SkeletalMeshAreaWeightedTriangleSampler(_) => "SkeletalMeshAreaWeightedTriangleSampler".to_string(),
+            Property::SmartNameProperty(_) => "SmartName".to_string(),
+            Property::SoftObjectPathProperty(_) => "SoftObjectPath".to_string(),
+            Property::WeightedRandomSamplerProperty(_) => "WeightedRandomSampler".to_string(),
+            Property::SoftClassPathProperty(_) => "SoftClassPath".to_string(),
+            Property::ColorProperty(_) => "Color".to_string(),
+            Property::ExpressionInputProperty(_) => "ExpressionInput".to_string(),
+            Property::MaterialAttributesInputProperty(_) => "MaterialAttributesInput".to_string(),
+            Property::ColorMaterialInputProperty(_) => "ColorMaterialInput".to_string(),
+            Property::ScalarMaterialInputProperty(_) => "ScalarMaterialInput".to_string(),
+            Property::ShadingModelMaterialInputProperty(_) => "ShadingModelMaterialInput".to_string(),
+            Property::VectorMaterialInputProperty(_) => "VectorMaterialInput".to_string(),
+            Property::Vector2MaterialInputProperty(_) => "Vector2MaterialInput".to_string(),
+            Property::GameplayTagContainerProperty(_) => "GameplayTagContainer".to_string(),
+            Property::PerPlatformBoolProperty(_) => "PerPlatformBool".to_string(),
+            Property::PerPlatformIntProperty(_) => "PerPlatformInt".to_string(),
+            Property::RichCurveKeyProperty(_) => "RichCurveKey".to_string(),
+            Property::SoftAssetPathProperty(_) => "SoftAssetPath".to_string(),
+            Property::TimeSpanProperty(_) => "Timespan".to_string(),
+            Property::DateTimeProperty(_) => "DateTime".to_string(),
+            Property::GuidProperty(_) => "Guid".to_string(),
+            Property::IntPointProperty(_) => "IntPoint".to_string(),
+            Property::LinearColorProperty(_) => "LinearColor".to_string(),
+            Property::QuatProperty(_) => "Quat".to_string(),
+            Property::RotatorProperty(_) => "Rotator".to_string(),
+            Property::StructProperty(_) => "StructProperty".to_string(),
+            Property::Vector2DProperty(_) => "Vector2D".to_string(),
+            Property::BoxProperty(_) => "Box".to_string(),
+            Property::PerPlatformFloatProperty(_) => "PerPlatformFloat".to_string(),
+            Property::Vector4Property(_) => "Vector4".to_string(),
+            Property::VectorProperty(_) => "Vector".to_string(),
+            Property::ViewTargetBlendParamsProperty(_) => "ViewTargetBlendParams".to_string(),
+            Property::DoubleProperty(_) => "DoubleProperty".to_string(),
+            Property::ArrayProperty(_) => "ArrayProperty".to_string(),
+            Property::SetProperty(_) => "SetProperty".to_string(),
+            Property::BoolProperty(_) => "BoolProperty".to_string(),
+            Property::ByteProperty(_) => "ByteProperty".to_string(),
+            Property::UnknownProperty(_) => "UnknownProperty".to_string(),
+            Property::EnumProperty(_) => "EnumProperty".to_string(),
+            Property::FloatProperty(_) => "FloatProperty".to_string(),
+            Property::Int16Property(_) => "Int16Property".to_string(),
+            Property::Int64Property(_) => "Int64Property".to_string(),
+            Property::Int8Property(_) => "Int8Property".to_string(),
+            Property::IntProperty(_) => "IntProperty".to_string(),
+            Property::MapProperty(_) => "MapProperty".to_string(),
+            Property::MulticastDelegateProperty(_) => "MulticastDelegateProperty".to_string(),
+            Property::NameProperty(_) => "NameProperty".to_string(),
+            Property::ObjectProperty(_) => "ObjectProperty".to_string(),
+            Property::AssetObjectProperty(_) => "AssetObjectProperty".to_string(),
+            Property::SoftObjectProperty(_) => "SoftObjectProperty".to_string(),
+            Property::StrProperty(_) => "StrProperty".to_string(),
+            Property::TextProperty(_) => "TextProperty".to_string(),
+            Property::UInt16Property(_) => "UInt16Property".to_string(),
+            Property::UInt32Property(_) => "UInt32Property".to_string(),
+            Property::UInt64Property(_) => "UInt64Property".to_string(),
         }
     }
 }

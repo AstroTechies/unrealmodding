@@ -5,7 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, simple_property_write};
-use crate::uasset::error::Error;
+use crate::uasset::error::{Error, PropertyError};
 use crate::uasset::properties::PropertyTrait;
 
 macro_rules! impl_int_property {
@@ -127,7 +127,7 @@ impl BoolProperty {
 impl PropertyTrait for BoolProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         cursor.write_bool(self.value)?;
-        optional_guid_write!(asset, cursor, include_header);
+        optional_guid_write!(self, asset, cursor, include_header);
         Ok(0)
     }
 }
@@ -145,7 +145,7 @@ impl Int8Property {
 
 impl PropertyTrait for Int8Property {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
-        optional_guid_write!(asset, cursor, include_header);
+        optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i8(self.value)?;
         Ok(size_of::<i8>())
     }
@@ -183,7 +183,7 @@ impl ByteProperty {
 impl PropertyTrait for ByteProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         if include_header {
-            cursor.write_i64::<LittleEndian>(self.enum_type.ok_or(Error::invalid_property("include_header: true on headerless property".to_string()))?)?;
+            cursor.write_i64::<LittleEndian>(self.enum_type.ok_or(PropertyError::headerless())?)?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
 
@@ -200,11 +200,50 @@ impl PropertyTrait for ByteProperty {
     }
 }
 
+
+impl FloatProperty {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+
+        Ok(FloatProperty {
+            name,
+            property_guid,
+            value: OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?)
+        })
+    }
+}
+
+impl PropertyTrait for FloatProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_f32::<LittleEndian>(self.value.0)?;
+        Ok(size_of::<f32>())
+    }
+}
+
+impl DoubleProperty {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+
+        Ok(DoubleProperty {
+            name,
+            property_guid,
+            value: OrderedFloat(asset.cursor.read_f64::<LittleEndian>()?)
+        })
+    }
+}
+
+impl PropertyTrait for DoubleProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_f64::<LittleEndian>(self.value.0)?;
+        Ok(size_of::<f64>())
+    }
+}
+
 impl_int_property!(IntProperty, read_i32, write_i32, i32);
 impl_int_property!(Int16Property, read_i16, write_i16, i16);
 impl_int_property!(Int64Property, read_i64, write_i64, i64);
 impl_int_property!(UInt16Property, read_u16, write_u16, u16);
 impl_int_property!(UInt32Property, read_u32, write_u32, u32);
 impl_int_property!(UInt64Property, read_u64, write_u64, u64);
-impl_int_property!(FloatProperty, read_f32, write_f32, f32);
-impl_int_property!(DoubleProperty, read_f64, write_f64, f64);

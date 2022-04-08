@@ -20,6 +20,7 @@ pub mod uasset {
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian, WriteBytesExt};
 
+    use crate::uasset::exports::ExportUnknownTrait;
     use crate::uasset::exports::class_export::ClassExport;
     use crate::uasset::exports::data_table_export::DataTableExport;
     use crate::uasset::exports::enum_export::EnumExport;
@@ -410,17 +411,6 @@ pub mod uasset {
             }
             Ok((hashes, s))
         }
-
-        fn fix_name_map_lookup(&mut self) {
-            if self.name_map_index_list.len() > 0 && self.name_map_lookup.is_empty() {
-                for i in 0..self.name_map_index_list.len() {
-                    let mut s = DefaultHasher::new();
-                    self.name_map_index_list[i].hash(&mut s);
-                    self.name_map_lookup.insert(s.finish(), i as i32);
-                }
-            }
-        }
-
         
         pub fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
             if self.engine_version >= ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
@@ -444,9 +434,7 @@ pub mod uasset {
             Ok(())
         }
 
-        fn search_name_reference(&mut self, name: &String) -> Option<i32> {
-            self.fix_name_map_lookup();
-
+        fn search_name_reference(&self, name: &String) -> Option<i32> {
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
 
@@ -454,8 +442,6 @@ pub mod uasset {
         }
 
         fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
-            self.fix_name_map_lookup();
-
             if !force_add_duplicates {
                 let existing = self.search_name_reference(&name);
                 if existing.is_some() {
@@ -466,13 +452,11 @@ pub mod uasset {
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
 
-            self.name_map_index_list.push(name.to_owned());
             self.name_map_lookup.insert(s.finish(), self.name_map_lookup.len() as i32);
             (self.name_map_lookup.len() - 1) as i32
         }
 
-        fn get_name_reference(&mut self, index: i32) -> String {
-            self.fix_name_map_lookup();
+        fn get_name_reference(&self, index: i32) -> String {
             if index < 0 {
                 return (-index).to_string(); // is this right even?
             }
@@ -489,8 +473,8 @@ pub mod uasset {
             Ok(FName::new(self.get_name_reference(name_map_pointer), number))
         }
 
-        fn write_fname(&mut self, cursor: &mut Cursor<Vec<u8>>, fname: &FName) -> Result<(), Error> {
-            cursor.write_i32::<LittleEndian>(self.search_name_reference(&fname.content)?)?;
+        fn write_fname(&self, cursor: &mut Cursor<Vec<u8>>, fname: &FName) -> Result<(), Error> {
+            cursor.write_i32::<LittleEndian>(self.search_name_reference(&fname.content).ok_or(Error::no_data(format!("name reference for {} not found", fname.content.to_owned())))?)?;
             cursor.write_i32::<LittleEndian>(fname.index)?;
             Ok(())
         }
@@ -785,7 +769,7 @@ pub mod uasset {
                     true => cursor.write_i32::<LittleEndian>(0)?,
                     false => {
                         cursor.write_i32::<LittleEndian>(self.custom_version.len() as i32)?;
-                        for custom_version in self.custom_version {
+                        for custom_version in &self.custom_version {
                             cursor.write(&custom_version.guid)?;
                             cursor.write_i32::<LittleEndian>(custom_version.version)?;
                         }
@@ -823,7 +807,7 @@ pub mod uasset {
             cursor.write(&self.package_guid)?;
             cursor.write_i32::<LittleEndian>(self.generations.len() as i32);
 
-            for i in 0..self.generations {
+            for _ in 0..self.generations.len() {
                 cursor.write_i32::<LittleEndian>(self.export_count)?;
                 cursor.write_i32::<LittleEndian>(self.name_count)?;
             }
@@ -856,8 +840,8 @@ pub mod uasset {
 
             if self.engine_version >= VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS {
                 cursor.write_i32::<LittleEndian>(self.chunk_ids.len() as i32)?;
-                for chunk_id in self.chunk_ids {
-                    cursor.write_i32::<LittleEndian>(chunk_id)?;
+                for chunk_id in &self.chunk_ids {
+                    cursor.write_i32::<LittleEndian>(*chunk_id)?;
                 }
             } else if self.engine_version >= VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE {
                 cursor.write_i32::<LittleEndian>(self.chunk_ids[0])?;
@@ -874,26 +858,26 @@ pub mod uasset {
         pub fn write_data(&mut self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
             self.write_header(cursor)?;
 
-            for name in self.name_map_index_list {
-                cursor.write_string(&name)?;
+            for name in &self.name_map_index_list {
+                cursor.write_string(name)?;
 
                 if self.engine_version >= VER_UE4_NAME_HASHES_SERIALIZED {
-                    match self.override_name_map_hashes.get(&name) {
+                    match self.override_name_map_hashes.get(name) {
                         Some(e) => cursor.write_u32::<LittleEndian>(*e)?,
-                        None => cursor.write_u32::<LittleEndian>(crc::generate_hash(&name))
+                        None => cursor.write_u32::<LittleEndian>(crc::generate_hash(name))?
                     };
                 }
             }
 
-            for import in self.imports {
+            for import in &self.imports {
                 self.write_fname(cursor, &import.class_package)?;
                 self.write_fname(cursor, &import.class_name)?;
                 cursor.write_i32::<LittleEndian>(import.outer_index)?;
                 self.write_fname(cursor, &import.object_name)?;
             }
 
-            for export in self.exports {
-                let unk: UnknownExport = export.get_unknown_export();
+            for export in &self.exports {
+                let unk: &UnknownExport = export.get_unknown_export();
                 cursor.write_i32::<LittleEndian>(unk.class_index)?;
                 cursor.write_i32::<LittleEndian>(unk.super_index)?;
 
@@ -959,7 +943,7 @@ pub mod uasset {
                         let current_data = &map[i];
                         cursor.write_i32::<LittleEndian>(current_data.len() as i32)?;
                         for i in current_data {
-                            cursor.write_i32::<LittleEndian>(i)?;
+                            cursor.write_i32::<LittleEndian>(*i)?;
                         }
                     }
                 }

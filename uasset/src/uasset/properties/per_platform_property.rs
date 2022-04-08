@@ -1,10 +1,12 @@
 use std::io::{Cursor, ErrorKind};
+use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
@@ -29,6 +31,17 @@ impl PerPlatformBoolProperty {
             property_guid,
             value
         })
+    }
+}
+
+impl PropertyTrait for PerPlatformBoolProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        for entry in &self.value {
+            cursor.write_bool(*entry)?;
+        }
+        Ok(size_of::<i32>() + size_of::<bool>() * self.value.len())
     }
 }
 
@@ -58,6 +71,17 @@ impl PerPlatformIntProperty {
     }
 }
 
+impl PropertyTrait for PerPlatformIntProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        for entry in &self.value {
+            cursor.write_i32::<LittleEndian>(*entry)?;
+        }
+        Ok(size_of::<i32>() + size_of::<i32>() * self.value.len())
+    }
+}
+
 #[derive(Hash, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
     pub name: FName,
@@ -81,5 +105,16 @@ impl PerPlatformFloatProperty {
             property_guid,
             value
         })
+    }
+}
+
+impl PropertyTrait for PerPlatformFloatProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        for entry in &self.value {
+            cursor.write_f32::<LittleEndian>(entry.0)?;
+        }
+        Ok(size_of::<i32>() + size_of::<f32>() * self.value.len())
     }
 }

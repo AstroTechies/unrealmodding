@@ -8,6 +8,7 @@ use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::uproperty::UProperty;
 
 use super::ExportNormalTrait;
+use super::ExportUnknownTrait;
 
 pub struct PropertyExport {
     pub normal_export: NormalExport,
@@ -23,7 +24,7 @@ impl PropertyExport {
 
         asset.cursor.read_i32::<LittleEndian>()?;
 
-        let export_class_type = asset.get_export_class_type(normal_export.class_index).ok_or(Error::invalid_package_index("No such class type".to_string()))?;
+        let export_class_type = asset.get_export_class_type(normal_export.unknown_export.class_index).ok_or(Error::invalid_package_index("No such class type".to_string()))?;
         let property = UProperty::new(asset, export_class_type)?;
 
         Ok(PropertyExport {

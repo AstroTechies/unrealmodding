@@ -4,7 +4,6 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO}, optional_guid};
 use crate::uasset::error::{Error, PropertyError};
-use crate::uasset::properties::Property::StructProperty;
 use crate::uasset::properties::PropertyTrait;
 use crate::uasset::ue4version::{VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
 use crate::uasset::unreal_types::default_guid;
@@ -28,6 +27,16 @@ impl ArrayProperty {
             false => (None, None)
         };
         ArrayProperty::new_no_header(asset, name, include_header, length, engine_version, serialize_struct_differently, array_type, property_guid)
+    }
+
+    pub fn from_arr(name: FName, array_type: Option<FName>, value: Vec<Property>) -> Self {
+        ArrayProperty {
+            name,
+            property_guid: None,
+            array_type,
+            value,
+            dummy_property: None
+        }
     }
 
     pub fn new_no_header(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
@@ -90,7 +99,7 @@ impl ArrayProperty {
             name,
             property_guid,
             array_type,
-            dummy_property,
+            dummy_property: dummy_struct,
             value: entries
         })
     }
@@ -102,8 +111,8 @@ impl ArrayProperty {
         };
 
         if include_header {
-            asset.write_fname(cursor, array_type.as_ref().ok_or(PropertyError::headerless().into())?)?;
-            asset.write_property_guid(cursor, &self.property_guid)
+            asset.write_fname(cursor, array_type.as_ref().ok_or(PropertyError::headerless())?)?;
+            asset.write_property_guid(cursor, &self.property_guid)?;
         }
 
         let begin = cursor.position();
@@ -123,11 +132,11 @@ impl ArrayProperty {
 
             let mut length_loc = -1;
             if asset.engine_version >= VER_UE4_INNER_ARRAY_TAG_INFO {
-                cursor.write_string(&struct_name)?;
+                asset.write_fname(cursor, &property.name)?;
                 asset.write_fname(cursor, &FName::from_slice("StructProperty"))?;
                 length_loc = cursor.position() as i32;
                 cursor.write_i64::<LittleEndian>(0)?;
-                asset.write_fname(cursor, &full_type)?;
+                asset.write_fname(cursor, property.struct_type.as_ref().ok_or(PropertyError::property_field_none("struct_type", "FName"))?)?;
                 if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                     cursor.write(&property.property_guid.unwrap_or(default_guid()))?;
                 }

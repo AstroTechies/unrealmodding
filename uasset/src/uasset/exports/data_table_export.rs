@@ -5,7 +5,7 @@ use byteorder::{ReadBytesExt, LittleEndian};
 use crate::{uasset::{properties::{struct_property::StructProperty, object_property::ObjectProperty, Property}, Asset, unreal_types::FName, is_import}, implement_get};
 use crate::uasset::error::Error;
 use std::io::{ErrorKind};
-use super::{normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait};
+use super::{normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait, ExportUnknownTrait};
 
 pub struct DataTable {
     data: Vec<StructProperty>

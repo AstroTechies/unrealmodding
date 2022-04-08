@@ -1,10 +1,12 @@
 use core::num;
 use std::{io::{Cursor, ErrorKind}, collections::HashMap, hash::Hash};
+use std::io::Write;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
 use crate::uasset::error::Error;
+use crate::uasset::properties::PropertyTrait;
 use super::{Property, struct_property::StructProperty};
 
 #[derive(PartialEq, Eq)]
@@ -13,7 +15,8 @@ pub struct MapProperty {
     pub property_guid: Option<Guid>,
     pub key_type: FName,
     pub value_type: FName,
-    pub value: HashMap<Property, Property>
+    pub value: HashMap<Property, Property>,
+    pub keys_to_remove: Option<Vec<Property>>
 }
 
 impl Hash for MapProperty {
@@ -56,13 +59,15 @@ impl MapProperty {
         }
 
         let num_keys_to_remove = asset.cursor.read_i32::<LittleEndian>()?;
-        let mut keys_to_remove = Vec::with_capacity(num_keys_to_remove as usize);
+        let mut keys_to_remove = None;
         
         let type_1 = type_1.ok_or(Error::invalid_file("No type1".to_string()))?;
         let type_2 = type_2.ok_or(Error::invalid_file("No type2".to_string()))?;
 
         for i in 0..num_keys_to_remove as usize {
-            keys_to_remove.push(MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?);
+            let mut vec = Vec::with_capacity(num_keys_to_remove as usize);
+            vec.push(MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?);
+            keys_to_remove = Some(vec);
         }
 
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
@@ -80,7 +85,45 @@ impl MapProperty {
             property_guid: property_guid,
             key_type: type_1,
             value_type: type_2,
-            value: values
+            value: values,
+            keys_to_remove
         })
+    }
+}
+
+impl PropertyTrait for MapProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        if include_header {
+            if let Some(key) = self.value.keys().next() {
+                asset.write_fname(cursor, &FName::new(key.to_string(), 0))?;
+                let value = self.value.values().next().unwrap();
+                asset.write_fname(cursor, &FName::new(value.to_string(), 0))?;
+            } else {
+                asset.write_fname(cursor, &self.key_type)?;
+                asset.write_fname(cursor, &self.value_type)?
+            }
+            asset.write_property_guid(cursor, &self.property_guid)?;
+        }
+
+        let begin = cursor.position();
+        cursor.write_i32::<LittleEndian>(match self.keys_to_remove {
+            Some(ref e) => e.len(),
+            None => 0
+        } as i32)?;
+
+        if let Some(ref keys_to_remove) = self.keys_to_remove {
+            for key in keys_to_remove {
+                key.write(asset, cursor, false)?;
+            }
+        }
+
+        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+
+        for (key, value) in &self.value {
+            key.write(asset, cursor, false)?;
+            value.write(asset, cursor, false)?;
+        }
+
+        Ok((cursor.position() - begin) as usize)
     }
 }

@@ -99,9 +99,9 @@ impl StructProperty {
 impl PropertyTrait for StructProperty {
     fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         if include_header {
-            asset.write_fname(cursor, self.struct_type.as_ref().ok_or(PropertyError::headerless().into())?)?;
+            asset.write_fname(cursor, self.struct_type.as_ref().ok_or(PropertyError::headerless())?)?;
             if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                cursor.write(&self.struct_guid.ok_or(PropertyError::headerless().into())?)?;
+                cursor.write(&self.struct_guid.ok_or(PropertyError::headerless())?)?;
             }
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
@@ -118,7 +118,7 @@ impl PropertyTrait for StructProperty {
         if has_custom_serialization {
             if self.value.len() != 1 {
                 return Err(PropertyError::invalid_struct(format!("Structs with type {} must have exactly 1 entry",
-                                                                 self.struct_type.map(|e|
+                                                                 self.struct_type.as_ref().map(|e|
                                                                      e.content.to_owned()).unwrap_or("Generic".to_string()))).into())
             }
             return self.value[0].write(asset, cursor, false);

@@ -2,8 +2,9 @@ use std::io::{Cursor, ErrorKind};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::uasset::error::Error;
+use crate::uasset::error::{Error, PropertyError};
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::uasset::properties::PropertyTrait;
 
 use super::{Property, array_property::ArrayProperty};
 
@@ -12,8 +13,8 @@ pub struct SetProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub array_type: Option<FName>,
-    pub value: Vec<Property>,
-    pub removed_items: Vec<Property>
+    pub value: ArrayProperty,
+    pub removed_items: ArrayProperty
 }
 
 impl SetProperty {
@@ -30,7 +31,7 @@ impl SetProperty {
             length, 
             engine_version,
             false, 
-            array_type.clone(), property_guid).map(|e| e.value)?;
+            array_type.clone(), property_guid)?;
         
         let items = ArrayProperty::new_no_header(
             asset,
@@ -40,7 +41,7 @@ impl SetProperty {
             engine_version,  
             false, 
             array_type.clone(), 
-            property_guid).map(|e| e.value)?;
+            property_guid)?;
         
         Ok(SetProperty {
             name,
@@ -49,5 +50,23 @@ impl SetProperty {
             value: items,
             removed_items
         })
+    }
+}
+
+impl PropertyTrait for SetProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        let array_type = match self.value.value.len() > 0 {
+            true => Some(FName::new(self.value.value[0].to_string(), 0)),
+            false => self.array_type.clone()
+        };
+
+        if include_header {
+            asset.write_fname(cursor, array_type.as_ref().ok_or(PropertyError::headerless())?)?;
+            asset.write_property_guid(cursor, &self.property_guid)?;
+        }
+
+        let removed_items_len = self.removed_items.write_full(asset, cursor, false, false)?;
+        let items_len = self.value.write_full(asset, cursor, false, false)?;
+        Ok(removed_items_len + items_len)
     }
 }

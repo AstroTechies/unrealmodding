@@ -1,9 +1,11 @@
-use std::io::{Cursor, ErrorKind, Read};
+use std::io::{Cursor, ErrorKind, Read, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid, optional_guid_write};
+use crate::uasset::error::PropertyError;
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SmartNameProperty {
@@ -42,5 +44,23 @@ impl SmartNameProperty {
             smart_name_id,
             temp_guid
         })
+    }
+}
+
+impl PropertyTrait for SmartNameProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        let begin = cursor.position();
+
+        asset.write_fname(cursor, &self.display_name)?;
+
+        let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
+        if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
+            cursor.write_u16::<LittleEndian>(self.smart_name_id.ok_or(PropertyError::property_field_none("smart_name_id", "u16"))?)?;
+        }
+        if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32 {
+            cursor.write(&self.temp_guid.ok_or(PropertyError::property_field_none("temp_guid", "String"))?)?;
+        }
+        Ok((cursor.position() - begin) as usize)
     }
 }

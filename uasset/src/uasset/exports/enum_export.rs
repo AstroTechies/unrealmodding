@@ -11,6 +11,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::uasset::exports::unknown_export::UnknownExport;
 
 use super::ExportNormalTrait;
+use super::ExportUnknownTrait;
 
 #[derive(IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]

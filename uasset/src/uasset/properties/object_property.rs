@@ -1,9 +1,11 @@
 use std::io::{Cursor, ErrorKind};
+use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
@@ -38,6 +40,15 @@ impl ObjectProperty {
         })
     }
 }
+
+impl PropertyTrait for ObjectProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_i32::<LittleEndian>(self.value)?;
+        Ok(size_of::<i32>())
+    }
+}
+
 impl AssetObjectProperty {
     pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
@@ -47,6 +58,13 @@ impl AssetObjectProperty {
             property_guid,
             value
         })
+    }
+}
+
+impl PropertyTrait for AssetObjectProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write_string(&self.value)
     }
 }
 
@@ -61,5 +79,14 @@ impl SoftObjectProperty {
             value,
             id
         })
+    }
+}
+
+impl PropertyTrait for SoftObjectProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        asset.write_fname(cursor, &self.value)?;
+        cursor.write_u32::<LittleEndian>(self.id)?;
+        Ok(size_of::<i32>() * 3)
     }
 }

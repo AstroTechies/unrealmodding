@@ -31,6 +31,7 @@ impl Display for KismetError {
 #[derive(Debug)]
 pub enum PropertyError {
     HeaderlessProperty,
+    PropertyFieldNone(Box<str>, Box<str>),
     InvalidStruct(Box<str>),
     InvalidArrayType(Box<str>),
     Other(Box<str>)
@@ -41,8 +42,12 @@ impl PropertyError {
         PropertyError::HeaderlessProperty
     }
 
+    pub fn property_field_none(field_name: &str, expected: &str) -> Self {
+        PropertyError::PropertyFieldNone(field_name.to_string().into_boxed_str(), expected.to_string().into_boxed_str())
+    }
+
     pub fn invalid_struct(msg: String) -> Self {
-        PropertyError::invalid_struct(msg.into_boxed_str())
+        PropertyError::InvalidStruct(msg.into_boxed_str())
     }
 
     pub fn invalid_array(msg: String) -> Self {
@@ -58,6 +63,7 @@ impl Display for PropertyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self {
             PropertyError::HeaderlessProperty => write!(f, "include_header: true on headerless property"),
+            PropertyError::PropertyFieldNone(ref field_name, ref expected) => write!(f, "{} is None expected {}", field_name, expected),
             PropertyError::InvalidStruct(ref err) => f.write_str(err),
             PropertyError::InvalidArrayType(ref err) => f.write_str(err),
             PropertyError::Other(ref err) => f.write_str(err)
@@ -69,6 +75,7 @@ impl Display for PropertyError {
 #[derive(Debug)]
 pub enum ErrorCode {
     Io(io::Error),
+    NoData(Box<str>),
     InvalidFile(Box<str>),
     InvalidPackageIndex(Box<str>),
     InvalidEnumValue(Box<str>),
@@ -83,6 +90,10 @@ pub struct Error {
 }
 
 impl Error {
+    pub fn no_data(msg: String) -> Self {
+        Error { code: ErrorCode::NoData(msg.into_boxed_str()) }
+    }
+
     pub fn invalid_file(msg: String) -> Self {
         Error { code: ErrorCode::InvalidFile(msg.into_boxed_str()) }
     }
@@ -133,6 +144,7 @@ impl Display for ErrorCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             ErrorCode::Io(ref err) => Display::fmt(err, f),
+            ErrorCode::NoData(ref err) => Display::fmt(err, f),
             ErrorCode::InvalidFile(ref err) => f.write_str(err),
             ErrorCode::InvalidPackageIndex(ref err) => f.write_str(err),
             ErrorCode::InvalidEnumValue(ref err) => f.write_str(err),

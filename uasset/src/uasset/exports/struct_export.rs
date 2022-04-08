@@ -14,6 +14,7 @@ use crate::uasset::unreal_types::{FName, PackageIndex};
 use crate::uasset::uproperty::UField;
 use crate::uasset::error::Error;
 use super::ExportNormalTrait;
+use super::ExportUnknownTrait;
 
 pub struct StructExport {
     pub normal_export: NormalExport,

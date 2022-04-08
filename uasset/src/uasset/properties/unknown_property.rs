@@ -1,9 +1,10 @@
-use std::io::{Cursor, ErrorKind, Read};
+use std::io::{Cursor, ErrorKind, Read, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
+use crate::uasset::properties::PropertyTrait;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UnknownProperty {
@@ -23,5 +24,13 @@ impl UnknownProperty {
             property_guid,
             value
         })
+    }
+}
+
+impl PropertyTrait for UnknownProperty {
+    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, cursor, include_header);
+        cursor.write(&self.value)?;
+        Ok(self.value.len())
     }
 }
