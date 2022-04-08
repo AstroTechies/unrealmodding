@@ -4,39 +4,46 @@ use std::mem::size_of;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: i32
+    pub duplication_index: i32,
+    pub value: i32,
 }
+impl_property_data_trait!(ObjectProperty);
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: String
+    pub duplication_index: i32,
+    pub value: String,
 }
+impl_property_data_trait!(AssetObjectProperty);
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub value: FName,
-    pub id: u32
+    pub id: u32,
 }
+impl_property_data_trait!(SoftObjectProperty);
 
 impl ObjectProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let value = asset.cursor.read_i32::<LittleEndian>()?;
         Ok(ObjectProperty {
             name,
             property_guid,
-            value
+            duplication_index,
+            value,
         })
     }
 }
@@ -50,13 +57,14 @@ impl PropertyTrait for ObjectProperty {
 }
 
 impl AssetObjectProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let value = asset.cursor.read_string()?;
         Ok(AssetObjectProperty {
             name,
             property_guid,
-            value
+            duplication_index,
+            value,
         })
     }
 }
@@ -69,15 +77,16 @@ impl PropertyTrait for AssetObjectProperty {
 }
 
 impl SoftObjectProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let value = asset.read_fname()?;
         let id = asset.cursor.read_u32::<LittleEndian>()?;
         Ok(SoftObjectProperty {
             name,
             property_guid,
+            duplication_index,
             value,
-            id
+            id,
         })
     }
 }

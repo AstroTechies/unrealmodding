@@ -4,19 +4,21 @@ use std::mem::size_of;
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct EnumProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub enum_type: Option<FName>,
-    pub value: FName
+    pub value: FName,
 }
+impl_property_data_trait!(EnumProperty);
 
 impl EnumProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let (enum_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
             false => (None, None)
@@ -26,8 +28,9 @@ impl EnumProperty {
         Ok(EnumProperty {
             name,
             property_guid,
+            duplication_index,
             enum_type,
-            value
+            value,
         })
     }
 }

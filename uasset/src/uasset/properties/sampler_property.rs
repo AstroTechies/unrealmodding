@@ -5,36 +5,42 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub prob: Vec<OrderedFloat<f32>>,
     pub alias: Vec<i32>,
-    pub total_weight: OrderedFloat<f32>
+    pub total_weight: OrderedFloat<f32>,
 }
+impl_property_data_trait!(WeightedRandomSamplerProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SkeletalMeshAreaWeightedTriangleSampler {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub prob: Vec<OrderedFloat<f32>>,
     pub alias: Vec<i32>,
-    pub total_weight: OrderedFloat<f32>
+    pub total_weight: OrderedFloat<f32>,
 }
+impl_property_data_trait!(SkeletalMeshAreaWeightedTriangleSampler);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub sampler_property: WeightedRandomSamplerProperty
+    pub duplication_index: i32,
+    pub sampler_property: WeightedRandomSamplerProperty,
 }
+impl_property_data_trait!(SkeletalMeshSamplingLODBuiltDataProperty);
 
 impl WeightedRandomSamplerProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let size = asset.cursor.read_i32::<LittleEndian>()?;
@@ -54,9 +60,10 @@ impl WeightedRandomSamplerProperty {
         Ok(WeightedRandomSamplerProperty {
             name,
             property_guid,
+            duplication_index,
             prob,
             alias,
-            total_weight
+            total_weight,
         })
     }
 }
@@ -80,7 +87,7 @@ impl PropertyTrait for WeightedRandomSamplerProperty {
 }
 
 impl SkeletalMeshAreaWeightedTriangleSampler {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let size = asset.cursor.read_i32::<LittleEndian>()?;
@@ -100,9 +107,10 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
         Ok(SkeletalMeshAreaWeightedTriangleSampler {
             name,
             property_guid,
+            duplication_index,
             prob,
             alias,
-            total_weight
+            total_weight,
         })
     }
 }
@@ -126,14 +134,15 @@ impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
 }
 
 impl SkeletalMeshSamplingLODBuiltDataProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let sampler_property = WeightedRandomSamplerProperty::new(asset, name.clone(), false, 0)?;
+        let sampler_property = WeightedRandomSamplerProperty::new(asset, name.clone(), false, 0, 0)?;
 
         Ok(SkeletalMeshSamplingLODBuiltDataProperty {
             name,
             property_guid,
-            sampler_property
+            duplication_index,
+            sampler_property,
         })
     }
 }

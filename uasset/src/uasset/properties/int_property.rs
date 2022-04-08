@@ -1,22 +1,23 @@
-use std::io::{Cursor,};
+use std::io::{Cursor};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, simple_property_write};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, simple_property_write, impl_property_data_trait};
 use crate::uasset::error::{Error, PropertyError};
-use crate::uasset::properties::PropertyTrait;
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {
         impl $property_type {
-            pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+            pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
 
                 Ok($property_type {
                     name,
                     property_guid,
+duplication_index,
                     value: asset.cursor.$read_func::<LittleEndian>()?
                 })
             }
@@ -30,96 +31,119 @@ macro_rules! impl_int_property {
 pub struct Int8Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: i8
+    pub duplication_index: i32,
+    pub value: i8,
 }
+impl_property_data_trait!(Int8Property);
 
 #[derive(Hash, PartialEq, Eq)]
 pub enum ByteType {
     Byte,
-    Long
+    Long,
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ByteProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub enum_type: Option<i64>,
     pub byte_type: ByteType,
-    pub value: i64
+    pub value: i64,
 }
+impl_property_data_trait!(ByteProperty);
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct BoolProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: bool
+    pub duplication_index: i32,
+    pub value: bool,
 }
+impl_property_data_trait!(BoolProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct IntProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: i32
+    pub duplication_index: i32,
+    pub value: i32,
 }
+impl_property_data_trait!(IntProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct Int16Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: i16
+    pub duplication_index: i32,
+    pub value: i16,
 }
+impl_property_data_trait!(Int16Property);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct Int64Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: i64
+    pub duplication_index: i32,
+    pub value: i64,
 }
+impl_property_data_trait!(Int64Property);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UInt16Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: u16
+    pub duplication_index: i32,
+    pub value: u16,
 }
+impl_property_data_trait!(UInt16Property);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UInt32Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: u32
+    pub duplication_index: i32,
+    pub value: u32,
 }
+impl_property_data_trait!(UInt32Property);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct UInt64Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: u64
+    pub duplication_index: i32,
+    pub value: u64,
 }
+impl_property_data_trait!(UInt64Property);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct FloatProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: OrderedFloat<f32>
+    pub duplication_index: i32,
+    pub value: OrderedFloat<f32>,
 }
+impl_property_data_trait!(FloatProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct DoubleProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: OrderedFloat<f64>
+    pub duplication_index: i32,
+    pub value: OrderedFloat<f64>,
 }
+impl_property_data_trait!(DoubleProperty);
 
 impl BoolProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let value = asset.cursor.read_bool()?;
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(BoolProperty {
             name,
             property_guid,
-            value
+            duplication_index,
+            value,
         })
     }
 }
@@ -133,12 +157,13 @@ impl PropertyTrait for BoolProperty {
 }
 
 impl Int8Property {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         Ok(Int8Property {
             name,
             property_guid,
-            value: asset.cursor.read_i8()?
+            duplication_index,
+            value: asset.cursor.read_i8()?,
         })
     }
 }
@@ -162,7 +187,7 @@ impl ByteProperty {
         value.ok_or(Error::invalid_file(format!("Invalid length of {} for ByteProperty", length)))
     }
 
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, fallback_length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, fallback_length: i64, duplication_index: i32) -> Result<Self, Error> {
         let (property_guid, enum_type) = match include_header {
             true => (asset.read_property_guid()?, Some(asset.cursor.read_i64::<LittleEndian>()?)),
             false => (None, None)
@@ -173,9 +198,10 @@ impl ByteProperty {
         Ok(ByteProperty {
             name,
             property_guid,
+            duplication_index,
             enum_type,
             byte_type,
-            value
+            value,
         })
     }
 }
@@ -191,7 +217,7 @@ impl PropertyTrait for ByteProperty {
             ByteType::Byte => {
                 cursor.write_u8(self.value as u8)?;
                 Ok(1)
-            },
+            }
             ByteType::Long => {
                 cursor.write_i64::<LittleEndian>(self.value)?;
                 Ok(8)
@@ -202,13 +228,14 @@ impl PropertyTrait for ByteProperty {
 
 
 impl FloatProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(FloatProperty {
             name,
             property_guid,
-            value: OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?)
+            duplication_index,
+            value: OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?),
         })
     }
 }
@@ -222,13 +249,14 @@ impl PropertyTrait for FloatProperty {
 }
 
 impl DoubleProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(DoubleProperty {
             name,
             property_guid,
-            value: OrderedFloat(asset.cursor.read_f64::<LittleEndian>()?)
+            duplication_index,
+            value: OrderedFloat(asset.cursor.read_f64::<LittleEndian>()?),
         })
     }
 }

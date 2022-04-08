@@ -4,20 +4,23 @@ use std::mem::size_of;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct GameplayTagContainerProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: Vec<FName>
+    pub duplication_index: i32,
+    pub value: Vec<FName>,
 }
+impl_property_data_trait!(GameplayTagContainerProperty);
+
 
 impl GameplayTagContainerProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        
+
         let length = asset.cursor.read_i32::<LittleEndian>()?;
         let mut value = Vec::with_capacity(length as usize);
         for i in 0..length as usize {
@@ -27,7 +30,8 @@ impl GameplayTagContainerProperty {
         Ok(GameplayTagContainerProperty {
             name,
             property_guid,
-            value
+            duplication_index,
+            value,
         })
     }
 }

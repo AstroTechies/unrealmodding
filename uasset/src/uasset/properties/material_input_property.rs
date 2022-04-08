@@ -5,8 +5,8 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 use super::{color_property::ColorProperty, vector_property::{Vector2DProperty, VectorProperty}};
 
@@ -16,62 +16,76 @@ pub struct MaterialExpression {
     extras: Vec<u8>,
     output_index: i32,
     input_name: FName,
-    expression_name: FName
+    expression_name: FName,
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ColorMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub material_expression: MaterialExpression,
-    pub value: ColorProperty
+    pub value: ColorProperty,
 }
+impl_property_data_trait!(ColorMaterialInputProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ScalarMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub material_expression: MaterialExpression,
-    pub value: OrderedFloat<f32>
+    pub value: OrderedFloat<f32>,
 }
+impl_property_data_trait!(ScalarMaterialInputProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ShadingModelMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub material_expression: MaterialExpression,
-    pub value: u32
+    pub value: u32,
 }
+impl_property_data_trait!(ShadingModelMaterialInputProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct VectorMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub material_expression: MaterialExpression,
-    pub value: VectorProperty
+    pub value: VectorProperty,
 }
+impl_property_data_trait!(VectorMaterialInputProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct Vector2MaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub material_expression: MaterialExpression,
-    pub value: Vector2DProperty
+    pub value: Vector2DProperty,
 }
+impl_property_data_trait!(Vector2MaterialInputProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ExpressionInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub material_expression: MaterialExpression
+    pub duplication_index: i32,
+    pub material_expression: MaterialExpression,
 }
+impl_property_data_trait!(ExpressionInputProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct MaterialAttributesInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub material_expression: MaterialExpression
+    pub duplication_index: i32,
+    pub material_expression: MaterialExpression,
 }
+impl_property_data_trait!(MaterialAttributesInputProperty);
 
 impl MaterialExpression {
     pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
@@ -86,7 +100,7 @@ impl MaterialExpression {
             output_index,
             input_name,
             extras: extras.to_vec(),
-            expression_name
+            expression_name,
         })
     }
 
@@ -100,18 +114,19 @@ impl MaterialExpression {
 }
 
 impl ColorMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
         asset.cursor.read_i32::<LittleEndian>()?;
 
-        let value = ColorProperty::new(asset, name.clone(), false)?;
+        let value = ColorProperty::new(asset, name.clone(), false, 0)?;
 
         Ok(ColorMaterialInputProperty {
             name,
             property_guid,
+            duplication_index,
             material_expression,
-            value
+            value,
         })
     }
 }
@@ -127,7 +142,7 @@ impl PropertyTrait for ColorMaterialInputProperty {
 }
 
 impl ScalarMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
         asset.cursor.read_i32::<LittleEndian>()?;
@@ -137,8 +152,9 @@ impl ScalarMaterialInputProperty {
         Ok(ScalarMaterialInputProperty {
             name,
             property_guid,
+            duplication_index,
             material_expression,
-            value: OrderedFloat(value)
+            value: OrderedFloat(value),
         })
     }
 }
@@ -154,7 +170,7 @@ impl PropertyTrait for ScalarMaterialInputProperty {
 }
 
 impl ShadingModelMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
@@ -163,8 +179,9 @@ impl ShadingModelMaterialInputProperty {
         Ok(ShadingModelMaterialInputProperty {
             name,
             property_guid,
+            duplication_index,
             material_expression,
-            value
+            value,
         })
     }
 }
@@ -180,17 +197,18 @@ impl PropertyTrait for ShadingModelMaterialInputProperty {
 }
 
 impl VectorMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
         asset.cursor.read_i32::<LittleEndian>()?;
-        let value = VectorProperty::new(asset, name.clone(), false)?;
+        let value = VectorProperty::new(asset, name.clone(), false, 0)?;
         Ok(VectorMaterialInputProperty {
             name,
             property_guid,
+            duplication_index,
             material_expression,
-            value
+            value,
         })
     }
 }
@@ -206,17 +224,18 @@ impl PropertyTrait for VectorMaterialInputProperty {
 }
 
 impl Vector2MaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
         asset.cursor.read_i32::<LittleEndian>()?;
-        let value = Vector2DProperty::new(asset, name.clone(), false)?;
+        let value = Vector2DProperty::new(asset, name.clone(), false, 0)?;
         Ok(Vector2MaterialInputProperty {
             name,
             property_guid,
+            duplication_index,
             material_expression,
-            value
+            value,
         })
     }
 }
@@ -232,14 +251,15 @@ impl PropertyTrait for Vector2MaterialInputProperty {
 }
 
 impl ExpressionInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
         Ok(ExpressionInputProperty {
             name,
             property_guid,
-            material_expression
+            duplication_index,
+            material_expression,
         })
     }
 }
@@ -252,14 +272,15 @@ impl PropertyTrait for ExpressionInputProperty {
 }
 
 impl MaterialAttributesInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
         Ok(MaterialAttributesInputProperty {
             name,
             property_guid,
-            material_expression
+            duplication_index,
+            material_expression,
         })
     }
 }

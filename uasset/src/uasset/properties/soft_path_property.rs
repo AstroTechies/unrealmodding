@@ -3,40 +3,46 @@ use std::io::{Cursor, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid, optional_guid_write};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub asset_path_name: Option<FName>,
     pub sub_path: Option<String>,
-    pub path: Option<String>
+    pub path: Option<String>,
 }
+impl_property_data_trait!(SoftAssetPathProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SoftObjectPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub asset_path_name: Option<FName>,
     pub sub_path: Option<String>,
-    pub path: Option<String>
+    pub path: Option<String>,
 }
+impl_property_data_trait!(SoftObjectPathProperty);
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SoftClassPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub asset_path_name: Option<FName>,
     pub sub_path: Option<String>,
-    pub path: Option<String>
+    pub path: Option<String>,
 }
+impl_property_data_trait!(SoftClassPathProperty);
 
 macro_rules! impl_soft_path_property {
     ($property_name:ident) => {
         impl $property_name {
-            pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+            pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
 
                 let mut path = None;
@@ -53,6 +59,7 @@ macro_rules! impl_soft_path_property {
                 Ok($property_name {
                     name,
                     property_guid,
+duplication_index,
                     asset_path_name,
                     sub_path,
                     path

@@ -2,9 +2,9 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO}, optional_guid, impl_property_data_trait};
 use crate::uasset::error::{Error, PropertyError};
-use crate::uasset::properties::PropertyTrait;
+use crate::uasset::properties::{PropertyDataTrait, PropertyTrait};
 use crate::uasset::ue4version::{VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
 use crate::uasset::unreal_types::default_guid;
 
@@ -14,19 +14,21 @@ use super::{Property, struct_property::StructProperty};
 pub struct ArrayProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub array_type: Option<FName>,
     pub value: Vec<Property>,
 
-    dummy_property: Option<StructProperty>
+    dummy_property: Option<StructProperty>,
 }
+impl_property_data_trait!(ArrayProperty);
 
 impl ArrayProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32, serialize_struct_differently: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, engine_version: i32, serialize_struct_differently: bool) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
             false => (None, None)
         };
-        ArrayProperty::new_no_header(asset, name, include_header, length, engine_version, serialize_struct_differently, array_type, property_guid)
+        ArrayProperty::new_no_header(asset, name, include_header, length, duplication_index, engine_version, serialize_struct_differently, array_type, property_guid)
     }
 
     pub fn from_arr(name: FName, array_type: Option<FName>, value: Vec<Property>) -> Self {
@@ -35,11 +37,12 @@ impl ArrayProperty {
             property_guid: None,
             array_type,
             value,
-            dummy_property: None
+            duplication_index: 0,
+            dummy_property: None,
         }
     }
 
-    pub fn new_no_header(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
+    pub fn new_no_header(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, engine_version: i32, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
         let mut cursor = &mut asset.cursor;
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
         let mut entries = Vec::new();
@@ -80,7 +83,7 @@ impl ArrayProperty {
                 dummy_struct = Some(StructProperty::dummy(name.clone(), full_type.clone(), struct_guid));
             }
             for i in 0..num_entries {
-                let data = StructProperty::custom_header(asset, name.clone(), struct_length, Some(full_type.clone()), struct_guid, None)?;
+                let data = StructProperty::custom_header(asset, name.clone(), struct_length, 0, Some(full_type.clone()), struct_guid, None)?;
                 entries.push(data.into());
             }
         } else {
@@ -89,7 +92,7 @@ impl ArrayProperty {
                 let size_est_2 = (length - 4) / num_entries as i64;
                 let array_type = array_type.as_ref().ok_or(Error::invalid_file("Unknown array type".to_string()))?;
                 for i in 0..num_entries {
-                    let entry = Property::from_type(asset, array_type, FName::new(i.to_string(), i32::MIN), false, size_est_1, size_est_2)?;
+                    let entry = Property::from_type(asset, array_type, FName::new(i.to_string(), i32::MIN), false, size_est_1, size_est_2, 0)?;
                     entries.push(entry);
                 }
             }
@@ -98,9 +101,10 @@ impl ArrayProperty {
         Ok(ArrayProperty {
             name,
             property_guid,
+            duplication_index,
             array_type,
             dummy_property: dummy_struct,
-            value: entries
+            value: entries,
         })
     }
 

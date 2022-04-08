@@ -1,48 +1,55 @@
-use std::io::{Cursor,};
+use std::io::{Cursor};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_enum::TryFromPrimitiveError;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, enums::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid, optional_guid_write};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, enums::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::uasset::error::{Error, PropertyError};
-use crate::uasset::properties::PropertyTrait;
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct StrProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: String
+    pub duplication_index: i32,
+    pub value: String,
 }
+impl_property_data_trait!(StrProperty);
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct TextProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub culture_invariant_string: Option<String>,
     pub namespace: Option<String>,
     pub table_id: Option<FName>,
     pub flags: u32,
     pub history_type: Option<i8>,
-    pub value: Option<String>
+    pub value: Option<String>,
 }
+impl_property_data_trait!(TextProperty);
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct NameProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    pub value: FName
+    pub duplication_index: i32,
+    pub value: FName,
 }
+impl_property_data_trait!(NameProperty);
 
 
 impl StrProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(StrProperty {
             name,
             property_guid,
-            value: asset.cursor.read_string()?
+            duplication_index,
+            value: asset.cursor.read_string()?,
         })
     }
 }
@@ -57,16 +64,16 @@ impl PropertyTrait for StrProperty {
 }
 
 impl TextProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, engine_version: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let mut culture_invariant_string = None;
         let mut namespace = None;
         let mut value = None;
 
-        if engine_version < VER_UE4_FTEXT_HISTORY {
+        if asset.engine_version < VER_UE4_FTEXT_HISTORY {
             culture_invariant_string = Some(asset.cursor.read_string()?);
-            if engine_version >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
+            if asset.engine_version >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
                 namespace = Some(asset.cursor.read_string()?);
                 value = Some(asset.cursor.read_string()?);
             } else {
@@ -78,7 +85,7 @@ impl TextProperty {
         let flags = asset.cursor.read_u32::<LittleEndian>()?;
         let mut history_type = None;
         let mut table_id = None;
-        if engine_version >= VER_UE4_FTEXT_HISTORY {
+        if asset.engine_version >= VER_UE4_FTEXT_HISTORY {
             history_type = Some(asset.cursor.read_i8()?);
             let history_type: TextHistoryType = history_type.unwrap().try_into()?;
 
@@ -110,7 +117,14 @@ impl TextProperty {
 
         Ok(TextProperty {
             name,
-            property_guid, culture_invariant_string, namespace, table_id, flags, history_type, value
+            property_guid,
+            duplication_index,
+            culture_invariant_string,
+            namespace,
+            table_id,
+            flags,
+            history_type,
+            value,
         })
     }
 }
@@ -151,18 +165,18 @@ impl PropertyTrait for TextProperty {
                         }
                     }
                     Ok(())
-                },
+                }
                 TextHistoryType::Base => {
                     cursor.write_string(self.namespace.as_ref().ok_or(PropertyError::property_field_none("namespace", "String"))?)?;
                     cursor.write_string(self.value.as_ref().ok_or(PropertyError::property_field_none("value", "String"))?)?;
                     cursor.write_string(self.culture_invariant_string.as_ref().ok_or(PropertyError::property_field_none("culture_invariant_string", "String"))?)?;
                     Ok(())
-                },
+                }
                 TextHistoryType::StringTableEntry => {
                     asset.write_fname(cursor, self.table_id.as_ref().ok_or(PropertyError::property_field_none("table_id", "FName"))?)?;
                     cursor.write_string(self.value.as_ref().ok_or(PropertyError::property_field_none("value", "String"))?)?;
                     Ok(())
-                },
+                }
                 _ => Err(Error::unimplemented(format!("Unimplemented writer for {}", history_type as i8)))
             }?;
         }
@@ -171,13 +185,14 @@ impl PropertyTrait for TextProperty {
 }
 
 impl NameProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let value = asset.read_fname()?;
         Ok(NameProperty {
             name,
             property_guid,
-            value
+            duplication_index,
+            value,
         })
     }
 }

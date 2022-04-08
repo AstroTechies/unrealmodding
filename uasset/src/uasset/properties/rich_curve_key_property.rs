@@ -1,12 +1,12 @@
-use std::io::{Cursor,};
+use std::io::{Cursor};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
@@ -14,7 +14,7 @@ pub enum RichCurveInterpMode {
     Linear,
     Constant,
     Cubic,
-    None
+    None,
 }
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
@@ -23,7 +23,7 @@ pub enum RichCurveTangentMode {
     Auto,
     User,
     Break,
-    None
+    None,
 }
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
@@ -32,13 +32,14 @@ pub enum RichCurveTangentWeightMode {
     WeightedNone,
     WeightedArrive,
     WeightedLeave,
-    WeightedBoth
+    WeightedBoth,
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct RichCurveKeyProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
 
     pub interp_mode: RichCurveInterpMode,
     pub tangent_mode: RichCurveTangentMode,
@@ -48,11 +49,12 @@ pub struct RichCurveKeyProperty {
     pub arrive_tangent: OrderedFloat<f32>,
     pub arrive_tangent_weight: OrderedFloat<f32>,
     pub leave_tangent: OrderedFloat<f32>,
-    pub leave_tangent_weight: OrderedFloat<f32>
+    pub leave_tangent_weight: OrderedFloat<f32>,
 }
+impl_property_data_trait!(RichCurveKeyProperty);
 
 impl RichCurveKeyProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let interp_mode = RichCurveInterpMode::try_from(asset.cursor.read_i8()?)?; // todo: implement normal errors
@@ -69,6 +71,7 @@ impl RichCurveKeyProperty {
         Ok(RichCurveKeyProperty {
             name,
             property_guid,
+            duplication_index,
             interp_mode,
             tangent_mode,
             tangent_weight_mode,
@@ -77,7 +80,7 @@ impl RichCurveKeyProperty {
             arrive_tangent,
             arrive_tangent_weight,
             leave_tangent,
-            leave_tangent_weight
+            leave_tangent_weight,
         })
     }
 }

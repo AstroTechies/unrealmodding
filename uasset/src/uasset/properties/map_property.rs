@@ -1,23 +1,24 @@
-use core::num;
 use std::{io::{Cursor, ErrorKind}, collections::HashMap, hash::Hash};
 use std::io::Write;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
 use crate::uasset::error::Error;
-use crate::uasset::properties::PropertyTrait;
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 use super::{Property, struct_property::StructProperty};
 
 #[derive(PartialEq, Eq)]
 pub struct MapProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub key_type: FName,
     pub value_type: FName,
     pub value: HashMap<Property, Property>,
-    pub keys_to_remove: Option<Vec<Property>>
+    pub keys_to_remove: Option<Vec<Property>>,
 }
+impl_property_data_trait!(MapProperty);
 
 impl Hash for MapProperty {
     //todo: probably do something with map
@@ -30,7 +31,6 @@ impl Hash for MapProperty {
 }
 
 impl MapProperty {
-
     fn map_type_to_class(asset: &mut Asset, type_name: FName, name: FName, length: i64, include_header: bool, is_key: bool) -> Result<Property, Error> {
         match type_name.content.as_str() {
             "StructProperty" => {
@@ -39,15 +39,15 @@ impl MapProperty {
                     false => asset.map_value_override.get(&name.content).map(|s| s.to_owned())
                 }.unwrap_or(String::from("Generic"));
 
-                Property::from_type(asset, &FName::new(struct_type.to_string(), 0), name, false, 1, 0)
-            },
+                Property::from_type(asset, &FName::new(struct_type.to_string(), 0), name, false, 1, 0, 0)
+            }
             _ => {
-                Property::from_type(asset, &type_name, name, include_header, length, 0)
+                Property::from_type(asset, &type_name, name, include_header, length, 0, 0)
             }
         }
     }
 
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
         let mut type_1 = None;
         let mut type_2 = None;
         let mut property_guid = None;
@@ -60,7 +60,7 @@ impl MapProperty {
 
         let num_keys_to_remove = asset.cursor.read_i32::<LittleEndian>()?;
         let mut keys_to_remove = None;
-        
+
         let type_1 = type_1.ok_or(Error::invalid_file("No type1".to_string()))?;
         let type_2 = type_2.ok_or(Error::invalid_file("No type2".to_string()))?;
 
@@ -83,10 +83,11 @@ impl MapProperty {
         Ok(MapProperty {
             name,
             property_guid: property_guid,
+            duplication_index,
             key_type: type_1,
             value_type: type_2,
             value: values,
-            keys_to_remove
+            keys_to_remove,
         })
     }
 }

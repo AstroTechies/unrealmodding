@@ -6,6 +6,7 @@ use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_W
 use crate::uasset::error::Error;
 use super::vector_property::{IntPointProperty, BoxProperty};
 
+//todo: what is this file even doing in properties?
 
 pub struct FWorldTileLayer {
     name: String,
@@ -19,7 +20,7 @@ impl FWorldTileLayer {
     pub fn new(asset: &mut Asset, engine_version: i32) -> Result<Self, Error> {
         let name = asset.cursor.read_string()?;
         let reserved_0 = asset.cursor.read_i32::<LittleEndian>()?;
-        let reserved_1 = IntPointProperty::new(asset, FName::default(), false)?;
+        let reserved_1 = IntPointProperty::new(asset, FName::default(), false, 0)?;
         
         let streaming_distance = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
             true => Some(asset.cursor.read_i32::<LittleEndian>()?),
@@ -77,7 +78,7 @@ impl FWorldTileInfo {
             false => asset.cursor.read_int_vector()?
         };
 
-        let bounds = BoxProperty::new(asset, FName::default(), false)?;
+        let bounds = BoxProperty::new(asset, FName::default(), false, 0)?;
         let layer = FWorldTileLayer::new(asset, engine_version)?;
 
         let mut hide_in_tile_view = None;

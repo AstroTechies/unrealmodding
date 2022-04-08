@@ -3,22 +3,24 @@ use std::io::{Cursor, ErrorKind, Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid, optional_guid_write};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::uasset::error::PropertyError;
-use crate::uasset::properties::PropertyTrait;
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SmartNameProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    
+    pub duplication_index: i32,
+
     pub display_name: FName,
     pub smart_name_id: Option<u16>,
-    pub temp_guid: Option<Guid>
+    pub temp_guid: Option<Guid>,
 }
+impl_property_data_trait!(SmartNameProperty);
 
 impl SmartNameProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let display_name = asset.read_fname()?;
@@ -40,9 +42,10 @@ impl SmartNameProperty {
         Ok(SmartNameProperty {
             name,
             property_guid,
+            duplication_index,
             display_name,
             smart_name_id,
-            temp_guid
+            temp_guid,
         })
     }
 }

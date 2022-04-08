@@ -3,8 +3,8 @@ use std::io::{Cursor, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 use super::{Property, array_property::ArrayProperty};
 
@@ -12,13 +12,15 @@ use super::{Property, array_property::ArrayProperty};
 pub struct SetProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub array_type: Option<FName>,
     pub value: ArrayProperty,
-    pub removed_items: ArrayProperty
+    pub removed_items: ArrayProperty,
 }
+impl_property_data_trait!(SetProperty);
 
 impl SetProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, engine_version: i32) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
             false => (None, None)
@@ -27,28 +29,31 @@ impl SetProperty {
         let removed_items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
-            false, 
-            length, 
+            false,
+            length,
+            0,
             engine_version,
-            false, 
+            false,
             array_type.clone(), property_guid)?;
-        
+
         let items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
-            false, 
-            length, 
-            engine_version,  
-            false, 
-            array_type.clone(), 
+            false,
+            length,
+            0,
+            engine_version,
+            false,
+            array_type.clone(),
             property_guid)?;
-        
+
         Ok(SetProperty {
             name,
             property_guid,
+            duplication_index,
             array_type,
             value: items,
-            removed_items
+            removed_items,
         })
     }
 }

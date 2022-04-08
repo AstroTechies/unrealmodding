@@ -6,8 +6,8 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(u8)]
@@ -30,15 +30,17 @@ pub enum ViewTargetBlendFunction
 pub struct ViewTargetBlendParamsProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
-    
+    pub duplication_index: i32,
+
     pub blend_time: OrderedFloat<f32>,
     pub blend_function: ViewTargetBlendFunction,
     pub blend_exp: OrderedFloat<f32>,
-    pub lock_outgoing: bool
+    pub lock_outgoing: bool,
 }
+impl_property_data_trait!(ViewTargetBlendParamsProperty);
 
 impl ViewTargetBlendParamsProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let blend_time = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
@@ -49,10 +51,11 @@ impl ViewTargetBlendParamsProperty {
         Ok(ViewTargetBlendParamsProperty {
             name,
             property_guid,
+            duplication_index,
             blend_time,
             blend_function,
             blend_exp,
-            lock_outgoing
+            lock_outgoing,
         })
     }
 }

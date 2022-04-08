@@ -3,8 +3,8 @@ use std::io::{Cursor, ErrorKind, Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, optional_guid};
-use crate::uasset::properties::PropertyTrait;
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, optional_guid, impl_property_data_trait};
+use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 use super::Property;
 
@@ -14,20 +14,22 @@ pub struct StructProperty {
     pub struct_type: Option<FName>,
     pub struct_guid: Option<Guid>,
     pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
     pub serialize_none: bool,
-    pub value: Vec<Property>
+    pub value: Vec<Property>,
 }
+impl_property_data_trait!(StructProperty);
 
 impl StructProperty {
     pub fn dummy(name: FName, struct_type: FName, struct_guid: Option<Guid>) -> Self {
-        StructProperty { name, struct_type: Some(struct_type), struct_guid, property_guid: None, serialize_none: true, value: Vec::new() }
+        StructProperty { name, struct_type: Some(struct_type), struct_guid, property_guid: None, duplication_index: 0, serialize_none: true, value: Vec::new() }
     }
 
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, engine_version: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, engine_version: i32) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
         let mut property_guid = None;
-        
+
         if include_header {
             struct_type = Some(asset.read_fname()?);
             if engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
@@ -38,10 +40,10 @@ impl StructProperty {
             property_guid = asset.read_property_guid()?;
         }
 
-        StructProperty::custom_header(asset, name, length, struct_type, struct_guid, property_guid)
+        StructProperty::custom_header(asset, name, length, 0, struct_type, struct_guid, property_guid)
     }
 
-    pub fn custom_header(asset: &mut Asset, name: FName, length: i64, struct_type: Option<FName>, struct_guid: Option<[u8; 16]>, property_guid: Option<[u8; 16]>) -> Result<Self, Error> {
+    pub fn custom_header(asset: &mut Asset, name: FName, length: i64, duplication_index: i32, struct_type: Option<FName>, struct_guid: Option<[u8; 16]>, property_guid: Option<[u8; 16]>) -> Result<Self, Error> {
         let mut custom_serialization = match struct_type {
             Some(ref e) => Property::has_custom_serialization(&e.content),
             None => false
@@ -59,13 +61,14 @@ impl StructProperty {
                 struct_type,
                 struct_guid,
                 property_guid,
+                duplication_index,
                 serialize_none: false,
-                value: Vec::new()
+                value: Vec::new(),
             });
         }
 
         if custom_serialization {
-            let property = Property::from_type(asset, struct_type.as_ref().unwrap(), name.clone(), false, 0, 0)?;
+            let property = Property::from_type(asset, struct_type.as_ref().unwrap(), name.clone(), false, 0, 0, 0)?;
             let value = vec![property];
 
             return Ok(StructProperty {
@@ -73,8 +76,9 @@ impl StructProperty {
                 struct_type,
                 struct_guid,
                 property_guid,
+                duplication_index,
                 serialize_none: true,
-                value
+                value,
             });
         } else {
             let mut values = Vec::new();
@@ -89,8 +93,9 @@ impl StructProperty {
                 struct_type,
                 struct_guid,
                 property_guid,
+                duplication_index,
                 serialize_none: true,
-                value: values
+                value: values,
             });
         }
     }
@@ -119,7 +124,7 @@ impl PropertyTrait for StructProperty {
             if self.value.len() != 1 {
                 return Err(PropertyError::invalid_struct(format!("Structs with type {} must have exactly 1 entry",
                                                                  self.struct_type.as_ref().map(|e|
-                                                                     e.content.to_owned()).unwrap_or("Generic".to_string()))).into())
+                                                                     e.content.to_owned()).unwrap_or("Generic".to_string()))).into());
             }
             return self.value[0].write(asset, cursor, false);
         } else if self.value.len() == 0 && !self.serialize_none {
