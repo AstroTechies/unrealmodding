@@ -97,7 +97,7 @@ impl StructProperty {
 }
 
 impl PropertyTrait for StructProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         if include_header {
             asset.write_fname(cursor, self.struct_type.as_ref().ok_or(PropertyError::headerless())?)?;
             if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {

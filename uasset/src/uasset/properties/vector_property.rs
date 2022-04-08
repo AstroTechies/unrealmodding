@@ -68,7 +68,7 @@ impl VectorProperty {
 }
 
 impl PropertyTrait for VectorProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f32::<LittleEndian>(self.value.x.0)?;
         cursor.write_f32::<LittleEndian>(self.value.y.0)?;
@@ -93,7 +93,7 @@ impl IntPointProperty {
 }
 
 impl PropertyTrait for IntPointProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i32::<LittleEndian>(self.x)?;
         cursor.write_i32::<LittleEndian>(self.y)?;
@@ -119,7 +119,7 @@ impl Vector4Property {
 }
 
 impl PropertyTrait for Vector4Property {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f32::<LittleEndian>(self.value.x.0)?;
         cursor.write_f32::<LittleEndian>(self.value.y.0)?;
@@ -145,7 +145,7 @@ impl Vector2DProperty {
 }
 
 impl PropertyTrait for Vector2DProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f32::<LittleEndian>(self.x.0)?;
         cursor.write_f32::<LittleEndian>(self.y.0)?;
@@ -172,7 +172,7 @@ impl QuatProperty {
 }
 
 impl PropertyTrait for QuatProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f32::<LittleEndian>(self.value.x.0)?;
         cursor.write_f32::<LittleEndian>(self.value.y.0)?;
@@ -200,7 +200,7 @@ impl RotatorProperty {
 }
 
 impl PropertyTrait for RotatorProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f32::<LittleEndian>(self.value.x.0)?;
         cursor.write_f32::<LittleEndian>(self.value.y.0)?;
@@ -236,7 +236,7 @@ impl BoxProperty {
 }
 
 impl PropertyTrait for BoxProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let total_size =
             self.v1.write(asset, cursor, include_header)? +

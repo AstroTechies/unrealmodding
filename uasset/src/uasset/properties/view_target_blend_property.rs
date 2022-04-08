@@ -58,7 +58,7 @@ impl ViewTargetBlendParamsProperty {
 }
 
 impl PropertyTrait for ViewTargetBlendParamsProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
 
         cursor.write_f32::<LittleEndian>(self.blend_time.0)?;

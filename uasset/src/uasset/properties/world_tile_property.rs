@@ -107,7 +107,7 @@ impl FWorldTileInfo {
         })
     }
 
-    pub fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         if asset.get_custom_version::<FFortniteMainBranchObjectVersion>().version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32 {
             cursor.write_i32::<LittleEndian>(self.position.x);
             cursor.write_i32::<LittleEndian>(self.position.y);

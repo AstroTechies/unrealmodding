@@ -90,7 +90,7 @@ impl MaterialExpression {
         })
     }
 
-    pub fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         cursor.write_i32::<LittleEndian>(self.output_index)?;
         asset.write_fname(cursor, &self.input_name)?;
         cursor.write(&self.extras)?;
@@ -117,7 +117,7 @@ impl ColorMaterialInputProperty {
 }
 
 impl PropertyTrait for ColorMaterialInputProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -144,7 +144,7 @@ impl ScalarMaterialInputProperty {
 }
 
 impl PropertyTrait for ScalarMaterialInputProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -170,7 +170,7 @@ impl ShadingModelMaterialInputProperty {
 }
 
 impl PropertyTrait for ShadingModelMaterialInputProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -196,7 +196,7 @@ impl VectorMaterialInputProperty {
 }
 
 impl PropertyTrait for VectorMaterialInputProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -222,7 +222,7 @@ impl Vector2MaterialInputProperty {
 }
 
 impl PropertyTrait for Vector2MaterialInputProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -245,7 +245,7 @@ impl ExpressionInputProperty {
 }
 
 impl PropertyTrait for ExpressionInputProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         self.material_expression.write(asset, cursor, false)
     }
@@ -265,7 +265,7 @@ impl MaterialAttributesInputProperty {
 }
 
 impl PropertyTrait for MaterialAttributesInputProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         self.material_expression.write(asset, cursor, false)
     }

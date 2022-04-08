@@ -104,7 +104,7 @@ impl ArrayProperty {
         })
     }
 
-    pub fn write_full(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool, serialize_structs_differently: bool) -> Result<usize, Error> {
+    pub fn write_full(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool, serialize_structs_differently: bool) -> Result<usize, Error> {
         let array_type = match self.value.len() > 0 {
             true => Some(FName::new(self.value[0].to_string(), 0)),
             false => self.array_type.clone()
@@ -175,7 +175,7 @@ impl ArrayProperty {
 }
 
 impl PropertyTrait for ArrayProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         self.write_full(asset, cursor, include_header, true)
     }
 }

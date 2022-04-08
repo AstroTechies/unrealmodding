@@ -48,7 +48,7 @@ impl StrProperty {
 }
 
 impl PropertyTrait for StrProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let begin = cursor.position();
         cursor.write_string(&self.value)?;
@@ -116,7 +116,7 @@ impl TextProperty {
 }
 
 impl PropertyTrait for TextProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let begin = cursor.position();
 
@@ -183,7 +183,7 @@ impl NameProperty {
 }
 
 impl PropertyTrait for NameProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         asset.write_fname(cursor, &self.value)?;
         Ok(size_of::<i32>() * 2)

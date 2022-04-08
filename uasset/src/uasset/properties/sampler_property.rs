@@ -62,7 +62,7 @@ impl WeightedRandomSamplerProperty {
 }
 
 impl PropertyTrait for WeightedRandomSamplerProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i32::<LittleEndian>(self.prob.len() as i32)?;
         for entry in &self.prob {
@@ -108,7 +108,7 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
 }
 
 impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i32::<LittleEndian>(self.prob.len() as i32)?;
         for entry in &self.prob {
@@ -139,7 +139,7 @@ impl SkeletalMeshSamplingLODBuiltDataProperty {
 }
 
 impl PropertyTrait for SkeletalMeshSamplingLODBuiltDataProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         self.sampler_property.write(asset, cursor, false)
     }

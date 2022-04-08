@@ -57,7 +57,7 @@ macro_rules! optional_guid_write {
 macro_rules! simple_property_write {
     ($property_name:ident, $write_func:ident, $value_name:ident, $value_type:ty) => {
         impl PropertyTrait for $property_name {
-            fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, cursor, include_header);
                 cursor.$write_func::<LittleEndian>(self.$value_name)?;
                 Ok(size_of::<$value_type>())
@@ -105,7 +105,7 @@ lazy_static! {
 
 #[enum_dispatch]
 trait PropertyTrait {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error>;
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error>;
 }
 
 #[derive(Hash, PartialEq, Eq)]

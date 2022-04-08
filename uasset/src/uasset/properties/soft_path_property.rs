@@ -61,7 +61,7 @@ macro_rules! impl_soft_path_property {
         }
 
         impl PropertyTrait for $property_name {
-            fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, cursor, include_header);
                 let begin = cursor.position();
                 if asset.engine_version < VER_UE4_ADDED_SOFT_OBJECT_PATH {

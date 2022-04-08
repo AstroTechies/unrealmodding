@@ -125,7 +125,7 @@ impl BoolProperty {
 }
 
 impl PropertyTrait for BoolProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         cursor.write_bool(self.value)?;
         optional_guid_write!(self, asset, cursor, include_header);
         Ok(0)
@@ -144,7 +144,7 @@ impl Int8Property {
 }
 
 impl PropertyTrait for Int8Property {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i8(self.value)?;
         Ok(size_of::<i8>())
@@ -181,7 +181,7 @@ impl ByteProperty {
 }
 
 impl PropertyTrait for ByteProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         if include_header {
             cursor.write_i64::<LittleEndian>(self.enum_type.ok_or(PropertyError::headerless())?)?;
             asset.write_property_guid(cursor, &self.property_guid)?;
@@ -214,7 +214,7 @@ impl FloatProperty {
 }
 
 impl PropertyTrait for FloatProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f32::<LittleEndian>(self.value.0)?;
         Ok(size_of::<f32>())
@@ -234,7 +234,7 @@ impl DoubleProperty {
 }
 
 impl PropertyTrait for DoubleProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_f64::<LittleEndian>(self.value.0)?;
         Ok(size_of::<f64>())

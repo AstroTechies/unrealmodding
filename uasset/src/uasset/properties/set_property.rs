@@ -54,7 +54,7 @@ impl SetProperty {
 }
 
 impl PropertyTrait for SetProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         let array_type = match self.value.value.len() > 0 {
             true => Some(FName::new(self.value.value[0].to_string(), 0)),
             false => self.array_type.clone()

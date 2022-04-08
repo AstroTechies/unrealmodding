@@ -92,7 +92,7 @@ impl MapProperty {
 }
 
 impl PropertyTrait for MapProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         if include_header {
             if let Some(key) = self.value.keys().next() {
                 asset.write_fname(cursor, &FName::new(key.to_string(), 0))?;

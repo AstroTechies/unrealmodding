@@ -42,7 +42,7 @@ impl ObjectProperty {
 }
 
 impl PropertyTrait for ObjectProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_i32::<LittleEndian>(self.value)?;
         Ok(size_of::<i32>())
@@ -62,7 +62,7 @@ impl AssetObjectProperty {
 }
 
 impl PropertyTrait for AssetObjectProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write_string(&self.value)
     }
@@ -83,7 +83,7 @@ impl SoftObjectProperty {
 }
 
 impl PropertyTrait for SoftObjectProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         asset.write_fname(cursor, &self.value)?;
         cursor.write_u32::<LittleEndian>(self.id)?;

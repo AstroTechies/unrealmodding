@@ -28,7 +28,7 @@ impl UnknownProperty {
 }
 
 impl PropertyTrait for UnknownProperty {
-    fn write(&self, asset: &mut Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write(&self.value)?;
         Ok(self.value.len())
