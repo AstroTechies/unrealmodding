@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::io::{Cursor, Read, Seek, SeekFrom};
-use byteorder::{LittleEndian, ReadBytesExt};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::implement_get;
 use crate::uasset::Asset;
 use crate::uasset::custom_version::FCoreObjectVersion;
@@ -13,6 +13,7 @@ use crate::uasset::ue4version::VER_UE4_16;
 use crate::uasset::unreal_types::{FName, PackageIndex};
 use crate::uasset::uproperty::UField;
 use crate::uasset::error::Error;
+use crate::uasset::exports::ExportTrait;
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
 
@@ -93,5 +94,54 @@ impl StructExport {
             code.push(KismetExpression::new(asset)?);
         }
         Ok(code)
+    }
+}
+
+impl ExportTrait for StructExport {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        self.normal_export.write(asset, cursor)?;
+        cursor.write_i32::<LittleEndian>(0)?;
+        self.field.write(asset, cursor)?;
+
+        cursor.write_i32::<LittleEndian>(self.super_struct.index)?;
+        cursor.write_i32::<LittleEndian>(self.children.len() as i32)?;
+        for child in &self.children {
+            cursor.write_i32::<LittleEndian>(child.index)?;
+        }
+
+        if asset.get_custom_version::<FCoreObjectVersion>().version >= FCoreObjectVersion::FProperties as i32 {
+            cursor.write_i32::<LittleEndian>(self.loaded_properties.len() as i32)?;
+            for loaded_property in &self.loaded_properties {
+                FProperty::write(loaded_property, asset, cursor)?;
+            }
+        }
+
+        if let Some(bytecode) = &self.script_bytecode {
+            let len_offset_1 = cursor.position();
+            cursor.write_i32::<LittleEndian>(0)?; // total iCode offset; will be filled after serialization
+            let len_offset_2 = cursor.position();
+            cursor.write_i32::<LittleEndian>(0)?; // size on disk; will be filled after serialization
+
+            let mut total_offset = 0;
+            let begin = cursor.position();
+            for expression in bytecode {
+                total_offset += KismetExpression::write(expression, asset, cursor)?;
+            }
+            let end = cursor.position();
+
+            let total_len = end - begin;
+            cursor.seek(SeekFrom::Start(len_offset_1))?;
+            cursor.write_i32::<LittleEndian>(total_offset as i32)?;
+            cursor.seek(SeekFrom::Start(len_offset_2))?;
+            cursor.write_i32::<LittleEndian>(total_len as i32)?;
+            cursor.seek(SeekFrom::Start(end))?;
+        } else {
+            cursor.write_i32::<LittleEndian>(self.script_bytecode_size)?;
+            let raw_bytecode = self.script_bytecode_raw.as_ref().ok_or(Error::no_data("script_bytecode and raw_bytecode are None".to_string()))?;
+            cursor.write_i32::<LittleEndian>(raw_bytecode.len() as i32)?;
+            cursor.write(&raw_bytecode)?;
+        }
+
+        Ok(())
     }
 }

@@ -1,10 +1,10 @@
 use std::io::{Cursor};
 use crate::uasset::Asset;
 use crate::uasset::exports::unknown_export::UnknownExport;
-use crate::uasset::properties::Property;
+use crate::uasset::properties::{Property, PropertyTrait};
 use crate::uasset::unreal_types::{FName, Guid};
 use crate::uasset::error::Error;
-use crate::uasset::exports::ExportUnknownTrait;
+use crate::uasset::exports::{ExportTrait, ExportUnknownTrait};
 
 use super::ExportNormalTrait;
 
@@ -52,5 +52,15 @@ impl NormalExport {
 
             properties
         })
+    }
+}
+
+impl ExportTrait for NormalExport {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        for entry in &self.properties {
+            Property::write(entry, asset, cursor, true)?;
+        }
+        asset.write_fname(cursor, &FName::from_slice("None"))?;
+        Ok(())
     }
 }

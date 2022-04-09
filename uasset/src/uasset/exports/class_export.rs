@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::mem::size_of;
 use std::io::{Cursor, ErrorKind, Seek, SeekFrom};
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::uasset::Asset;
 use crate::uasset::error::Error;
-use crate::uasset::exports::ExportUnknownTrait;
+use crate::uasset::exports::{ExportTrait, ExportUnknownTrait};
 use crate::uasset::exports::struct_export::StructExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::flags::EClassFlags;
@@ -108,6 +108,19 @@ impl ClassExport {
             class_default_object
         })
     }
+
+    fn serialize_interfaces(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        cursor.write_i32::<LittleEndian>(self.interfaces.len() as i32)?;
+        for interface in &self.interfaces {
+            cursor.write_i32::<LittleEndian>(interface.class)?;
+            cursor.write_i32::<LittleEndian>(interface.pointer_offset)?;
+            cursor.write_i32::<LittleEndian>(match interface.implemented_by_k2 {
+                true => 1,
+                false => 0
+            })?;
+        }
+        Ok(())
+    }
 }
 
 impl ExportNormalTrait for ClassExport {
@@ -128,5 +141,51 @@ impl ExportUnknownTrait for ClassExport {
 
     fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
         &mut self.struct_export.normal_export.unknown_export
+    }
+}
+
+impl ExportTrait for ClassExport {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        self.struct_export.write(asset, cursor)?;
+
+        cursor.write_i32::<LittleEndian>(self.func_map.len() as i32)?;
+        for (name, index) in &self.func_map {
+            asset.write_fname(cursor, name)?;
+            cursor.write_i32::<LittleEndian>(index.index)?;
+        }
+
+        let serializing_class_flags = match asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
+            true => self.class_flags ^ EClassFlags::CLASS_NotPlaceable,
+            false => self.class_flags
+        };
+        cursor.write_u32::<LittleEndian>(serializing_class_flags.bits())?;
+
+        cursor.write_i32::<LittleEndian>(self.class_within.index)?;
+        asset.write_fname(cursor, &self.class_config_name)?;
+
+        if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING as i32 {
+            self.serialize_interfaces(asset, cursor)?;
+        }
+        cursor.write_i32::<LittleEndian>(self.class_generated_by.index)?;
+
+        if asset.engine_version >= VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+            self.serialize_interfaces(asset, cursor)?;
+        }
+
+        cursor.write_i32::<LittleEndian>(match self.deprecated_force_script_order {
+            true => 1,
+            false => 0
+        })?;
+        asset.write_fname(cursor, &FName::from_slice("None"))?;
+
+        if asset.engine_version >= VER_UE4_ADD_COOKED_TO_UCLASS {
+            cursor.write_i32::<LittleEndian>(match self.cooked.ok_or(Error::no_data("engine_version >= UE4_ADD_COOKED_TO_UCLASS but cooked is None".to_string()))? {
+                true => 1,
+                false => 0
+            })?;
+        }
+
+        cursor.write_i32::<LittleEndian>(self.class_default_object.index)?;
+        Ok(())
     }
 }

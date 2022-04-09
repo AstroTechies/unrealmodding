@@ -1,7 +1,7 @@
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Write};
 use crate::uasset::Asset;
 use crate::uasset::error::Error;
-use crate::uasset::exports::ExportUnknownTrait;
+use crate::uasset::exports::{ExportTrait, ExportUnknownTrait};
 use crate::uasset::exports::unknown_export::UnknownExport;
 
 use super::ExportNormalTrait;
@@ -43,5 +43,12 @@ impl RawExport {
             unknown_export: unk,
             data
         })
+    }
+}
+
+impl ExportTrait for RawExport {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        cursor.write(&self.data)?;
+        Ok(())
     }
 }

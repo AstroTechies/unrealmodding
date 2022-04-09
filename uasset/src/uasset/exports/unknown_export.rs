@@ -1,3 +1,7 @@
+use std::io::Cursor;
+use crate::uasset::Asset;
+use crate::uasset::error::Error;
+use crate::uasset::exports::ExportTrait;
 use crate::uasset::unreal_types::{FName, Guid};
 
 use super::ExportNormalTrait;
@@ -46,5 +50,11 @@ impl ExportUnknownTrait for UnknownExport {
 
     fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
         self
+    }
+}
+
+impl ExportTrait for UnknownExport {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        Ok(())
     }
 }

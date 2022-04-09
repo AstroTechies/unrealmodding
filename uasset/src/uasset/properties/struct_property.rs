@@ -99,31 +99,29 @@ impl StructProperty {
             });
         }
     }
-}
 
-impl PropertyTrait for StructProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    pub fn write_with_type(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool, struct_type: Option<FName>) -> Result<usize, Error> {
         if include_header {
-            asset.write_fname(cursor, self.struct_type.as_ref().ok_or(PropertyError::headerless())?)?;
+            asset.write_fname(cursor, struct_type.as_ref().ok_or(PropertyError::headerless())?)?;
             if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 cursor.write(&self.struct_guid.ok_or(PropertyError::headerless())?)?;
             }
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
 
-        let mut has_custom_serialization = match self.struct_type {
+        let mut has_custom_serialization = match struct_type {
             Some(ref e) => Property::has_custom_serialization(&e.content),
             None => false
         };
 
-        if (self.struct_type.is_some() && self.struct_type.as_ref().unwrap().content.as_str() == "RichCurveKey") && asset.engine_version < VER_UE4_SERIALIZE_RICH_CURVE_KEY {
+        if (struct_type.is_some() && struct_type.as_ref().unwrap().content.as_str() == "RichCurveKey") && asset.engine_version < VER_UE4_SERIALIZE_RICH_CURVE_KEY {
             has_custom_serialization = false;
         }
 
         if has_custom_serialization {
             if self.value.len() != 1 {
                 return Err(PropertyError::invalid_struct(format!("Structs with type {} must have exactly 1 entry",
-                                                                 self.struct_type.as_ref().map(|e|
+                                                                 struct_type.as_ref().map(|e|
                                                                      e.content.to_owned()).unwrap_or("Generic".to_string()))).into());
             }
             return self.value[0].write(asset, cursor, false);
@@ -137,5 +135,11 @@ impl PropertyTrait for StructProperty {
             asset.write_fname(cursor, &FName::from_slice("None"))?;
             return Ok((cursor.position() - begin) as usize);
         }
+    }
+}
+
+impl PropertyTrait for StructProperty {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+        self.write_with_type(asset, cursor, include_header, self.struct_type.clone())
     }
 }

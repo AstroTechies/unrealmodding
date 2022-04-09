@@ -1,10 +1,13 @@
 use std::io::Cursor;
 
-use byteorder::{ReadBytesExt, LittleEndian};
+use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 
 use crate::{uasset::{properties::{struct_property::StructProperty, object_property::ObjectProperty, Property}, Asset, unreal_types::FName, is_import}, implement_get};
 use crate::uasset::error::Error;
 use std::io::{ErrorKind};
+use crate::uasset::exports::ExportTrait;
+use crate::uasset::properties::PropertyTrait;
+use crate::uasset::unreal_types::ToFName;
 use super::{normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait, ExportUnknownTrait};
 
 pub struct DataTable {
@@ -44,7 +47,7 @@ impl DataTableExport {
         let mut data = Vec::with_capacity(num_entires);
         for i in 0..num_entires {
             let row_name = asset.read_fname()?;
-            let next_struct = StructProperty::custom_header(asset, row_name, 1, Some(decided_struct_type.clone()), None, None)?;
+            let next_struct = StructProperty::custom_header(asset, row_name, 1, 0,Some(decided_struct_type.clone()), None, None)?;
             data.push(next_struct);
         }
 
@@ -54,5 +57,32 @@ impl DataTableExport {
             normal_export,
             table
         })
+    }
+}
+
+impl ExportTrait for DataTableExport {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        self.normal_export.write(asset, cursor)?;
+
+        let mut decided_struct_type = FName::from_slice("Generic");
+        for data in &self.normal_export.properties {
+            if data.to_fname().content.as_str() == "RowStruct" {
+                match data {
+                    Property::ObjectProperty(prop) => if let Some(import) = asset.get_import(prop.value) {
+                        decided_struct_type = import.object_name.clone();
+                        break;
+                    },
+                    _ => {}
+                }
+            }
+        }
+        cursor.write_i32::<LittleEndian>(0)?;
+        cursor.write_i32::<LittleEndian>(self.table.data.len() as i32)?;
+        for entry in &self.table.data {
+            asset.write_fname(cursor, &entry.name)?;
+            entry.write_with_type(asset, cursor, false, Some(decided_struct_type.clone()))?;
+        }
+
+        Ok(())
     }
 }

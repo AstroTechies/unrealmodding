@@ -1,5 +1,5 @@
 use std::io::{Cursor, Read};
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::implement_get;
 use crate::uasset::Asset;
 use crate::uasset::cursor_ext::CursorExt;
@@ -7,6 +7,7 @@ use crate::uasset::exports::normal_export::NormalExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
 use crate::uasset::unreal_types::{FName, Guid, NamespacedString};
 use crate::uasset::error::Error;
+use crate::uasset::exports::ExportTrait;
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
 
@@ -53,5 +54,30 @@ impl LevelExport {
             flags_probably,
             misc_category_data
         })
+    }
+}
+
+impl ExportTrait for LevelExport {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        self.normal_export.write(asset, cursor)?;
+
+        cursor.write_i32::<LittleEndian>(0)?;
+        cursor.write_i32::<LittleEndian>(self.index_data.len() as i32)?;
+        for index in &self.index_data {
+            cursor.write_i32::<LittleEndian>(*index)?;
+        }
+
+        cursor.write_string(&self.level_type.namespace)?;
+        cursor.write_i32::<LittleEndian>(0)?;
+        cursor.write_string(&self.level_type.value)?;
+
+        cursor.write_u64::<LittleEndian>(0)?;
+        cursor.write_u64::<LittleEndian>(self.flags_probably)?;
+
+        for data in &self.misc_category_data {
+            cursor.write_i32::<LittleEndian>(*data)?;
+        }
+        cursor.write_u8(0)?;
+        Ok(())
     }
 }
