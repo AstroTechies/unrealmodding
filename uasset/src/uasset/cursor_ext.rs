@@ -1,4 +1,5 @@
 use std::io::{Cursor, Read, SeekFrom, Seek, ErrorKind, Write};
+use std::mem::size_of;
 use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 
 use super::{unreal_types::Guid, types::Vector};
@@ -55,6 +56,10 @@ impl CursorExt for Cursor<Vec<u8>> {
     }
 
     fn write_string(&mut self, string: &String) -> Result<usize, Error> {
+        if string.len() == 0 {
+            self.write_i32::<LittleEndian>(0)?;
+            return Ok(size_of::<i32>());
+        }
         let is_unicode = string.len() != string.chars().count();
         match is_unicode {
             true => self.write_i32::<LittleEndian>(-(string.len() as i32) + 1),

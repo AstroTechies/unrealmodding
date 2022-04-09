@@ -452,6 +452,7 @@ pub mod uasset {
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
 
+            self.name_map_index_list.push(name.clone());
             self.name_map_lookup.insert(s.finish(), self.name_map_lookup.len() as i32);
             (self.name_map_lookup.len() - 1) as i32
         }
@@ -563,7 +564,7 @@ pub mod uasset {
                     export.forced_export = self.cursor.read_i32::<LittleEndian>()? == 1;
                     export.not_for_client = self.cursor.read_i32::<LittleEndian>()? == 1;
                     export.not_for_server = self.cursor.read_i32::<LittleEndian>()? == 1;
-                    self.cursor.read_exact(&mut self.package_guid)?;
+                    self.cursor.read_exact(&mut export.package_guid)?;
                     export.package_flags = self.cursor.read_u32::<LittleEndian>()?;
 
                     if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
@@ -622,7 +623,7 @@ pub mod uasset {
 
             if self.use_seperate_bulk_data_files {
                 self.cursor.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
-                let mut preload_dependencies = Vec::with_capacity(self.preload_dependency_count as usize);
+                let mut preload_dependencies = Vec::new();
 
                 for i in 0..self.preload_dependency_count as usize {
                     preload_dependencies.push(self.cursor.read_i32::<LittleEndian>()?);
@@ -748,7 +749,7 @@ pub mod uasset {
         }
 
         fn write_header(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-            cursor.write_u32::<LittleEndian>(UE4_ASSET_MAGIC)?;
+            cursor.write_u32::<BigEndian>(UE4_ASSET_MAGIC)?;
             cursor.write_i32::<LittleEndian>(self.legacy_file_version)?;
 
             if self.legacy_file_version != 4 {
