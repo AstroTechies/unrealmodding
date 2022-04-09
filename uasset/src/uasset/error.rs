@@ -1,5 +1,6 @@
 use std::{io, fmt::Display, error};
 use std::fmt::Formatter;
+use std::string::{FromUtf16Error, FromUtf8Error};
 
 use num_enum::{TryFromPrimitiveError, TryFromPrimitive};
 
@@ -75,6 +76,8 @@ impl Display for PropertyError {
 #[derive(Debug)]
 pub enum ErrorCode {
     Io(io::Error),
+    Utf8(FromUtf8Error),
+    Utf16(FromUtf16Error),
     NoData(Box<str>),
     InvalidFile(Box<str>),
     InvalidPackageIndex(Box<str>),
@@ -113,6 +116,14 @@ impl From<io::Error> for Error {
     }
 }
 
+impl From<FromUtf8Error> for Error {
+    fn from(e: FromUtf8Error) -> Self { Error { code: ErrorCode::Utf8(e) } }
+}
+
+impl From<FromUtf16Error> for Error {
+    fn from(e: FromUtf16Error) -> Self { Error { code: ErrorCode::Utf16(e) } }
+}
+
 impl<T: TryFromPrimitive> From<TryFromPrimitiveError<T>> for Error {
     fn from(e: TryFromPrimitiveError<T>) -> Self {
         Error { code: ErrorCode::InvalidEnumValue(e.to_string().into_boxed_str()) }
@@ -144,6 +155,8 @@ impl Display for ErrorCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             ErrorCode::Io(ref err) => Display::fmt(err, f),
+            ErrorCode::Utf8(ref err) => Display::fmt(err, f),
+            ErrorCode::Utf16(ref err) => Display::fmt(err, f),
             ErrorCode::NoData(ref err) => Display::fmt(err, f),
             ErrorCode::InvalidFile(ref err) => f.write_str(err),
             ErrorCode::InvalidPackageIndex(ref err) => f.write_str(err),

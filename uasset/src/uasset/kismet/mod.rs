@@ -1,6 +1,7 @@
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Write};
+use std::mem::size_of;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use crate::uasset::Asset;
 use crate::uasset::Error;
@@ -15,7 +16,7 @@ use crate::uasset::unreal_types::{FieldPath, FName, PackageIndex};
 
 use super::error::KismetError;
 
-#[derive(PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+#[derive(PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EExprToken {
     // A local variable.
@@ -190,6 +191,33 @@ pub enum EExprToken {
     EX_Max = 0xff,
 }
 
+fn read_kismet_string(cursor: &mut Cursor<Vec<u8>>) -> Result<String, Error> {
+    let mut data = Vec::new();
+    loop {
+        let read = cursor.read_u8()?;
+        if read == 0 { break; }
+        data.push(read);
+    }
+    Ok(String::from_utf8(data)?)
+}
+
+fn read_kismet_unicode_string(cursor: &mut Cursor<Vec<u8>>) -> Result<String, Error> {
+    let mut data = Vec::new();
+    loop {
+        let b1 = cursor.read_u8()?;
+        let b2 = cursor.read_u8()?;
+        if b1 == 0 && b2 == 0 { break; }
+        data.push(((b1 as u16) << 8) | b2 as u16)
+    }
+    Ok(String::from_utf16(&data)?)
+}
+
+fn write_kismet_string(string: &String, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+    let begin = cursor.position();
+    cursor.write(string.as_bytes())?;
+    cursor.write(&[0u8; 1])?;
+    Ok((cursor.position() - begin) as usize)
+}
 
 macro_rules! declare_expression {
     ($name:ident, $($v:ident: $t:ty),*) => {
@@ -203,6 +231,10 @@ macro_rules! declare_expression {
         impl KismetExpressionEnumEqTrait for $name {
             fn enum_eq(&self, token: &EExprToken) -> bool { self.token == *token }
         }
+
+        impl KismetExpressionDataTrait for $name {
+            fn get_token(&self) -> EExprToken { self.token }
+        }
     }
 }
 
@@ -211,8 +243,18 @@ macro_rules! implement_expression {
         $(
             pub struct $name { pub token: EExprToken }
 
+            impl KismetExpressionTrait for $name {
+                fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+                    Ok(0)
+                }
+            }
+
             impl KismetExpressionEnumEqTrait for $name {
                 fn enum_eq(&self, token: &EExprToken) -> bool { self.token == *token }
+            }
+
+            impl KismetExpressionDataTrait for $name {
+                fn get_token(&self) -> EExprToken { self.token }
             }
 
             impl $name {
@@ -227,7 +269,7 @@ macro_rules! implement_expression {
 }
 
 macro_rules! implement_value_expression {
-    ($name:ident, $param:ident, $read_func:ident) => {
+    ($name:ident, $param:ty, $read_func:ident, $write_func:ident) => {
         declare_expression!($name, value: $param);
         impl $name {
             pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -237,9 +279,16 @@ macro_rules! implement_value_expression {
                 })
             }
         }
+
+        impl KismetExpressionTrait for $name {
+            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+                cursor.$write_func(self.value)?;
+                Ok(size_of::<$param>())
+            }
+        }
     };
 
-    ($name:ident, $param:ident, $read_func:ident, $endianness:ident) => {
+    ($name:ident, $param:ty, $read_func:ident, $write_func:ident, $endianness:ident) => {
         declare_expression!($name, value: $param);
         impl $name {
             pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -247,6 +296,13 @@ macro_rules! implement_value_expression {
                     token: EExprToken::$name,
                     value: asset.cursor.$read_func::<$endianness>()?
                 })
+            }
+        }
+
+        impl KismetExpressionTrait for $name {
+            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+                cursor.$write_func::<$endianness>(self.value)?;
+                Ok(size_of::<$param>())
             }
         }
     }
@@ -352,6 +408,12 @@ impl KismetSwitchCase {
 
 #[enum_dispatch]
 pub trait KismetExpressionTrait {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error>;
+}
+
+#[enum_dispatch]
+pub trait KismetExpressionDataTrait {
+    fn get_token(&self) -> EExprToken;
 }
 
 #[enum_dispatch]
@@ -360,7 +422,7 @@ pub trait KismetExpressionEnumEqTrait {
 }
 
 #[derive(PartialEq, Eq)]
-#[enum_dispatch(KismetExpressionTrait, KismetExpressionEnumEqTrait)]
+#[enum_dispatch(KismetExpressionEnumEqTrait)]
 pub enum KismetExpression {
     EX_LocalVariable,
     EX_InstanceVariable,
@@ -611,7 +673,6 @@ impl EX_SoftObjectConst {
 declare_expression!(EX_TransformConst, value: Transform<f32>);
 impl EX_TransformConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-        let mut cursor = &mut asset.cursor;
         let rotation = Vector4::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?);
         let translation = Vector::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?);
         let scale = Vector::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?);
@@ -625,7 +686,6 @@ impl EX_TransformConst {
 declare_expression!(EX_VectorConst, value: Vector<f32>);
 impl EX_VectorConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-        let mut cursor = &mut asset.cursor;
         Ok(EX_VectorConst {
             token: EExprToken::EX_VectorConst,
             value: Vector::new(asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?, asset.cursor.read_f32::<LittleEndian>()?)
@@ -1211,17 +1271,33 @@ impl EX_VirtualFunction {
         })
     }
 }
+declare_expression!(EX_StringConst, value: String);
+impl EX_StringConst {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        Ok(EX_StringConst {
+            token: EExprToken::EX_StringConst,
+            value: read_kismet_string(&mut asset.cursor)?
+        })
+    }
+}
+declare_expression!(EX_UnicodeStringConst, value: String);
+impl EX_UnicodeStringConst {
+    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        Ok(EX_UnicodeStringConst {
+            token: EExprToken::EX_UnicodeStringConst,
+            value: read_kismet_unicode_string(&mut asset.cursor)?
+        })
+    }
+}
 
 implement_expression!(EX_Breakpoint, EX_DeprecatedOp4A, EX_EndArray, EX_EndArrayConst, EX_EndFunctionParms,
     EX_EndMap, EX_EndMapConst, EX_EndOfScript, EX_EndParmValue, EX_EndSet, EX_EndSetConst,
     EX_EndStructConst, EX_False, EX_InstrumentationEvent, EX_IntOne, EX_IntZero,
     EX_NoInterface, EX_NoObject, EX_Nothing, EX_PopExecutionFlow, EX_Self, EX_Tracepoint, EX_True, EX_WireTracepoint);
 
-implement_value_expression!(EX_ByteConst, u8, read_u8);
-implement_value_expression!(EX_Int64Const, i64, read_i64, LittleEndian);
-implement_value_expression!(EX_IntConst, i32, read_i32, LittleEndian);
-implement_value_expression!(EX_IntConstByte, u8, read_u8);
-implement_value_expression!(EX_SkipOffsetConst, u32, read_u32, LittleEndian);
-implement_value_expression!(EX_StringConst, String, read_string);
-implement_value_expression!(EX_UInt64Const, u64, read_u64, LittleEndian);
-implement_value_expression!(EX_UnicodeStringConst, String, read_string);
+implement_value_expression!(EX_ByteConst, u8, read_u8, write_u8);
+implement_value_expression!(EX_Int64Const, i64, read_i64, write_i64, LittleEndian);
+implement_value_expression!(EX_IntConst, i32, read_i32, write_i32, LittleEndian);
+implement_value_expression!(EX_IntConstByte, u8, read_u8, write_u8);
+implement_value_expression!(EX_SkipOffsetConst, u32, read_u32, write_u32, LittleEndian);
+implement_value_expression!(EX_UInt64Const, u64, read_u64, write_u64, LittleEndian);
