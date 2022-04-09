@@ -55,7 +55,7 @@ macro_rules! implement_get {
 }
 
 #[enum_dispatch]
-trait ExportTrait {
+pub trait ExportTrait {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
 }
 

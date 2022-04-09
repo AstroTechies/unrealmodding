@@ -20,7 +20,7 @@ pub mod uasset {
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian, WriteBytesExt};
 
-    use crate::uasset::exports::ExportUnknownTrait;
+    use crate::uasset::exports::{ExportTrait, ExportUnknownTrait};
     use crate::uasset::exports::class_export::ClassExport;
     use crate::uasset::exports::data_table_export::DataTableExport;
     use crate::uasset::exports::enum_export::EnumExport;
@@ -855,7 +855,66 @@ pub mod uasset {
             Ok(())
         }
 
-        pub fn write_data(&mut self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        fn write_export_header(&self, unk: &UnknownExport, cursor: &mut Cursor<Vec<u8>>, serial_size: i64, serial_offset: i64) -> Result<(), Error> {
+            cursor.write_i32::<LittleEndian>(unk.class_index)?;
+            cursor.write_i32::<LittleEndian>(unk.super_index)?;
+
+            if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
+                cursor.write_i32::<LittleEndian>(unk.template_index)?;
+            }
+
+            cursor.write_i32::<LittleEndian>(unk.outer_index)?;
+            self.write_fname(cursor, &unk.object_name)?;
+            cursor.write_u32::<LittleEndian>(unk.object_flags)?;
+
+            if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
+                cursor.write_i32::<LittleEndian>(serial_size as i32)?;
+                cursor.write_i32::<LittleEndian>(serial_offset as i32)?;
+            } else {
+                cursor.write_i64::<LittleEndian>(serial_size)?;
+                cursor.write_i64::<LittleEndian>(serial_offset)?;
+            }
+
+            cursor.write_i32::<LittleEndian>(match unk.forced_export {
+                true => 1,
+                false => 0
+            })?;
+            cursor.write_i32::<LittleEndian>(match unk.not_for_client {
+                true => 1,
+                false => 0
+            })?;
+            cursor.write_i32::<LittleEndian>(match unk.not_for_server {
+                true => 1,
+                false => 0
+            })?;
+            cursor.write(&unk.package_guid)?;
+            cursor.write_u32::<LittleEndian>(self.package_flags)?;
+
+            if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
+                cursor.write_i32::<LittleEndian>(match unk.not_always_loaded_for_editor_game {
+                    true => 1,
+                    false => 0
+                });
+            }
+
+            if self.engine_version >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
+                cursor.write_i32::<LittleEndian>(match unk.is_asset {
+                    true => 1,
+                    false => 0
+                })?;
+            }
+
+            if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+                cursor.write_i32::<LittleEndian>(unk.first_export_dependency)?;
+                cursor.write_i32::<LittleEndian>(unk.serialization_before_serialization_dependencies)?;
+                cursor.write_i32::<LittleEndian>(unk.create_before_serialization_dependencies)?;
+                cursor.write_i32::<LittleEndian>(unk.serialization_before_create_dependencies)?;
+                cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies)?;
+            }
+            Ok(())
+        }
+
+        pub fn write_data(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
             self.write_header(cursor)?;
 
             for name in &self.name_map_index_list {
@@ -878,90 +937,67 @@ pub mod uasset {
 
             for export in &self.exports {
                 let unk: &UnknownExport = export.get_unknown_export();
-                cursor.write_i32::<LittleEndian>(unk.class_index)?;
-                cursor.write_i32::<LittleEndian>(unk.super_index)?;
-
-                if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
-                    cursor.write_i32::<LittleEndian>(unk.template_index)?;
-                }
-
-                cursor.write_i32::<LittleEndian>(unk.outer_index)?;
-                self.write_fname(cursor, &unk.object_name)?;
-                cursor.write_u32::<LittleEndian>(unk.object_flags)?;
-
-                if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
-                    cursor.write_i32::<LittleEndian>(unk.serial_size as i32)?;
-                    cursor.write_i32::<LittleEndian>(unk.serial_offset as i32)?;
-                } else {
-                    cursor.write_i64::<LittleEndian>(unk.serial_size)?;
-                    cursor.write_i64::<LittleEndian>(unk.serial_offset)?;
-                }
-
-                cursor.write_i32::<LittleEndian>(match unk.forced_export {
-                    true => 1,
-                    false => 0
-                })?;
-                cursor.write_i32::<LittleEndian>(match unk.not_for_client {
-                    true => 1,
-                    false => 0
-                })?;
-                cursor.write_i32::<LittleEndian>(match unk.not_for_server {
-                    true => 1,
-                    false => 0
-                })?;
-                cursor.write(&unk.package_guid)?;
-                cursor.write_u32::<LittleEndian>(self.package_flags)?;
-
-                if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
-                    cursor.write_i32::<LittleEndian>(match unk.not_always_loaded_for_editor_game {
-                        true => 1,
-                        false => 0
-                    });
-                }
-
-                if self.engine_version >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
-                    cursor.write_i32::<LittleEndian>(match unk.is_asset {
-                        true => 1,
-                        false => 0
-                    })?;
-                }
-
-                if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-                    cursor.write_i32::<LittleEndian>(unk.first_export_dependency)?;
-                    cursor.write_i32::<LittleEndian>(unk.serialization_before_serialization_dependencies)?;
-                    cursor.write_i32::<LittleEndian>(unk.create_before_serialization_dependencies)?;
-                    cursor.write_i32::<LittleEndian>(unk.serialization_before_create_dependencies)?;
-                    cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies)?;
-                }
-
-                if let Some(ref mut map) = self.depends_map {
-                    for i in 0..self.exports.len() {
-                        if i >= map.len() {
-                            map.push(Vec::new());
-                        }
-
-                        let current_data = &map[i];
-                        cursor.write_i32::<LittleEndian>(current_data.len() as i32)?;
-                        for i in current_data {
-                            cursor.write_i32::<LittleEndian>(*i)?;
-                        }
-                    }
-                }
-
-                if let Some(ref package_references) = self.soft_package_reference_list {
-                    for reference in package_references {
-                        cursor.write_string(reference)?;
-                    }
-                }
-
-                // todo: asset registry data support
-
-                if let Some(ref world_tile_info) = self.world_tile_info {
-
-                }
-
+                self.write_export_header(unk, cursor, unk.serial_size, unk.serial_offset)?;
             }
 
+            if let Some(ref map) = self.depends_map {
+                for i in 0..self.exports.len() {
+                    let dummy = Vec::new();
+                    let current_data = match map.get(i) {
+                        Some(e) => e,
+                        None => &dummy
+                    };
+                    cursor.write_i32::<LittleEndian>(current_data.len() as i32)?;
+                    for i in current_data {
+                        cursor.write_i32::<LittleEndian>(*i)?;
+                    }
+                }
+            }
+
+            if let Some(ref package_references) = self.soft_package_reference_list {
+                for reference in package_references {
+                    cursor.write_string(reference)?;
+                }
+            }
+
+            // todo: asset registry data support
+
+            if let Some(ref world_tile_info) = self.world_tile_info {
+                world_tile_info.write(self, cursor)?;
+            }
+
+            if self.use_seperate_bulk_data_files {
+                for entry in self.preload_dependencies.as_ref().ok_or(Error::no_data("use_seperate_bulk_data_files: true but no preload_dependencies found".to_string()))? {
+                    cursor.write_i32::<LittleEndian>(*entry)?;
+                }
+            }
+
+            let mut category_starts = Vec::with_capacity(self.exports.len());
+            for export in &self.exports {
+                category_starts.push(cursor.position());
+                export.write(self, cursor)?;
+                if let Some(normal_export) = export.get_normal_export() {
+                    cursor.write(&normal_export.extras)?;
+                }
+            }
+            cursor.write(&[0xc1, 0x83, 0x2a, 0x9e])?;
+
+            if self.exports.len() > 0 {
+                cursor.seek(SeekFrom::Start(self.export_offset as u64))?;
+                for i in 0..self.exports.len() {
+                    let unk = &self.exports[i].get_unknown_export();
+                    let next_loc = match self.exports.len() - 1 > i {
+                        true => category_starts[i + 1] as i64,
+                        false => self.bulk_data_start_offset
+                    };
+                    self.write_export_header(unk, cursor, next_loc - category_starts[i] as i64, category_starts[i] as i64)?;
+                }
+            }
+
+            cursor.seek(SeekFrom::Start(0))?;
+            self.write_header(cursor)?;
+
+            cursor.seek(SeekFrom::Start(0))?;
             Ok(())
         }
     }
