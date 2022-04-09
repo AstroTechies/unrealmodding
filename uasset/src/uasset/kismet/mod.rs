@@ -264,6 +264,12 @@ macro_rules! implement_expression {
                     })
                 }
             }
+
+            impl Default for $name {
+                fn default() -> Self {
+                    $name { token: EExprToken::$name }
+                }
+            }
         )*
     }
 }
@@ -361,6 +367,32 @@ impl FScriptText {
             string_table_key
         })
     }
+
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u8>();
+        cursor.write_u8(self.text_literal_type.into())?;
+        match self.text_literal_type {
+            EBlueprintTextLiteralType::Empty => {},
+            EBlueprintTextLiteralType::LocalizedText => {
+                offset = offset + KismetExpression::write(self.localized_source.as_ref().ok_or(Error::no_data("text_literal_type is LocalizedText but localized_source is None".to_string()))?, asset, cursor)?;
+                offset = offset + KismetExpression::write(self.localized_key.as_ref().ok_or(Error::no_data("text_literal_type is LocalizedText but localized_key is None".to_string()))?, asset, cursor)?;
+                offset = offset + KismetExpression::write(self.localized_namespace.as_ref().ok_or(Error::no_data("text_literal_type is LocalizedText but localized_namespace is None".to_string()))?, asset, cursor)?;
+            },
+            EBlueprintTextLiteralType::InvariantText => {
+                offset = offset + KismetExpression::write(self.invariant_literal_string.as_ref().ok_or(Error::no_data("text_literal_type is InvariantText but invariant_literal_string is None".to_string()))?, asset, cursor)?;
+            },
+            EBlueprintTextLiteralType::LiteralString => {
+                offset = offset + KismetExpression::write(self.literal_string.as_ref().ok_or(Error::no_data("text_literal_type is LiteralString but literal_string is None".to_string()))?, asset, cursor)?;
+            },
+            EBlueprintTextLiteralType::StringTableEntry => {
+                cursor.write_i32::<LittleEndian>(self.string_table_asset.map(|e| e.index).ok_or(Error::no_data("text_literal_type is StringTableEntry but string_table_asset is None".to_string()))?)?;
+                offset = offset + size_of::<u64>();
+                offset = offset + KismetExpression::write(self.string_table_id.as_ref().ok_or(Error::no_data("text_literal_type is StringTalbleEntry but string_table_id is None".to_string()))?, asset, cursor)?;
+                offset = offset + KismetExpression::write(self.string_table_key.as_ref().ok_or(Error::no_data("text_literal_type is StringTableEntry but string_table_key is None".to_string()))?, asset, cursor)?;
+            }
+        }
+        Ok(offset)
+    }
 }
 
 #[derive(Default)]
@@ -392,6 +424,20 @@ impl KismetPropertyPointer {
             Ok(KismetPropertyPointer::from_old(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)))
         }
     }
+
+    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        if asset.engine_version >= VER_UE4_ADDED_PACKAGE_OWNER {
+            let new = self.new.as_ref().ok_or(Error::no_data("engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string()))?;
+            cursor.write_i32::<LittleEndian>(new.path.len() as i32)?;
+            for entry in &new.path {
+                asset.write_fname(cursor, entry)?;
+            }
+            cursor.write_i32::<LittleEndian>(new.resolved_owner.index)?;
+        } else {
+            cursor.write_i32::<LittleEndian>(self.old.map(|e| e.index).ok_or(Error::no_data("engine_version < UE4_ADDED_PAFCKAGE_OWNER but old is None".to_string()))?)?;
+        }
+        Ok(size_of::<u64>())
+    }
 }
 
 pub struct KismetSwitchCase {
@@ -422,7 +468,7 @@ pub trait KismetExpressionEnumEqTrait {
 }
 
 #[derive(PartialEq, Eq)]
-#[enum_dispatch(KismetExpressionEnumEqTrait)]
+#[enum_dispatch(KismetExpressionTrait, KismetExpressionEnumEqTrait, KismetExpressionDataTrait)]
 pub enum KismetExpression {
     EX_LocalVariable,
     EX_InstanceVariable,
@@ -632,6 +678,11 @@ impl KismetExpression {
         }
         Ok(data)
     }
+
+    pub fn write(expr: &KismetExpression, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_u8(expr.get_token().into())?;
+        Ok(expr.write(asset, cursor)? + size_of::<u8>())
+    }
 }
 
 declare_expression!(EX_FieldPathConst, value: Box<KismetExpression>);
@@ -643,6 +694,11 @@ impl EX_FieldPathConst {
         })
     }
 }
+impl KismetExpressionTrait for EX_FieldPathConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        KismetExpression::write(self.value.as_ref(), asset, cursor)
+    }
+}
 declare_expression!(EX_NameConst, value: FName);
 impl EX_NameConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -650,6 +706,12 @@ impl EX_NameConst {
             token: EExprToken::EX_NameConst,
             value: asset.read_fname()?
         })
+    }
+}
+impl KismetExpressionTrait for EX_NameConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        asset.write_fname(cursor, &self.value)?;
+        Ok(12)
     }
 }
 declare_expression!(EX_ObjectConst, value: PackageIndex);
@@ -661,6 +723,12 @@ impl EX_ObjectConst {
         })
     }
 }
+impl KismetExpressionTrait for EX_ObjectConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_i32::<LittleEndian>(self.value.index)?;
+        Ok(size_of::<u64>())
+    }
+}
 declare_expression!(EX_SoftObjectConst, value: Box<KismetExpression>);
 impl EX_SoftObjectConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -668,6 +736,11 @@ impl EX_SoftObjectConst {
             token: EExprToken::EX_SoftObjectConst,
             value: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_SoftObjectConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        KismetExpression::write(self.value.as_ref(), asset, cursor)
     }
 }
 declare_expression!(EX_TransformConst, value: Transform<f32>);
@@ -682,7 +755,21 @@ impl EX_TransformConst {
         })
     }
 }
-
+impl KismetExpressionTrait for EX_TransformConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_f32::<LittleEndian>(self.value.rotation.x)?;
+        cursor.write_f32::<LittleEndian>(self.value.rotation.y)?;
+        cursor.write_f32::<LittleEndian>(self.value.rotation.z)?;
+        cursor.write_f32::<LittleEndian>(self.value.rotation.w)?;
+        cursor.write_f32::<LittleEndian>(self.value.translation.x)?;
+        cursor.write_f32::<LittleEndian>(self.value.translation.y)?;
+        cursor.write_f32::<LittleEndian>(self.value.translation.z)?;
+        cursor.write_f32::<LittleEndian>(self.value.scale.x)?;
+        cursor.write_f32::<LittleEndian>(self.value.scale.y)?;
+        cursor.write_f32::<LittleEndian>(self.value.scale.z)?;
+        Ok(size_of::<f32>() * 10)
+    }
+}
 declare_expression!(EX_VectorConst, value: Vector<f32>);
 impl EX_VectorConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -692,7 +779,14 @@ impl EX_VectorConst {
         })
     }
 }
-
+impl KismetExpressionTrait for EX_VectorConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_f32::<LittleEndian>(self.value.x)?;
+        cursor.write_f32::<LittleEndian>(self.value.y)?;
+        cursor.write_f32::<LittleEndian>(self.value.z)?;
+        Ok(size_of::<f32>() * 3)
+    }
+}
 declare_expression!(EX_TextConst, value: Box<FScriptText>);
 impl EX_TextConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -702,7 +796,11 @@ impl EX_TextConst {
         })
     }
 }
-
+impl KismetExpressionTrait for EX_TextConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.value.write(asset, cursor)
+    }
+}
 declare_expression!(EX_AddMulticastDelegate, delegate: Box<KismetExpression>, delegate_to_add: Box<KismetExpression>);
 impl EX_AddMulticastDelegate {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -713,14 +811,37 @@ impl EX_AddMulticastDelegate {
         })
     }
 }
+impl KismetExpressionTrait for EX_AddMulticastDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.delegate.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.delegate_to_add.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_ArrayConst, inner_property: PackageIndex, elements: Vec<KismetExpression>);
 impl EX_ArrayConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+        let inner_property = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        asset.cursor.read_i32::<LittleEndian>()?; // num_entries
+        let elements = KismetExpression::read_arr(asset, EExprToken::EX_EndArrayConst)?;
         Ok(EX_ArrayConst {
             token: EExprToken::EX_AddMulticastDelegate,
-            inner_property: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
-            elements: KismetExpression::read_arr(asset, EExprToken::EX_EndArrayConst)?
+            inner_property,
+            elements
         })
+    }
+}
+impl KismetExpressionTrait for EX_ArrayConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>() + size_of::<i32>();
+        cursor.write_i32::<LittleEndian>(self.inner_property.index)?;
+        cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        for element in &self.elements {
+            offset = offset + KismetExpression::write(element, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndArrayConst::default().into(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_ArrayGetByRef, array_variable: Box<KismetExpression>, array_index: Box<KismetExpression>);
@@ -731,6 +852,14 @@ impl EX_ArrayGetByRef {
             array_variable: Box::new(KismetExpression::new(asset)?),
             array_index: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_ArrayGetByRef {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.array_variable.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.array_index.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_Assert, line_number: u16, debug_mode: bool, assert_expression: Box<KismetExpression>);
@@ -744,6 +873,15 @@ impl EX_Assert {
         })
     }
 }
+impl KismetExpressionTrait for EX_Assert {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_u16::<LittleEndian>(self.line_number)?;
+        cursor.write_bool(self.debug_mode)?;
+        let offset = size_of::<u32>() + size_of::<bool>() +
+            KismetExpression::write(self.assert_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_BindDelegate, function_name: FName, delegate: Box<KismetExpression>, object_term: Box<KismetExpression>);
 impl EX_BindDelegate {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -753,6 +891,14 @@ impl EX_BindDelegate {
             delegate: Box::new(KismetExpression::new(asset)?),
             object_term: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_BindDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset = 12 /* FScriptName's iCode offset */ +
+            KismetExpression::write(self.delegate.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.object_term.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_CallMath, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
@@ -765,6 +911,17 @@ impl EX_CallMath {
         })
     }
 }
+impl KismetExpressionTrait for EX_CallMath {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
+        for parameter in &self.parameters {
+            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndFunctionParms::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_CallMulticastDelegate, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
 impl EX_CallMulticastDelegate {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -773,6 +930,17 @@ impl EX_CallMulticastDelegate {
             stack_node: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
             parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
+    }
+}
+impl KismetExpressionTrait for EX_CallMulticastDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
+        for parameter in &self.parameters {
+            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndFunctionParms::default().into(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_ClassContext, object_expression: Box<KismetExpression>, offset: u32, r_value_pointer: KismetPropertyPointer, context_expression: Box<KismetExpression>);
@@ -787,6 +955,16 @@ impl EX_ClassContext {
         })
     }
 }
+impl KismetExpressionTrait for EX_ClassContext {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u32>();
+        offset = offset + KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
+        cursor.write_u32::<LittleEndian>(self.offset)?;
+        offset = offset + self.r_value_pointer.write(asset, cursor)?;
+        offset = offset + KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_ClassSparseDataVariable, variable: KismetPropertyPointer);
 impl EX_ClassSparseDataVariable {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -794,6 +972,11 @@ impl EX_ClassSparseDataVariable {
             token: EExprToken::EX_ClassSparseDataVariable,
             variable: KismetPropertyPointer::new(asset)?
         })
+    }
+}
+impl KismetExpressionTrait for EX_ClassSparseDataVariable {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.variable.write(asset, cursor)
     }
 }
 declare_expression!(EX_ClearMulticastDelegate, delegate_to_clear: Box<KismetExpression>);
@@ -805,6 +988,11 @@ impl EX_ClearMulticastDelegate {
         })
     }
 }
+impl KismetExpressionTrait for EX_ClearMulticastDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        KismetExpression::write(self.delegate_to_clear.as_ref(), asset, cursor)
+    }
+}
 declare_expression!(EX_ComputedJump, code_offset_expression: Box<KismetExpression>);
 impl EX_ComputedJump {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -812,6 +1000,11 @@ impl EX_ComputedJump {
             token: EExprToken::EX_ComputedJump,
             code_offset_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_ComputedJump {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        KismetExpression::write(self.code_offset_expression.as_ref(), asset, cursor)
     }
 }
 declare_expression!(EX_Context, object_expression: Box<KismetExpression>, offset: u32, r_value_pointer: KismetPropertyPointer, context_expression: Box<KismetExpression>);
@@ -826,6 +1019,16 @@ impl EX_Context {
         })
     }
 }
+impl KismetExpressionTrait for EX_Context {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u32>();
+        offset = offset + KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
+        cursor.write_u32::<LittleEndian>(self.offset)?;
+        offset = offset + self.r_value_pointer.write(asset, cursor)?;
+        offset = offset + KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_Context_FailSilent, object_expression: Box<KismetExpression>, offset: u32, r_value_pointer: KismetPropertyPointer, context_expression: Box<KismetExpression>);
 impl EX_Context_FailSilent {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -838,6 +1041,16 @@ impl EX_Context_FailSilent {
         })
     }
 }
+impl KismetExpressionTrait for EX_Context_FailSilent {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u32>();
+        offset = offset + KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
+        cursor.write_u32::<LittleEndian>(self.offset)?;
+        offset = offset + self.r_value_pointer.write(asset, cursor)?;
+        offset = offset + KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_CrossInterfaceCast, class_ptr: PackageIndex, target: Box<KismetExpression>);
 impl EX_CrossInterfaceCast {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -848,6 +1061,14 @@ impl EX_CrossInterfaceCast {
         })
     }
 }
+impl KismetExpressionTrait for EX_CrossInterfaceCast {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_DefaultVariable, variable: KismetPropertyPointer);
 impl EX_DefaultVariable {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -855,6 +1076,11 @@ impl EX_DefaultVariable {
             token: EExprToken::EX_DefaultVariable,
             variable: KismetPropertyPointer::new(asset)?
         })
+    }
+}
+impl KismetExpressionTrait for EX_DefaultVariable {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.variable.write(asset, cursor)
     }
 }
 declare_expression!(EX_DynamicCast, class_ptr: PackageIndex, target_expression: Box<KismetExpression>);
@@ -867,6 +1093,14 @@ impl EX_DynamicCast {
         })
     }
 }
+impl KismetExpressionTrait for EX_DynamicCast {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        offset = offset + KismetExpression::write(self.target_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_FinalFunction, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
 impl EX_FinalFunction {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -877,13 +1111,15 @@ impl EX_FinalFunction {
         })
     }
 }
-declare_expression!(EX_FloatConst, value: f32);
-impl EX_FloatConst {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-        Ok(EX_FloatConst {
-            token: EExprToken::EX_FloatConst,
-            value: asset.cursor.read_f32::<LittleEndian>()?
-        })
+impl KismetExpressionTrait for EX_FinalFunction {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
+        for parameter in &self.parameters {
+            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndFunctionParms::default().into(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_InstanceDelegate, function_name: FName);
@@ -895,6 +1131,12 @@ impl EX_InstanceDelegate {
         })
     }
 }
+impl KismetExpressionTrait for EX_InstanceDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        asset.write_fname(cursor, &self.function_name)?;
+        Ok(12) // FScriptName's iCode offset
+    }
+}
 declare_expression!(EX_InstanceVariable, variable: KismetPropertyPointer);
 impl EX_InstanceVariable {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -904,6 +1146,11 @@ impl EX_InstanceVariable {
         })
     }
 }
+impl KismetExpressionTrait for EX_InstanceVariable {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.variable.write(asset, cursor)
+    }
+}
 declare_expression!(EX_InterfaceContext, interface_value: Box<KismetExpression>);
 impl EX_InterfaceContext {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -911,6 +1158,11 @@ impl EX_InterfaceContext {
             token: EExprToken::EX_InterfaceContext,
             interface_value: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_InterfaceContext {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        KismetExpression::write(self.interface_value.as_ref(), asset, cursor)
     }
 }
 declare_expression!(EX_InterfaceToObjCast, class_ptr: PackageIndex, target: Box<KismetExpression>);
@@ -923,6 +1175,14 @@ impl EX_InterfaceToObjCast {
         })
     }
 }
+impl KismetExpressionTrait for EX_InterfaceToObjCast {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_Jump, code_offset: u32);
 impl EX_Jump {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -930,6 +1190,12 @@ impl EX_Jump {
             token: EExprToken::EX_Jump,
             code_offset: asset.cursor.read_u32::<LittleEndian>()?
         })
+    }
+}
+impl KismetExpressionTrait for EX_Jump {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_u32::<LittleEndian>(self.code_offset)?;
+        Ok(size_of::<u32>())
     }
 }
 declare_expression!(EX_JumpIfNot, code_offset: u32, boolean_expression: Box<KismetExpression>);
@@ -942,6 +1208,14 @@ impl EX_JumpIfNot {
         })
     }
 }
+impl KismetExpressionTrait for EX_JumpIfNot {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u32>();
+        cursor.write_u32::<LittleEndian>(self.code_offset)?;
+        offset = offset + KismetExpression::write(self.boolean_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_Let, value: KismetPropertyPointer);
 impl EX_Let {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -949,6 +1223,11 @@ impl EX_Let {
             token: EExprToken::EX_Let,
             value: KismetPropertyPointer::new(asset)?
         })
+    }
+}
+impl KismetExpressionTrait for EX_Let {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.value.write(asset, cursor)
     }
 }
 declare_expression!(EX_LetBool, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
@@ -961,6 +1240,14 @@ impl EX_LetBool {
         })
     }
 }
+impl KismetExpressionTrait for EX_LetBool {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.variable_expression.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.assignment_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_LetDelegate, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetDelegate {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -969,6 +1256,14 @@ impl EX_LetDelegate {
             variable_expression: Box::new(KismetExpression::new(asset)?),
             assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_LetDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.variable_expression.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.assignment_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_LetMulticastDelegate, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
@@ -981,6 +1276,14 @@ impl EX_LetMulticastDelegate {
         })
     }
 }
+impl KismetExpressionTrait for EX_LetMulticastDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.variable_expression.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.assignment_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_LetObj, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetObj {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -989,6 +1292,14 @@ impl EX_LetObj {
             variable_expression: Box::new(KismetExpression::new(asset)?),
             assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_LetObj {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.variable_expression.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.assignment_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_LetValueOnPersistentFrame, destination_property: KismetPropertyPointer, assignment_expression: Box<KismetExpression>);
@@ -1001,6 +1312,14 @@ impl EX_LetValueOnPersistentFrame {
         })
     }
 }
+impl KismetExpressionTrait for EX_LetValueOnPersistentFrame {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            self.destination_property.write(asset, cursor)? +
+            KismetExpression::write(self.assignment_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_LetWeakObjPtr, variable_expression: Box<KismetExpression>, assignment_expression: Box<KismetExpression>);
 impl EX_LetWeakObjPtr {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1009,6 +1328,14 @@ impl EX_LetWeakObjPtr {
             variable_expression: Box::new(KismetExpression::new(asset)?),
             assignment_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_LetWeakObjPtr {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.variable_expression.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.assignment_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_LocalFinalFunction, stack_node: PackageIndex, parameters: Vec<KismetExpression>);
@@ -1021,6 +1348,17 @@ impl EX_LocalFinalFunction {
         })
     }
 }
+impl KismetExpressionTrait for EX_LocalFinalFunction {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
+        for parameter in &self.parameters {
+            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndFunctionParms::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_LocalOutVariable, variable: KismetPropertyPointer);
 impl EX_LocalOutVariable {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1030,6 +1368,11 @@ impl EX_LocalOutVariable {
         })
     }
 }
+impl KismetExpressionTrait for EX_LocalOutVariable {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.variable.write(asset, cursor)
+    }
+}
 declare_expression!(EX_LocalVariable, variable: KismetPropertyPointer);
 impl EX_LocalVariable {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1037,6 +1380,11 @@ impl EX_LocalVariable {
             token: EExprToken::EX_LocalVariable,
             variable: KismetPropertyPointer::new(asset)?
         })
+    }
+}
+impl KismetExpressionTrait for EX_LocalVariable {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.variable.write(asset, cursor)
     }
 }
 declare_expression!(EX_LocalVirtualFunction, virtual_function_name: FName, parameters: Vec<KismetExpression>);
@@ -1049,10 +1397,20 @@ impl EX_LocalVirtualFunction {
         })
     }
 }
+impl KismetExpressionTrait for EX_LocalVirtualFunction {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = 12; // FScriptName's iCode offset
+        asset.write_fname(cursor, &self.virtual_function_name)?;
+        for parameter in &self.parameters {
+            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+        }
+        offset += KismetExpression::write(&EX_EndFunctionParms::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_MapConst, key_property: PackageIndex, value_property: PackageIndex, elements: Vec<KismetExpression>);
 impl EX_MapConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-
         let key_property = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
         let value_property = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
@@ -1065,6 +1423,19 @@ impl EX_MapConst {
         })
     }
 }
+impl KismetExpressionTrait for EX_MapConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>() * 2 + size_of::<i32>();
+        cursor.write_i32::<LittleEndian>(self.key_property.index)?;
+        cursor.write_i32::<LittleEndian>(self.value_property.index)?;
+        cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        for element in &self.elements {
+            offset = offset + KismetExpression::write(element, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndMapConst::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_MetaCast, class_ptr: PackageIndex, target_expression: Box<KismetExpression>);
 impl EX_MetaCast {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1073,6 +1444,14 @@ impl EX_MetaCast {
             class_ptr: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
             target_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_MetaCast {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        offset = offset + KismetExpression::write(self.target_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_ObjToInterfaceCast, class_ptr: PackageIndex, target: Box<KismetExpression>);
@@ -1085,6 +1464,14 @@ impl EX_ObjToInterfaceCast {
         })
     }
 }
+impl KismetExpressionTrait for EX_ObjToInterfaceCast {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_PopExecutionFlowIfNot, boolean_expression: Box<KismetExpression>);
 impl EX_PopExecutionFlowIfNot {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1092,6 +1479,11 @@ impl EX_PopExecutionFlowIfNot {
             token: EExprToken::EX_PopExecutionFlowIfNot,
             boolean_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_PopExecutionFlowIfNot {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        KismetExpression::write(self.boolean_expression.as_ref(), asset, cursor)
     }
 }
 declare_expression!(EX_PrimitiveCast, conversion_type: EExprToken, target: Box<KismetExpression>);
@@ -1104,6 +1496,14 @@ impl EX_PrimitiveCast {
         })
     }
 }
+impl KismetExpressionTrait for EX_PrimitiveCast {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u8>();
+        cursor.write_u8(self.conversion_type.into())?;
+        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_PropertyConst, property: KismetPropertyPointer);
 impl EX_PropertyConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1113,6 +1513,11 @@ impl EX_PropertyConst {
         })
     }
 }
+impl KismetExpressionTrait for EX_PropertyConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        self.property.write(asset, cursor)
+    }
+}
 declare_expression!(EX_PushExecutionFlow, pushing_address: u32);
 impl EX_PushExecutionFlow {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1120,6 +1525,12 @@ impl EX_PushExecutionFlow {
             token: EExprToken::EX_PushExecutionFlow,
             pushing_address: asset.cursor.read_u32::<LittleEndian>()?
         })
+    }
+}
+impl KismetExpressionTrait for EX_PushExecutionFlow {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_u32::<LittleEndian>(self.pushing_address)?;
+        Ok(size_of::<u32>())
     }
 }
 declare_expression!(EX_RemoveMulticastDelegate, delegate: Box<KismetExpression>, delegate_to_add: Box<KismetExpression>);
@@ -1132,6 +1543,14 @@ impl EX_RemoveMulticastDelegate {
         })
     }
 }
+impl KismetExpressionTrait for EX_RemoveMulticastDelegate {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let offset =
+            KismetExpression::write(self.delegate.as_ref(), asset, cursor)? +
+            KismetExpression::write(self.delegate_to_add.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_Return, return_expression: Box<KismetExpression>);
 impl EX_Return {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1139,6 +1558,11 @@ impl EX_Return {
             token: EExprToken::EX_Return,
             return_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_Return {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        KismetExpression::write(self.return_expression.as_ref(), asset, cursor)
     }
 }
 declare_expression!(EX_RotationConst, pitch: i32, yaw: i32, roll: i32);
@@ -1150,6 +1574,14 @@ impl EX_RotationConst {
             yaw: asset.cursor.read_i32::<LittleEndian>()?,
             roll: asset.cursor.read_i32::<LittleEndian>()?
         })
+    }
+}
+impl KismetExpressionTrait for EX_RotationConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        cursor.write_i32::<LittleEndian>(self.pitch)?;
+        cursor.write_i32::<LittleEndian>(self.yaw)?;
+        cursor.write_i32::<LittleEndian>(self.roll)?;
+        Ok(size_of::<i32>())
     }
 }
 declare_expression!(EX_SetArray, assigning_property: Option<Box<KismetExpression>>, array_inner_prop: Option<PackageIndex>, elements: Vec<KismetExpression>);
@@ -1167,6 +1599,23 @@ impl EX_SetArray {
         })
     }
 }
+impl KismetExpressionTrait for EX_SetArray {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = 0;
+        if asset.engine_version >= VER_UE4_CHANGE_SETARRAY_BYTECODE {
+            offset = offset + KismetExpression::write(self.assigning_property.as_ref().ok_or(Error::no_data("engine_version >= UE4_CHANGE_SETARRAY_BYTECODE but assigning_property is None".to_string()))?, asset, cursor)?;
+        } else {
+            cursor.write_i32::<LittleEndian>(self.array_inner_prop.map(|e| e.index).ok_or(Error::no_data("engine_version < UE4_CHANGE_SETARRAY_BYTECODE but array_inner_prop is None".to_string()))?)?;
+            offset = offset + size_of::<u64>();
+        }
+
+        for element in &self.elements {
+            offset = offset + KismetExpression::write(element, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndArray::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_SetConst, inner_property: PackageIndex, elements: Vec<KismetExpression>);
 impl EX_SetConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1178,6 +1627,18 @@ impl EX_SetConst {
             inner_property,
             elements
         })
+    }
+}
+impl KismetExpressionTrait for EX_SetConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>() + size_of::<i32>();
+        cursor.write_i32::<LittleEndian>(self.inner_property.index)?;
+        cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        for element in &self.elements {
+            offset = offset + KismetExpression::write(element, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndSetConst::default().into(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_SetMap, map_property: Box<KismetExpression>, elements: Vec<KismetExpression>);
@@ -1193,6 +1654,18 @@ impl EX_SetMap {
         })
     }
 }
+impl KismetExpressionTrait for EX_SetMap {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<i32>();
+        offset = offset + KismetExpression::write(self.map_property.as_ref(), asset, cursor)?;
+        cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        for element in &self.elements {
+            offset = offset + KismetExpression::write(element, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndMap::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_SetSet, set_property: Box<KismetExpression>, elements: Vec<KismetExpression>);
 impl EX_SetSet {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1206,6 +1679,18 @@ impl EX_SetSet {
         })
     }
 }
+impl KismetExpressionTrait for EX_SetSet {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<i32>();
+        offset = offset + KismetExpression::write(self.set_property.as_ref(), asset, cursor)?;
+        cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        for element in &self.elements {
+            offset = offset + KismetExpression::write(element, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndSet::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_Skip, code_offset: u32, skip_expression: Box<KismetExpression>);
 impl EX_Skip {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1214,6 +1699,14 @@ impl EX_Skip {
             code_offset: asset.cursor.read_u32::<LittleEndian>()?,
             skip_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_Skip {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u32>();
+        cursor.write_u32::<LittleEndian>(self.code_offset)?;
+        offset = offset + KismetExpression::write(self.skip_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_StructConst, struct_value: PackageIndex, struct_size: i32, value: Vec<KismetExpression>);
@@ -1227,6 +1720,18 @@ impl EX_StructConst {
         })
     }
 }
+impl KismetExpressionTrait for EX_StructConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>() + size_of::<i32>();
+        cursor.write_i32::<LittleEndian>(self.struct_value.index)?;
+        cursor.write_i32::<LittleEndian>(self.struct_size)?;
+        for entry in &self.value {
+            offset = offset + KismetExpression::write(entry, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndStructConst::default().into(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_StructMemberContext, struct_member_expression: PackageIndex, struct_expression: Box<KismetExpression>);
 impl EX_StructMemberContext {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1235,6 +1740,14 @@ impl EX_StructMemberContext {
             struct_member_expression: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
             struct_expression: Box::new(KismetExpression::new(asset)?)
         })
+    }
+}
+impl KismetExpressionTrait for EX_StructMemberContext {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u64>();
+        cursor.write_i32::<LittleEndian>(self.struct_member_expression.index)?;
+        offset = offset + KismetExpression::write(self.struct_expression.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_SwitchValue, end_goto_offset: u32, index_term: Box<KismetExpression>, default_term: Box<KismetExpression>, cases: Vec<KismetSwitchCase>);
@@ -1261,6 +1774,22 @@ impl EX_SwitchValue {
         })
     }
 }
+impl KismetExpressionTrait for EX_SwitchValue {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = size_of::<u16>() + size_of::<u32>();
+        cursor.write_u16::<LittleEndian>(self.cases.len() as u16);
+        cursor.write_u32::<LittleEndian>(self.end_goto_offset)?;
+        offset = offset + KismetExpression::write(self.index_term.as_ref(), asset, cursor)?;
+        for case in &self.cases {
+            offset = offset + KismetExpression::write(&case.case_index_value_term, asset, cursor)?;
+            offset = offset + size_of::<u32>();
+            cursor.write_u32::<LittleEndian>(case.next_offset)?;
+            offset = offset + KismetExpression::write(&case.case_term, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(self.default_term.as_ref(), asset, cursor)?;
+        Ok(offset)
+    }
+}
 declare_expression!(EX_VirtualFunction, virtual_function_name: FName, parameters: Vec<KismetExpression>);
 impl EX_VirtualFunction {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1269,6 +1798,17 @@ impl EX_VirtualFunction {
             virtual_function_name: asset.read_fname()?,
             parameters: KismetExpression::read_arr(asset, EExprToken::EX_EndFunctionParms)?
         })
+    }
+}
+impl KismetExpressionTrait for EX_VirtualFunction {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        let mut offset = 12; // FScriptName's iCode offset
+        asset.write_fname(cursor, &self.virtual_function_name)?;
+        for parameter in &self.parameters {
+            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+        }
+        offset = offset + KismetExpression::write(&EX_EndFunctionParms::default().into(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(EX_StringConst, value: String);
@@ -1280,6 +1820,11 @@ impl EX_StringConst {
         })
     }
 }
+impl KismetExpressionTrait for EX_StringConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        write_kismet_string(&self.value, cursor)
+    }
+}
 declare_expression!(EX_UnicodeStringConst, value: String);
 impl EX_UnicodeStringConst {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
@@ -1287,6 +1832,11 @@ impl EX_UnicodeStringConst {
             token: EExprToken::EX_UnicodeStringConst,
             value: read_kismet_unicode_string(&mut asset.cursor)?
         })
+    }
+}
+impl KismetExpressionTrait for EX_UnicodeStringConst {
+    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        write_kismet_string(&self.value, cursor)
     }
 }
 
@@ -1301,3 +1851,4 @@ implement_value_expression!(EX_IntConst, i32, read_i32, write_i32, LittleEndian)
 implement_value_expression!(EX_IntConstByte, u8, read_u8, write_u8);
 implement_value_expression!(EX_SkipOffsetConst, u32, read_u32, write_u32, LittleEndian);
 implement_value_expression!(EX_UInt64Const, u64, read_u64, write_u64, LittleEndian);
+implement_value_expression!(EX_FloatConst, f32, read_f32, write_f32, LittleEndian);

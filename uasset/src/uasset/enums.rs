@@ -47,7 +47,7 @@ pub enum ELifetimeCondition
 }
 
 
-#[derive(Debug, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EBlueprintTextLiteralType {
     // Text is an empty string. The bytecode contains no strings, and you should use FText::GetEmpty() to initialize the FText instance.
