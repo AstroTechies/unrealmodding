@@ -59,7 +59,7 @@ impl ClassExport {
 
         let class_within = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
         let class_config_name = asset.read_fname()?;
-        asset.add_name_reference(class_config_name.content.to_owned(), true);
+        asset.add_name_reference(class_config_name.content.to_owned(), false);
 
         let mut interfaces_start = None;
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {

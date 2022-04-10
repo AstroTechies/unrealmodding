@@ -19,7 +19,7 @@ impl_property_data_trait!(UnknownProperty);
 impl UnknownProperty {
     pub fn with_serialized_type(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, serialized_type: Option<FName>) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let mut value = Vec::with_capacity(length as usize);
+        let mut value = vec![0u8; length as usize];
         asset.cursor.read_exact(&mut value);
 
         Ok(UnknownProperty {

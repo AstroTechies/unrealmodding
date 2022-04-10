@@ -69,7 +69,7 @@ impl StructExport {
             Some(_) => None,
             None => {
                 asset.cursor.seek(SeekFrom::Start(start_offset));
-                let mut data = Vec::with_capacity(script_storage_size as usize);
+                let mut data = vec![0u8; script_storage_size as usize];
                 asset.cursor.read_exact(&mut data)?;
                 Some(data)
             }

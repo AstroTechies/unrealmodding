@@ -15,8 +15,10 @@ pub mod uasset {
     use std::collections::hash_map::DefaultHasher;
     use std::env::split_paths;
     use std::fmt::{Debug, Formatter};
+    use std::fs::File;
     use std::hash::{Hash, Hasher};
     use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+    use std::path::Path;
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian, WriteBytesExt};
 
@@ -221,7 +223,6 @@ pub mod uasset {
 
             // read legacy version
             self.legacy_file_version = self.cursor.read_i32::<LittleEndian>()?;
-            println!("Legacy file version: {}", self.legacy_file_version);
             if self.legacy_file_version != -4 {
                 // LegacyUE3Version for backwards-compatibility with UE3 games: always 864 in versioned assets, always 0 in unversioned assets
                 self.cursor.read_exact(&mut [0u8; 4])?;
@@ -229,10 +230,8 @@ pub mod uasset {
 
             // read unreal version
             let file_version = self.cursor.read_i32::<LittleEndian>()?;
-            println!("File version: {}", file_version);
 
             self.unversioned = file_version == ue4version::UNKNOWN;
-            println!("Unversioned: {}", self.unversioned);
 
             if self.unversioned {
                 if self.engine_version == ue4version::UNKNOWN {
@@ -242,7 +241,6 @@ pub mod uasset {
                 self.engine_version = file_version;
             }
 
-            println!("Engine version: {}", self.engine_version);
 
             // read file license version
             self.file_license_version = self.cursor.read_i32::<LittleEndian>()?;
@@ -298,12 +296,8 @@ pub mod uasset {
             }
             self.thumbnail_table_offset = self.cursor.read_i32::<LittleEndian>()?;
 
-            println!("Header offset: {}", self.header_offset);
-
             // read guid
             self.cursor.read_exact(&mut self.package_guid)?;
-
-            println!("Package GUID: {:02X?}", self.package_guid);
 
             // raed generations
             let generations_count = self.cursor.read_i32::<LittleEndian>()?;
@@ -452,8 +446,9 @@ pub mod uasset {
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
 
+            let hash = s.finish();
             self.name_map_index_list.push(name.clone());
-            self.name_map_lookup.insert(s.finish(), self.name_map_lookup.len() as i32);
+            self.name_map_lookup.insert(hash, self.name_map_lookup.len() as i32);
             (self.name_map_lookup.len() - 1) as i32
         }
 
@@ -515,8 +510,6 @@ pub mod uasset {
         }
 
         pub fn parse_data(&mut self) -> Result<(), Error> {
-            println!("Parsing data...");
-
             self.parse_header()?;
             self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
 
@@ -643,7 +636,6 @@ pub mod uasset {
                             Ok(e) => Ok(e),
                             Err(e) => {
                                 //todo: warning?
-                                println!("{:?}", e);
                                 self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
                                 Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
                             }
@@ -663,8 +655,6 @@ pub mod uasset {
                 self.cursor.get_ref().len(),
                 self.cursor.get_ref()
             );*/
-
-            println!("Cursor offset: {:02X?}", self.cursor.position());
 
             Ok(())
         }
@@ -732,14 +722,13 @@ pub mod uasset {
 
             let extras_len = (next_starting as i64 - self.cursor.position() as i64);
             if extras_len < 0 {
-                println!("{:?}", self.cursor.position());
                 // todo: warning?
                 
                 self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
                 return Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
             } else {
                 if let Some(normal_export) = export.get_normal_export_mut() {
-                    let mut extras = Vec::with_capacity(extras_len as usize);
+                    let mut extras = vec![0u8; extras_len as usize];
                     self.cursor.read_exact(&mut extras)?;
                     normal_export.extras = extras;
                 }
@@ -889,7 +878,7 @@ pub mod uasset {
                 false => 0
             })?;
             cursor.write(&unk.package_guid)?;
-            cursor.write_u32::<LittleEndian>(self.package_flags)?;
+            cursor.write_u32::<LittleEndian>(unk.package_flags)?;
 
             if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
                 cursor.write_i32::<LittleEndian>(match unk.not_always_loaded_for_editor_game {
@@ -962,6 +951,7 @@ pub mod uasset {
             }
 
             // todo: asset registry data support
+            cursor.write_i32::<LittleEndian>(0); // asset registry data length
 
             if let Some(ref world_tile_info) = self.world_tile_info {
                 world_tile_info.write(self, cursor)?;
