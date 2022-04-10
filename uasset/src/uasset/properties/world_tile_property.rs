@@ -9,7 +9,7 @@ use super::vector_property::{IntPointProperty, BoxProperty};
 //todo: what is this file even doing in properties?
 
 pub struct FWorldTileLayer {
-    pub name: String,
+    pub name: Option<String>,
     pub reserved_0: i32,
     pub reserved_1: IntPointProperty,
     pub streaming_distance: Option<i32>,
@@ -85,7 +85,7 @@ impl FWorldTileInfo {
         let mut parent_tile_package_name = None;
         if engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
             hide_in_tile_view = Some(asset.cursor.read_i32::<LittleEndian>()? == 1);
-            parent_tile_package_name = Some(asset.cursor.read_string()?);
+            parent_tile_package_name = asset.cursor.read_string()?;
         }
 
         let mut lod_list = None;

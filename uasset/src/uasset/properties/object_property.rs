@@ -21,7 +21,7 @@ pub struct AssetObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub value: String,
+    pub value: Option<String>,
 }
 impl_property_data_trait!(AssetObjectProperty);
 

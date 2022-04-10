@@ -13,7 +13,7 @@ pub struct StrProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub value: String,
+    pub value: Option<String>,
 }
 impl_property_data_trait!(StrProperty);
 
@@ -72,13 +72,13 @@ impl TextProperty {
         let mut value = None;
 
         if asset.engine_version < VER_UE4_FTEXT_HISTORY {
-            culture_invariant_string = Some(asset.cursor.read_string()?);
+            culture_invariant_string = asset.cursor.read_string()?;
             if asset.engine_version >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
-                namespace = Some(asset.cursor.read_string()?);
-                value = Some(asset.cursor.read_string()?);
+                namespace = asset.cursor.read_string()?;
+                value = asset.cursor.read_string()?;
             } else {
                 namespace = None;
-                value = Some(asset.cursor.read_string()?);
+                value = asset.cursor.read_string()?;
             }
         }
 
@@ -96,18 +96,18 @@ impl TextProperty {
                     if version.version >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability as i32 {
                         let has_culture_invariant_string = asset.cursor.read_i32::<LittleEndian>()? == 1;
                         if has_culture_invariant_string {
-                            culture_invariant_string = Some(asset.cursor.read_string()?);
+                            culture_invariant_string = asset.cursor.read_string()?;
                         }
                     }
                 }
                 TextHistoryType::Base => {
-                    namespace = Some(asset.cursor.read_string()?);
-                    value = Some(asset.cursor.read_string()?);
-                    culture_invariant_string = Some(asset.cursor.read_string()?);
+                    namespace = asset.cursor.read_string()?;
+                    value = asset.cursor.read_string()?;
+                    culture_invariant_string = asset.cursor.read_string()?;
                 }
                 TextHistoryType::StringTableEntry => {
                     table_id = Some(asset.read_fname()?);
-                    value = Some(asset.cursor.read_string()?);
+                    value = asset.cursor.read_string()?;
                 }
                 _ => {
                     return Err(Error::unimplemented(format!("Unimplemented reader for {:?}", history_type)));
@@ -135,12 +135,12 @@ impl PropertyTrait for TextProperty {
         let begin = cursor.position();
 
         if asset.engine_version < VER_UE4_FTEXT_HISTORY {
-            cursor.write_string(self.culture_invariant_string.as_ref().ok_or(PropertyError::property_field_none("culture_invariant_string", "String"))?)?;
+            cursor.write_string(&self.culture_invariant_string)?;
             if asset.engine_version >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
-                cursor.write_string(self.namespace.as_ref().ok_or(PropertyError::property_field_none("namespace", "String"))?)?;
-                cursor.write_string(self.value.as_ref().ok_or(PropertyError::property_field_none("value", "String"))?)?;
+                cursor.write_string(&self.namespace)?;
+                cursor.write_string(&self.value)?;
             } else {
-                cursor.write_string(self.value.as_ref().ok_or(PropertyError::property_field_none("value", "String"))?)?;
+                cursor.write_string(&self.value)?;
             }
         }
         cursor.write_u32::<LittleEndian>(self.flags)?;
@@ -160,21 +160,21 @@ impl PropertyTrait for TextProperty {
                             true => cursor.write_i32::<LittleEndian>(0)?,
                             false => {
                                 cursor.write_i32::<LittleEndian>(1)?;
-                                cursor.write_string(self.culture_invariant_string.as_ref().unwrap())?;
+                                cursor.write_string(&self.culture_invariant_string)?;
                             }
                         }
                     }
                     Ok(())
                 }
                 TextHistoryType::Base => {
-                    cursor.write_string(self.namespace.as_ref().ok_or(PropertyError::property_field_none("namespace", "String"))?)?;
-                    cursor.write_string(self.value.as_ref().ok_or(PropertyError::property_field_none("value", "String"))?)?;
-                    cursor.write_string(self.culture_invariant_string.as_ref().ok_or(PropertyError::property_field_none("culture_invariant_string", "String"))?)?;
+                    cursor.write_string(&self.namespace)?;
+                    cursor.write_string(&self.value)?;
+                    cursor.write_string(&self.culture_invariant_string)?;
                     Ok(())
                 }
                 TextHistoryType::StringTableEntry => {
                     asset.write_fname(cursor, self.table_id.as_ref().ok_or(PropertyError::property_field_none("table_id", "FName"))?)?;
-                    cursor.write_string(self.value.as_ref().ok_or(PropertyError::property_field_none("value", "String"))?)?;
+                    cursor.write_string(&self.value)?;
                     Ok(())
                 }
                 _ => Err(Error::unimplemented(format!("Unimplemented writer for {}", history_type as i8)))

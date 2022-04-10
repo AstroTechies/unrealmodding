@@ -50,10 +50,10 @@ macro_rules! impl_soft_path_property {
                 let mut sub_path = None;
 
                 if asset.engine_version < VER_UE4_ADDED_SOFT_OBJECT_PATH {
-                    path = Some(asset.cursor.read_string()?);
+                    path = asset.cursor.read_string()?;
                 } else {
                     asset_path_name = Some(asset.read_fname()?);
-                    sub_path = Some(asset.cursor.read_string()?);
+                    sub_path = asset.cursor.read_string()?;
                 }
 
                 Ok($property_name {
@@ -72,10 +72,10 @@ macro_rules! impl_soft_path_property {
                 optional_guid_write!(self, asset, cursor, include_header);
                 let begin = cursor.position();
                 if asset.engine_version < VER_UE4_ADDED_SOFT_OBJECT_PATH {
-                    cursor.write_string(self.path.as_ref().ok_or(PropertyError::property_field_none("path", "String"))?)?;
+                    cursor.write_string(&self.path)?;
                 } else {
                     asset.write_fname(cursor, self.asset_path_name.as_ref().ok_or(PropertyError::property_field_none("asset_path_name", "FName"))?)?;
-                    cursor.write_string(self.sub_path.as_ref().ok_or(PropertyError::property_field_none("sub_path", "String"))?)?;
+                    cursor.write_string(&self.sub_path)?;
                 }
 
                 Ok((cursor.position() - begin) as usize)

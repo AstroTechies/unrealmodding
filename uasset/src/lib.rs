@@ -267,7 +267,7 @@ pub mod uasset {
             self.header_offset = self.cursor.read_i32::<LittleEndian>()?;
 
             // read folder name
-            self.folder_name = self.cursor.read_string()?;
+            self.folder_name = self.cursor.read_string()?.ok_or(Error::no_data("folder_name is None".to_string()))?;
 
             // read package flags
             self.package_flags = self.cursor.read_u32::<LittleEndian>()?;
@@ -315,7 +315,7 @@ pub mod uasset {
                 self.engine_version_recorded = EngineVersion::read(&mut self.cursor)?;
             } else {
                 self.engine_version_recorded =
-                    EngineVersion::new(4, 0, 0, self.cursor.read_u32::<LittleEndian>()?, String::from(""));
+                    EngineVersion::new(4, 0, 0, self.cursor.read_u32::<LittleEndian>()?, None);
             }
             if self.engine_version
                 >= ue4version::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
@@ -398,7 +398,7 @@ pub mod uasset {
         }
 
         fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
-            let s = self.cursor.read_string()?;
+            let s = self.cursor.read_string()?.ok_or(Error::no_data("name_map_string is None".to_string()))?;
             let mut hashes = 0;
             if self.engine_version >= ue4version::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
                 hashes = self.cursor.read_u32::<LittleEndian>()?;
@@ -630,7 +630,9 @@ pub mod uasset {
                 self.cursor.seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
 
                 for _i in 0..self.soft_package_reference_count as usize {
-                    soft_package_reference_list.push(self.cursor.read_string()?);
+                    if let Some(reference) = self.cursor.read_string()? {
+                        soft_package_reference_list.push(reference);
+                    }
                 }
                 self.soft_package_reference_list = Some(soft_package_reference_list);
             }
@@ -796,7 +798,7 @@ pub mod uasset {
             }
 
             cursor.write_i32::<LittleEndian>(self.header_offset)?;
-            cursor.write_string(&self.folder_name)?;
+            cursor.write_string(&Some(self.folder_name.clone()))?;
             cursor.write_u32::<LittleEndian>(self.package_flags)?;
             cursor.write_i32::<LittleEndian>(self.name_count)?;
             cursor.write_i32::<LittleEndian>(self.name_offset)?;
@@ -936,7 +938,7 @@ pub mod uasset {
             self.write_header(cursor)?;
 
             for name in &self.name_map_index_list {
-                cursor.write_string(name)?;
+                cursor.write_string(&Some(name.clone()))?;
 
                 if self.engine_version >= VER_UE4_NAME_HASHES_SERIALIZED {
                     match self.override_name_map_hashes.get(name) {
@@ -974,7 +976,7 @@ pub mod uasset {
 
             if let Some(ref package_references) = self.soft_package_reference_list {
                 for reference in package_references {
-                    cursor.write_string(reference)?;
+                    cursor.write_string(&Some(reference.clone()))?;
                 }
             }
 
@@ -1106,10 +1108,10 @@ pub mod uasset {
         minor: u16,
         patch: u16,
         build: u32,
-        branch: String,
+        branch: Option<String>,
     }
     impl EngineVersion {
-        fn new(major: u16, minor: u16, patch: u16, build: u32, branch: String) -> Self {
+        fn new(major: u16, minor: u16, patch: u16, build: u32, branch: Option<String>) -> Self {
             Self {
                 major,
                 minor,
@@ -1139,7 +1141,7 @@ pub mod uasset {
         }
 
         fn unknown() -> Self {
-            Self::new(0, 0, 0, 0, String::from(""))
+            Self::new(0, 0, 0, 0, None)
         }
     }
 }

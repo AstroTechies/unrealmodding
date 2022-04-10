@@ -30,7 +30,8 @@ impl StringTableExport {
 
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
         for _i in 0..num_entries {
-            table.value.insert(asset.cursor.read_string()?, asset.cursor.read_string()?);
+            table.value.insert(asset.cursor.read_string()?.ok_or(Error::no_data("StringTable key is None".to_string()))?,
+             asset.cursor.read_string()?.ok_or(Error::no_data("StringTable value is None".to_string()))?);
         }
 
         Ok(StringTableExport {
@@ -48,8 +49,8 @@ impl ExportTrait for StringTableExport {
         cursor.write_string(&self.table.namespace)?;
         cursor.write_i32::<LittleEndian>(self.table.value.len() as i32)?;
         for (key, value) in &self.table.value {
-            cursor.write_string(key)?;
-            cursor.write_string(value)?;
+            cursor.write_string(&Some(key.clone()))?;
+            cursor.write_string(&Some(value.clone()))?;
         }
         Ok(())
     }

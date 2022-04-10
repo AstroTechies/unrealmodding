@@ -6,7 +6,6 @@ use crate::{uasset::{properties::{struct_property::StructProperty, Property, Pro
 use crate::uasset::error::Error;
 
 use crate::uasset::exports::ExportTrait;
-use crate::uasset::unreal_types::ToFName;
 use super::{normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait, ExportUnknownTrait};
 
 pub struct DataTable {

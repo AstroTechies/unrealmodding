@@ -58,12 +58,12 @@ impl FName {
 
 #[derive(Debug, Default)]
 pub struct NamespacedString {
-    pub namespace: String,
-    pub value: String
+    pub namespace: Option<String>,
+    pub value: Option<String>
 }
 
 impl NamespacedString {
-    pub fn new(namespace: String, value: String) -> Self {
+    pub fn new(namespace: Option<String>, value: Option<String>) -> Self {
         NamespacedString {
             namespace,
             value
@@ -73,12 +73,12 @@ impl NamespacedString {
 
 #[derive(Debug)]
 pub struct StringTable {
-    pub namespace: String,
+    pub namespace: Option<String>,
     pub value: HashMap<String, String>
 }
 
 impl StringTable {
-    pub fn new(namespace: String) -> Self {
+    pub fn new(namespace: Option<String>) -> Self {
         StringTable {
             namespace,
             value: HashMap::new()
