@@ -15,7 +15,6 @@ use crate::uasset::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETA
 use crate::uasset::unreal_types::{FieldPath, FName, PackageIndex};
 
 use super::error::KismetError;
-#[allow(non_camel_case_types)]
 
 #[derive(PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]

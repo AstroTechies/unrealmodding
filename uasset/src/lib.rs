@@ -138,12 +138,12 @@ pub mod uasset {
         pub exports: Vec<Export>,
         depends_map: Option<Vec<Vec<i32>>>,
         soft_package_reference_list: Option<Vec<String>>,
-        world_tile_info: Option<FWorldTileInfo>,
+        pub world_tile_info: Option<FWorldTileInfo>,
         preload_dependencies: Option<Vec<i32>>,
 
         //todo: fill out with defaults
-        map_key_override: HashMap<String, String>,
-        map_value_override: HashMap<String, String>
+        pub map_key_override: HashMap<String, String>,
+        pub map_value_override: HashMap<String, String>
     }
 
     impl<'a> Asset {
@@ -500,6 +500,20 @@ pub mod uasset {
             }
 
             Some(&self.exports[index as usize])
+        }
+
+        pub fn get_export_mut(&'a mut self, index: i32) -> Option<&'a mut Export> {
+            if !is_export(index) {
+                return None;
+            }
+
+            let index = index - 1;
+
+            if index < 0 || index >= self.exports.len() as i32 {
+                return None;
+            }
+
+            Some(&mut self.exports[index as usize])
         }
 
         fn get_export_class_type(&'a self, index: i32) -> Option<FName> {
