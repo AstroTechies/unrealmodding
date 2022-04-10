@@ -10,15 +10,15 @@ mod tests {
 //pub use crate::ue4version;
 
 pub mod uasset {
-    use std::borrow::Borrow;
+    
     use std::collections::HashMap;
     use std::collections::hash_map::DefaultHasher;
-    use std::env::split_paths;
+    
     use std::fmt::{Debug, Formatter};
-    use std::fs::File;
+    
     use std::hash::{Hash, Hasher};
     use std::io::{Cursor, Read, Seek, SeekFrom, Write};
-    use std::path::Path;
+    
 
     use byteorder::{ReadBytesExt, LittleEndian, BigEndian, WriteBytesExt};
 
@@ -40,7 +40,7 @@ pub mod uasset {
     use self::cursor_ext::CursorExt;
     use self::custom_version::CustomVersionTrait;
     use self::exports::{Export, ExportNormalTrait};
-    use self::flags::{EPackageFlags, EObjectFlags};
+    
     use self::properties::world_tile_property::FWorldTileInfo;
     use self::unreal_types::Guid;
 
@@ -475,7 +475,7 @@ pub mod uasset {
             Ok(())
         }
 
-        fn get_import(&'a self, index: i32) -> Option<&'a Import> {
+        pub fn get_import(&'a self, index: i32) -> Option<&'a Import> {
             if !is_import(index) {
                 return None;
             }
@@ -488,7 +488,7 @@ pub mod uasset {
             Some(&self.imports[index as usize])
         }
 
-        fn get_export(&'a self, index: i32) -> Option<&'a Export> {
+        pub fn get_export(&'a self, index: i32) -> Option<&'a Export> {
             if !is_export(index) {
                 return None;
             }
@@ -513,7 +513,7 @@ pub mod uasset {
             self.parse_header()?;
             self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
 
-            for i in 0..self.name_count {
+            for _i in 0..self.name_count {
                 let name_map = self.read_name_map_string()?;
                 if name_map.0 == 0 {
                     if let Some(entry) = self.override_name_map_hashes.get_mut(&name_map.1) {
@@ -524,21 +524,21 @@ pub mod uasset {
             }
 
             if self.import_offset > 0 {
-                self.cursor.seek(SeekFrom::Start(self.import_offset as u64));
-                for i in 0..self.import_count {
+                self.cursor.seek(SeekFrom::Start(self.import_offset as u64))?;
+                for _i in 0..self.import_count {
                     let import = Import::new(self.read_fname()?, self.read_fname()?, self.cursor.read_i32::<LittleEndian>()?, self.read_fname()?);
                     self.imports.push(import);
                 }
             }
 
             if self.export_offset > 0 {
-                self.cursor.seek(SeekFrom::Start(self.export_offset as u64));
-                for i in 0..self.export_count {
+                self.cursor.seek(SeekFrom::Start(self.export_offset as u64))?;
+                for _i in 0..self.export_count {
                     let mut export = UnknownExport::default();
                     export.class_index = self.cursor.read_i32::<LittleEndian>()?;
                     export.super_index = self.cursor.read_i32::<LittleEndian>()?;
 
-                    if(self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS) {
+                    if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
                         export.template_index = self.cursor.read_i32::<LittleEndian>()?;
                     }
 
@@ -585,10 +585,10 @@ pub mod uasset {
 
                 self.cursor.seek(SeekFrom::Start(self.depends_offset as u64))?;
 
-                for i in 0..self.export_count as usize {
+                for _i in 0..self.export_count as usize {
                     let size = self.cursor.read_i32::<LittleEndian>()?;
                     let mut data: Vec<i32> = Vec::new();
-                    for j in 0..size {
+                    for _j in 0..size {
                         data.push(self.cursor.read_i32::<LittleEndian>()?);
                     }
                     depends_map.push(data);
@@ -601,7 +601,7 @@ pub mod uasset {
 
                 self.cursor.seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
 
-                for i in 0..self.soft_package_reference_count as usize {
+                for _i in 0..self.soft_package_reference_count as usize {
                     soft_package_reference_list.push(self.cursor.read_string()?);
                 }
                 self.soft_package_reference_list = Some(soft_package_reference_list);
@@ -618,7 +618,7 @@ pub mod uasset {
                 self.cursor.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
                 let mut preload_dependencies = Vec::new();
 
-                for i in 0..self.preload_dependency_count as usize {
+                for _i in 0..self.preload_dependency_count as usize {
                     preload_dependencies.push(self.cursor.read_i32::<LittleEndian>()?);
                 }
                 self.preload_dependencies = Some(preload_dependencies);
@@ -634,9 +634,9 @@ pub mod uasset {
                     if let Some(unk_export) = unk_export {
                         let export: Result<Export, Error> = match self.read_export(&unk_export, i) {
                             Ok(e) => Ok(e),
-                            Err(e) => {
+                            Err(_e) => {
                                 //todo: warning?
-                                self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
+                                self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
                                 Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
                             }
                         };
@@ -670,7 +670,7 @@ pub mod uasset {
                 false => self.data_length - 4
             };
 
-            self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
+            self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
                     
             //todo: manual skips
             let export_class_type = self.get_export_class_type(unk_export.class_index).ok_or(Error::invalid_package_index("Unknown class type".to_string()))?;
@@ -720,11 +720,11 @@ pub mod uasset {
                 }
             };
 
-            let extras_len = (next_starting as i64 - self.cursor.position() as i64);
+            let extras_len = next_starting as i64 - self.cursor.position() as i64;
             if extras_len < 0 {
                 // todo: warning?
                 
-                self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64));
+                self.cursor.seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
                 return Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
             } else {
                 if let Some(normal_export) = export.get_normal_export_mut() {
@@ -795,7 +795,7 @@ pub mod uasset {
 
             cursor.write_i32::<LittleEndian>(self.thumbnail_table_offset)?;
             cursor.write(&self.package_guid)?;
-            cursor.write_i32::<LittleEndian>(self.generations.len() as i32);
+            cursor.write_i32::<LittleEndian>(self.generations.len() as i32)?;
 
             for _ in 0..self.generations.len() {
                 cursor.write_i32::<LittleEndian>(self.export_count)?;
@@ -884,7 +884,7 @@ pub mod uasset {
                 cursor.write_i32::<LittleEndian>(match unk.not_always_loaded_for_editor_game {
                     true => 1,
                     false => 0
-                });
+                })?;
             }
 
             if self.engine_version >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
@@ -951,7 +951,7 @@ pub mod uasset {
             }
 
             // todo: asset registry data support
-            cursor.write_i32::<LittleEndian>(0); // asset registry data length
+            cursor.write_i32::<LittleEndian>(0)?; // asset registry data length
 
             if let Some(ref world_tile_info) = self.world_tile_info {
                 world_tile_info.write(self, cursor)?;

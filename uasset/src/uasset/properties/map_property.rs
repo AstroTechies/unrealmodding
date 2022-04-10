@@ -1,13 +1,13 @@
-use std::{io::{Cursor, ErrorKind}, collections::HashMap, hash::Hash};
-use std::io::Write;
+use std::{collections::HashMap, hash::Hash, io::{Cursor}};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
+use crate::{impl_property_data_trait, uasset::{Asset, unreal_types::{FName, Guid}}};
 use crate::uasset::error::Error;
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::uasset::properties::{PropertyDataTrait, PropertyTrait};
 use crate::uasset::unreal_types::ToFName;
-use super::{Property, struct_property::StructProperty};
+
+use super::{Property};
 
 #[derive(PartialEq, Eq)]
 pub struct MapProperty {
@@ -65,7 +65,7 @@ impl MapProperty {
         let type_1 = type_1.ok_or(Error::invalid_file("No type1".to_string()))?;
         let type_2 = type_2.ok_or(Error::invalid_file("No type2".to_string()))?;
 
-        for i in 0..num_keys_to_remove as usize {
+        for _ in 0..num_keys_to_remove as usize {
             let mut vec = Vec::with_capacity(num_keys_to_remove as usize);
             vec.push(MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?);
             keys_to_remove = Some(vec);
@@ -74,7 +74,7 @@ impl MapProperty {
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
         let mut values = HashMap::new();
 
-        for i in 0..num_entries {
+        for _ in 0..num_entries {
             let key = MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?;
             let value = MapProperty::map_type_to_class(asset, type_2.clone(), name.clone(), 0, false, false)?;
 

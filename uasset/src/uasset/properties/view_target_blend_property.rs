@@ -1,4 +1,4 @@
-use std::io::{Cursor, ErrorKind};
+use std::io::{Cursor};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -6,7 +6,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
@@ -14,16 +14,16 @@ use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 pub enum ViewTargetBlendFunction
 {
     /** Camera does a simple linear interpolation. */
-    VTBlend_Linear,
+    VtBlendLinear,
     /** Camera has a slight ease in and ease out, but amount of ease cannot be tweaked. */
-    VTBlend_Cubic,
+    VtBlendCubic,
     /** Camera immediately accelerates, but smoothly decelerates into the target.  Ease amount controlled by BlendExp. */
-    VTBlend_EaseIn,
+    VtBlendEaseIn,
     /** Camera smoothly accelerates, but does not decelerate into the target.  Ease amount controlled by BlendExp. */
-    VTBlend_EaseOut,
+    VtBlendEaseOut,
     /** Camera smoothly accelerates and decelerates.  Ease amount controlled by BlendExp. */
-    VTBlend_EaseInOut,
-    VTBlend_MAX,
+    VtBlendEaseInOut,
+    VtBlendMax,
 }
 
 #[derive(Hash, PartialEq, Eq)]
@@ -40,7 +40,7 @@ pub struct ViewTargetBlendParamsProperty {
 impl_property_data_trait!(ViewTargetBlendParamsProperty);
 
 impl ViewTargetBlendParamsProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let blend_time = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);

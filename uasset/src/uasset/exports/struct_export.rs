@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::implement_get;
@@ -6,11 +6,11 @@ use crate::uasset::Asset;
 use crate::uasset::custom_version::FCoreObjectVersion;
 use crate::uasset::exports::normal_export::NormalExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
-use crate::uasset::flags::EClassFlags;
+
 use crate::uasset::fproperty::FProperty;
 use crate::uasset::kismet::KismetExpression;
 use crate::uasset::ue4version::VER_UE4_16;
-use crate::uasset::unreal_types::{FName, PackageIndex};
+use crate::uasset::unreal_types::{PackageIndex};
 use crate::uasset::uproperty::UField;
 use crate::uasset::error::Error;
 use crate::uasset::exports::ExportTrait;
@@ -40,15 +40,15 @@ impl StructExport {
 
         let num_index_entries = asset.cursor.read_i32::<LittleEndian>()?;
         let mut children = Vec::with_capacity(num_index_entries as usize);
-        for i in 0..num_index_entries as usize {
+        for _i in 0..num_index_entries as usize {
             children.push(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?));
         }
 
-        let mut loaded_properties = match asset.get_custom_version::<FCoreObjectVersion>().version >= FCoreObjectVersion::FProperties as i32 {
+        let loaded_properties = match asset.get_custom_version::<FCoreObjectVersion>().version >= FCoreObjectVersion::FProperties as i32 {
             true => {
                 let num_props = asset.cursor.read_i32::<LittleEndian>()?;
                 let mut props = Vec::with_capacity(num_props as usize);
-                for i in 0..num_props as usize {
+                for _i in 0..num_props as usize {
                     props.push(FProperty::new(asset)?);
                 }
                 props
@@ -68,7 +68,7 @@ impl StructExport {
         let script_bytecode_raw = match &script_bytecode {
             Some(_) => None,
             None => {
-                asset.cursor.seek(SeekFrom::Start(start_offset));
+                asset.cursor.seek(SeekFrom::Start(start_offset))?;
                 let mut data = vec![0u8; script_storage_size as usize];
                 asset.cursor.read_exact(&mut data)?;
                 Some(data)

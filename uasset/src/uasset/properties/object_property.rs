@@ -1,4 +1,4 @@
-use std::io::{Cursor, ErrorKind};
+use std::io::{Cursor};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};

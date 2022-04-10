@@ -2,7 +2,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO}, optional_guid, impl_property_data_trait};
+use crate::{impl_property_data_trait, uasset::{Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO, unreal_types::{FName, Guid}}};
 use crate::uasset::error::{Error, PropertyError};
 use crate::uasset::properties::{PropertyDataTrait, PropertyTrait};
 use crate::uasset::ue4version::{VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
@@ -42,8 +42,8 @@ impl ArrayProperty {
         }
     }
 
-    pub fn new_no_header(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, engine_version: i32, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
-        let mut cursor = &mut asset.cursor;
+    pub fn new_no_header(asset: &mut Asset, name: FName, _include_header: bool, length: i64, duplication_index: i32, engine_version: i32, serialize_struct_differently: bool, array_type: Option<FName>, property_guid: Option<Guid>) -> Result<Self, Error> {
+        let _cursor = &mut asset.cursor;
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
         let mut entries = Vec::new();
         let mut name = name;
@@ -82,7 +82,7 @@ impl ArrayProperty {
             if num_entries == 0 {
                 dummy_struct = Some(StructProperty::dummy(name.clone(), full_type.clone(), struct_guid));
             }
-            for i in 0..num_entries {
+            for _i in 0..num_entries {
                 let data = StructProperty::custom_header(asset, name.clone(), struct_length, 0, Some(full_type.clone()), struct_guid, None)?;
                 entries.push(data.into());
             }

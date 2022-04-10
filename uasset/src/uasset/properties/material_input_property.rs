@@ -1,11 +1,11 @@
-use std::io::{Cursor, ErrorKind, Read, Write};
+use std::io::{Cursor, Read, Write};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 use super::{color_property::ColorProperty, vector_property::{Vector2DProperty, VectorProperty}};
@@ -88,7 +88,7 @@ pub struct MaterialAttributesInputProperty {
 impl_property_data_trait!(MaterialAttributesInputProperty);
 
 impl MaterialExpression {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, _include_header: bool) -> Result<Self, Error> {
         let output_index = asset.cursor.read_i32::<LittleEndian>()?;
         let input_name = asset.read_fname()?;
         let mut extras = [0u8; 20];
@@ -104,7 +104,7 @@ impl MaterialExpression {
         })
     }
 
-    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, _include_header: bool) -> Result<usize, Error> {
         cursor.write_i32::<LittleEndian>(self.output_index)?;
         asset.write_fname(cursor, &self.input_name)?;
         cursor.write(&self.extras)?;

@@ -42,14 +42,14 @@ impl UEnum {
             let custom_version = asset.get_custom_version::<FCoreObjectVersion>();
             if custom_version.version < FCoreObjectVersion::EnumProperties as i32 {
                 let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
-                for i in 0..num_entries {
+                for _i in 0..num_entries {
                     let name = asset.read_fname()?;
                     let index = asset.cursor.read_u8()?;
                     names.push((name, index as i64));
                 }
             } else {
                 let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
-                for i in 0..num_entries {
+                for _i in 0..num_entries {
                     let name = asset.read_fname()?;
                     let index = asset.cursor.read_i64::<LittleEndian>()?;
                     names.push((name, index));
@@ -121,7 +121,7 @@ implement_get!(EnumExport);
 
 impl EnumExport {
     pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let mut cursor = &mut asset.cursor;
+        let _cursor = &mut asset.cursor;
         let normal_export = NormalExport::from_unk(unk, asset)?;
         asset.cursor.read_i32::<LittleEndian>()?;
 

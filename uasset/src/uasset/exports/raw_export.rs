@@ -35,7 +35,7 @@ impl ExportUnknownTrait for RawExport {
 
 impl RawExport {
     pub fn from_unk(unk: UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let mut cursor = &mut asset.cursor;
+        let cursor = &mut asset.cursor;
         let mut data = vec![0u8; unk.serial_size as usize];
         cursor.read_exact(&mut data)?;
 
@@ -47,7 +47,7 @@ impl RawExport {
 }
 
 impl ExportTrait for RawExport {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write(&self, _asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         cursor.write(&self.data)?;
         Ok(())
     }

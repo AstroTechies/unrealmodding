@@ -1,4 +1,4 @@
-use std::{io::{Cursor, ErrorKind}, str::FromStr};
+use std::{io::{Cursor}};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -9,11 +9,11 @@ use super::vector_property::{IntPointProperty, BoxProperty};
 //todo: what is this file even doing in properties?
 
 pub struct FWorldTileLayer {
-    name: String,
-    reserved_0: i32,
-    reserved_1: IntPointProperty,
-    streaming_distance: Option<i32>,
-    distance_streaming_enabled: Option<bool>
+    pub name: String,
+    pub reserved_0: i32,
+    pub reserved_1: IntPointProperty,
+    pub streaming_distance: Option<i32>,
+    pub distance_streaming_enabled: Option<bool>
 }
 
 impl FWorldTileLayer {
@@ -39,11 +39,11 @@ impl FWorldTileLayer {
 }
 
 pub struct FWorldTileLODInfo {
-    relative_streaming_distance: i32,
-    reserved_0: f32,
-    reserved_1: f32,
-    reserved_2: i32,
-    reserved_3: i32
+    pub relative_streaming_distance: i32,
+    pub reserved_0: f32,
+    pub reserved_1: f32,
+    pub reserved_2: i32,
+    pub reserved_3: i32
 }
 
 impl FWorldTileLODInfo {
@@ -60,13 +60,13 @@ impl FWorldTileLODInfo {
 
 pub struct FWorldTileInfo {
     position: Vector<i32>,
-    bounds: BoxProperty,
+    pub bounds: BoxProperty,
     //absolute_position: Vector<i32>, // not set in most recent version of uassetapi?
-    layer: FWorldTileLayer,
-    hide_in_tile_view: Option<bool>,
-    parent_tile_package_name: Option<String>,
-    lod_list: Option<Vec<FWorldTileLODInfo>>,
-    z_order: Option<i32>
+    pub layer: FWorldTileLayer,
+    pub hide_in_tile_view: Option<bool>,
+    pub parent_tile_package_name: Option<String>,
+    pub lod_list: Option<Vec<FWorldTileLODInfo>>,
+    pub z_order: Option<i32>
 }
 
 impl FWorldTileInfo {
@@ -92,7 +92,7 @@ impl FWorldTileInfo {
         if engine_version >= VER_UE4_WORLD_LEVEL_INFO_LOD_LIST {
             let num_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
             let mut list = Vec::with_capacity(num_entries);
-            for i in 0..num_entries {
+            for _i in 0..num_entries {
                 list.push(FWorldTileLODInfo::new(asset)?);
             }
             lod_list = Some(list);
@@ -110,12 +110,12 @@ impl FWorldTileInfo {
 
     pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         if asset.get_custom_version::<FFortniteMainBranchObjectVersion>().version < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32 {
-            cursor.write_i32::<LittleEndian>(self.position.x);
-            cursor.write_i32::<LittleEndian>(self.position.y);
+            cursor.write_i32::<LittleEndian>(self.position.x)?;
+            cursor.write_i32::<LittleEndian>(self.position.y)?;
         } else {
-            cursor.write_i32::<LittleEndian>(self.position.x);
-            cursor.write_i32::<LittleEndian>(self.position.y);
-            cursor.write_i32::<LittleEndian>(self.position.z);
+            cursor.write_i32::<LittleEndian>(self.position.x)?;
+            cursor.write_i32::<LittleEndian>(self.position.y)?;
+            cursor.write_i32::<LittleEndian>(self.position.z)?;
         }
 
 

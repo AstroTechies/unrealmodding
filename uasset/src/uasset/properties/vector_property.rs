@@ -1,10 +1,10 @@
-use std::io::{Cursor, ErrorKind, Read};
+use std::io::{Cursor};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::{Color, Vector, Vector4}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::{Vector, Vector4}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Debug, Hash, PartialEq, Eq)]

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+
 use std::io::{Cursor};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::implement_get;
@@ -29,7 +29,7 @@ impl StringTableExport {
         let mut table = StringTable::new(asset.cursor.read_string()?);
 
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
-        for i in 0..num_entries {
+        for _i in 0..num_entries {
             table.value.insert(asset.cursor.read_string()?, asset.cursor.read_string()?);
         }
 

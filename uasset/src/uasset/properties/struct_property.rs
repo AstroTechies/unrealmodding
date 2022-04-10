@@ -1,9 +1,9 @@
-use std::io::{Cursor, ErrorKind, Read, Write};
+use std::io::{Cursor, Read, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+
 
 use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, optional_guid, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 use super::Property;
@@ -25,7 +25,7 @@ impl StructProperty {
         StructProperty { name, struct_type: Some(struct_type), struct_guid, property_guid: None, duplication_index: 0, serialize_none: true, value: Vec::new() }
     }
 
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, engine_version: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, _duplication_index: i32, engine_version: i32) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
         let mut property_guid = None;

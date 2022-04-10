@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::mem::size_of;
-use std::io::{Cursor, ErrorKind, Seek, SeekFrom};
+use std::io::{Cursor, Seek, SeekFrom};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::uasset::Asset;
 use crate::uasset::error::Error;
@@ -45,7 +45,7 @@ impl ClassExport {
 
         let num_func_index_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
         let mut func_map = HashMap::with_capacity(num_func_index_entries);
-        for i in 0..num_func_index_entries {
+        for _i in 0..num_func_index_entries {
             let name = asset.read_fname()?;
             let function_export = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
 
@@ -54,7 +54,7 @@ impl ClassExport {
 
         let mut class_flags = EClassFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?).ok_or(Error::invalid_file("Invalid class flags".to_string()))?;
         if asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
-            class_flags = class_flags ^ EClassFlags::CLASS_NotPlaceable
+            class_flags = class_flags ^ EClassFlags::CLASS_NOT_PLACEABLE
         }
 
         let class_within = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
@@ -65,23 +65,23 @@ impl ClassExport {
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
             interfaces_start = Some(asset.cursor.position());
             let num_interfaces = asset.cursor.read_i32::<LittleEndian>()?;
-            asset.cursor.seek(SeekFrom::Start(interfaces_start.unwrap() + size_of::<i32>() as u64 + num_interfaces as u64 * (size_of::<i32>() as u64 * 3)));
+            asset.cursor.seek(SeekFrom::Start(interfaces_start.unwrap() + size_of::<i32>() as u64 + num_interfaces as u64 * (size_of::<i32>() as u64 * 3)))?;
         }
 
         let class_generated_by = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
         let current_offset = asset.cursor.position();
 
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            asset.cursor.seek(SeekFrom::Start(interfaces_start.unwrap()));
+            asset.cursor.seek(SeekFrom::Start(interfaces_start.unwrap()))?;
         }
         let num_interfaces = asset.cursor.read_i32::<LittleEndian>()? as usize;
         let mut interfaces = Vec::with_capacity(num_interfaces);
-        for i in 0..num_interfaces {
+        for _i in 0..num_interfaces {
             interfaces.push(SerializedInterfaceReference::new(asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()?, asset.cursor.read_i32::<LittleEndian>()? == 1));
         }
 
         if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            asset.cursor.seek(SeekFrom::Start(current_offset));
+            asset.cursor.seek(SeekFrom::Start(current_offset))?;
         }
 
         let deprecated_force_script_order = asset.cursor.read_i32::<LittleEndian>()? == 1;
@@ -109,7 +109,7 @@ impl ClassExport {
         })
     }
 
-    fn serialize_interfaces(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn serialize_interfaces(&self, _asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         cursor.write_i32::<LittleEndian>(self.interfaces.len() as i32)?;
         for interface in &self.interfaces {
             cursor.write_i32::<LittleEndian>(interface.class)?;
@@ -155,7 +155,7 @@ impl ExportTrait for ClassExport {
         }
 
         let serializing_class_flags = match asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
-            true => self.class_flags ^ EClassFlags::CLASS_NotPlaceable,
+            true => self.class_flags ^ EClassFlags::CLASS_NOT_PLACEABLE,
             false => self.class_flags
         };
         cursor.write_u32::<LittleEndian>(serializing_class_flags.bits())?;

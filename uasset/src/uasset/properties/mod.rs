@@ -22,7 +22,7 @@ pub mod view_target_blend_property;
 pub mod gameplay_tag_container_property;
 pub mod smart_name_property;
 
-use std::{io::{Cursor}, collections::HashMap};
+use std::{io::{Cursor}};
 use std::io::{Seek, SeekFrom};
 use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
@@ -199,7 +199,7 @@ pub enum Property {
 
 impl Property {
     pub fn new(asset: &mut Asset, include_header: bool) -> Result<Option<Self>, Error> {
-        let offset = asset.cursor.position();
+        let _offset = asset.cursor.position();
         let name = asset.read_fname()?;
         if &name.content == "None" {
             return Ok(None);

@@ -1,13 +1,13 @@
-use std::io::{Cursor, ErrorKind};
+use std::io::{Cursor};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+
 
 use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, Asset}, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 use crate::uasset::unreal_types::ToFName;
 
-use super::{Property, array_property::ArrayProperty};
+use super::{array_property::ArrayProperty};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SetProperty {

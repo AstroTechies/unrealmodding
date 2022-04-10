@@ -54,7 +54,7 @@ impl ExportUnknownTrait for UnknownExport {
 }
 
 impl ExportTrait for UnknownExport {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write(&self, _asset: &Asset, _cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use std::io::{Cursor};
 use crate::uasset::Asset;
 use crate::uasset::exports::unknown_export::UnknownExport;
-use crate::uasset::properties::{Property, PropertyTrait};
-use crate::uasset::unreal_types::{FName, Guid};
+use crate::uasset::properties::Property;
+use crate::uasset::unreal_types::{FName};
 use crate::uasset::error::Error;
 use crate::uasset::exports::{ExportTrait, ExportUnknownTrait};
 
@@ -39,7 +39,7 @@ impl ExportUnknownTrait for NormalExport {
 
 impl NormalExport {
     pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let mut cursor = &mut asset.cursor;
+        let _cursor = &mut asset.cursor;
         let mut properties = Vec::new();
 
         while let Some(e) = Property::new(asset, true)? {

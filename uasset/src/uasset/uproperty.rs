@@ -155,7 +155,7 @@ pub struct UBoolProperty {
 
 impl UField {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-        let next = match asset.get_custom_version::<FFrameworkObjectVersion>().version < FFrameworkObjectVersion::RemoveUField_Next as i32 {
+        let next = match asset.get_custom_version::<FFrameworkObjectVersion>().version < FFrameworkObjectVersion::RemoveUfieldNext as i32 {
             true => Some(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)),
             false => None
         };
@@ -165,8 +165,8 @@ impl UField {
     }
 
     pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-        if asset.get_custom_version::<FFrameworkObjectVersion>().version < FFrameworkObjectVersion::RemoveUField_Next as i32 {
-            cursor.write_i32::<LittleEndian>(self.next.ok_or(Error::no_data("FFrameworkObjectVersion < RemoveUField_Next but no next index present".to_string()))?.index)?;
+        if asset.get_custom_version::<FFrameworkObjectVersion>().version < FFrameworkObjectVersion::RemoveUfieldNext as i32 {
+            cursor.write_i32::<LittleEndian>(self.next.ok_or(Error::no_data("FFrameworkObjectVersion < RemoveUfieldNext but no next index present".to_string()))?.index)?;
         }
         Ok(())
     }

@@ -1,9 +1,9 @@
-use std::io::{Cursor, ErrorKind, Read, Write};
+use std::io::{Cursor, Read, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+
 
 use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
@@ -20,7 +20,7 @@ impl UnknownProperty {
     pub fn with_serialized_type(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, serialized_type: Option<FName>) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let mut value = vec![0u8; length as usize];
-        asset.cursor.read_exact(&mut value);
+        asset.cursor.read_exact(&mut value)?;
 
         Ok(UnknownProperty {
             name,

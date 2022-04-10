@@ -1,6 +1,6 @@
-use std::io::{Cursor, ErrorKind};
+use std::io::{Cursor};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+
 
 use crate::uasset::error::{Error, PropertyError};
 use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid, optional_guid_write, impl_property_data_trait};
@@ -42,7 +42,7 @@ impl_property_data_trait!(SoftClassPathProperty);
 macro_rules! impl_soft_path_property {
     ($property_name:ident) => {
         impl $property_name {
-            pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+            pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
 
                 let mut path = None;
@@ -59,7 +59,7 @@ macro_rules! impl_soft_path_property {
                 Ok($property_name {
                     name,
                     property_guid,
-duplication_index,
+                    duplication_index,
                     asset_path_name,
                     sub_path,
                     path

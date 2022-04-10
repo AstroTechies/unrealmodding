@@ -11,7 +11,7 @@ use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {
         impl $property_type {
-            pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+            pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
 
                 Ok($property_type {
@@ -135,7 +135,7 @@ pub struct DoubleProperty {
 impl_property_data_trait!(DoubleProperty);
 
 impl BoolProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
         let value = asset.cursor.read_bool()?;
         let property_guid = optional_guid!(asset, include_header);
 
@@ -157,7 +157,7 @@ impl PropertyTrait for BoolProperty {
 }
 
 impl Int8Property {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         Ok(Int8Property {
             name,
@@ -228,7 +228,7 @@ impl PropertyTrait for ByteProperty {
 
 
 impl FloatProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(FloatProperty {
@@ -249,7 +249,7 @@ impl PropertyTrait for FloatProperty {
 }
 
 impl DoubleProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(DoubleProperty {

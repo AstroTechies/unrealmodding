@@ -5,7 +5,7 @@ use crate::uasset::Asset;
 use crate::uasset::cursor_ext::CursorExt;
 use crate::uasset::exports::normal_export::NormalExport;
 use crate::uasset::exports::unknown_export::UnknownExport;
-use crate::uasset::unreal_types::{FName, Guid, NamespacedString};
+use crate::uasset::unreal_types::{NamespacedString};
 use crate::uasset::error::Error;
 use crate::uasset::exports::ExportTrait;
 use super::ExportNormalTrait;
@@ -30,7 +30,7 @@ impl LevelExport {
 
         let num_index_entries = asset.cursor.read_i32::<LittleEndian>()?;
         let mut index_data = Vec::with_capacity(num_index_entries as usize);
-        for i in 0..num_index_entries as usize {
+        for _i in 0..num_index_entries as usize {
             index_data.push(asset.cursor.read_i32::<LittleEndian>()?);
         }
 

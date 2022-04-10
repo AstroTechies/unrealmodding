@@ -1,9 +1,9 @@
-use std::io::{Cursor, ErrorKind, Read, Write};
+use std::io::{Cursor, Read, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::uasset::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::uasset::error::PropertyError;
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
@@ -20,7 +20,7 @@ pub struct SmartNameProperty {
 impl_property_data_trait!(SmartNameProperty);
 
 impl SmartNameProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let display_name = asset.read_fname()?;
@@ -35,7 +35,7 @@ impl SmartNameProperty {
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32 {
             let mut guid = [0u8; 16];
-            asset.cursor.read_exact(&mut guid);
+            asset.cursor.read_exact(&mut guid)?;
             temp_guid = Some(guid);
         }
 

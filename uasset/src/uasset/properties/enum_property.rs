@@ -1,10 +1,10 @@
-use std::io::{Cursor, ErrorKind};
+use std::io::{Cursor};
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+
 
 use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, impl_property_data_trait};
+use crate::{uasset::{unreal_types::{Guid, FName}, Asset}, impl_property_data_trait};
 use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
@@ -18,7 +18,7 @@ pub struct EnumProperty {
 impl_property_data_trait!(EnumProperty);
 
 impl EnumProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
         let (enum_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
             false => (None, None)

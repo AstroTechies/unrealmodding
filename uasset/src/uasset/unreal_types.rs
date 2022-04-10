@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::io::ErrorKind;
+
 use crate::uasset::error::Error;
 
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 
 pub type Guid = [u8; 16];
 
