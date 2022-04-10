@@ -130,7 +130,7 @@ impl StructProperty {
         } else {
             let begin = cursor.position();
             for entry in &self.value {
-                entry.write(asset, cursor, true)?;
+                Property::write(entry, asset, cursor, true)?;
             }
             asset.write_fname(cursor, &FName::from_slice("None"))?;
             return Ok((cursor.position() - begin) as usize);

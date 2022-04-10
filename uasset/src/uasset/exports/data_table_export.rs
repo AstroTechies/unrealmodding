@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 
-use crate::{uasset::{properties::{struct_property::StructProperty, Property}, Asset, unreal_types::FName, is_import}, implement_get};
+use crate::{uasset::{properties::{struct_property::StructProperty, Property, PropertyDataTrait}, Asset, unreal_types::FName, is_import}, implement_get};
 use crate::uasset::error::Error;
 
 use crate::uasset::exports::ExportTrait;
@@ -10,7 +10,7 @@ use crate::uasset::unreal_types::ToFName;
 use super::{normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait, ExportUnknownTrait};
 
 pub struct DataTable {
-    data: Vec<StructProperty>
+    pub data: Vec<StructProperty>
 }
 
 impl DataTable {
@@ -20,8 +20,8 @@ impl DataTable {
 }
 
 pub struct DataTableExport {
-    normal_export: NormalExport,
-    table: DataTable
+    pub normal_export: NormalExport,
+    pub table: DataTable
 }
 
 implement_get!(DataTableExport);
@@ -65,7 +65,7 @@ impl ExportTrait for DataTableExport {
 
         let mut decided_struct_type = FName::from_slice("Generic");
         for data in &self.normal_export.properties {
-            if data.to_fname().content.as_str() == "RowStruct" {
+            if data.get_name().content.as_str() == "RowStruct" {
                 match data {
                     Property::ObjectProperty(prop) => if let Some(import) = asset.get_import(prop.value) {
                         decided_struct_type = import.object_name.clone();

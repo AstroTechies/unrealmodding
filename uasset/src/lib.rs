@@ -61,7 +61,7 @@ pub mod uasset {
     use custom_version::CustomVersion;
     use unreal_types::{FName, GenerationInfo};
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Import {
         pub class_package: FName,
         pub class_name: FName,
@@ -406,7 +406,7 @@ pub mod uasset {
             Ok((hashes, s))
         }
         
-        pub fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
+        pub(crate) fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
             if self.engine_version >= ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
                 let has_property_guid = self.cursor.read_bool()?;
                 if has_property_guid {
@@ -418,7 +418,7 @@ pub mod uasset {
             Ok(None)
         }
 
-        pub fn write_property_guid(&self, cursor: &mut Cursor<Vec<u8>>, guid: &Option<Guid>) -> Result<(), Error> {
+        pub(crate) fn write_property_guid(&self, cursor: &mut Cursor<Vec<u8>>, guid: &Option<Guid>) -> Result<(), Error> {
             if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
                 cursor.write_bool(guid.is_some())?;
                 if let Some(ref data) = guid {
@@ -428,14 +428,14 @@ pub mod uasset {
             Ok(())
         }
 
-        fn search_name_reference(&self, name: &String) -> Option<i32> {
+        pub fn search_name_reference(&self, name: &String) -> Option<i32> {
             let mut s = DefaultHasher::new();
             name.hash(&mut s);
 
             self.name_map_lookup.get(&s.finish()).map(|e| *e)
         }
 
-        fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
+        pub fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
             if !force_add_duplicates {
                 let existing = self.search_name_reference(&name);
                 if existing.is_some() {
@@ -452,7 +452,7 @@ pub mod uasset {
             (self.name_map_lookup.len() - 1) as i32
         }
 
-        fn get_name_reference(&self, index: i32) -> String {
+        pub fn get_name_reference(&self, index: i32) -> String {
             if index < 0 {
                 return (-index).to_string(); // is this right even?
             }
@@ -460,6 +460,12 @@ pub mod uasset {
                 return index.to_string();
             }
             self.name_map_index_list[index as usize].to_owned()
+        }
+
+        pub fn add_fname(&mut self, slice: &str) -> FName {
+            let name = FName::from_slice(slice);
+            self.add_name_reference(name.content.clone(), false);
+            name
         }
 
         fn read_fname(&mut self) -> Result<FName, Error> {
@@ -473,6 +479,14 @@ pub mod uasset {
             cursor.write_i32::<LittleEndian>(self.search_name_reference(&fname.content).ok_or(Error::no_data(format!("name reference for {} not found", fname.content.to_owned())))?)?;
             cursor.write_i32::<LittleEndian>(fname.index)?;
             Ok(())
+        }
+
+        pub fn add_import(&mut self, import: Import) -> i32 {
+            let index = -(self.imports.len() as i32) - 1;
+            let mut import = import.clone();
+            import.outer_index = index;
+            self.imports.push(import);
+            index
         }
 
         pub fn get_import(&'a self, index: i32) -> Option<&'a Import> {

@@ -188,12 +188,12 @@ impl ByteProperty {
     }
 
     pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, fallback_length: i64, duplication_index: i32) -> Result<Self, Error> {
-        let (property_guid, enum_type) = match include_header {
-            true => (asset.read_property_guid()?, Some(asset.cursor.read_i64::<LittleEndian>()?)),
+        let (enum_type, property_guid) = match include_header {
+            true => (Some(asset.cursor.read_i64::<LittleEndian>()?), asset.read_property_guid()?),
             false => (None, None)
         };
 
-        let (byte_type, value) = ByteProperty::read_byte(asset, length).or(ByteProperty::read_byte(asset, fallback_length))?;
+        let (byte_type, value) = ByteProperty::read_byte(asset, length).or_else(|_| ByteProperty::read_byte(asset, fallback_length))?;
 
         Ok(ByteProperty {
             name,
