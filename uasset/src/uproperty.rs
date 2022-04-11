@@ -1,13 +1,13 @@
 use std::io::{Cursor,};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
-use crate::uasset::Asset;
-use crate::uasset::Error;
-use crate::uasset::cursor_ext::CursorExt;
-use crate::uasset::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
-use crate::uasset::enums::{EArrayDim, ELifetimeCondition};
-use crate::uasset::flags::{EPropertyFlags};
-use crate::uasset::unreal_types::{FName, PackageIndex};
+use crate::Asset;
+use crate::Error;
+use crate::cursor_ext::CursorExt;
+use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
+use crate::enums::{EArrayDim, ELifetimeCondition};
+use crate::flags::{EPropertyFlags};
+use crate::unreal_types::{FName, PackageIndex};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
@@ -211,7 +211,7 @@ impl UPropertyTrait for UGenericProperty {
 
 impl UBoolProperty {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
-        
+
         let generic_property = UGenericProperty::new(asset)?;
 
         let element_size = asset.cursor.read_u8()?;

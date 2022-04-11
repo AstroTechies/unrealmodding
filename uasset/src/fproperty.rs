@@ -1,12 +1,12 @@
 use std::io::{Cursor,};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
-use crate::uasset::Asset;
-use crate::uasset::error::Error;
-use crate::uasset::cursor_ext::CursorExt;
-use crate::uasset::enums::{ELifetimeCondition, EArrayDim};
-use crate::uasset::flags::{EObjectFlags, EPropertyFlags};
-use crate::uasset::unreal_types::{FName, PackageIndex, ToFName};
+use crate::Asset;
+use crate::error::Error;
+use crate::cursor_ext::CursorExt;
+use crate::enums::{ELifetimeCondition, EArrayDim};
+use crate::flags::{EObjectFlags, EPropertyFlags};
+use crate::unreal_types::{FName, PackageIndex, ToFName};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
