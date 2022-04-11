@@ -2,14 +2,14 @@ use std::collections::HashMap;
 use std::mem::size_of;
 use std::io::{Cursor, Seek, SeekFrom};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::uasset::Asset;
-use crate::uasset::error::Error;
-use crate::uasset::exports::{ExportTrait, ExportUnknownTrait};
-use crate::uasset::exports::struct_export::StructExport;
-use crate::uasset::exports::unknown_export::UnknownExport;
-use crate::uasset::flags::EClassFlags;
-use crate::uasset::ue4version::{VER_UE4_ADD_COOKED_TO_UCLASS, VER_UE4_CLASS_NOTPLACEABLE_ADDED, VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING};
-use crate::uasset::unreal_types::{FName, PackageIndex};
+use crate::Asset;
+use crate::error::Error;
+use crate::exports::{ExportTrait, ExportUnknownTrait};
+use crate::exports::struct_export::StructExport;
+use crate::exports::unknown_export::UnknownExport;
+use crate::flags::EClassFlags;
+use crate::ue4version::{VER_UE4_ADD_COOKED_TO_UCLASS, VER_UE4_CLASS_NOTPLACEABLE_ADDED, VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING};
+use crate::unreal_types::{FName, PackageIndex};
 
 use super::ExportNormalTrait;
 

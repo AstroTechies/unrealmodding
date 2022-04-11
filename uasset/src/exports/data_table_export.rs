@@ -2,10 +2,10 @@ use std::io::Cursor;
 
 use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 
-use crate::{uasset::{properties::{struct_property::StructProperty, Property, PropertyDataTrait}, Asset, unreal_types::FName, is_import}, implement_get};
-use crate::uasset::error::Error;
+use crate::{properties::{struct_property::StructProperty, Property, PropertyDataTrait}, Asset, unreal_types::FName, is_import, implement_get};
+use crate::error::Error;
 
-use crate::uasset::exports::ExportTrait;
+use crate::exports::ExportTrait;
 use super::{normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait, ExportUnknownTrait};
 
 pub struct DataTable {

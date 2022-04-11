@@ -2,9 +2,9 @@ use std::io::{Cursor};
 
 
 
-use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid, optional_guid_write, impl_property_data_trait};
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::error::{Error, PropertyError};
+use crate::{{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset, ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
@@ -87,4 +87,3 @@ macro_rules! impl_soft_path_property {
 impl_soft_path_property!(SoftAssetPathProperty);
 impl_soft_path_property!(SoftObjectPathProperty);
 impl_soft_path_property!(SoftClassPathProperty);
-

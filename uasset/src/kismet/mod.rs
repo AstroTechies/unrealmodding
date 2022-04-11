@@ -3,16 +3,16 @@ use std::mem::size_of;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
-use crate::uasset::Asset;
-use crate::uasset::Error;
-use crate::uasset::cursor_ext::CursorExt;
+use crate::Asset;
+use crate::Error;
+use crate::cursor_ext::CursorExt;
 
-use crate::uasset::enums::EBlueprintTextLiteralType;
+use crate::enums::EBlueprintTextLiteralType;
 
 
-use crate::uasset::types::{Transform, Vector, Vector4};
-use crate::uasset::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETARRAY_BYTECODE};
-use crate::uasset::unreal_types::{FieldPath, FName, PackageIndex};
+use crate::types::{Transform, Vector, Vector4};
+use crate::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETARRAY_BYTECODE};
+use crate::unreal_types::{FieldPath, FName, PackageIndex};
 
 use super::error::KismetError;
 

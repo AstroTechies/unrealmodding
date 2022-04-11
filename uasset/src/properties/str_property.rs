@@ -4,9 +4,9 @@ use std::mem::size_of;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, enums::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid, optional_guid_write, impl_property_data_trait};
-use crate::uasset::error::{Error, PropertyError};
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::{{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, enums::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::error::{Error, PropertyError};
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct StrProperty {

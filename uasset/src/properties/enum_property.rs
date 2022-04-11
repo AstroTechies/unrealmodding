@@ -3,9 +3,9 @@ use std::mem::size_of;
 
 
 
-use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, Asset}, impl_property_data_trait};
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::error::{Error, PropertyError};
+use crate::{{unreal_types::{Guid, FName}, Asset}, impl_property_data_trait};
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct EnumProperty {

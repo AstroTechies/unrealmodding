@@ -17,6 +17,7 @@ use crate::exports::property_export::PropertyExport;
 use crate::exports::raw_export::RawExport;
 use crate::exports::string_table_export::StringTableExport;
 use crate::exports::struct_export::StructExport;
+use crate::exports::data_table_export::DataTableExport;
 use crate::exports::unknown_export::UnknownExport;
 use crate::exports::{ExportTrait, ExportUnknownTrait};
 use crate::fproperty::FProperty;

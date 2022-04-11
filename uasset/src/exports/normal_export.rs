@@ -1,10 +1,10 @@
 use std::io::{Cursor};
-use crate::uasset::Asset;
-use crate::uasset::exports::unknown_export::UnknownExport;
-use crate::uasset::properties::Property;
-use crate::uasset::unreal_types::{FName};
-use crate::uasset::error::Error;
-use crate::uasset::exports::{ExportTrait, ExportUnknownTrait};
+use crate::Asset;
+use crate::exports::unknown_export::UnknownExport;
+use crate::properties::Property;
+use crate::unreal_types::{FName};
+use crate::error::Error;
+use crate::exports::{ExportTrait, ExportUnknownTrait};
 
 use super::ExportNormalTrait;
 

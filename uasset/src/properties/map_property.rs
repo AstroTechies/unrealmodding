@@ -2,10 +2,10 @@ use std::{collections::HashMap, hash::Hash, io::{Cursor}};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{impl_property_data_trait, uasset::{Asset, unreal_types::{FName, Guid}}};
-use crate::uasset::error::Error;
-use crate::uasset::properties::{PropertyDataTrait, PropertyTrait};
-use crate::uasset::unreal_types::ToFName;
+use crate::{impl_property_data_trait, {Asset, unreal_types::{FName, Guid}}};
+use crate::error::Error;
+use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::unreal_types::ToFName;
 
 use super::{Property};
 

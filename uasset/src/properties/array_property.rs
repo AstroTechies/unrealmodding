@@ -2,11 +2,11 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{impl_property_data_trait, uasset::{Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO, unreal_types::{FName, Guid}}};
-use crate::uasset::error::{Error, PropertyError};
-use crate::uasset::properties::{PropertyDataTrait, PropertyTrait};
-use crate::uasset::ue4version::{VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
-use crate::uasset::unreal_types::{default_guid, ToFName};
+use crate::{impl_property_data_trait, Asset, ue4version::VER_UE4_INNER_ARRAY_TAG_INFO, unreal_types::{FName, Guid}};
+use crate::error::{Error, PropertyError};
+use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::ue4version::{VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
+use crate::unreal_types::{default_guid, ToFName};
 
 use super::{Property, struct_property::StructProperty};
 

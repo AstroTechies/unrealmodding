@@ -3,9 +3,9 @@ use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
-use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::{Vector, Vector4}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::error::Error;
+use crate::{{unreal_types::{Guid, FName}, cursor_ext::CursorExt, types::{Vector, Vector4}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct VectorProperty {

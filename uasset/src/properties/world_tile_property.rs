@@ -2,8 +2,8 @@ use std::{io::{Cursor}};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::uasset::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion, unreal_types::FName};
-use crate::uasset::error::Error;
+use crate::{types::Vector, cursor_ext::CursorExt, ue4version::{VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST, VER_UE4_WORLD_LEVEL_INFO_ZORDER}, Asset, custom_version::FFortniteMainBranchObjectVersion, unreal_types::FName};
+use crate::error::Error;
 use super::vector_property::{IntPointProperty, BoxProperty};
 
 //todo: what is this file even doing in properties?
@@ -21,7 +21,7 @@ impl FWorldTileLayer {
         let name = asset.cursor.read_string()?;
         let reserved_0 = asset.cursor.read_i32::<LittleEndian>()?;
         let reserved_1 = IntPointProperty::new(asset, FName::default(), false, 0)?;
-        
+
         let streaming_distance = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
             true => Some(asset.cursor.read_i32::<LittleEndian>()?),
             false => None

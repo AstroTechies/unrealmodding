@@ -1,12 +1,12 @@
 use std::io::{Cursor,};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::implement_get;
-use crate::uasset::Asset;
-use crate::uasset::Error;
-use crate::uasset::exports::ExportTrait;
-use crate::uasset::exports::normal_export::NormalExport;
-use crate::uasset::exports::unknown_export::UnknownExport;
-use crate::uasset::uproperty::{UProperty, UPropertyTrait};
+use crate::Asset;
+use crate::Error;
+use crate::exports::ExportTrait;
+use crate::exports::normal_export::NormalExport;
+use crate::exports::unknown_export::UnknownExport;
+use crate::uproperty::{UProperty, UPropertyTrait};
 
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;

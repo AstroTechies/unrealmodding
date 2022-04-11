@@ -2,9 +2,9 @@ use std::io::{Cursor, Read, Write};
 
 
 
-use crate::uasset::error::{Error, PropertyError};
-use crate::{uasset::{unreal_types::{Guid, FName}, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, impl_property_data_trait};
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::error::{Error, PropertyError};
+use crate::{{unreal_types::{Guid, FName}, ue4version::{VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG, VER_UE4_SERIALIZE_RICH_CURVE_KEY}, Asset}, impl_property_data_trait};
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 use super::Property;
 

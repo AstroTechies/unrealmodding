@@ -5,9 +5,9 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
-use crate::uasset::error::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::error::Error;
+use crate::{{unreal_types::{Guid, FName}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(u8)]

@@ -2,10 +2,10 @@ use std::io::{Cursor, Read, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::uasset::Error;
-use crate::{uasset::{unreal_types::{Guid, FName}, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid, optional_guid_write, impl_property_data_trait};
-use crate::uasset::error::PropertyError;
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::Error;
+use crate::{{unreal_types::{Guid, FName}, Asset, custom_version::FAnimPhysObjectVersion}, optional_guid, optional_guid_write, impl_property_data_trait};
+use crate::error::PropertyError;
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SmartNameProperty {

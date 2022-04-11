@@ -27,10 +27,10 @@ use std::io::{Seek, SeekFrom};
 use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
-use crate::uasset::properties::date_property::TimeSpanProperty;
-use crate::uasset::properties::sampler_property::SkeletalMeshAreaWeightedTriangleSampler;
-use crate::uasset::properties::soft_path_property::{SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty};
-use crate::uasset::unreal_types::{Guid, ToFName};
+use crate::properties::date_property::TimeSpanProperty;
+use crate::properties::sampler_property::SkeletalMeshAreaWeightedTriangleSampler;
+use crate::properties::soft_path_property::{SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty};
+use crate::unreal_types::{Guid, ToFName};
 
 use self::{unknown_property::UnknownProperty, int_property::{BoolProperty, UInt16Property, UInt32Property, UInt64Property, FloatProperty, Int16Property, Int64Property, Int8Property, IntProperty, ByteProperty, DoubleProperty}, str_property::{NameProperty, StrProperty, TextProperty}, object_property::{ObjectProperty, AssetObjectProperty, SoftObjectProperty}, vector_property::{IntPointProperty, VectorProperty, Vector4Property, Vector2DProperty, QuatProperty, RotatorProperty, BoxProperty}, color_property::{LinearColorProperty, ColorProperty}, date_property::DateTimeProperty, guid_property::GuidProperty, struct_property::StructProperty, set_property::SetProperty, array_property::ArrayProperty, map_property::MapProperty, per_platform_property::{PerPlatformBoolProperty, PerPlatformIntProperty, PerPlatformFloatProperty}, material_input_property::{MaterialAttributesInputProperty, ExpressionInputProperty, ColorMaterialInputProperty, ScalarMaterialInputProperty, ShadingModelMaterialInputProperty, VectorMaterialInputProperty, Vector2MaterialInputProperty}, enum_property::EnumProperty, sampler_property::{WeightedRandomSamplerProperty, SkeletalMeshSamplingLODBuiltDataProperty}, delegate_property::MulticastDelegateProperty, rich_curve_key_property::RichCurveKeyProperty, view_target_blend_property::ViewTargetBlendParamsProperty, gameplay_tag_container_property::GameplayTagContainerProperty, smart_name_property::SmartNameProperty};
 use super::error::Error;
@@ -280,7 +280,7 @@ impl Property {
             "EnumProperty" => EnumProperty::new(asset, name, include_header, length, duplication_index)?.into(),
             _ => UnknownProperty::with_serialized_type(asset, name, include_header, length, duplication_index, Some(type_name.clone()))?.into()
         };
-        
+
         Ok(res)
     }
 

@@ -4,9 +4,9 @@ use std::mem::size_of;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
-use crate::{uasset::{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, simple_property_write, impl_property_data_trait};
-use crate::uasset::error::{Error, PropertyError};
-use crate::uasset::properties::{PropertyTrait, PropertyDataTrait};
+use crate::{{unreal_types::{Guid, FName}, cursor_ext::CursorExt, Asset}, optional_guid, optional_guid_write, simple_property_write, impl_property_data_trait};
+use crate::error::{Error, PropertyError};
+use crate::properties::{PropertyTrait, PropertyDataTrait};
 
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {

@@ -2,18 +2,18 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::implement_get;
-use crate::uasset::Asset;
-use crate::uasset::custom_version::FCoreObjectVersion;
-use crate::uasset::exports::normal_export::NormalExport;
-use crate::uasset::exports::unknown_export::UnknownExport;
+use crate::Asset;
+use crate::custom_version::FCoreObjectVersion;
+use crate::exports::normal_export::NormalExport;
+use crate::exports::unknown_export::UnknownExport;
 
-use crate::uasset::fproperty::FProperty;
-use crate::uasset::kismet::KismetExpression;
-use crate::uasset::ue4version::VER_UE4_16;
-use crate::uasset::unreal_types::{PackageIndex};
-use crate::uasset::uproperty::UField;
-use crate::uasset::error::Error;
-use crate::uasset::exports::ExportTrait;
+use crate::fproperty::FProperty;
+use crate::kismet::KismetExpression;
+use crate::ue4version::VER_UE4_16;
+use crate::unreal_types::{PackageIndex};
+use crate::uproperty::UField;
+use crate::error::Error;
+use crate::exports::ExportTrait;
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
 
