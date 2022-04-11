@@ -1,26 +1,29 @@
 use eframe::{egui, epi};
 use std::sync::{Arc, Mutex};
 
-pub struct ModloaderData {
+pub struct AppData {
     pub should_exit: bool,
     pub ready_exit: bool,
+
+    pub window_title: String,
 }
 
-pub struct Modloader {
-    pub data: Arc<Mutex<ModloaderData>>,
+pub struct App {
+    pub data: Arc<Mutex<AppData>>,
+
+    pub window_title: String,
 }
 
-impl epi::App for Modloader {
+impl epi::App for App {
     fn name(&self) -> &str {
-        "Modloader"
+        self.window_title.as_str()
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
-        let Self { data } = self;
-        let mut data = data.lock().unwrap();
+        let mut data = self.data.lock().unwrap();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Modloader");
+            ui.heading(self.window_title.as_str());
 
             ui.horizontal(|ui| {
                 if ui.button("Quit").clicked() {
@@ -45,8 +48,7 @@ impl epi::App for Modloader {
     }
 
     fn on_exit_event(&mut self) -> bool {
-        let Self { data } = self;
-        let mut data = data.lock().unwrap();
+        let mut data = self.data.lock().unwrap();
         data.should_exit = true;
 
         if data.ready_exit {
