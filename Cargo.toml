@@ -3,5 +3,6 @@
 members = [
     "unreal_pak", "unreal_pak_cli",
     "unreal_asset",
+    "unreal_modloader",
     "astro_modloader"
 ]
