@@ -1,24 +1,36 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::path::PathBuf;
 
 mod app;
+mod determine_paths;
 pub mod config;
+
+pub struct AppData {
+    pub should_exit: bool,
+    pub ready_exit: bool,
+
+    pub base_path: Option<PathBuf>,
+    pub install_path: Option<PathBuf>,
+}
 
 pub fn run<C, E>(config: &C)
 where
     E: config::DummyIntegratorConfig,
     C: config::GameConfig<E>,
 {
-    println!("Unreal Modloader");
+    println!(
+        "Got integrator config: {:?}",
+        config.get_integrator_config().dummy()
+    );
 
-    println!("Got integrator config: {:?}", config.get_integrator_config().dummy());
-
-    let data = Arc::new(Mutex::new(app::AppData {
+    let data = Arc::new(Mutex::new(AppData {
         should_exit: false,
         ready_exit: false,
 
-        window_title: config.get_game_name(),
+        base_path: None,
+        install_path: None,
     }));
 
     let data_processing = Arc::clone(&data);
