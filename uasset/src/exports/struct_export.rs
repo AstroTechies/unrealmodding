@@ -1,21 +1,20 @@
-
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::implement_get;
-use crate::Asset;
 use crate::custom_version::FCoreObjectVersion;
 use crate::exports::normal_export::NormalExport;
 use crate::exports::unknown_export::UnknownExport;
+use crate::implement_get;
+use crate::Asset;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
+use super::ExportNormalTrait;
+use super::ExportUnknownTrait;
+use crate::error::Error;
+use crate::exports::ExportTrait;
 use crate::fproperty::FProperty;
 use crate::kismet::KismetExpression;
 use crate::ue4version::VER_UE4_16;
-use crate::unreal_types::{PackageIndex};
+use crate::unreal_types::PackageIndex;
 use crate::uproperty::UField;
-use crate::error::Error;
-use crate::exports::ExportTrait;
-use super::ExportNormalTrait;
-use super::ExportUnknownTrait;
 
 pub struct StructExport {
     pub normal_export: NormalExport,
@@ -44,7 +43,9 @@ impl StructExport {
             children.push(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?));
         }
 
-        let loaded_properties = match asset.get_custom_version::<FCoreObjectVersion>().version >= FCoreObjectVersion::FProperties as i32 {
+        let loaded_properties = match asset.get_custom_version::<FCoreObjectVersion>().version
+            >= FCoreObjectVersion::FProperties as i32
+        {
             true => {
                 let num_props = asset.cursor.read_i32::<LittleEndian>()?;
                 let mut props = Vec::with_capacity(num_props as usize);
@@ -52,8 +53,8 @@ impl StructExport {
                     props.push(FProperty::new(asset)?);
                 }
                 props
-            },
-            false => Vec::new()
+            }
+            false => Vec::new(),
         };
 
         let script_bytecode_size = asset.cursor.read_i32::<LittleEndian>()?; // number of bytes in deserialized memory
@@ -62,7 +63,8 @@ impl StructExport {
 
         let mut script_bytecode = None;
         if asset.engine_version >= VER_UE4_16 {
-            script_bytecode = StructExport::read_bytecode(asset, start_offset, script_storage_size).ok();
+            script_bytecode =
+                StructExport::read_bytecode(asset, start_offset, script_storage_size).ok();
         }
 
         let script_bytecode_raw = match &script_bytecode {
@@ -84,11 +86,15 @@ impl StructExport {
             loaded_properties,
             script_bytecode,
             script_bytecode_size,
-            script_bytecode_raw
+            script_bytecode_raw,
         })
     }
 
-    fn read_bytecode(asset: &mut Asset, start_offset: u64, storage_size: i32) -> Result<Vec<KismetExpression>, Error> {
+    fn read_bytecode(
+        asset: &mut Asset,
+        start_offset: u64,
+        storage_size: i32,
+    ) -> Result<Vec<KismetExpression>, Error> {
         let mut code = Vec::new();
         while (asset.cursor.position() - start_offset) < storage_size as u64 {
             code.push(KismetExpression::new(asset)?);
@@ -109,7 +115,9 @@ impl ExportTrait for StructExport {
             cursor.write_i32::<LittleEndian>(child.index)?;
         }
 
-        if asset.get_custom_version::<FCoreObjectVersion>().version >= FCoreObjectVersion::FProperties as i32 {
+        if asset.get_custom_version::<FCoreObjectVersion>().version
+            >= FCoreObjectVersion::FProperties as i32
+        {
             cursor.write_i32::<LittleEndian>(self.loaded_properties.len() as i32)?;
             for loaded_property in &self.loaded_properties {
                 FProperty::write(loaded_property, asset, cursor)?;
@@ -137,7 +145,9 @@ impl ExportTrait for StructExport {
             cursor.seek(SeekFrom::Start(end))?;
         } else {
             cursor.write_i32::<LittleEndian>(self.script_bytecode_size)?;
-            let raw_bytecode = self.script_bytecode_raw.as_ref().ok_or(Error::no_data("script_bytecode and raw_bytecode are None".to_string()))?;
+            let raw_bytecode = self.script_bytecode_raw.as_ref().ok_or(Error::no_data(
+                "script_bytecode and raw_bytecode are None".to_string(),
+            ))?;
             cursor.write_i32::<LittleEndian>(raw_bytecode.len() as i32)?;
             cursor.write(&raw_bytecode)?;
         }

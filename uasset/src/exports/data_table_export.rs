@@ -1,15 +1,23 @@
 use std::io::Cursor;
 
-use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{properties::{struct_property::StructProperty, Property, PropertyDataTrait}, Asset, unreal_types::FName, is_import, implement_get};
 use crate::error::Error;
+use crate::{
+    implement_get, is_import,
+    properties::{struct_property::StructProperty, Property, PropertyDataTrait},
+    unreal_types::FName,
+    Asset,
+};
 
+use super::{
+    normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait,
+    ExportUnknownTrait,
+};
 use crate::exports::ExportTrait;
-use super::{normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait, ExportUnknownTrait};
 
 pub struct DataTable {
-    pub data: Vec<StructProperty>
+    pub data: Vec<StructProperty>,
 }
 
 impl DataTable {
@@ -20,7 +28,7 @@ impl DataTable {
 
 pub struct DataTableExport {
     pub normal_export: NormalExport,
-    pub table: DataTable
+    pub table: DataTable,
 }
 
 implement_get!(DataTableExport);
@@ -45,7 +53,15 @@ impl DataTableExport {
         let mut data = Vec::with_capacity(num_entires);
         for _i in 0..num_entires {
             let row_name = asset.read_fname()?;
-            let next_struct = StructProperty::custom_header(asset, row_name, 1, 0,Some(decided_struct_type.clone()), None, None)?;
+            let next_struct = StructProperty::custom_header(
+                asset,
+                row_name,
+                1,
+                0,
+                Some(decided_struct_type.clone()),
+                None,
+                None,
+            )?;
             data.push(next_struct);
         }
 
@@ -53,7 +69,7 @@ impl DataTableExport {
 
         Ok(DataTableExport {
             normal_export,
-            table
+            table,
         })
     }
 }
@@ -66,10 +82,12 @@ impl ExportTrait for DataTableExport {
         for data in &self.normal_export.properties {
             if data.get_name().content.as_str() == "RowStruct" {
                 match data {
-                    Property::ObjectProperty(prop) => if let Some(import) = asset.get_import(prop.value) {
-                        decided_struct_type = import.object_name.clone();
-                        break;
-                    },
+                    Property::ObjectProperty(prop) => {
+                        if let Some(import) = asset.get_import(prop.value) {
+                            decided_struct_type = import.object_name.clone();
+                            break;
+                        }
+                    }
                     _ => {}
                 }
             }

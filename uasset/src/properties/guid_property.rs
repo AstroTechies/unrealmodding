@@ -1,10 +1,14 @@
 use std::io::{Cursor, Read, Write};
 
-
-
 use crate::error::Error;
-use crate::{{unreal_types::{Guid, FName}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
-use crate::properties::{PropertyTrait, PropertyDataTrait};
+use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::{
+    impl_property_data_trait, optional_guid, optional_guid_write,
+    {
+        unreal_types::{FName, Guid},
+        Asset,
+    },
+};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct GuidProperty {
@@ -15,9 +19,13 @@ pub struct GuidProperty {
 }
 impl_property_data_trait!(GuidProperty);
 
-
 impl GuidProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let mut value = [0u8; 16];
         asset.cursor.read_exact(&mut value)?;
@@ -31,7 +39,12 @@ impl GuidProperty {
 }
 
 impl PropertyTrait for GuidProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         cursor.write(&self.value)?;
         Ok(16)

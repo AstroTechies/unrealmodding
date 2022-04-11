@@ -1,11 +1,15 @@
-use std::io::{Cursor};
+use std::io::Cursor;
 use std::mem::size_of;
 
-
-
 use crate::error::{Error, PropertyError};
-use crate::{{unreal_types::{Guid, FName}, Asset}, impl_property_data_trait};
-use crate::properties::{PropertyTrait, PropertyDataTrait};
+use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::{
+    impl_property_data_trait,
+    {
+        unreal_types::{FName, Guid},
+        Asset,
+    },
+};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct EnumProperty {
@@ -18,10 +22,16 @@ pub struct EnumProperty {
 impl_property_data_trait!(EnumProperty);
 
 impl EnumProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, _length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        _length: i64,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let (enum_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
-            false => (None, None)
+            false => (None, None),
         };
         let value = asset.read_fname()?;
 
@@ -36,9 +46,17 @@ impl EnumProperty {
 }
 
 impl PropertyTrait for EnumProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         if include_header {
-            asset.write_fname(cursor, self.enum_type.as_ref().ok_or(PropertyError::headerless())?)?;
+            asset.write_fname(
+                cursor,
+                self.enum_type.as_ref().ok_or(PropertyError::headerless())?,
+            )?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
         asset.write_fname(cursor, &self.value)?;

@@ -1,12 +1,11 @@
-use std::io::Cursor;
-use crate::Asset;
 use crate::error::Error;
 use crate::exports::ExportTrait;
 use crate::unreal_types::{FName, Guid};
+use crate::Asset;
+use std::io::Cursor;
 
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
-
 
 #[derive(Debug, Default, Clone)]
 pub struct UnknownExport {
@@ -26,19 +25,20 @@ pub struct UnknownExport {
     pub not_always_loaded_for_editor_game: bool,
     pub is_asset: bool,
     pub first_export_dependency: i32,
-    pub serialization_before_serialization_dependencies : i32,
+    pub serialization_before_serialization_dependencies: i32,
     pub create_before_serialization_dependencies: i32,
     pub serialization_before_create_dependencies: i32,
-    pub create_before_create_dependencies: i32
+    pub create_before_create_dependencies: i32,
 }
 
 impl ExportNormalTrait for UnknownExport {
-    fn get_normal_export< 'a>(&'a self) -> Option<& 'a super::normal_export::NormalExport> {
+    fn get_normal_export<'a>(&'a self) -> Option<&'a super::normal_export::NormalExport> {
         None
     }
 
-
-    fn get_normal_export_mut< 'a>(&'a mut self) -> Option<& 'a mut super::normal_export::NormalExport> {
+    fn get_normal_export_mut<'a>(
+        &'a mut self,
+    ) -> Option<&'a mut super::normal_export::NormalExport> {
         None
     }
 }

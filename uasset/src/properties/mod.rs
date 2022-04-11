@@ -1,47 +1,83 @@
-pub mod int_property;
-pub mod str_property;
-pub mod object_property;
-pub mod guid_property;
-pub mod date_property;
-pub mod color_property;
-pub mod vector_property;
-pub mod struct_property;
 pub mod array_property;
-pub mod set_property;
-pub mod map_property;
-pub mod unknown_property;
-pub mod per_platform_property;
-pub mod material_input_property;
-pub mod enum_property;
-pub mod world_tile_property;
-pub mod sampler_property;
-pub mod soft_path_property;
+pub mod color_property;
+pub mod date_property;
 pub mod delegate_property;
-pub mod rich_curve_key_property;
-pub mod view_target_blend_property;
+pub mod enum_property;
 pub mod gameplay_tag_container_property;
+pub mod guid_property;
+pub mod int_property;
+pub mod map_property;
+pub mod material_input_property;
+pub mod object_property;
+pub mod per_platform_property;
+pub mod rich_curve_key_property;
+pub mod sampler_property;
+pub mod set_property;
 pub mod smart_name_property;
+pub mod soft_path_property;
+pub mod str_property;
+pub mod struct_property;
+pub mod unknown_property;
+pub mod vector_property;
+pub mod view_target_blend_property;
+pub mod world_tile_property;
 
-use std::{io::{Cursor}};
-use std::io::{Seek, SeekFrom};
-use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
-use enum_dispatch::enum_dispatch;
-use lazy_static::lazy_static;
 use crate::properties::date_property::TimeSpanProperty;
 use crate::properties::sampler_property::SkeletalMeshAreaWeightedTriangleSampler;
-use crate::properties::soft_path_property::{SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty};
+use crate::properties::soft_path_property::{
+    SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty,
+};
 use crate::unreal_types::{Guid, ToFName};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use enum_dispatch::enum_dispatch;
+use lazy_static::lazy_static;
+use std::io::Cursor;
+use std::io::{Seek, SeekFrom};
 
-use self::{unknown_property::UnknownProperty, int_property::{BoolProperty, UInt16Property, UInt32Property, UInt64Property, FloatProperty, Int16Property, Int64Property, Int8Property, IntProperty, ByteProperty, DoubleProperty}, str_property::{NameProperty, StrProperty, TextProperty}, object_property::{ObjectProperty, AssetObjectProperty, SoftObjectProperty}, vector_property::{IntPointProperty, VectorProperty, Vector4Property, Vector2DProperty, QuatProperty, RotatorProperty, BoxProperty}, color_property::{LinearColorProperty, ColorProperty}, date_property::DateTimeProperty, guid_property::GuidProperty, struct_property::StructProperty, set_property::SetProperty, array_property::ArrayProperty, map_property::MapProperty, per_platform_property::{PerPlatformBoolProperty, PerPlatformIntProperty, PerPlatformFloatProperty}, material_input_property::{MaterialAttributesInputProperty, ExpressionInputProperty, ColorMaterialInputProperty, ScalarMaterialInputProperty, ShadingModelMaterialInputProperty, VectorMaterialInputProperty, Vector2MaterialInputProperty}, enum_property::EnumProperty, sampler_property::{WeightedRandomSamplerProperty, SkeletalMeshSamplingLODBuiltDataProperty}, delegate_property::MulticastDelegateProperty, rich_curve_key_property::RichCurveKeyProperty, view_target_blend_property::ViewTargetBlendParamsProperty, gameplay_tag_container_property::GameplayTagContainerProperty, smart_name_property::SmartNameProperty};
+use self::{
+    array_property::ArrayProperty,
+    color_property::{ColorProperty, LinearColorProperty},
+    date_property::DateTimeProperty,
+    delegate_property::MulticastDelegateProperty,
+    enum_property::EnumProperty,
+    gameplay_tag_container_property::GameplayTagContainerProperty,
+    guid_property::GuidProperty,
+    int_property::{
+        BoolProperty, ByteProperty, DoubleProperty, FloatProperty, Int16Property, Int64Property,
+        Int8Property, IntProperty, UInt16Property, UInt32Property, UInt64Property,
+    },
+    map_property::MapProperty,
+    material_input_property::{
+        ColorMaterialInputProperty, ExpressionInputProperty, MaterialAttributesInputProperty,
+        ScalarMaterialInputProperty, ShadingModelMaterialInputProperty,
+        Vector2MaterialInputProperty, VectorMaterialInputProperty,
+    },
+    object_property::{AssetObjectProperty, ObjectProperty, SoftObjectProperty},
+    per_platform_property::{
+        PerPlatformBoolProperty, PerPlatformFloatProperty, PerPlatformIntProperty,
+    },
+    rich_curve_key_property::RichCurveKeyProperty,
+    sampler_property::{SkeletalMeshSamplingLODBuiltDataProperty, WeightedRandomSamplerProperty},
+    set_property::SetProperty,
+    smart_name_property::SmartNameProperty,
+    str_property::{NameProperty, StrProperty, TextProperty},
+    struct_property::StructProperty,
+    unknown_property::UnknownProperty,
+    vector_property::{
+        BoxProperty, IntPointProperty, QuatProperty, RotatorProperty, Vector2DProperty,
+        Vector4Property, VectorProperty,
+    },
+    view_target_blend_property::ViewTargetBlendParamsProperty,
+};
 use super::error::Error;
-use super::{Asset, unreal_types::FName};
+use super::{unreal_types::FName, Asset};
 
 #[macro_export]
 macro_rules! optional_guid {
     ($asset:ident, $include_header:ident) => {
         match $include_header {
             true => $asset.read_property_guid()?,
-            false => None
+            false => None,
         }
     };
 }
@@ -52,20 +88,25 @@ macro_rules! optional_guid_write {
         if $include_header {
             $asset.write_property_guid($cursor, &$self.property_guid)?;
         }
-    }
+    };
 }
 
 #[macro_export]
 macro_rules! simple_property_write {
     ($property_name:ident, $write_func:ident, $value_name:ident, $value_type:ty) => {
         impl PropertyTrait for $property_name {
-            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+            fn write(
+                &self,
+                asset: &Asset,
+                cursor: &mut Cursor<Vec<u8>>,
+                include_header: bool,
+            ) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, cursor, include_header);
                 cursor.$write_func::<LittleEndian>(self.$value_name)?;
                 Ok(size_of::<$value_type>())
             }
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -84,7 +125,7 @@ macro_rules! impl_property_data_trait {
                 self.property_guid.clone()
             }
         }
-    }
+    };
 }
 
 lazy_static! {
@@ -133,7 +174,12 @@ pub trait PropertyDataTrait {
 
 #[enum_dispatch]
 pub trait PropertyTrait {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error>;
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error>;
 }
 
 #[derive(Hash, PartialEq, Eq)]
@@ -209,82 +255,297 @@ impl Property {
         let length = asset.cursor.read_i32::<LittleEndian>()?;
         let duplication_index = asset.cursor.read_i32::<LittleEndian>()?;
 
-        Property::from_type(asset, &property_type, name, include_header, length as i64, 0, duplication_index).map(|e| Some(e))
+        Property::from_type(
+            asset,
+            &property_type,
+            name,
+            include_header,
+            length as i64,
+            0,
+            duplication_index,
+        )
+        .map(|e| Some(e))
     }
-    pub fn from_type(asset: &mut Asset, type_name: &FName, name: FName, include_header: bool, length: i64, fallback_length: i64, duplication_index: i32) -> Result<Self, Error> {
+    pub fn from_type(
+        asset: &mut Asset,
+        type_name: &FName,
+        name: FName,
+        include_header: bool,
+        length: i64,
+        fallback_length: i64,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let res = match type_name.content.as_str() {
-            "BoolProperty" => BoolProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "UInt16Property" => UInt16Property::new(asset, name, include_header, length, duplication_index)?.into(),
-            "UInt32Property" => UInt32Property::new(asset, name, include_header, length, duplication_index)?.into(),
-            "UInt64Property" => UInt64Property::new(asset, name, include_header, length, duplication_index)?.into(),
-            "FloatProperty" => FloatProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "Int16Property" => Int16Property::new(asset, name, include_header, length, duplication_index)?.into(),
-            "Int64Property" => Int64Property::new(asset, name, include_header, length, duplication_index)?.into(),
-            "Int8Property" => Int8Property::new(asset, name, include_header, length, duplication_index)?.into(),
-            "IntProperty" => IntProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "ByteProperty" => ByteProperty::new(asset, name, include_header, length, fallback_length, duplication_index)?.into(),
-            "DoubleProperty" => DoubleProperty::new(asset, name, include_header, length, duplication_index)?.into(),
+            "BoolProperty" => {
+                BoolProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "UInt16Property" => {
+                UInt16Property::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "UInt32Property" => {
+                UInt32Property::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "UInt64Property" => {
+                UInt64Property::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "FloatProperty" => {
+                FloatProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "Int16Property" => {
+                Int16Property::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "Int64Property" => {
+                Int64Property::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "Int8Property" => {
+                Int8Property::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "IntProperty" => {
+                IntProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "ByteProperty" => ByteProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                fallback_length,
+                duplication_index,
+            )?
+            .into(),
+            "DoubleProperty" => {
+                DoubleProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            }
 
-            "NameProperty" => NameProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "StrProperty" => StrProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "TextProperty" => TextProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "NameProperty" => {
+                NameProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "StrProperty" => {
+                StrProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "TextProperty" => {
+                TextProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
 
-            "ObjectProperty" => ObjectProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "AssetObjectProperty" => AssetObjectProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "SoftObjectProperty" => SoftObjectProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "ObjectProperty" => {
+                ObjectProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "AssetObjectProperty" => {
+                AssetObjectProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "SoftObjectProperty" => {
+                SoftObjectProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
 
-            "IntPoint" => IntPointProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "IntPoint" => {
+                IntPointProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
             "Vector" => VectorProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "Vector4" => Vector4Property::new(asset, name, include_header, duplication_index)?.into(),
-            "Vector2D" => Vector2DProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "Vector4" => {
+                Vector4Property::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "Vector2D" => {
+                Vector2DProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
             "Box" => BoxProperty::new(asset, name, include_header, duplication_index)?.into(),
             "Quat" => QuatProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "Rotator" => RotatorProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "LinearColor" => LinearColorProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "Rotator" => {
+                RotatorProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "LinearColor" => {
+                LinearColorProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
             "Color" => ColorProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "Timespan" => TimeSpanProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "DateTime" => DateTimeProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "Timespan" => {
+                TimeSpanProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "DateTime" => {
+                DateTimeProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
             "Guid" => GuidProperty::new(asset, name, include_header, duplication_index)?.into(),
 
-            "SetProperty" => SetProperty::new(asset, name, include_header, length, duplication_index, asset.engine_version)?.into(),
-            "ArrayProperty" => ArrayProperty::new(asset, name, include_header, length, duplication_index, asset.engine_version, true)?.into(),
-            "MapProperty" => MapProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "SetProperty" => SetProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+                asset.engine_version,
+            )?
+            .into(),
+            "ArrayProperty" => ArrayProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+                asset.engine_version,
+                true,
+            )?
+            .into(),
+            "MapProperty" => {
+                MapProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
 
-            "PerPlatformBool" => PerPlatformBoolProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "PerPlatformInt" => PerPlatformIntProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "PerPlatformFloat" => PerPlatformFloatProperty::new(asset, name, include_header, length, duplication_index)?.into(),
+            "PerPlatformBool" => PerPlatformBoolProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "PerPlatformInt" => {
+                PerPlatformIntProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
+            "PerPlatformFloat" => PerPlatformFloatProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
 
-            "MaterialAttributesInput" => MaterialAttributesInputProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "ExpressionInput" => ExpressionInputProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "ColorMaterialInput" => ColorMaterialInputProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "ScalarMaterialInput" => ScalarMaterialInputProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "ShadingModelMaterialInput" => ShadingModelMaterialInputProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "VectorMaterialInput" => VectorMaterialInputProperty::new(asset, name, include_header, duplication_index)?.into(),
-            "Vector2MaterialInput" => Vector2MaterialInputProperty::new(asset, name, include_header, duplication_index)?.into(),
+            "MaterialAttributesInput" => MaterialAttributesInputProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "ExpressionInput" => {
+                ExpressionInputProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
+            "ColorMaterialInput" => {
+                ColorMaterialInputProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "ScalarMaterialInput" => {
+                ScalarMaterialInputProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "ShadingModelMaterialInput" => ShadingModelMaterialInputProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "VectorMaterialInput" => {
+                VectorMaterialInputProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "Vector2MaterialInput" => {
+                Vector2MaterialInputProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
 
-            "WeightedRandomSampler" => WeightedRandomSamplerProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "SkeletalMeshAreaWeightedTriangleSampler" => SkeletalMeshAreaWeightedTriangleSampler::new(asset, name, include_header, length, duplication_index)?.into(),
-            "SkeletalMeshSamplingLODBuiltData" => SkeletalMeshSamplingLODBuiltDataProperty::new(asset, name, include_header, length, duplication_index)?.into(),
+            "WeightedRandomSampler" => WeightedRandomSamplerProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "SkeletalMeshAreaWeightedTriangleSampler" => {
+                SkeletalMeshAreaWeightedTriangleSampler::new(
+                    asset,
+                    name,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into()
+            }
+            "SkeletalMeshSamplingLODBuiltData" => SkeletalMeshSamplingLODBuiltDataProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
 
-            "SoftAssetPath" => SoftAssetPathProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "SoftObjectPath" => SoftObjectPathProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "SoftClassPath" => SoftClassPathProperty::new(asset, name, include_header, length, duplication_index)?.into(),
+            "SoftAssetPath" => {
+                SoftAssetPathProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
+            "SoftObjectPath" => {
+                SoftObjectPathProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
+            "SoftClassPath" => {
+                SoftClassPathProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
 
-            "MulticastDelegateProperty" => MulticastDelegateProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "RichCurveKey" => RichCurveKeyProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "ViewTargetBlendParams" => ViewTargetBlendParamsProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "GameplayTagContainer" => GameplayTagContainerProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            "SmartName" => SmartNameProperty::new(asset, name, include_header, length, duplication_index)?.into(),
+            "MulticastDelegateProperty" => MulticastDelegateProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "RichCurveKey" => {
+                RichCurveKeyProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
+            "ViewTargetBlendParams" => ViewTargetBlendParamsProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "GameplayTagContainer" => GameplayTagContainerProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "SmartName" => {
+                SmartNameProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
 
-            "StructProperty" => StructProperty::new(asset, name, include_header, length, duplication_index, asset.engine_version)?.into(),
-            "EnumProperty" => EnumProperty::new(asset, name, include_header, length, duplication_index)?.into(),
-            _ => UnknownProperty::with_serialized_type(asset, name, include_header, length, duplication_index, Some(type_name.clone()))?.into()
+            "StructProperty" => StructProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+                asset.engine_version,
+            )?
+            .into(),
+            "EnumProperty" => {
+                EnumProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            _ => UnknownProperty::with_serialized_type(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+                Some(type_name.clone()),
+            )?
+            .into(),
         };
 
         Ok(res)
     }
 
-    pub fn write(property: &Property, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    pub fn write(
+        property: &Property,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         asset.write_fname(cursor, &property.get_name())?;
         asset.write_fname(cursor, &property.to_fname())?;
 
@@ -308,18 +569,28 @@ impl Property {
 impl ToFName for Property {
     fn to_fname(&self) -> FName {
         match self {
-            Property::SkeletalMeshSamplingLODBuiltDataProperty(_) => FName::from_slice("SkeletalMeshSamplingLODBuiltData"),
-            Property::SkeletalMeshAreaWeightedTriangleSampler(_) => FName::from_slice("SkeletalMeshAreaWeightedTriangleSampler"),
+            Property::SkeletalMeshSamplingLODBuiltDataProperty(_) => {
+                FName::from_slice("SkeletalMeshSamplingLODBuiltData")
+            }
+            Property::SkeletalMeshAreaWeightedTriangleSampler(_) => {
+                FName::from_slice("SkeletalMeshAreaWeightedTriangleSampler")
+            }
             Property::SmartNameProperty(_) => FName::from_slice("SmartName"),
             Property::SoftObjectPathProperty(_) => FName::from_slice("SoftObjectPath"),
-            Property::WeightedRandomSamplerProperty(_) => FName::from_slice("WeightedRandomSampler"),
+            Property::WeightedRandomSamplerProperty(_) => {
+                FName::from_slice("WeightedRandomSampler")
+            }
             Property::SoftClassPathProperty(_) => FName::from_slice("SoftClassPath"),
             Property::ColorProperty(_) => FName::from_slice("Color"),
             Property::ExpressionInputProperty(_) => FName::from_slice("ExpressionInput"),
-            Property::MaterialAttributesInputProperty(_) => FName::from_slice("MaterialAttributesInput"),
+            Property::MaterialAttributesInputProperty(_) => {
+                FName::from_slice("MaterialAttributesInput")
+            }
             Property::ColorMaterialInputProperty(_) => FName::from_slice("ColorMaterialInput"),
             Property::ScalarMaterialInputProperty(_) => FName::from_slice("ScalarMaterialInput"),
-            Property::ShadingModelMaterialInputProperty(_) => FName::from_slice("ShadingModelMaterialInput"),
+            Property::ShadingModelMaterialInputProperty(_) => {
+                FName::from_slice("ShadingModelMaterialInput")
+            }
             Property::VectorMaterialInputProperty(_) => FName::from_slice("VectorMaterialInput"),
             Property::Vector2MaterialInputProperty(_) => FName::from_slice("Vector2MaterialInput"),
             Property::GameplayTagContainerProperty(_) => FName::from_slice("GameplayTagContainer"),
@@ -340,7 +611,9 @@ impl ToFName for Property {
             Property::PerPlatformFloatProperty(_) => FName::from_slice("PerPlatformFloat"),
             Property::Vector4Property(_) => FName::from_slice("Vector4"),
             Property::VectorProperty(_) => FName::from_slice("Vector"),
-            Property::ViewTargetBlendParamsProperty(_) => FName::from_slice("ViewTargetBlendParams"),
+            Property::ViewTargetBlendParamsProperty(_) => {
+                FName::from_slice("ViewTargetBlendParams")
+            }
             Property::DoubleProperty(_) => FName::from_slice("DoubleProperty"),
             Property::ArrayProperty(_) => FName::from_slice("ArrayProperty"),
             Property::SetProperty(_) => FName::from_slice("SetProperty"),
@@ -353,7 +626,9 @@ impl ToFName for Property {
             Property::Int8Property(_) => FName::from_slice("Int8Property"),
             Property::IntProperty(_) => FName::from_slice("IntProperty"),
             Property::MapProperty(_) => FName::from_slice("MapProperty"),
-            Property::MulticastDelegateProperty(_) => FName::from_slice("MulticastDelegateProperty"),
+            Property::MulticastDelegateProperty(_) => {
+                FName::from_slice("MulticastDelegateProperty")
+            }
             Property::NameProperty(_) => FName::from_slice("NameProperty"),
             Property::ObjectProperty(_) => FName::from_slice("ObjectProperty"),
             Property::AssetObjectProperty(_) => FName::from_slice("AssetObjectProperty"),
@@ -363,7 +638,11 @@ impl ToFName for Property {
             Property::UInt16Property(_) => FName::from_slice("UInt16Property"),
             Property::UInt32Property(_) => FName::from_slice("UInt32Property"),
             Property::UInt64Property(_) => FName::from_slice("UInt64Property"),
-            Property::UnknownProperty(unk) => unk.serialized_type.as_ref().map(|e| e.clone()).unwrap_or(FName::from_slice("Generic")),
+            Property::UnknownProperty(unk) => unk
+                .serialized_type
+                .as_ref()
+                .map(|e| e.clone())
+                .unwrap_or(FName::from_slice("Generic")),
         }
     }
 }

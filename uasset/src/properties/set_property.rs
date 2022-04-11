@@ -1,13 +1,17 @@
-use std::io::{Cursor};
-
-
+use std::io::Cursor;
 
 use crate::error::{Error, PropertyError};
-use crate::{{unreal_types::{Guid, FName}, Asset}, impl_property_data_trait};
-use crate::properties::{PropertyTrait, PropertyDataTrait};
+use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::unreal_types::ToFName;
+use crate::{
+    impl_property_data_trait,
+    {
+        unreal_types::{FName, Guid},
+        Asset,
+    },
+};
 
-use super::{array_property::ArrayProperty};
+use super::array_property::ArrayProperty;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct SetProperty {
@@ -21,10 +25,17 @@ pub struct SetProperty {
 impl_property_data_trait!(SetProperty);
 
 impl SetProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, length: i64, duplication_index: i32, engine_version: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        length: i64,
+        duplication_index: i32,
+        engine_version: i32,
+    ) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
-            false => (None, None)
+            false => (None, None),
         };
 
         let removed_items = ArrayProperty::new_no_header(
@@ -35,7 +46,9 @@ impl SetProperty {
             0,
             engine_version,
             false,
-            array_type.clone(), property_guid)?;
+            array_type.clone(),
+            property_guid,
+        )?;
 
         let items = ArrayProperty::new_no_header(
             asset,
@@ -46,7 +59,8 @@ impl SetProperty {
             engine_version,
             false,
             array_type.clone(),
-            property_guid)?;
+            property_guid,
+        )?;
 
         Ok(SetProperty {
             name,
@@ -60,14 +74,22 @@ impl SetProperty {
 }
 
 impl PropertyTrait for SetProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         let array_type = match self.value.value.len() > 0 {
             true => Some(self.value.value[0].to_fname()),
-            false => self.array_type.clone()
+            false => self.array_type.clone(),
         };
 
         if include_header {
-            asset.write_fname(cursor, array_type.as_ref().ok_or(PropertyError::headerless())?)?;
+            asset.write_fname(
+                cursor,
+                array_type.as_ref().ok_or(PropertyError::headerless())?,
+            )?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
 

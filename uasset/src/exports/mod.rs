@@ -1,19 +1,24 @@
-pub mod unknown_export;
+pub mod class_export;
+pub mod data_table_export;
+pub mod enum_export;
 pub mod level_export;
 pub mod normal_export;
-pub mod string_table_export;
-pub mod enum_export;
-pub mod struct_export;
 pub mod property_export;
-pub mod class_export;
 pub mod raw_export;
-pub mod data_table_export;
+pub mod string_table_export;
+pub mod struct_export;
+pub mod unknown_export;
 
-use std::io::{Cursor};
+use std::io::Cursor;
 
 use enum_dispatch::enum_dispatch;
 
-use self::{unknown_export::UnknownExport, class_export::ClassExport, enum_export::EnumExport, level_export::LevelExport, normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport, string_table_export::StringTableExport, struct_export::StructExport, data_table_export::DataTableExport};
+use self::{
+    class_export::ClassExport, data_table_export::DataTableExport, enum_export::EnumExport,
+    level_export::LevelExport, normal_export::NormalExport, property_export::PropertyExport,
+    raw_export::RawExport, string_table_export::StringTableExport, struct_export::StructExport,
+    unknown_export::UnknownExport,
+};
 use super::error::Error;
 use super::Asset;
 
@@ -70,8 +75,7 @@ pub enum Export {
     RawExport,
     StringTableExport,
     StructExport,
-    DataTableExport
+    DataTableExport,
 }
 
-impl Export {
-}
+impl Export {}

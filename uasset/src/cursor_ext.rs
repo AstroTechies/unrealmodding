@@ -1,9 +1,9 @@
-use std::io::{Cursor, Read, SeekFrom, Seek, Write};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
-use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
 
-use super::{types::Vector};
 use super::error::Error;
+use super::types::Vector;
 
 pub trait CursorExt {
     fn read_string(&mut self) -> Result<Option<String>, Error>;
@@ -17,7 +17,8 @@ pub trait CursorExt {
 
 impl CursorExt for Cursor<Vec<u8>> {
     // read string of format <length u32><string><null>
-    fn read_string(&mut self) -> Result<Option<String>, Error> { // todo: unicode encoding
+    fn read_string(&mut self) -> Result<Option<String>, Error> {
+        // todo: unicode encoding
         let len = self.read_u32::<LittleEndian>()?;
 
         if len == 0 {
@@ -36,23 +37,19 @@ impl CursorExt for Cursor<Vec<u8>> {
     }
 
     fn read_vector(&mut self) -> Result<Vector<f32>, Error> {
-        Ok(
-            Vector::new(
-                self.read_f32::<LittleEndian>()?,
-                self.read_f32::<LittleEndian>()?,
-                self.read_f32::<LittleEndian>()?
-            )
-        )
+        Ok(Vector::new(
+            self.read_f32::<LittleEndian>()?,
+            self.read_f32::<LittleEndian>()?,
+            self.read_f32::<LittleEndian>()?,
+        ))
     }
 
     fn read_int_vector(&mut self) -> Result<Vector<i32>, Error> {
-        Ok(
-            Vector::new(
-                self.read_i32::<LittleEndian>()?,
-                self.read_i32::<LittleEndian>()?,
-                self.read_i32::<LittleEndian>()?
-            )
-        )
+        Ok(Vector::new(
+            self.read_i32::<LittleEndian>()?,
+            self.read_i32::<LittleEndian>()?,
+            self.read_i32::<LittleEndian>()?,
+        ))
     }
 
     fn write_string(&mut self, string: &Option<String>) -> Result<usize, Error> {
@@ -64,7 +61,7 @@ impl CursorExt for Cursor<Vec<u8>> {
         let is_unicode = string.len() != string.chars().count();
         match is_unicode {
             true => self.write_i32::<LittleEndian>(-(string.len() as i32) + 1)?,
-            false => self.write_i32::<LittleEndian>(string.len() as i32 + 1)?
+            false => self.write_i32::<LittleEndian>(string.len() as i32 + 1)?,
         };
         let bytes = string.clone().into_bytes();
         self.write(&bytes)?;
@@ -75,7 +72,7 @@ impl CursorExt for Cursor<Vec<u8>> {
     fn write_bool(&mut self, value: bool) -> Result<(), Error> {
         self.write_u8(match value {
             true => 1,
-            false => 0
+            false => 0,
         })?;
         Ok(())
     }

@@ -1,10 +1,10 @@
-use std::io::{Cursor};
-use crate::Asset;
-use crate::exports::unknown_export::UnknownExport;
-use crate::properties::Property;
-use crate::unreal_types::{FName};
 use crate::error::Error;
+use crate::exports::unknown_export::UnknownExport;
 use crate::exports::{ExportTrait, ExportUnknownTrait};
+use crate::properties::Property;
+use crate::unreal_types::FName;
+use crate::Asset;
+use std::io::Cursor;
 
 use super::ExportNormalTrait;
 
@@ -12,19 +12,17 @@ pub struct NormalExport {
     pub unknown_export: UnknownExport,
     pub extras: Vec<u8>,
 
-    pub properties: Vec<Property>
+    pub properties: Vec<Property>,
 }
 
 impl ExportNormalTrait for NormalExport {
-    fn get_normal_export< 'a>(&'a self) -> Option<& 'a NormalExport> {
+    fn get_normal_export<'a>(&'a self) -> Option<&'a NormalExport> {
         Some(&self)
     }
 
-
-    fn get_normal_export_mut< 'a>(&'a mut self) -> Option<& 'a mut NormalExport> {
+    fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut NormalExport> {
         Some(self)
     }
-
 }
 
 impl ExportUnknownTrait for NormalExport {
@@ -50,7 +48,7 @@ impl NormalExport {
             unknown_export: unk.clone(),
             extras: Vec::new(),
 
-            properties
+            properties,
         })
     }
 }

@@ -1,12 +1,21 @@
-use std::io::{Cursor};
+use std::io::Cursor;
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-
-use crate::{{unreal_types::{Guid, FName}, cursor_ext::CursorExt, ue4version::{VER_UE4_FTEXT_HISTORY, VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT}, enums::TextHistoryType, Asset, custom_version::{FEditorObjectVersion, CustomVersion}}, optional_guid, optional_guid_write, impl_property_data_trait};
 use crate::error::{Error, PropertyError};
-use crate::properties::{PropertyTrait, PropertyDataTrait};
+use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::{
+    impl_property_data_trait, optional_guid, optional_guid_write,
+    {
+        cursor_ext::CursorExt,
+        custom_version::{CustomVersion, FEditorObjectVersion},
+        enums::TextHistoryType,
+        ue4version::{VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT, VER_UE4_FTEXT_HISTORY},
+        unreal_types::{FName, Guid},
+        Asset,
+    },
+};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct StrProperty {
@@ -40,9 +49,13 @@ pub struct NameProperty {
 }
 impl_property_data_trait!(NameProperty);
 
-
 impl StrProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(StrProperty {
@@ -55,7 +68,12 @@ impl StrProperty {
 }
 
 impl PropertyTrait for StrProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let begin = cursor.position();
         cursor.write_string(&self.value)?;
@@ -64,7 +82,12 @@ impl PropertyTrait for StrProperty {
 }
 
 impl TextProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
         let mut culture_invariant_string = None;
@@ -93,8 +116,12 @@ impl TextProperty {
                 TextHistoryType::None => {
                     value = None;
                     let version: CustomVersion = asset.get_custom_version::<FEditorObjectVersion>();
-                    if version.version >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability as i32 {
-                        let has_culture_invariant_string = asset.cursor.read_i32::<LittleEndian>()? == 1;
+                    if version.version
+                        >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability
+                            as i32
+                    {
+                        let has_culture_invariant_string =
+                            asset.cursor.read_i32::<LittleEndian>()? == 1;
                         if has_culture_invariant_string {
                             culture_invariant_string = asset.cursor.read_string()?;
                         }
@@ -110,7 +137,10 @@ impl TextProperty {
                     value = asset.cursor.read_string()?;
                 }
                 _ => {
-                    return Err(Error::unimplemented(format!("Unimplemented reader for {:?}", history_type)));
+                    return Err(Error::unimplemented(format!(
+                        "Unimplemented reader for {:?}",
+                        history_type
+                    )));
                 }
             }
         }
@@ -130,7 +160,12 @@ impl TextProperty {
 }
 
 impl PropertyTrait for TextProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let begin = cursor.position();
 
@@ -146,15 +181,20 @@ impl PropertyTrait for TextProperty {
         cursor.write_u32::<LittleEndian>(self.flags)?;
 
         if asset.engine_version >= VER_UE4_FTEXT_HISTORY {
-            let history_type = self.history_type.ok_or(PropertyError::property_field_none("history_type", "i8"))?;
+            let history_type = self
+                .history_type
+                .ok_or(PropertyError::property_field_none("history_type", "i8"))?;
             cursor.write_i8(history_type)?;
             let history_type = history_type.try_into()?;
             match history_type {
                 TextHistoryType::None => {
-                    if asset.get_custom_version::<FEditorObjectVersion>().version >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability as i32 {
+                    if asset.get_custom_version::<FEditorObjectVersion>().version
+                        >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability
+                            as i32
+                    {
                         let is_empty = match &self.culture_invariant_string {
                             Some(e) => e.is_empty(),
-                            None => true
+                            None => true,
                         };
                         match is_empty {
                             true => cursor.write_i32::<LittleEndian>(0)?,
@@ -173,11 +213,19 @@ impl PropertyTrait for TextProperty {
                     Ok(())
                 }
                 TextHistoryType::StringTableEntry => {
-                    asset.write_fname(cursor, self.table_id.as_ref().ok_or(PropertyError::property_field_none("table_id", "FName"))?)?;
+                    asset.write_fname(
+                        cursor,
+                        self.table_id
+                            .as_ref()
+                            .ok_or(PropertyError::property_field_none("table_id", "FName"))?,
+                    )?;
                     cursor.write_string(&self.value)?;
                     Ok(())
                 }
-                _ => Err(Error::unimplemented(format!("Unimplemented writer for {}", history_type as i8)))
+                _ => Err(Error::unimplemented(format!(
+                    "Unimplemented writer for {}",
+                    history_type as i8
+                ))),
             }?;
         }
         Ok((cursor.position() - begin) as usize)
@@ -185,7 +233,12 @@ impl PropertyTrait for TextProperty {
 }
 
 impl NameProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let value = asset.read_fname()?;
         Ok(NameProperty {
@@ -198,7 +251,12 @@ impl NameProperty {
 }
 
 impl PropertyTrait for NameProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         asset.write_fname(cursor, &self.value)?;
         Ok(size_of::<i32>() * 2)

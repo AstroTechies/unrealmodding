@@ -1,18 +1,16 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-
 #[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum EArrayDim {
     NotAnArray = 0,
     TArray = 1,
-    CArray = 2
+    CArray = 2,
 }
 
 #[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
-pub enum ELifetimeCondition
-{
+pub enum ELifetimeCondition {
     // This property has no condition, and will send anytime it changes
     CondNone = 0,
     // This property will only attempt to send on the initial bunch
@@ -43,9 +41,8 @@ pub enum ELifetimeCondition
     CondSkipReplay = 13,
     // This property will never be replicated
     CondNever = 15,
-    CondMax = 16
+    CondMax = 16,
 }
-
 
 #[derive(Debug, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
@@ -59,7 +56,7 @@ pub enum EBlueprintTextLiteralType {
     // Text is a literal FString. The bytecode will contain one string, and you should use FText::FromString to initialize the FText instance.
     LiteralString,
     // Text is from a string table. The bytecode will contain an object pointer (not used) and two strings - the table ID, and key - and should be found via FText::FromStringTable
-    StringTableEntry
+    StringTableEntry,
 }
 
 #[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
@@ -78,7 +75,7 @@ pub enum TextHistoryType {
     AsDateTime,
     Transform,
     StringTableEntry,
-    TextGenerator
+    TextGenerator,
 }
 
 impl Default for TextHistoryType {

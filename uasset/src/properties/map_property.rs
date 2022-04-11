@@ -1,13 +1,19 @@
-use std::{collections::HashMap, hash::Hash, io::{Cursor}};
+use std::{collections::HashMap, hash::Hash, io::Cursor};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{impl_property_data_trait, {Asset, unreal_types::{FName, Guid}}};
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::unreal_types::ToFName;
+use crate::{
+    impl_property_data_trait,
+    {
+        unreal_types::{FName, Guid},
+        Asset,
+    },
+};
 
-use super::{Property};
+use super::Property;
 
 #[derive(PartialEq, Eq)]
 pub struct MapProperty {
@@ -32,23 +38,48 @@ impl Hash for MapProperty {
 }
 
 impl MapProperty {
-    fn map_type_to_class(asset: &mut Asset, type_name: FName, name: FName, length: i64, include_header: bool, is_key: bool) -> Result<Property, Error> {
+    fn map_type_to_class(
+        asset: &mut Asset,
+        type_name: FName,
+        name: FName,
+        length: i64,
+        include_header: bool,
+        is_key: bool,
+    ) -> Result<Property, Error> {
         match type_name.content.as_str() {
             "StructProperty" => {
                 let struct_type = match is_key {
-                    true => asset.map_key_override.get(&name.content).map(|s| s.to_owned()),
-                    false => asset.map_value_override.get(&name.content).map(|s| s.to_owned())
-                }.unwrap_or(String::from("Generic"));
+                    true => asset
+                        .map_key_override
+                        .get(&name.content)
+                        .map(|s| s.to_owned()),
+                    false => asset
+                        .map_value_override
+                        .get(&name.content)
+                        .map(|s| s.to_owned()),
+                }
+                .unwrap_or(String::from("Generic"));
 
-                Property::from_type(asset, &FName::new(struct_type.to_string(), 0), name, false, 1, 0, 0)
+                Property::from_type(
+                    asset,
+                    &FName::new(struct_type.to_string(), 0),
+                    name,
+                    false,
+                    1,
+                    0,
+                    0,
+                )
             }
-            _ => {
-                Property::from_type(asset, &type_name, name, include_header, length, 0, 0)
-            }
+            _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
         }
     }
 
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let mut type_1 = None;
         let mut type_2 = None;
         let mut property_guid = None;
@@ -67,7 +98,14 @@ impl MapProperty {
 
         for _ in 0..num_keys_to_remove as usize {
             let mut vec = Vec::with_capacity(num_keys_to_remove as usize);
-            vec.push(MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?);
+            vec.push(MapProperty::map_type_to_class(
+                asset,
+                type_1.clone(),
+                name.clone(),
+                0,
+                false,
+                true,
+            )?);
             keys_to_remove = Some(vec);
         }
 
@@ -75,8 +113,22 @@ impl MapProperty {
         let mut values = HashMap::new();
 
         for _ in 0..num_entries {
-            let key = MapProperty::map_type_to_class(asset, type_1.clone(), name.clone(), 0, false, true)?;
-            let value = MapProperty::map_type_to_class(asset, type_2.clone(), name.clone(), 0, false, false)?;
+            let key = MapProperty::map_type_to_class(
+                asset,
+                type_1.clone(),
+                name.clone(),
+                0,
+                false,
+                true,
+            )?;
+            let value = MapProperty::map_type_to_class(
+                asset,
+                type_2.clone(),
+                name.clone(),
+                0,
+                false,
+                false,
+            )?;
 
             values.insert(key, value);
         }
@@ -94,7 +146,12 @@ impl MapProperty {
 }
 
 impl PropertyTrait for MapProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         if include_header {
             if let Some(key) = self.value.keys().next() {
                 asset.write_fname(cursor, &key.to_fname())?;
@@ -110,7 +167,7 @@ impl PropertyTrait for MapProperty {
         let begin = cursor.position();
         cursor.write_i32::<LittleEndian>(match self.keys_to_remove {
             Some(ref e) => e.len(),
-            None => 0
+            None => 0,
         } as i32)?;
 
         if let Some(ref keys_to_remove) = self.keys_to_remove {

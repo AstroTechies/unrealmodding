@@ -1,14 +1,13 @@
-
-use std::io::{Cursor};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::implement_get;
-use crate::error::Error;
-use crate::Asset;
 use crate::cursor_ext::CursorExt;
-use crate::exports::ExportTrait;
+use crate::error::Error;
 use crate::exports::normal_export::NormalExport;
 use crate::exports::unknown_export::UnknownExport;
+use crate::exports::ExportTrait;
+use crate::implement_get;
 use crate::unreal_types::StringTable;
+use crate::Asset;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::Cursor;
 
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
@@ -16,7 +15,7 @@ use super::ExportUnknownTrait;
 pub struct StringTableExport {
     normal_export: NormalExport,
 
-    table: StringTable
+    table: StringTable,
 }
 
 implement_get!(StringTableExport);
@@ -30,13 +29,21 @@ impl StringTableExport {
 
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
         for _i in 0..num_entries {
-            table.value.insert(asset.cursor.read_string()?.ok_or(Error::no_data("StringTable key is None".to_string()))?,
-             asset.cursor.read_string()?.ok_or(Error::no_data("StringTable value is None".to_string()))?);
+            table.value.insert(
+                asset
+                    .cursor
+                    .read_string()?
+                    .ok_or(Error::no_data("StringTable key is None".to_string()))?,
+                asset
+                    .cursor
+                    .read_string()?
+                    .ok_or(Error::no_data("StringTable value is None".to_string()))?,
+            );
         }
 
         Ok(StringTableExport {
             normal_export,
-            table
+            table,
         })
     }
 }

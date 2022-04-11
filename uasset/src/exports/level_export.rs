@@ -1,15 +1,15 @@
-use std::io::{Cursor, Read};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::implement_get;
-use crate::Asset;
-use crate::cursor_ext::CursorExt;
-use crate::exports::normal_export::NormalExport;
-use crate::exports::unknown_export::UnknownExport;
-use crate::unreal_types::{NamespacedString};
-use crate::error::Error;
-use crate::exports::ExportTrait;
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
+use crate::cursor_ext::CursorExt;
+use crate::error::Error;
+use crate::exports::normal_export::NormalExport;
+use crate::exports::unknown_export::UnknownExport;
+use crate::exports::ExportTrait;
+use crate::implement_get;
+use crate::unreal_types::NamespacedString;
+use crate::Asset;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::{Cursor, Read};
 
 pub struct LevelExport {
     normal_export: NormalExport,
@@ -17,13 +17,17 @@ pub struct LevelExport {
     index_data: Vec<i32>,
     level_type: NamespacedString,
     flags_probably: u64,
-    misc_category_data: Vec<i32>
+    misc_category_data: Vec<i32>,
 }
 
 implement_get!(LevelExport);
 
 impl LevelExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset, next_starting: u64) -> Result<Self, Error> {
+    pub fn from_unk(
+        unk: &UnknownExport,
+        asset: &mut Asset,
+        next_starting: u64,
+    ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_unk(unk, asset)?;
 
         asset.cursor.read_i32::<LittleEndian>()?;
@@ -52,7 +56,7 @@ impl LevelExport {
             index_data,
             level_type,
             flags_probably,
-            misc_category_data
+            misc_category_data,
         })
     }
 }

@@ -1,4 +1,3 @@
-
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 
@@ -10,14 +9,14 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::exports::class_export::ClassExport;
-use crate::exports::level_export::LevelExport;
+use crate::exports::data_table_export::DataTableExport;
 use crate::exports::enum_export::EnumExport;
+use crate::exports::level_export::LevelExport;
 use crate::exports::normal_export::NormalExport;
 use crate::exports::property_export::PropertyExport;
 use crate::exports::raw_export::RawExport;
 use crate::exports::string_table_export::StringTableExport;
 use crate::exports::struct_export::StructExport;
-use crate::exports::data_table_export::DataTableExport;
 use crate::exports::unknown_export::UnknownExport;
 use crate::exports::{ExportTrait, ExportUnknownTrait};
 use crate::fproperty::FProperty;

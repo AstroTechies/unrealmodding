@@ -1,15 +1,15 @@
-use std::io::{Cursor, Read, Write};
-use crate::Asset;
 use crate::error::Error;
-use crate::exports::{ExportTrait, ExportUnknownTrait};
 use crate::exports::unknown_export::UnknownExport;
+use crate::exports::{ExportTrait, ExportUnknownTrait};
+use crate::Asset;
+use std::io::{Cursor, Read, Write};
 
 use super::ExportNormalTrait;
 
 pub struct RawExport {
     unknown_export: UnknownExport,
 
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl ExportNormalTrait for RawExport {
@@ -17,8 +17,9 @@ impl ExportNormalTrait for RawExport {
         None
     }
 
-
-    fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut super::normal_export::NormalExport> {
+    fn get_normal_export_mut<'a>(
+        &'a mut self,
+    ) -> Option<&'a mut super::normal_export::NormalExport> {
         None
     }
 }
@@ -41,7 +42,7 @@ impl RawExport {
 
         Ok(RawExport {
             unknown_export: unk,
-            data
+            data,
         })
     }
 }

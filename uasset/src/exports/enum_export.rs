@@ -1,16 +1,16 @@
-use std::collections::HashMap;
-use std::io::{Cursor,};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::implement_get;
-use crate::Asset;
-use crate::Error;
 use crate::custom_version::FCoreObjectVersion;
 use crate::exports::normal_export::NormalExport;
+use crate::exports::unknown_export::UnknownExport;
+use crate::exports::ExportTrait;
+use crate::implement_get;
 use crate::ue4version::{VER_UE4_ENUM_CLASS_SUPPORT, VER_UE4_TIGHTLY_PACKED_ENUMS};
 use crate::unreal_types::FName;
+use crate::Asset;
+use crate::Error;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use crate::exports::ExportTrait;
-use crate::exports::unknown_export::UnknownExport;
+use std::collections::HashMap;
+use std::io::Cursor;
 
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
@@ -20,12 +20,12 @@ use super::ExportUnknownTrait;
 pub enum ECppForm {
     Regular,
     Namespaced,
-    EnumClass
+    EnumClass,
 }
 
 pub struct UEnum {
     pub names: Vec<(FName, i64)>,
-    pub cpp_form: ECppForm
+    pub cpp_form: ECppForm,
 }
 
 impl UEnum {
@@ -62,16 +62,13 @@ impl UEnum {
                 let is_namespace = asset.cursor.read_i32::<LittleEndian>()? == 1;
                 match is_namespace {
                     true => ECppForm::Namespaced,
-                    false => ECppForm::Regular
+                    false => ECppForm::Regular,
                 }
             }
-            false => asset.cursor.read_u8()?.try_into()?
+            false => asset.cursor.read_u8()?.try_into()?,
         };
 
-        Ok(UEnum {
-            names,
-            cpp_form
-        })
+        Ok(UEnum { names, cpp_form })
     }
 
     pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
@@ -87,7 +84,9 @@ impl UEnum {
                     asset.write_fname(cursor, name)?;
                 }
             }
-        } else if asset.get_custom_version::<FCoreObjectVersion>().version < FCoreObjectVersion::EnumProperties as i32 {
+        } else if asset.get_custom_version::<FCoreObjectVersion>().version
+            < FCoreObjectVersion::EnumProperties as i32
+        {
             for (name, index) in &self.names {
                 asset.write_fname(cursor, name)?;
                 cursor.write_u8(*index as u8)?;
@@ -102,7 +101,7 @@ impl UEnum {
         if asset.engine_version < VER_UE4_ENUM_CLASS_SUPPORT {
             cursor.write_i32::<LittleEndian>(match self.cpp_form == ECppForm::Namespaced {
                 true => 1,
-                false => 0
+                false => 0,
             })?;
         } else {
             cursor.write_u8(self.cpp_form.into())?;
@@ -114,7 +113,7 @@ impl UEnum {
 pub struct EnumExport {
     pub normal_export: NormalExport,
 
-    pub value: UEnum
+    pub value: UEnum,
 }
 
 implement_get!(EnumExport);
@@ -128,7 +127,7 @@ impl EnumExport {
         let value = UEnum::new(asset)?;
         Ok(EnumExport {
             normal_export,
-            value
+            value,
         })
     }
 }

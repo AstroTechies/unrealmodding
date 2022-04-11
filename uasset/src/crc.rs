@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 
+#[rustfmt::skip]
 lazy_static! {
     static ref CRCTABLE_DEPRECATED: [u32; 256] = [
         0x00000000, 0x04C11DB7, 0x09823B6E, 0x0D4326D9, 0x130476DC, 0x17C56B6B, 0x1A864DB2, 0x1E475005, 0x2608EDB8, 0x22C9F00F, 0x2F8AD6D6, 0x2B4BCB61, 0x350C9B64, 0x31CD86D3, 0x3C8EA00A, 0x384FBDBD,
@@ -174,7 +175,6 @@ pub fn generate_hash(string: &String) -> u32 {
     (algo1 & 0xffff) | ((algo2 & 0xffff) << 16)
 }
 
-
 fn generate_hash_deprecated(string: &String) -> u32 {
     let mut hash = 0u32;
 
@@ -184,14 +184,14 @@ fn generate_hash_deprecated(string: &String) -> u32 {
         upper[0].encode_utf8(&mut data);
         for byte in data {
             if byte != 0 {
-                hash = ((hash >> 8) & 0xffffff) ^ CRCTABLE_DEPRECATED[((hash ^ byte as u32) & 0xff) as usize];
+                hash = ((hash >> 8) & 0xffffff)
+                    ^ CRCTABLE_DEPRECATED[((hash ^ byte as u32) & 0xff) as usize];
             }
         }
     }
 
     hash
 }
-
 
 fn generate_crc32(string: &String, crc: u32) -> u32 {
     let mut crc = !crc;

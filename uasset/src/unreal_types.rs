@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use crate::error::Error;
 
-
-
 pub type Guid = [u8; 16];
 
+#[rustfmt::skip]
 pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     [
         (a & 0xff) as u8, ((a >> 8) & 0xff) as u8, ((a >> 16) & 0xff) as u8, ((a >> 24) & 0xff) as u8,
@@ -27,14 +26,17 @@ pub struct GenerationInfo {
 
 impl GenerationInfo {
     pub fn new(export_count: i32, name_count: i32) -> Self {
-        GenerationInfo { export_count, name_count }
+        GenerationInfo {
+            export_count,
+            name_count,
+        }
     }
 }
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone)]
 pub struct FName {
     pub content: String,
-    pub index: i32
+    pub index: i32,
 }
 
 pub trait ToFName {
@@ -43,15 +45,13 @@ pub trait ToFName {
 
 impl FName {
     pub fn new(content: String, index: i32) -> Self {
-        FName {
-            content, index
-        }
+        FName { content, index }
     }
 
     pub fn from_slice(content: &str) -> Self {
         FName {
             content: content.to_string(),
-            index: 0
+            index: 0,
         }
     }
 }
@@ -59,54 +59,55 @@ impl FName {
 #[derive(Debug, Default)]
 pub struct NamespacedString {
     pub namespace: Option<String>,
-    pub value: Option<String>
+    pub value: Option<String>,
 }
 
 impl NamespacedString {
     pub fn new(namespace: Option<String>, value: Option<String>) -> Self {
-        NamespacedString {
-            namespace,
-            value
-        }
+        NamespacedString { namespace, value }
     }
 }
 
 #[derive(Debug)]
 pub struct StringTable {
     pub namespace: Option<String>,
-    pub value: HashMap<String, String>
+    pub value: HashMap<String, String>,
 }
 
 impl StringTable {
     pub fn new(namespace: Option<String>) -> Self {
         StringTable {
             namespace,
-            value: HashMap::new()
+            value: HashMap::new(),
         }
     }
 }
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct PackageIndex {
-    pub index: i32
+    pub index: i32,
 }
 
 impl PackageIndex {
     pub fn new(index: i32) -> Self {
-        PackageIndex{ index }
+        PackageIndex { index }
     }
 
     pub fn from_import(import_index: i32) -> Result<Self, Error> {
         match import_index < 0 {
-            true => Err(Error::invalid_package_index("Import index must be bigger than zero".to_string())),
-            false => Ok(PackageIndex::new(-import_index - 1))
+            true => Err(Error::invalid_package_index(
+                "Import index must be bigger than zero".to_string(),
+            )),
+            false => Ok(PackageIndex::new(-import_index - 1)),
         }
     }
 
     pub fn from_export(export_index: i32) -> Result<Self, Error> {
         match export_index < 0 {
-            true => Err(Error::invalid_package_index("Export index must be greater than zero".to_string())),
-            false => Ok(PackageIndex::new(export_index + 1))
+            true => Err(Error::invalid_package_index(
+                "Export index must be greater than zero".to_string(),
+            )),
+            false => Ok(PackageIndex::new(export_index + 1)),
         }
     }
 }
@@ -114,11 +115,14 @@ impl PackageIndex {
 #[derive(Debug, Default)]
 pub struct FieldPath {
     pub path: Vec<FName>,
-    pub resolved_owner: PackageIndex
+    pub resolved_owner: PackageIndex,
 }
 
 impl FieldPath {
     pub fn new(path: Vec<FName>, resolved_owner: PackageIndex) -> Self {
-        FieldPath { path, resolved_owner }
+        FieldPath {
+            path,
+            resolved_owner,
+        }
     }
 }

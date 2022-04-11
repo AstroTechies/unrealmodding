@@ -5,10 +5,19 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
 use crate::error::Error;
-use crate::{{unreal_types::{Guid, FName}, Asset}, optional_guid, optional_guid_write, impl_property_data_trait};
-use crate::properties::{PropertyTrait, PropertyDataTrait};
+use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::{
+    impl_property_data_trait, optional_guid, optional_guid_write,
+    {
+        unreal_types::{FName, Guid},
+        Asset,
+    },
+};
 
-use super::{color_property::ColorProperty, vector_property::{Vector2DProperty, VectorProperty}};
+use super::{
+    color_property::ColorProperty,
+    vector_property::{Vector2DProperty, VectorProperty},
+};
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct MaterialExpression {
@@ -104,7 +113,12 @@ impl MaterialExpression {
         })
     }
 
-    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, _include_header: bool) -> Result<usize, Error> {
+    pub fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        _include_header: bool,
+    ) -> Result<usize, Error> {
         cursor.write_i32::<LittleEndian>(self.output_index)?;
         asset.write_fname(cursor, &self.input_name)?;
         cursor.write(&self.extras)?;
@@ -114,7 +128,12 @@ impl MaterialExpression {
 }
 
 impl ColorMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
         asset.cursor.read_i32::<LittleEndian>()?;
@@ -132,7 +151,12 @@ impl ColorMaterialInputProperty {
 }
 
 impl PropertyTrait for ColorMaterialInputProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -142,7 +166,12 @@ impl PropertyTrait for ColorMaterialInputProperty {
 }
 
 impl ScalarMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
         asset.cursor.read_i32::<LittleEndian>()?;
@@ -160,7 +189,12 @@ impl ScalarMaterialInputProperty {
 }
 
 impl PropertyTrait for ScalarMaterialInputProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -170,7 +204,12 @@ impl PropertyTrait for ScalarMaterialInputProperty {
 }
 
 impl ShadingModelMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
@@ -187,7 +226,12 @@ impl ShadingModelMaterialInputProperty {
 }
 
 impl PropertyTrait for ShadingModelMaterialInputProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -197,7 +241,12 @@ impl PropertyTrait for ShadingModelMaterialInputProperty {
 }
 
 impl VectorMaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
@@ -214,7 +263,12 @@ impl VectorMaterialInputProperty {
 }
 
 impl PropertyTrait for VectorMaterialInputProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -224,7 +278,12 @@ impl PropertyTrait for VectorMaterialInputProperty {
 }
 
 impl Vector2MaterialInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
@@ -241,7 +300,12 @@ impl Vector2MaterialInputProperty {
 }
 
 impl PropertyTrait for Vector2MaterialInputProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let exp_len = self.material_expression.write(asset, cursor, false)?;
         cursor.write_i32::<LittleEndian>(0)?;
@@ -251,7 +315,12 @@ impl PropertyTrait for Vector2MaterialInputProperty {
 }
 
 impl ExpressionInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
@@ -265,14 +334,24 @@ impl ExpressionInputProperty {
 }
 
 impl PropertyTrait for ExpressionInputProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         self.material_expression.write(asset, cursor, false)
     }
 }
 
 impl MaterialAttributesInputProperty {
-    pub fn new(asset: &mut Asset, name: FName, include_header: bool, duplication_index: i32) -> Result<Self, Error> {
+    pub fn new(
+        asset: &mut Asset,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
@@ -286,7 +365,12 @@ impl MaterialAttributesInputProperty {
 }
 
 impl PropertyTrait for MaterialAttributesInputProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>, include_header: bool) -> Result<usize, Error> {
+    fn write(
+        &self,
+        asset: &Asset,
+        cursor: &mut Cursor<Vec<u8>>,
+        include_header: bool,
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         self.material_expression.write(asset, cursor, false)
     }
