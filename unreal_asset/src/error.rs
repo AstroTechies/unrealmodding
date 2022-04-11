@@ -132,13 +132,6 @@ impl From<io::Error> for Error {
     }
 }
 
-//tmp
-impl Into<io::Error> for Error {
-    fn into(self) -> io::Error {
-        io::Error::new(io::ErrorKind::Other, "O")
-    }
-}
-
 impl From<FromUtf8Error> for Error {
     fn from(e: FromUtf8Error) -> Self {
         Error {

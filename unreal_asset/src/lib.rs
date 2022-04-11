@@ -1012,7 +1012,21 @@ impl<'a> Asset {
         Ok(())
     }
 
-    pub fn write_data(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    pub fn write_data(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        uexp_cursor: &mut Option<Cursor<Vec<u8>>>,
+    ) -> Result<(), Error> {
+        if self.use_separate_bulk_data_files != uexp_cursor.is_some() {
+            return Err(Error::no_data(format!(
+                "use_separate_bulk_data_files is {} but uexp_cursor is {}",
+                self.use_separate_bulk_data_files,
+                match uexp_cursor.is_some() {
+                    true => "Some(...)",
+                    false => "None",
+                }
+            )));
+        }
         self.write_header(
             cursor,
             self.name_offset,
@@ -1132,17 +1146,30 @@ impl<'a> Asset {
         };
 
         let mut category_starts = Vec::with_capacity(self.exports.len());
+
+        let final_cursor_pos = cursor.position();
+        let bulk_cursor = match self.use_separate_bulk_data_files {
+            true => uexp_cursor.as_mut().unwrap(),
+            false => cursor,
+        };
+
         for export in &self.exports {
-            category_starts.push(cursor.position());
-            export.write(self, cursor)?;
+            category_starts.push(match self.use_separate_bulk_data_files {
+                true => bulk_cursor.position() + final_cursor_pos,
+                false => bulk_cursor.position(),
+            });
+            export.write(self, bulk_cursor)?;
             if let Some(normal_export) = export.get_normal_export() {
-                cursor.write(&normal_export.extras)?;
+                bulk_cursor.write(&normal_export.extras)?;
             }
         }
-        cursor.write(&[0xc1, 0x83, 0x2a, 0x9e])?;
+        bulk_cursor.write(&[0xc1, 0x83, 0x2a, 0x9e])?;
 
         let bulk_data_start_offset = match self.exports.len() != 0 {
-            true => cursor.position() as i64,
+            true => match self.use_separate_bulk_data_files {
+                true => final_cursor_pos as i64 + bulk_cursor.position() as i64,
+                false => cursor.position() as i64,
+            },
             false => 0,
         };
 
