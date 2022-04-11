@@ -8,7 +8,7 @@ use std::time::SystemTime;
 use clap::{Parser, Subcommand};
 use walkdir::WalkDir;
 
-use upak;
+use unreal_pak;
 
 /// Command line tool for working with Unreal Engine .pak files
 #[derive(Parser, Debug)]
@@ -56,12 +56,12 @@ fn main() {
     match args.commands {
         Commands::CheckHeader { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = upak::PakFile::new(&file);
+            let mut pak = unreal_pak::PakFile::new(&file);
             check_header(&mut pak);
         }
         Commands::Check { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = upak::PakFile::new(&file);
+            let mut pak = unreal_pak::PakFile::new(&file);
             check_header(&mut pak);
 
             // TODO: get rid of this clone
@@ -85,7 +85,7 @@ fn main() {
         Commands::Extract { pakfile, outdir } => {
             let path = Path::new(&pakfile);
             let file = open_file(&path);
-            let mut pak = upak::PakFile::new(&file);
+            let mut pak = unreal_pak::PakFile::new(&file);
             check_header(&mut pak);
 
             // temp values required to extend lifetimes outside of match scope
@@ -179,13 +179,13 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak = upak::PakFile::new(&file);
+            let mut pak = unreal_pak::PakFile::new(&file);
             pak.init_empty(8).unwrap();
 
             let compression_method = if no_compression {
-                upak::CompressionMethod::None
+                unreal_pak::CompressionMethod::None
             } else {
-                upak::CompressionMethod::Zlib
+                unreal_pak::CompressionMethod::Zlib
             };
 
             println!("Using compression method: {:?}", compression_method);
@@ -241,7 +241,7 @@ fn open_file(path: &Path) -> File {
     }
 }
 
-fn check_header(pak: &mut upak::PakFile) {
+fn check_header(pak: &mut unreal_pak::PakFile) {
     match pak.load_records() {
         Ok(_) => println!("Header is ok"),
         Err(e) => {

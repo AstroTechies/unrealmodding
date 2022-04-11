@@ -1,6 +1,6 @@
 [workspace]
 
 members = [
-    "upak", "upakcli",
-    "uasset"
+    "unreal_pak", "unreal_pak_cli",
+    "unreal_asset"
 ]
