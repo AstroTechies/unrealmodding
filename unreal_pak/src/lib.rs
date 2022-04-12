@@ -34,7 +34,7 @@ use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use sha1::{Digest, Sha1};
 
-mod error;
+pub mod error;
 use error::UpakError;
 
 const UE4_PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
