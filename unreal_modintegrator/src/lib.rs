@@ -4,6 +4,7 @@ use assets::{
 };
 use error::IntegrationError;
 use lazy_static::lazy_static;
+use metadata::{Metadata, SyncMode};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{DirEntry, File, OpenOptions};
@@ -20,7 +21,7 @@ use unreal_asset::unreal_types::FName;
 
 mod assets;
 pub mod error;
-use serde::{Deserialize, Serialize};
+pub mod metadata;
 use serde_json::Value;
 use unreal_asset::{Asset, Import};
 use unreal_pak::PakFile;
@@ -41,52 +42,6 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     fn get_integrator_version(&self) -> String;
     fn get_refuse_mismatched_connections(&self) -> bool;
     fn get_engine_version(&self) -> i32;
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub enum SyncMode {
-    #[serde(rename = "serverclient")]
-    ServerAndClient,
-    #[serde(rename = "server_only")]
-    ServerOnly,
-    #[serde(rename = "client_only")]
-    ClientOnly,
-    #[serde(rename = "none")]
-    None,
-}
-
-impl Default for SyncMode {
-    fn default() -> Self {
-        SyncMode::ServerAndClient
-    }
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub enum DownloadMode {
-    #[serde(rename = "index_file")]
-    IndexFile,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DownloadInfo {
-    #[serde(rename = "type")]
-    download_mode: DownloadMode,
-    url: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Metadata {
-    schema_version: i32,
-    name: String,
-    mod_id: String,
-    author: Option<String>,
-    description: Option<String>,
-    #[serde(rename = "version")]
-    mod_version: String,
-    game_build: Option<String>,
-    sync: SyncMode,
-    homepage: Option<String>,
-    download: Option<DownloadInfo>,
 }
 
 lazy_static! {
