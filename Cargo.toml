@@ -2,5 +2,7 @@
 
 members = [
     "unreal_pak", "unreal_pak_cli",
-    "unreal_asset", "unreal_modintegrator"
+    "unreal_asset",
+    "unreal_modloader", "unreal_modintegrator",
+    "astro_modloader"
 ]
