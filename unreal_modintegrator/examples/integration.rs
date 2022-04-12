@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io, env};
+use std::{collections::HashMap, env, io};
 
 use unreal_asset::ue4version::VER_UE4_23;
 use unreal_modintegrator::IntegratorConfig;
@@ -46,7 +46,10 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
             >,
         > = HashMap::new();
 
-        handlers.insert(String::from("persistent_actors"), Box::new(handle_persistent_actors));
+        handlers.insert(
+            String::from("persistent_actors"),
+            Box::new(handle_persistent_actors),
+        );
 
         handlers
     }

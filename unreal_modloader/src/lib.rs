@@ -27,7 +27,6 @@ where
     E: config::DummyIntegratorConfig,
     C: 'static + config::GameConfig<E>,
 {
-
     println!(
         "Got integrator config: {:?}",
         config.get_integrator_config().dummy()

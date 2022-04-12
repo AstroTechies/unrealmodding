@@ -3,9 +3,8 @@ name = "unreal_modloader"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+unreal_modintegrator = { version = "0.1.0", path = "../unreal_modintegrator" }
 eframe = "0.17.0"
 directories = "4.0.1"
 steamlocate = "1.0.1"

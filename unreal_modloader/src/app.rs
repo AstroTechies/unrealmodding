@@ -1,5 +1,8 @@
 use eframe::{egui, epi};
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 
 pub struct App {
     pub data: Arc<Mutex<crate::AppData>>,
@@ -65,7 +68,6 @@ impl epi::App for App {
                     ui.label(game_mod.game_build.to_string().as_str());
                 });
             }
-
 
             egui::warn_if_debug_build(ui);
         });
