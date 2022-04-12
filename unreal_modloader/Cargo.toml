@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 eframe = "0.17.0"
 directories = "4.0.1"
+steamlocate = "1.0.1"

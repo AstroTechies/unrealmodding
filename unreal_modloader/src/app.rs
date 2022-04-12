@@ -1,8 +1,6 @@
 use eframe::{egui, epi};
 use std::sync::{Arc, Mutex};
 
-use crate::determine_paths;
-
 pub struct App {
     pub data: Arc<Mutex<crate::AppData>>,
 
@@ -14,15 +12,14 @@ impl epi::App for App {
         self.window_title.as_str()
     }
 
-    fn setup(
-        &mut self,
-        _ctx: &egui::Context,
-        _frame: &epi::Frame,
-        _storage: Option<&dyn epi::Storage>,
-    ) {
-        let mut data = self.data.lock().unwrap();
-        determine_paths::dertermine_base_path(&mut data);
-    }
+    // fn setup(
+    //     &mut self,
+    //     _ctx: &egui::Context,
+    //     _frame: &epi::Frame,
+    //     _storage: Option<&dyn epi::Storage>,
+    // ) {
+
+    // }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
         let mut data = self.data.lock().unwrap();
@@ -43,6 +40,11 @@ impl epi::App for App {
             ui.label(match data.base_path {
                 Some(ref path) => path.to_str().unwrap(),
                 None => "No base path",
+            });
+
+            ui.label(match data.install_path {
+                Some(ref path) => path.to_str().unwrap(),
+                None => "No install path",
             });
 
             egui::warn_if_debug_build(ui);
