@@ -1,3 +1,5 @@
+use unreal_modintegrator::metadata::{DownloadInfo, SyncMode};
+
 use crate::version::{GameBuild, Version};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,11 +23,9 @@ pub struct GameMod {
     pub author: String,
     pub description: String,
     pub game_build: GameBuild,
-    // TODO: proper type
-    pub sync: Option<()>,
+    pub sync: SyncMode,
     pub homepage: String,
-    // TODO: proper type
-    pub download: Option<()>,
+    pub download: Option<DownloadInfo>,
     pub size: usize,
 }
 

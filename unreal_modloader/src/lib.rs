@@ -6,7 +6,7 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use unreal_modintegrator::IntegratorConfig;
+use unreal_modintegrator::{metadata::SyncMode, IntegratorConfig};
 
 mod app;
 pub mod config;
@@ -56,7 +56,7 @@ where
         author: "Konsti".to_string(),
         description: "test mod description".to_string(),
         game_build: GameBuild::new(1, 24, 29, 0),
-        sync: None,
+        sync: SyncMode::default(),
         homepage: "https://astroneermods.space/m/TestMod".to_string(),
         download: None,
         size: 1000,

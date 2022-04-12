@@ -70,8 +70,6 @@ impl epi::App for App {
                 });
             }
 
-
-
             egui::warn_if_debug_build(ui);
         });
 
