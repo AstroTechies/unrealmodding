@@ -1,10 +1,16 @@
 use eframe::{egui, epi};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 
 pub struct App {
     pub data: Arc<Mutex<crate::AppData>>,
 
     pub window_title: String,
+
+    pub should_exit: Arc<AtomicBool>,
+    pub ready_exit: Arc<AtomicBool>,
+
+    pub should_integrate: Arc<AtomicBool>,
+    pub working: Arc<AtomicBool>,
 }
 
 impl epi::App for App {
@@ -23,6 +29,7 @@ impl epi::App for App {
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
         let mut data = self.data.lock().unwrap();
+        let should_integrate = &self.should_integrate;
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading(self.window_title.as_str());
@@ -32,7 +39,7 @@ impl epi::App for App {
                     frame.quit();
                 }
 
-                if data.should_exit {
+                if self.should_exit.load(Ordering::Relaxed) {
                     ui.label("Exiting...");
                 }
             });
@@ -46,6 +53,19 @@ impl epi::App for App {
                 Some(ref path) => path.to_str().unwrap(),
                 None => "No install path",
             });
+
+            ui.heading("Mods");
+            for game_mod in data.game_mods.iter_mut() {
+                ui.horizontal(|ui| {
+                    if ui.checkbox(&mut game_mod.active, "Active").changed() {
+                        should_integrate.store(true, Ordering::Relaxed);
+                    };
+                    ui.label(game_mod.name.as_str());
+                    ui.label(game_mod.author.as_str());
+                    ui.label(game_mod.game_build.to_string().as_str());
+                });
+            }
+
 
             egui::warn_if_debug_build(ui);
         });
@@ -63,23 +83,22 @@ impl epi::App for App {
         // We need to keep the paint loop constantly running when shutting down,
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
-        if data.should_exit {
+        if self.should_exit.load(Ordering::Relaxed) {
             frame.request_repaint();
         }
 
-        if data.should_exit && data.ready_exit {
+        if self.should_exit.load(Ordering::Relaxed) && self.ready_exit.load(Ordering::Relaxed) {
             frame.quit();
         }
     }
 
     fn on_exit_event(&mut self) -> bool {
-        let mut data = self.data.lock().unwrap();
-        data.should_exit = true;
+        self.should_exit.store(true, Ordering::Relaxed);
 
-        if data.ready_exit {
+        if self.ready_exit.load(Ordering::Relaxed) {
             println!("Exiting...");
         }
 
-        data.ready_exit
+        self.ready_exit.load(Ordering::Relaxed)
     }
 }
