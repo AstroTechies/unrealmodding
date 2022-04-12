@@ -78,6 +78,7 @@ where
     let app = app::App {
         data: Arc::clone(&data),
         window_title: config.get_window_title(),
+        dropped_files: Vec::new(),
 
         should_exit: Arc::clone(&should_exit),
         ready_exit: Arc::clone(&ready_exit),
@@ -97,6 +98,8 @@ where
         let install_path = determine_paths::dertermine_install_path(config.get_app_id());
         data.lock().unwrap().base_path = base_path;
         data.lock().unwrap().install_path = install_path;
+
+        // TODO: gather mods
 
         working.store(true, Ordering::Relaxed);
 
@@ -126,6 +129,9 @@ where
     });
 
     // run the GUI app
-    let native_options = eframe::NativeOptions::default();
+    let native_options = eframe::NativeOptions {
+        drag_and_drop_support: true,
+        ..eframe::NativeOptions::default()
+    };
     eframe::run_native(Box::new(app), native_options);
 }
