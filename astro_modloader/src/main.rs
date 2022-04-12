@@ -15,6 +15,10 @@ impl unreal_modloader::config::GameConfig<astro_integrator::AstroIntegratorConfi
         "Astro".to_string()
     }
 
+    fn get_app_id(&self) -> u32 {
+        361420
+    }
+
     fn get_window_title(&self) -> String {
         "Astroneer Modloader".to_string()
     }
@@ -25,5 +29,5 @@ fn main() {
 
     let config = AstroGameConfig;
 
-    unreal_modloader::run(&config);
+    unreal_modloader::run(config);
 }
