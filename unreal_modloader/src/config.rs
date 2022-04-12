@@ -1,10 +1,8 @@
-pub trait DummyIntegratorConfig: std::marker::Send {
-    fn dummy(&self) -> String;
-}
+use unreal_modintegrator::IntegratorConfig;
 
-pub trait GameConfig<C>: std::marker::Send
+pub trait GameConfig<'a, C, T, E: std::error::Error>: std::marker::Send
 where
-    C: DummyIntegratorConfig,
+    C: IntegratorConfig<'a, T, E>,
 {
     fn get_integrator_config(&self) -> &C;
     fn get_game_name(&self) -> String;

@@ -1,11 +1,14 @@
-use unreal_modloader;
+use unreal_modintegrator::IntegratorConfig;
+use unreal_modloader::config::GameConfig;
 
 mod astro_integrator;
+use astro_integrator::AstroIntegratorConfig;
 
 struct AstroGameConfig;
 
-impl unreal_modloader::config::GameConfig<astro_integrator::AstroIntegratorConfig>
-    for AstroGameConfig
+impl<T, E: std::error::Error> GameConfig<'static, AstroIntegratorConfig, T, E> for AstroGameConfig
+where
+    AstroIntegratorConfig: IntegratorConfig<'static, T, E>,
 {
     fn get_integrator_config(&self) -> &astro_integrator::AstroIntegratorConfig {
         &astro_integrator::AstroIntegratorConfig

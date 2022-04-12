@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
+unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 lazy_static = "1.4.0"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"

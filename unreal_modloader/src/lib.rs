@@ -6,6 +6,8 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
+use unreal_modintegrator::IntegratorConfig;
+
 mod app;
 pub mod config;
 mod determine_paths;
@@ -22,14 +24,14 @@ pub struct AppData {
     pub game_mods: Vec<game_mod::GameMod>,
 }
 
-pub fn run<C, E>(config: C)
+pub fn run<'a, C, D, T, E: std::error::Error>(config: C)
 where
-    E: config::DummyIntegratorConfig,
-    C: 'static + config::GameConfig<E>,
+    D: 'static + IntegratorConfig<'a, T, E>,
+    C: 'static + config::GameConfig<'a, D, T, E>,
 {
     println!(
-        "Got integrator config: {:?}",
-        config.get_integrator_config().dummy()
+        "Got integrator config engine_version: {:?}",
+        config.get_integrator_config().get_engine_version()
     );
 
     // TODO: remove temp test
