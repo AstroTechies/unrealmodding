@@ -331,7 +331,7 @@ pub fn integrate_mods<
     let mod_files: Vec<DirEntry> = mods_dir
         .filter_map(|e| e.ok())
         .filter(|e| match e.file_name().into_string() {
-            Ok(s) => s.ends_with("_P.pak"),
+            Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
             Err(_) => false,
         })
         .collect();
@@ -363,7 +363,7 @@ pub fn integrate_mods<
     }
 
     if mods.len() > 0 {
-        let path = Path::new(install_path).join("999_Mods.pak");
+        let path = Path::new(install_path).join("999-Mods_P.pak");
         OpenOptions::new()
             .create(true)
             .write(true)
