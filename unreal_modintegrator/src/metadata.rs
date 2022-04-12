@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SyncMode {
     #[serde(rename = "serverclient")]
     ServerAndClient,
-    #[serde(rename = "server_only")]
+    #[serde(rename = "server")]
     ServerOnly,
-    #[serde(rename = "client_only")]
+    #[serde(rename = "client")]
     ClientOnly,
     #[serde(rename = "none")]
     None,
@@ -18,20 +18,20 @@ impl Default for SyncMode {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DownloadMode {
     #[serde(rename = "index_file")]
     IndexFile,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DownloadInfo {
     #[serde(rename = "type")]
     pub download_mode: DownloadMode,
     pub url: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
     pub schema_version: i32,
     pub name: String,
