@@ -31,12 +31,10 @@ pub trait IntegratorConfig<
     'data,
     T,
     E: std::error::Error,
-    F: FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>,
 >
 {
     fn get_data(&self) -> &'data T;
-    fn get_handlers(&self) -> HashMap<String, F>;
-    // todo: data handlers
+    fn get_handlers(&self) -> HashMap<String, Box<dyn FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>>>;
 
     fn get_integrator_version(&self) -> String;
     fn get_refuse_mismatched_connections(&self) -> bool;
@@ -359,8 +357,7 @@ pub fn integrate_mods<
     'data,
     T: 'data,
     E: 'static + std::error::Error,
-    F: FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>,
-    C: IntegratorConfig<'data, T, E, F>,
+    C: IntegratorConfig<'data, T, E>,
 >(
     integrator_config: &C,
     paks_path: &str,

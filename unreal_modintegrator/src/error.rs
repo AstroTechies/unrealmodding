@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, fmt::Display};
 
 #[derive(Debug)]
 pub enum IntegrationError {
@@ -16,6 +16,16 @@ impl IntegrationError {
     }
 }
 
+impl Display for IntegrationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            IntegrationError::GameNotFound => write!(f, "Game not found"),
+            IntegrationError::CorruptedStarterPak => write!(f, "Corrupted starter pak"),
+        }
+    }
+}
+
+
 #[derive(Debug)]
 pub enum ErrorCode {
     Io(io::Error),
@@ -24,6 +34,19 @@ pub enum ErrorCode {
     Json(serde_json::Error),
     Integration(IntegrationError),
     Other(Box<dyn std::error::Error>),
+}
+
+impl Display for ErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            ErrorCode::Io(ref err) => Display::fmt(err, f),
+            ErrorCode::Uasset(ref err) => Display::fmt(err, f),
+            ErrorCode::Upak(ref err) => Display::fmt(err, f),
+            ErrorCode::Json(ref err) => Display::fmt(err, f),
+            ErrorCode::Integration(ref err) => Display::fmt(err, f),
+            ErrorCode::Other(ref err) => Display::fmt(err, f),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -76,5 +99,11 @@ impl From<serde_json::Error> for Error {
         Error {
             code: ErrorCode::Json(e),
         }
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.code, f)
     }
 }
