@@ -1,4 +1,7 @@
-use assets::{LIST_OF_MODS_ASSET, INTEGRATOR_STATICS_ASSET, METADATA_JSON, INTEGRATOR_API_ASSET, MOD_ASSET, MOD_MISMATCH_WIDGET_ASSET, SERVER_MOD_COMPONENT_ASSET, SYNC_MODE_ASSET};
+use assets::{
+    INTEGRATOR_API_ASSET, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_JSON, MOD_ASSET,
+    MOD_MISMATCH_WIDGET_ASSET, SERVER_MOD_COMPONENT_ASSET, SYNC_MODE_ASSET,
+};
 use error::IntegrationError;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -24,17 +27,16 @@ use unreal_pak::PakFile;
 
 use crate::error::Error;
 
-pub trait IntegratorInfo {
-}
+pub trait IntegratorInfo {}
 
-pub trait IntegratorConfig<
-    'data,
-    T,
-    E: std::error::Error,
->
-{
+pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     fn get_data(&self) -> &'data T;
-    fn get_handlers(&self) -> HashMap<String, Box<dyn FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>>>;
+    fn get_handlers(
+        &self,
+    ) -> HashMap<
+        String,
+        Box<dyn FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>>,
+    >;
 
     fn get_integrator_version(&self) -> String;
     fn get_refuse_mismatched_connections(&self) -> bool;
@@ -114,7 +116,11 @@ pub fn read_asset(pak: &mut PakFile, engine_version: i32, name: &String) -> Resu
     Ok(asset)
 }
 
-fn read_in_memory(uasset: Vec<u8>, uexp: Option<Vec<u8>>, engine_version: i32) -> Result<Asset, Error> {
+fn read_in_memory(
+    uasset: Vec<u8>,
+    uexp: Option<Vec<u8>>,
+    engine_version: i32,
+) -> Result<Asset, Error> {
     let mut asset = Asset::new(uasset, uexp);
     asset.engine_version = engine_version;
     asset.parse_data()?;
@@ -295,8 +301,11 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
     Ok(())
 }
 
-fn bake_integrator_data(asset: &mut Asset, integrator_version: String, refuse_mismatched_connections: bool) -> Result<(), Error>
-{
+fn bake_integrator_data(
+    asset: &mut Asset,
+    integrator_version: String,
+    refuse_mismatched_connections: bool,
+) -> Result<(), Error> {
     let bp_import = Import {
         class_package: asset.add_fname("/Script/CoreUObject"),
         class_name: asset.add_fname("Package"),
@@ -410,7 +419,11 @@ pub fn integrate_mods<
         let mut generated_pak = PakFile::new(&file);
         generated_pak.init_empty(8)?;
 
-        let mut list_of_mods = read_in_memory(LIST_OF_MODS_ASSET.to_vec(),None, integrator_config.get_engine_version())?;
+        let mut list_of_mods = read_in_memory(
+            LIST_OF_MODS_ASSET.to_vec(),
+            None,
+            integrator_config.get_engine_version(),
+        )?;
         bake_mod_data(&mut list_of_mods, &mods)?;
         write_asset(
             &mut generated_pak,
@@ -418,21 +431,57 @@ pub fn integrate_mods<
             &String::from("Astro/Content/Integrator/ListOfMods.uasset"),
         )?;
 
-        let mut integrator_statics = read_in_memory(INTEGRATOR_STATICS_ASSET.to_vec(), None, integrator_config.get_engine_version())?;
-        bake_integrator_data(&mut integrator_statics, integrator_config.get_integrator_version(), integrator_config.get_refuse_mismatched_connections())?;
+        let mut integrator_statics = read_in_memory(
+            INTEGRATOR_STATICS_ASSET.to_vec(),
+            None,
+            integrator_config.get_engine_version(),
+        )?;
+        bake_integrator_data(
+            &mut integrator_statics,
+            integrator_config.get_integrator_version(),
+            integrator_config.get_refuse_mismatched_connections(),
+        )?;
         write_asset(
             &mut generated_pak,
             &integrator_statics,
             &String::from("Astro/Content/Integrator/IntegratorStatics.uasset"),
         )?;
-        
-        generated_pak.write_record(&String::from("metadata.json"), &METADATA_JSON.to_vec(), &unreal_pak::CompressionMethod::Zlib)?;
-        generated_pak.write_record(&String::from("Astro/Content/Integrator/IntegratorAPI.uasset"), &INTEGRATOR_API_ASSET.to_vec(), &unreal_pak::CompressionMethod::Zlib)?;
-        generated_pak.write_record(&String::from("Astro/Content/Integrator/IntegratorStatics_BP.uasset"), &assets::INTEGRATOR_STATICS_BP_ASSET.to_vec(), &unreal_pak::CompressionMethod::Zlib)?;
-        generated_pak.write_record(&String::from("Astro/Content/Integrator/Mod.uasset"), &MOD_ASSET.to_vec(), &unreal_pak::CompressionMethod::Zlib)?;
-        generated_pak.write_record(&String::from("Astro/Content/Integrator/ModMismatchWidget.uasset"), &MOD_MISMATCH_WIDGET_ASSET.to_vec(), &unreal_pak::CompressionMethod::Zlib)?;
-        generated_pak.write_record(&String::from("Astro/Content/Integrator/ServerModComponent.uasset"), &SERVER_MOD_COMPONENT_ASSET.to_vec(), &unreal_pak::CompressionMethod::Zlib)?;
-        generated_pak.write_record(&String::from("Astro/Content/Integrator/SyncMode.uasset"), &SYNC_MODE_ASSET.to_vec(), &unreal_pak::CompressionMethod::Zlib)?;
+
+        generated_pak.write_record(
+            &String::from("metadata.json"),
+            &METADATA_JSON.to_vec(),
+            &unreal_pak::CompressionMethod::Zlib,
+        )?;
+        generated_pak.write_record(
+            &String::from("Astro/Content/Integrator/IntegratorAPI.uasset"),
+            &INTEGRATOR_API_ASSET.to_vec(),
+            &unreal_pak::CompressionMethod::Zlib,
+        )?;
+        generated_pak.write_record(
+            &String::from("Astro/Content/Integrator/IntegratorStatics_BP.uasset"),
+            &assets::INTEGRATOR_STATICS_BP_ASSET.to_vec(),
+            &unreal_pak::CompressionMethod::Zlib,
+        )?;
+        generated_pak.write_record(
+            &String::from("Astro/Content/Integrator/Mod.uasset"),
+            &MOD_ASSET.to_vec(),
+            &unreal_pak::CompressionMethod::Zlib,
+        )?;
+        generated_pak.write_record(
+            &String::from("Astro/Content/Integrator/ModMismatchWidget.uasset"),
+            &MOD_MISMATCH_WIDGET_ASSET.to_vec(),
+            &unreal_pak::CompressionMethod::Zlib,
+        )?;
+        generated_pak.write_record(
+            &String::from("Astro/Content/Integrator/ServerModComponent.uasset"),
+            &SERVER_MOD_COMPONENT_ASSET.to_vec(),
+            &unreal_pak::CompressionMethod::Zlib,
+        )?;
+        generated_pak.write_record(
+            &String::from("Astro/Content/Integrator/SyncMode.uasset"),
+            &SYNC_MODE_ASSET.to_vec(),
+            &unreal_pak::CompressionMethod::Zlib,
+        )?;
 
         let mut game_paks = Vec::new();
         for game_file in &game_files {

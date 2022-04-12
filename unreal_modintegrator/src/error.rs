@@ -1,9 +1,9 @@
-use std::{io, fmt::Display};
+use std::{fmt::Display, io};
 
 #[derive(Debug)]
 pub enum IntegrationError {
     GameNotFound,
-    CorruptedStarterPak
+    CorruptedStarterPak,
 }
 
 impl IntegrationError {
@@ -24,7 +24,6 @@ impl Display for IntegrationError {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub enum ErrorCode {

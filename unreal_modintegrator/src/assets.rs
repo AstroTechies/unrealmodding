@@ -1,6 +1,6 @@
 use include_flate::flate;
 
-// todo: use bulk data 
+// todo: use bulk data
 // todo: make assets universal
 flate!(pub(crate) static INTEGRATOR_API_ASSET: [u8] from "assets/IntegratorAPI.uasset");
 flate!(pub(crate) static INTEGRATOR_STATICS_ASSET: [u8] from "assets/IntegratorStatics.uasset");
