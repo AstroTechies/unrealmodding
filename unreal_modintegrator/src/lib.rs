@@ -330,11 +330,23 @@ pub fn integrate_mods<
     let mods_dir = fs::read_dir(paks_path)?;
     let mod_files: Vec<DirEntry> = mods_dir
         .filter_map(|e| e.ok())
-        .filter(|e| match e.file_name().into_string() {
-            Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
-            Err(_) => false,
+        .filter(|e| {
+            e.file_name()
+                .into_string()
+                .map(|e| e.ends_with("_P.pak") && e != "999-Mods_P.pak")
+                .unwrap_or(false)
         })
         .collect();
+
+    let game_dir = fs::read_dir(install_path)?;
+    for existing_mod in game_dir.filter_map(|e| e.ok()).filter(|e| {
+        e.file_name()
+            .into_string()
+            .map(|e| e.ends_with("_P.pak"))
+            .unwrap_or(false)
+    }) {
+        fs::remove_file(existing_mod.path())?;
+    }
 
     let game_dir = fs::read_dir(install_path)?;
     let game_files: Vec<File> = game_dir
@@ -349,7 +361,8 @@ pub fn integrate_mods<
     let mut mods = Vec::new();
     let mut optional_mods_data = Vec::new();
     for mod_file in &mod_files {
-        println!("{:?}", mod_file.path());
+        fs::copy(mod_file.path(), Path::new(install_path).join(mod_file.file_name()))?;
+
         let stream = File::open(&mod_file.path())?;
         let mut pak = PakFile::new(&stream);
         pak.load_records()?;
