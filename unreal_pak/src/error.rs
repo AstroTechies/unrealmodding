@@ -1,3 +1,4 @@
+use std::error;
 use std::fmt;
 use std::io;
 
@@ -66,6 +67,8 @@ impl From<io::Error> for UpakError {
         }
     }
 }
+
+impl error::Error for UpakError {}
 
 #[derive(Debug)]
 pub enum UpakErrorKind {
