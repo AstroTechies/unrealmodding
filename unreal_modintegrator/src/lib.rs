@@ -132,7 +132,7 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
     for mod_data in mods {
         asset.add_name_reference(mod_data.mod_id.clone(), false);
 
-        let coded_sync_mode = match mod_data.sync {
+        let coded_sync_mode = match mod_data.sync.unwrap_or(SyncMode::ServerAndClient) {
             SyncMode::ServerAndClient => "SyncMode::NewEnumerator3",
             SyncMode::ServerOnly => "SyncMode::NewEnumerator2",
             SyncMode::ClientOnly => "SyncMode::NewEnumerator1",

@@ -33,7 +33,7 @@ pub struct DownloadInfo {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
-    pub schema_version: i32,
+    pub schema_version: Option<usize>,
     pub name: String,
     pub mod_id: String,
     pub author: Option<String>,
@@ -41,7 +41,7 @@ pub struct Metadata {
     #[serde(rename = "version")]
     pub mod_version: String,
     pub game_build: Option<String>,
-    pub sync: SyncMode,
+    pub sync: Option<SyncMode>,
     pub homepage: Option<String>,
     pub download: Option<DownloadInfo>,
 }
