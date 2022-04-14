@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -12,14 +13,24 @@ mod app;
 pub mod config;
 mod determine_paths;
 mod game_mod;
+mod modconfig;
 pub mod version;
 
 use game_mod::{GameMod, GameModVersion, SelectedVersion};
 use version::{GameBuild, Version};
 
+#[derive(Debug)]
 pub struct AppData {
+    /// %LocalAppData%\[GameName]\Saved
     pub base_path: Option<PathBuf>,
+    /// %LocalAppData%\[GameName]\Saved\Mods
+    pub data_path: Option<PathBuf>,
+    /// %LocalAppData%\[GameName]\Saved\Paks
+    pub paks_path: Option<PathBuf>,
+    /// install path
     pub install_path: Option<PathBuf>,
+
+    pub game_build: Option<GameBuild>,
 
     pub game_mods: Vec<game_mod::GameMod>,
 }
@@ -64,7 +75,10 @@ where
 
     let data = Arc::new(Mutex::new(AppData {
         base_path: None,
+        data_path: None,
+        paks_path: None,
         install_path: None,
+        game_build: None,
 
         game_mods: vec![test_mod],
     }));
@@ -94,12 +108,27 @@ where
         working.store(true, Ordering::Relaxed);
 
         // get paths
-        let base_path = determine_paths::dertermine_base_path(config.get_game_name().as_str());
-        let install_path = determine_paths::dertermine_install_path(config.get_app_id());
-        data.lock().unwrap().base_path = base_path;
-        data.lock().unwrap().install_path = install_path;
+        data.lock().unwrap().base_path =
+            determine_paths::dertermine_base_path(config.get_game_name().as_str());
+        data.lock().unwrap().install_path =
+            determine_paths::dertermine_install_path(config.get_app_id());
 
-        // TODO: gather mods
+        if data.lock().unwrap().base_path.is_some() {
+            let mut data_guard = data.lock().unwrap();
+
+            // set sub dirs
+            let base_path = data_guard.base_path.as_ref().unwrap().clone();
+            data_guard.data_path = Some(PathBuf::from(base_path.clone()).join("Mods"));
+            data_guard.paks_path = Some(PathBuf::from(base_path.clone()).join("Paks"));
+
+            // ensure the base_path/Mods directory exists
+            fs::create_dir_all(data_guard.data_path.as_ref().unwrap()).unwrap();
+
+            // load config
+            modconfig::load_config(&mut *data_guard);
+
+            // TODO: gather mods
+        }
 
         working.store(true, Ordering::Relaxed);
 
@@ -112,7 +141,7 @@ where
                 break;
             }
 
-            if should_integrate.load(Ordering::Relaxed) {
+            if should_integrate.load(Ordering::Relaxed) && data.base_path.is_some() {
                 println!("Integrating mods...");
                 working.store(true, Ordering::Relaxed);
                 should_integrate.store(false, Ordering::Relaxed);
