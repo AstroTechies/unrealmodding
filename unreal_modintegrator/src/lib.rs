@@ -38,7 +38,6 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
 
     fn get_game_name(&self) -> String;
     fn get_integrator_version(&self) -> String;
-    fn get_refuse_mismatched_connections(&self) -> bool;
     fn get_engine_version(&self) -> i32;
 }
 
@@ -287,6 +286,7 @@ pub fn integrate_mods<
     integrator_config: &C,
     paks_path: &str,
     install_path: &str,
+    refuse_mismatched_connections: bool
 ) -> Result<(), Error> {
     let mods_dir = fs::read_dir(paks_path)?;
     let mod_files: Vec<DirEntry> = mods_dir
@@ -362,7 +362,7 @@ pub fn integrate_mods<
         bake_integrator_data(
             &mut integrator_statics,
             integrator_config.get_integrator_version(),
-            integrator_config.get_refuse_mismatched_connections(),
+            refuse_mismatched_connections,
         )?;
         write_asset(
             &mut generated_pak,
