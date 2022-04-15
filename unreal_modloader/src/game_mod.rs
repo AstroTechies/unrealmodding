@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use unreal_modintegrator::metadata::{DownloadInfo, SyncMode};
 
 use crate::version::{GameBuild, Version};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SelectedVersion {
     Latest,
     Specific(Version),
@@ -10,10 +12,11 @@ pub enum SelectedVersion {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameMod {
+    //? kinda redundant since it will also be used as the hashmap key
     pub mod_id: String,
 
-    pub versions: Vec<GameModVersion>,
-    pub latest_version: Option<GameModVersion>,
+    pub versions: HashMap<Version, GameModVersion>,
+    pub latest_version: Option<Version>,
     pub selected_version: SelectedVersion,
 
     pub active: bool,
@@ -29,9 +32,8 @@ pub struct GameMod {
     pub size: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GameModVersion {
-    pub version: Version,
     pub file_name: String,
     pub downloaded: bool,
 }

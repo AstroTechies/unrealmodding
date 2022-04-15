@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 unreal_modintegrator = { version = "0.1.0", path = "../unreal_modintegrator" }
+unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 directories = "4.0.1"
 eframe = "0.17.0"
 serde = { version = "1.0.136", features = ["derive"] }

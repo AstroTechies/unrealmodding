@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+use std::error::Error;
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -7,7 +10,11 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use unreal_modintegrator::{metadata::SyncMode, IntegratorConfig};
+use unreal_modintegrator::{
+    metadata::{Metadata, SyncMode},
+    IntegratorConfig,
+};
+use unreal_pak::PakFile;
 
 mod app;
 pub mod config;
@@ -46,18 +53,18 @@ where
     );
 
     // TODO: remove temp test
+    let mut test_versions = HashMap::new();
+    test_versions.insert(
+        Version::new(1, 0, 0),
+        GameModVersion {
+            file_name: "test_mod.pak".to_string(),
+            downloaded: false,
+        },
+    );
     let test_mod = GameMod {
         mod_id: "TestMod".to_string(),
 
-        versions: vec![GameModVersion {
-            version: Version {
-                major: 1,
-                minor: 0,
-                patch: 0,
-            },
-            file_name: "000-TestMod-1.0.0_P.pak".to_string(),
-            downloaded: true,
-        }],
+        versions: test_versions,
         latest_version: None,
         selected_version: SelectedVersion::Specific(Version::new(1, 0, 0)),
 
@@ -117,20 +124,103 @@ where
             let mut data_guard = data.lock().unwrap();
 
             // set sub dirs
-            let base_path = data_guard.base_path.as_ref().unwrap().clone();
+            let base_path = data_guard.base_path.as_ref().unwrap().to_owned();
             data_guard.data_path = Some(PathBuf::from(base_path.clone()).join("Mods"));
             data_guard.paks_path = Some(PathBuf::from(base_path.clone()).join("Paks"));
 
             // ensure the base_path/Mods directory exists
             fs::create_dir_all(data_guard.data_path.as_ref().unwrap()).unwrap();
 
-            // load config
-            modconfig::load_config(&mut *data_guard);
+            // TODO: better error handling for all of this
+            // gather mods
+            let mods_dir = fs::read_dir(data_guard.data_path.as_ref().unwrap()).unwrap();
+            let mod_files: Vec<fs::DirEntry> = mods_dir
+                .filter_map(|e| e.ok())
+                .filter(|e| match e.file_name().into_string() {
+                    Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
+                    Err(_) => false,
+                })
+                .collect();
 
-            // TODO: gather mods
+            #[derive(Debug)]
+            struct ReadData(String, Metadata);
+            let mut mods_read: HashMap<String, Vec<ReadData>> = HashMap::new();
+
+            // read metadata
+            for file_path in mod_files.iter() {
+                let file_result = (|| -> Result<(), Box<dyn Error>> {
+                    let file = fs::File::open(&file_path.path())?;
+                    let mut pak = PakFile::new(&file);
+
+                    pak.load_records()?;
+
+                    let record = &pak.read_record(&String::from("metadata.json"))?;
+                    let metadata: Metadata = serde_json::from_slice(&record).unwrap();
+
+                    let file_name = file_path.file_name().to_str().unwrap().to_owned();
+                    let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
+                        .split("-")
+                        .collect::<Vec<&str>>();
+
+                    // check that mod id in file name matches metadata
+                    if file_name_parts[1] != metadata.mod_id {
+                        return Err(Box::new(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!(
+                                "Mod id in file name does not match metadata id: {} != {}",
+                                file_name_parts[1], metadata.mod_id
+                            ),
+                        )));
+                    }
+
+                    // check that version in file name matches metadata
+                    if file_name_parts[2] != metadata.mod_version {
+                        return Err(Box::new(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!(
+                                "Version in file name does not match metadata version: {} != {}",
+                                file_name_parts[2], metadata.mod_version
+                            ),
+                        )));
+                    }
+
+                    let mod_id = metadata.mod_id.to_owned();
+
+                    if !mods_read.contains_key(&mod_id) {
+                        mods_read.insert(mod_id.to_owned(), Vec::new());
+                    }
+
+                    mods_read
+                        .get_mut(&mod_id)
+                        .unwrap()
+                        .push(ReadData(file_name, metadata));
+
+                    Ok(())
+                })();
+                match &file_result {
+                    Ok(_) => {
+                        println!(
+                            "Successfully read metadata for {}",
+                            file_path.file_name().to_str().unwrap()
+                        );
+                    }
+                    Err(e) => {
+                        println!(
+                            "Failed to read pak file {}, error: {}",
+                            file_path.file_name().to_str().unwrap(),
+                            e
+                        );
+                    }
+                }
+            }
+
+            println!("{:#?}", mods_read);
+
+            // load config
+            //modconfig::load_config(&mut *data_guard);
         }
 
-        working.store(true, Ordering::Relaxed);
+        working.store(false, Ordering::Relaxed);
 
         // background loop
         loop {

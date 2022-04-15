@@ -4,7 +4,7 @@ use std::fmt;
 use std::num::ParseIntError;
 
 /// Version of a mod.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Version {
     pub major: usize,
     pub minor: usize,
@@ -55,7 +55,7 @@ impl TryFrom<&String> for Version {
 }
 
 /// Version of the Unreal Engine game.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct GameBuild {
     pub major: usize,
     pub minor: usize,
