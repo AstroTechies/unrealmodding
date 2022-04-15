@@ -40,7 +40,6 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     fn get_integrator_version(&self) -> String;
     fn get_refuse_mismatched_connections(&self) -> bool;
     fn get_engine_version(&self) -> i32;
-    fn get_mod_install_dir(&self) -> String;
 }
 
 pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<Vec<u8>> {
@@ -326,7 +325,7 @@ pub fn integrate_mods<
     }
 
     if mods.len() > 0 {
-        let path = Path::new(&integrator_config.get_mod_install_dir()).join("999-Mods_P.pak");
+        let path = Path::new(install_path).join("999-Mods_P.pak");
         OpenOptions::new()
             .create(true)
             .write(true)
