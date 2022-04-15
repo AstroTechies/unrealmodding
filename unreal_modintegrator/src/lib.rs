@@ -1,9 +1,5 @@
-use assets::{
-    INTEGRATOR_API_ASSET, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_JSON, MOD_ASSET,
-    MOD_MISMATCH_WIDGET_ASSET, SERVER_MOD_COMPONENT_ASSET, SYNC_MODE_ASSET,
-};
+use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_JSON};
 use error::IntegrationError;
-use lazy_static::lazy_static;
 use metadata::{Metadata, SyncMode};
 use std::collections::HashMap;
 use std::fs;
@@ -11,6 +7,7 @@ use std::fs::{DirEntry, File, OpenOptions};
 use std::io::Cursor;
 use std::path::Path;
 use unreal_asset::exports::data_table_export::DataTable;
+use unreal_asset::exports::normal_export::NormalExport;
 use unreal_asset::exports::Export;
 use unreal_asset::properties::int_property::{BoolProperty, ByteProperty};
 use unreal_asset::properties::object_property::ObjectProperty;
@@ -39,20 +36,11 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
         Box<dyn FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>>,
     >;
 
+    fn get_game_name(&self) -> String;
     fn get_integrator_version(&self) -> String;
     fn get_refuse_mismatched_connections(&self) -> bool;
     fn get_engine_version(&self) -> i32;
-}
-
-lazy_static! {
-    static ref COPY_OVER: Vec<String> = Vec::from([
-        String::from("IntegratorAPI"),
-        String::from("IntegratorStatics_BP"),
-        String::from("Mod"),
-        String::from("ModMismatchWidget"),
-        String::from("ServerModComponent"),
-        String::from("SyncMode"),
-    ]);
+    fn get_mod_install_dir(&self) -> String;
 }
 
 pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<Vec<u8>> {
@@ -88,7 +76,7 @@ fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<(), Er
         true => Some(Cursor::new(Vec::new())),
         false => None,
     };
-    asset.write_data(&mut uasset_cursor, &mut uexp_cursor)?;
+    asset.write_data(&mut uasset_cursor, uexp_cursor.as_mut())?;
 
     pak.write_record(
         name,
@@ -261,23 +249,11 @@ fn bake_integrator_data(
     integrator_version: String,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
-    let bp_import = Import {
-        class_package: asset.add_fname("/Script/CoreUObject"),
-        class_name: asset.add_fname("Package"),
-        outer_index: 0,
-        object_name: asset.add_fname("/Game/Integrator/IntegratorStatics_BP"),
-    };
-    let bp_import = asset.add_import(bp_import);
+    if asset.exports.len() != 2 {
+        return Err(IntegrationError::corrupted_starter_pak().into());
+    }
 
-    let import = Import {
-        class_package: asset.add_fname("/Script/Engine"),
-        class_name: asset.add_fname("BlueprintGeneratedClass"),
-        outer_index: bp_import,
-        object_name: asset.add_fname("IntegratorStatics_BP_C"),
-    };
-    let import = asset.add_import(import);
-
-    let data: Vec<Property> = Vec::from([
+    let properties: Vec<Property> = Vec::from([
         StrProperty {
             name: FName::from_slice("IntegratorVersion"),
             property_guid: None,
@@ -292,29 +268,15 @@ fn bake_integrator_data(
             value: refuse_mismatched_connections,
         }
         .into(),
-        ObjectProperty {
-            name: FName::from_slice("NativeClass"),
-            property_guid: None,
-            duplication_index: 0,
-            value: import,
-        }
-        .into(),
     ]);
 
-    let normal_export = asset
-        .exports
-        .get_mut(0)
-        .ok_or::<Error>(IntegrationError::corrupted_starter_pak().into())?;
-
-    let normal_export = match normal_export {
-        Export::NormalExport(e) => Some(e),
-        _ => None,
+    match asset.exports[1] {
+        Export::NormalExport(e) => {
+            e.properties = properties;
+            Ok(())
+        }
+        _ => Err(IntegrationError::corrupted_starter_pak().into()),
     }
-    .ok_or::<Error>(IntegrationError::corrupted_starter_pak().into())?;
-
-    normal_export.properties = data;
-
-    Ok(())
 }
 
 pub fn integrate_mods<
@@ -339,16 +301,6 @@ pub fn integrate_mods<
         .collect();
 
     let game_dir = fs::read_dir(install_path)?;
-    for existing_mod in game_dir.filter_map(|e| e.ok()).filter(|e| {
-        e.file_name()
-            .into_string()
-            .map(|e| e.ends_with("_P.pak"))
-            .unwrap_or(false)
-    }) {
-        fs::remove_file(existing_mod.path())?;
-    }
-
-    let game_dir = fs::read_dir(install_path)?;
     let game_files: Vec<File> = game_dir
         .filter_map(|e| e.ok())
         .filter(|e| e.path().extension().map(|e| e == "pak").unwrap_or(false))
@@ -361,8 +313,6 @@ pub fn integrate_mods<
     let mut mods = Vec::new();
     let mut optional_mods_data = Vec::new();
     for mod_file in &mod_files {
-        fs::copy(mod_file.path(), Path::new(install_path).join(mod_file.file_name()))?;
-
         let stream = File::open(&mod_file.path())?;
         let mut pak = PakFile::new(&stream);
         pak.load_records()?;
@@ -376,7 +326,7 @@ pub fn integrate_mods<
     }
 
     if mods.len() > 0 {
-        let path = Path::new(install_path).join("999-Mods_P.pak");
+        let path = Path::new(&integrator_config.get_mod_install_dir()).join("999-Mods_P.pak");
         OpenOptions::new()
             .create(true)
             .write(true)
@@ -396,14 +346,20 @@ pub fn integrate_mods<
         write_asset(
             &mut generated_pak,
             &list_of_mods,
-            &String::from("Astro/Content/Integrator/ListOfMods.uasset"),
+            &(integrator_config.get_game_name() + "/Content/Integrator/ListOfMods.uasset"),
         )?;
+
+        #[cfg(not(bulk_data))]
+        let integrator_statics_bulk = None;
+        #[cfg(bulk_data)]
+        let integrator_statics_bulk = Some(INTEGRATOR_STATICS_BULK.to_vec());
 
         let mut integrator_statics = read_in_memory(
             INTEGRATOR_STATICS_ASSET.to_vec(),
-            None,
+            integrator_statics_bulk,
             integrator_config.get_engine_version(),
         )?;
+
         bake_integrator_data(
             &mut integrator_statics,
             integrator_config.get_integrator_version(),
@@ -412,7 +368,8 @@ pub fn integrate_mods<
         write_asset(
             &mut generated_pak,
             &integrator_statics,
-            &String::from("Astro/Content/Integrator/IntegratorStatics.uasset"),
+            &(integrator_config.get_game_name()
+                + "/Content/Integrator/IntegratorStatics_BP.uasset"),
         )?;
 
         generated_pak.write_record(
@@ -420,36 +377,14 @@ pub fn integrate_mods<
             &METADATA_JSON.to_vec(),
             &unreal_pak::CompressionMethod::Zlib,
         )?;
-        generated_pak.write_record(
-            &String::from("Astro/Content/Integrator/IntegratorAPI.uasset"),
-            &INTEGRATOR_API_ASSET.to_vec(),
-            &unreal_pak::CompressionMethod::Zlib,
-        )?;
-        generated_pak.write_record(
-            &String::from("Astro/Content/Integrator/IntegratorStatics_BP.uasset"),
-            &assets::INTEGRATOR_STATICS_BP_ASSET.to_vec(),
-            &unreal_pak::CompressionMethod::Zlib,
-        )?;
-        generated_pak.write_record(
-            &String::from("Astro/Content/Integrator/Mod.uasset"),
-            &MOD_ASSET.to_vec(),
-            &unreal_pak::CompressionMethod::Zlib,
-        )?;
-        generated_pak.write_record(
-            &String::from("Astro/Content/Integrator/ModMismatchWidget.uasset"),
-            &MOD_MISMATCH_WIDGET_ASSET.to_vec(),
-            &unreal_pak::CompressionMethod::Zlib,
-        )?;
-        generated_pak.write_record(
-            &String::from("Astro/Content/Integrator/ServerModComponent.uasset"),
-            &SERVER_MOD_COMPONENT_ASSET.to_vec(),
-            &unreal_pak::CompressionMethod::Zlib,
-        )?;
-        generated_pak.write_record(
-            &String::from("Astro/Content/Integrator/SyncMode.uasset"),
-            &SYNC_MODE_ASSET.to_vec(),
-            &unreal_pak::CompressionMethod::Zlib,
-        )?;
+
+        for entry in &COPY_OVER {
+            generated_pak.write_record(
+                &(integrator_config.get_game_name() + "/Content/Integrator/" + entry.1),
+                &entry.0.to_vec(),
+                &unreal_pak::CompressionMethod::Zlib,
+            )?;
+        }
 
         let mut game_paks = Vec::new();
         for game_file in &game_files {
