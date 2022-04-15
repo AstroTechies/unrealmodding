@@ -22,14 +22,20 @@ impl epi::App for App {
         self.window_title.as_str()
     }
 
-    // fn setup(
-    //     &mut self,
-    //     _ctx: &egui::Context,
-    //     _frame: &epi::Frame,
-    //     _storage: Option<&dyn epi::Storage>,
-    // ) {
+    fn setup(
+        &mut self,
+        ctx: &egui::Context,
+        _frame: &epi::Frame,
+        _storage: Option<&dyn epi::Storage>,
+    ) {
+        let mut fonts = egui::FontDefinitions::default();
 
-    // }
+        fonts.font_data.iter_mut().for_each(|font| {
+            font.1.tweak.scale = 1.2;
+        });
+
+        ctx.set_fonts(fonts);
+    }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
         let mut data = self.data.lock().unwrap();
