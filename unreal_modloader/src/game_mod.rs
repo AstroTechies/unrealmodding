@@ -1,39 +1,57 @@
 use std::collections::HashMap;
+use std::fmt;
 
-use unreal_modintegrator::metadata::{DownloadInfo, SyncMode};
+use unreal_modintegrator::metadata::{DownloadInfo, Metadata, SyncMode};
 
 use crate::version::{GameBuild, Version};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SelectedVersion {
-    Latest,
+    /// Used when reading from index file
+    Latest(Version),
+    /// Used when sorting versions
+    LatestIndirect(Option<Version>),
+    /// Used when a specific version is selected
     Specific(Version),
+}
+
+impl fmt::Display for SelectedVersion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SelectedVersion::Latest(version) => write!(f, "Latest ({})", version),
+            SelectedVersion::LatestIndirect(version) => {
+                if let Some(version) = version {
+                    write!(f, "{}", version)
+                } else {
+                    write!(f, "None")
+                }
+            }
+            SelectedVersion::Specific(version) => write!(f, "{}", version),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameMod {
-    //? kinda redundant since it will also be used as the hashmap key
-    pub mod_id: String,
-
     pub versions: HashMap<Version, GameModVersion>,
-    pub latest_version: Option<Version>,
     pub selected_version: SelectedVersion,
 
     pub active: bool,
 
     // fields set depending on the selected version
     pub name: String,
-    pub author: String,
-    pub description: String,
-    pub game_build: GameBuild,
+    pub author: Option<String>,
+    pub description: Option<String>,
+    pub game_build: Option<GameBuild>,
     pub sync: SyncMode,
-    pub homepage: String,
+    pub homepage: Option<String>,
     pub download: Option<DownloadInfo>,
-    pub size: usize,
+    pub size: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GameModVersion {
     pub file_name: String,
     pub downloaded: bool,
+    pub metadata: Option<Metadata>,
 }

@@ -8,7 +8,7 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use unreal_modintegrator::{
     metadata::{Metadata, SyncMode},
@@ -39,7 +39,7 @@ pub struct AppData {
 
     pub game_build: Option<GameBuild>,
 
-    pub game_mods: Vec<game_mod::GameMod>,
+    pub game_mods: HashMap<String, GameMod>,
 }
 
 pub fn run<'a, C, D, T, E: std::error::Error>(config: C)
@@ -47,39 +47,6 @@ where
     D: 'static + IntegratorConfig<'a, T, E>,
     C: 'static + config::GameConfig<'a, D, T, E>,
 {
-    println!(
-        "Got integrator config engine_version: {:?}",
-        config.get_integrator_config().get_engine_version()
-    );
-
-    // TODO: remove temp test
-    let mut test_versions = HashMap::new();
-    test_versions.insert(
-        Version::new(1, 0, 0),
-        GameModVersion {
-            file_name: "test_mod.pak".to_string(),
-            downloaded: false,
-        },
-    );
-    let test_mod = GameMod {
-        mod_id: "TestMod".to_string(),
-
-        versions: test_versions,
-        latest_version: None,
-        selected_version: SelectedVersion::Specific(Version::new(1, 0, 0)),
-
-        active: true,
-
-        name: "Test Mod".to_string(),
-        author: "Konsti".to_string(),
-        description: "test mod description".to_string(),
-        game_build: GameBuild::new(1, 24, 29, 0),
-        sync: SyncMode::default(),
-        homepage: "https://astroneermods.space/m/TestMod".to_string(),
-        download: None,
-        size: 1000,
-    };
-
     let data = Arc::new(Mutex::new(AppData {
         base_path: None,
         data_path: None,
@@ -87,7 +54,7 @@ where
         install_path: None,
         game_build: None,
 
-        game_mods: vec![test_mod],
+        game_mods: HashMap::new(),
     }));
 
     let should_exit = Arc::new(AtomicBool::new(false));
@@ -108,144 +75,103 @@ where
     };
 
     // spawn a background thread to handle long running tasks
-    thread::spawn(move || {
-        println!("Starting background thread");
+    thread::Builder::new()
+        .name("background".to_string())
+        .spawn(move || {
+            println!("Starting background thread");
 
-        // startup work
-        working.store(true, Ordering::Relaxed);
+            let start = Instant::now();
 
-        // get paths
-        data.lock().unwrap().base_path =
-            determine_paths::dertermine_base_path(config.get_game_name().as_str());
-        data.lock().unwrap().install_path =
-            determine_paths::dertermine_install_path(config.get_app_id());
+            // startup work
+            working.store(true, Ordering::Relaxed);
 
-        if data.lock().unwrap().base_path.is_some() {
-            let mut data_guard = data.lock().unwrap();
+            // get paths
+            data.lock().unwrap().base_path =
+                determine_paths::dertermine_base_path(config.get_game_name().as_str());
+            data.lock().unwrap().install_path =
+                determine_paths::dertermine_install_path(config.get_app_id());
 
-            // set sub dirs
-            let base_path = data_guard.base_path.as_ref().unwrap().to_owned();
-            data_guard.data_path = Some(PathBuf::from(base_path.clone()).join("Mods"));
-            data_guard.paks_path = Some(PathBuf::from(base_path.clone()).join("Paks"));
+            if data.lock().unwrap().base_path.is_some() {
+                let mut data_guard = data.lock().unwrap();
 
-            // ensure the base_path/Mods directory exists
-            fs::create_dir_all(data_guard.data_path.as_ref().unwrap()).unwrap();
+                // set sub dirs
+                let base_path = data_guard.base_path.as_ref().unwrap().to_owned();
+                data_guard.data_path = Some(PathBuf::from(base_path.clone()).join("Mods"));
+                data_guard.paks_path = Some(PathBuf::from(base_path.clone()).join("Paks"));
 
-            // TODO: better error handling for all of this
-            // gather mods
-            let mods_dir = fs::read_dir(data_guard.data_path.as_ref().unwrap()).unwrap();
-            let mod_files: Vec<fs::DirEntry> = mods_dir
-                .filter_map(|e| e.ok())
-                .filter(|e| match e.file_name().into_string() {
-                    Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
-                    Err(_) => false,
-                })
-                .collect();
+                let data_path = data_guard.data_path.as_ref().unwrap().to_owned();
+                drop(data_guard);
 
-            #[derive(Debug)]
-            struct ReadData(String, Metadata);
-            let mut mods_read: HashMap<String, Vec<ReadData>> = HashMap::new();
+                // ensure the base_path/Mods directory exists
+                fs::create_dir_all(&data_path).unwrap();
 
-            // read metadata
-            for file_path in mod_files.iter() {
-                let file_result = (|| -> Result<(), Box<dyn Error>> {
-                    let file = fs::File::open(&file_path.path())?;
-                    let mut pak = PakFile::new(&file);
+                // TODO: better error handling for all of this
+                // gather mods
+                let mods_dir = fs::read_dir(&data_path).unwrap();
 
-                    pak.load_records()?;
+                let mod_files: Vec<fs::DirEntry> = mods_dir
+                    .filter_map(|e| e.ok())
+                    .filter(|e| match e.file_name().into_string() {
+                        Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
+                        Err(_) => false,
+                    })
+                    .collect();
 
-                    let record = &pak.read_record(&String::from("metadata.json"))?;
-                    let metadata: Metadata = serde_json::from_slice(&record).unwrap();
+                // read metadata from pak files and collect for each mod_id
+                let mods_read = read_pak_files(mod_files);
 
-                    let file_name = file_path.file_name().to_str().unwrap().to_owned();
-                    let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
-                        .split("-")
-                        .collect::<Vec<&str>>();
+                let mut data_guard = data.lock().unwrap();
 
-                    // check that mod id in file name matches metadata
-                    if file_name_parts[1] != metadata.mod_id {
-                        return Err(Box::new(io::Error::new(
-                            io::ErrorKind::Other,
-                            format!(
-                                "Mod id in file name does not match metadata id: {} != {}",
-                                file_name_parts[1], metadata.mod_id
-                            ),
-                        )));
-                    }
+                // turn metadata into proper data structures
+                insert_mods_from_readdata(&mods_read, &mut *data_guard);
 
-                    // check that version in file name matches metadata
-                    if file_name_parts[2] != metadata.mod_version {
-                        return Err(Box::new(io::Error::new(
-                            io::ErrorKind::Other,
-                            format!(
-                                "Version in file name does not match metadata version: {} != {}",
-                                file_name_parts[2], metadata.mod_version
-                            ),
-                        )));
-                    }
+                // set top level data
+                set_mod_data_from_version(&mut *data_guard);
 
-                    let mod_id = metadata.mod_id.to_owned();
+                // load config
+                modconfig::load_config(&mut *data_guard);
 
-                    if !mods_read.contains_key(&mod_id) {
-                        mods_read.insert(mod_id.to_owned(), Vec::new());
-                    }
+                println!("{:#?}", data_guard.game_mods);
+            }
 
-                    mods_read
-                        .get_mut(&mod_id)
-                        .unwrap()
-                        .push(ReadData(file_name, metadata));
+            println!(
+                "Background thread startup took {} milliseconds",
+                start.elapsed().as_millis()
+            );
 
-                    Ok(())
-                })();
-                match &file_result {
-                    Ok(_) => {
-                        println!(
-                            "Successfully read metadata for {}",
-                            file_path.file_name().to_str().unwrap()
-                        );
-                    }
-                    Err(e) => {
-                        println!(
-                            "Failed to read pak file {}, error: {}",
-                            file_path.file_name().to_str().unwrap(),
-                            e
-                        );
-                    }
+            working.store(false, Ordering::Relaxed);
+
+            // background loop
+            loop {
+                if should_exit.load(Ordering::Relaxed) {
+                    println!("Background thread exiting...");
+                    ready_exit.store(true, Ordering::Relaxed);
+                    break;
                 }
+
+                let data = data.lock().unwrap();
+                if should_integrate.load(Ordering::Relaxed) && data.base_path.is_some() {
+                    drop(data);
+                    println!(
+                        "Integrating mods with config engine_version: {:?}",
+                        config.get_integrator_config().get_engine_version()
+                    );
+
+                    working.store(true, Ordering::Relaxed);
+                    should_integrate.store(false, Ordering::Relaxed);
+
+                    // TODO: move mods
+                    // TODO: run integrator
+
+                    working.store(false, Ordering::Relaxed);
+                } else {
+                    drop(data);
+                }
+
+                thread::sleep(Duration::from_millis(50));
             }
-
-            println!("{:#?}", mods_read);
-
-            // load config
-            //modconfig::load_config(&mut *data_guard);
-        }
-
-        working.store(false, Ordering::Relaxed);
-
-        // background loop
-        loop {
-            let mut data = data.lock().unwrap();
-            if should_exit.load(Ordering::Relaxed) {
-                println!("Background thread exiting...");
-                ready_exit.store(true, Ordering::Relaxed);
-                break;
-            }
-
-            if should_integrate.load(Ordering::Relaxed) && data.base_path.is_some() {
-                println!("Integrating mods...");
-                working.store(true, Ordering::Relaxed);
-                should_integrate.store(false, Ordering::Relaxed);
-
-                // TODO: move mods
-                // TODO: run integrator
-
-                working.store(false, Ordering::Relaxed);
-            }
-
-            drop(data);
-            thread::sleep(Duration::from_millis(50));
-        }
-    });
+        })
+        .expect("Failure to spawn background thread");
 
     // run the GUI app
     let native_options = eframe::NativeOptions {
@@ -253,4 +179,160 @@ where
         ..eframe::NativeOptions::default()
     };
     eframe::run_native(Box::new(app), native_options);
+}
+
+#[derive(Debug)]
+struct ReadData(String, Metadata);
+
+fn read_pak_files(mod_files: Vec<fs::DirEntry>) -> HashMap<String, Vec<ReadData>> {
+    let mut mods_read: HashMap<String, Vec<ReadData>> = HashMap::new();
+
+    // read metadata
+    for file_path in mod_files.iter() {
+        let file_result = (|| -> Result<(), Box<dyn Error>> {
+            let file = fs::File::open(&file_path.path())?;
+            let mut pak = PakFile::new(&file);
+
+            pak.load_records()?;
+
+            let record = &pak.read_record(&String::from("metadata.json"))?;
+            let metadata: Metadata = serde_json::from_slice(&record).unwrap();
+
+            let file_name = file_path.file_name().to_str().unwrap().to_owned();
+            let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
+                .split("-")
+                .collect::<Vec<&str>>();
+
+            // check that mod id in file name matches metadata
+            if file_name_parts[1] != metadata.mod_id {
+                return Err(Box::new(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!(
+                        "Mod id in file name does not match metadata id: {} != {}",
+                        file_name_parts[1], metadata.mod_id
+                    ),
+                )));
+            }
+
+            // check that version in file name matches metadata
+            if file_name_parts[2] != metadata.mod_version {
+                return Err(Box::new(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!(
+                        "Version in file name does not match metadata version: {} != {}",
+                        file_name_parts[2], metadata.mod_version
+                    ),
+                )));
+            }
+
+            let mod_id = metadata.mod_id.to_owned();
+
+            if !mods_read.contains_key(&mod_id) {
+                mods_read.insert(mod_id.to_owned(), Vec::new());
+            }
+
+            mods_read
+                .get_mut(&mod_id)
+                .unwrap()
+                .push(ReadData(file_name, metadata));
+
+            Ok(())
+        })();
+        match &file_result {
+            Ok(_) => {
+                println!(
+                    "Successfully read metadata for {}",
+                    file_path.file_name().to_str().unwrap()
+                );
+            }
+            Err(e) => {
+                println!(
+                    "Failed to read pak file {}, error: {}",
+                    file_path.file_name().to_str().unwrap(),
+                    e
+                );
+            }
+        }
+    }
+
+    mods_read
+}
+
+fn insert_mods_from_readdata(mods_read: &HashMap<String, Vec<ReadData>>, data: &mut AppData) {
+    for (mod_id, mod_files) in mods_read.iter() {
+        // check if mod is in global list, if not insert empty
+        if !data.game_mods.contains_key(mod_id) {
+            let game_mod = GameMod {
+                versions: HashMap::new(),
+                selected_version: SelectedVersion::LatestIndirect(None),
+
+                active: false,
+
+                name: "".to_owned(),
+                author: None,
+                description: None,
+                game_build: None,
+                sync: SyncMode::ServerAndClient,
+                homepage: None,
+                download: None,
+                size: 0,
+            };
+
+            data.game_mods.insert(mod_id.to_owned(), game_mod);
+        }
+
+        // insert metadata
+        for read_data in mod_files {
+            let version = GameModVersion {
+                file_name: read_data.0.clone(),
+                downloaded: true,
+                metadata: Some(read_data.1.clone()),
+            };
+            let key: Version =
+                Version::try_from(&version.metadata.as_ref().unwrap().mod_version).unwrap();
+            data.game_mods
+                .get_mut(&version.metadata.as_ref().unwrap().mod_id)
+                .unwrap()
+                .versions
+                .insert(key, version);
+        }
+    }
+}
+
+fn set_mod_data_from_version(data: &mut AppData) {
+    for (_, game_mod) in data.game_mods.iter_mut() {
+        // if using latest indirect, find version
+        if let SelectedVersion::LatestIndirect(None) = game_mod.selected_version {
+            let mut versions = game_mod.versions.keys().collect::<Vec<&Version>>();
+            versions.sort();
+            game_mod.selected_version =
+                SelectedVersion::LatestIndirect(Some(**versions.last().unwrap()));
+        }
+
+        let use_version = match game_mod.selected_version {
+            SelectedVersion::Latest(version) => version,
+            SelectedVersion::Specific(version) => version,
+            SelectedVersion::LatestIndirect(version) => version.unwrap(),
+        };
+
+        let version_data = game_mod.versions.get(&use_version).unwrap();
+        let metadata = version_data.metadata.as_ref().unwrap();
+
+        game_mod.name = metadata.name.to_owned();
+        game_mod.author = metadata.author.to_owned();
+        game_mod.description = metadata.description.to_owned();
+        game_mod.game_build = match metadata.game_build {
+            Some(ref game_build) => Some(GameBuild::try_from(game_build).unwrap()),
+            None => None,
+        };
+        game_mod.sync = metadata.sync.unwrap_or(SyncMode::ServerAndClient);
+        game_mod.homepage = metadata.homepage.clone();
+        game_mod.download = metadata.download.clone();
+        let path = data
+            .data_path
+            .as_ref()
+            .unwrap()
+            .join(version_data.file_name.clone());
+        game_mod.size = fs::metadata(&path).unwrap().len();
+    }
 }

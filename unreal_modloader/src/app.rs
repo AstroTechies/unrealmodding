@@ -74,14 +74,27 @@ impl epi::App for App {
                 ui.label("Game build");
                 ui.end_row();
 
-                for game_mod in data.game_mods.iter_mut() {
+                for (_, game_mod) in data.game_mods.iter_mut() {
                     if ui.checkbox(&mut game_mod.active, "").changed() {
                         should_integrate.store(true, Ordering::Relaxed);
                     };
                     ui.label(game_mod.name.as_str());
-                    ui.label("Version here");
-                    ui.label(game_mod.author.as_str());
-                    ui.label(game_mod.game_build.to_string().as_str());
+                    ui.label(format!("{}", game_mod.selected_version));
+                    ui.label(
+                        game_mod
+                            .author
+                            .as_ref()
+                            .unwrap_or(&"No author".to_owned())
+                            .as_str(),
+                    );
+                    let temp: String;
+                    ui.label(match game_mod.game_build {
+                        Some(ref b) => {
+                            temp = b.to_string();
+                            temp.as_str()
+                        }
+                        None => "Any",
+                    });
                     ui.end_row();
                 }
             });

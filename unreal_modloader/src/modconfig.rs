@@ -27,14 +27,9 @@ struct ModConfigData {
 }
 
 pub fn load_config(data: &mut AppData) {
-    println!("Loading config");
-    println!("{:#?}", data);
-
     let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
-    println!("exists: {}", config_path.is_file());
     if config_path.is_file() {
         let config_str = fs::read_to_string(config_path).unwrap();
         let config: ModConfig = serde_json::from_str(&config_str).unwrap();
-        println!("{:#?}", config);
     }
 }
