@@ -10,6 +10,7 @@ use std::sync::{
 use std::thread;
 use std::time::{Duration, Instant};
 
+use eframe::egui;
 use unreal_modintegrator::{
     metadata::{Metadata, SyncMode},
     IntegratorConfig,
@@ -174,11 +175,21 @@ where
         .expect("Failure to spawn background thread");
 
     // run the GUI app
-    let native_options = eframe::NativeOptions {
-        drag_and_drop_support: true,
-        ..eframe::NativeOptions::default()
-    };
-    eframe::run_native(Box::new(app), native_options);
+    eframe::run_native(
+        app.window_title.clone().as_str(),
+        eframe::NativeOptions::default(),
+        Box::new(|cc| {
+            let mut fonts = egui::FontDefinitions::default();
+            fonts.font_data.iter_mut().for_each(|font| {
+                font.1.tweak.scale = 1.2;
+            });
+            cc.egui_ctx.set_fonts(fonts);
+
+            cc.egui_ctx.set_style(egui::Style::default());
+
+            Box::new(app)
+        }),
+    );
 }
 
 #[derive(Debug)]
