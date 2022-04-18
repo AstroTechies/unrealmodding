@@ -9,6 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use eframe::egui;
+use log::{debug, error};
 use unreal_modintegrator::IntegratorConfig;
 
 mod app;
@@ -76,7 +77,7 @@ where
     thread::Builder::new()
         .name("background".to_string())
         .spawn(move || {
-            println!("Starting background thread");
+            debug!("Starting background thread");
 
             // startup work
             let start = Instant::now();
@@ -101,9 +102,11 @@ where
                 // ensure the base_path/Mods directory exists
                 fs::create_dir_all(&data_path).unwrap();
 
-                // TODO: better error handling for all of this
                 // gather mods
-                let mods_dir = fs::read_dir(&data_path).unwrap();
+                let mods_dir = fs::read_dir(&data_path).unwrap_or_else(|_| {
+                    error!("Failed to read mods directory");
+                    panic!();
+                });
 
                 let mod_files: Vec<fs::DirEntry> = mods_dir
                     .filter_map(|e| e.ok())
@@ -119,10 +122,10 @@ where
                 let mut data_guard = data.lock().unwrap();
                 load_config(&mut *data_guard);
 
-                //println!("{:#?}", data_guard.game_mods);
+                //trace!("{:#?}", data_guard.game_mods);
             }
 
-            println!(
+            debug!(
                 "Background thread startup took {} milliseconds",
                 start.elapsed().as_millis()
             );
@@ -132,7 +135,7 @@ where
             // background loop
             loop {
                 if should_exit.load(Ordering::Relaxed) {
-                    println!("Background thread exiting...");
+                    debug!("Background thread exiting...");
                     ready_exit.store(true, Ordering::Relaxed);
                     break;
                 }
@@ -140,7 +143,7 @@ where
                 let data = data.lock().unwrap();
                 if should_integrate.load(Ordering::Relaxed) && data.base_path.is_some() {
                     drop(data);
-                    println!(
+                    debug!(
                         "Integrating mods with config engine_version: {:?}",
                         config.get_integrator_config().get_engine_version()
                     );
@@ -159,7 +162,10 @@ where
                 thread::sleep(Duration::from_millis(50));
             }
         })
-        .expect("Failure to spawn background thread");
+        .unwrap_or_else(|_| {
+            error!("Failed to start background thread");
+            panic!();
+        });
 
     // run the GUI app
     eframe::run_native(

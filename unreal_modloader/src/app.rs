@@ -1,9 +1,11 @@
-use eframe::{egui, epi};
-use egui_extras::{Size, StripBuilder, TableBuilder};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
+
+use eframe::{egui, epi};
+use egui_extras::{Size, StripBuilder, TableBuilder};
+use log::info;
 
 pub(crate) struct App {
     pub data: Arc<Mutex<crate::AppData>>,
@@ -160,7 +162,7 @@ impl epi::App for App {
         self.should_exit.store(true, Ordering::Relaxed);
 
         if self.ready_exit.load(Ordering::Relaxed) {
-            println!("Exiting...");
+            info!("Exiting...");
         }
 
         self.ready_exit.load(Ordering::Relaxed)

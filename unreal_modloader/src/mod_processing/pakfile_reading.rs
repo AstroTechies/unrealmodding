@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
+use log::{debug, warn};
 use unreal_modintegrator::metadata::{Metadata, SyncMode};
 use unreal_pak::PakFile;
 
@@ -25,7 +26,7 @@ pub(crate) fn read_pak_files(mod_files: &Vec<fs::DirEntry>) -> HashMap<String, V
             pak.load_records()?;
 
             let record = &pak.read_record(&String::from("metadata.json"))?;
-            let metadata: Metadata = serde_json::from_slice(&record).unwrap();
+            let metadata: Metadata = serde_json::from_slice(&record)?;
 
             let file_name = file_path.file_name().to_str().unwrap().to_owned();
             let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
@@ -37,7 +38,7 @@ pub(crate) fn read_pak_files(mod_files: &Vec<fs::DirEntry>) -> HashMap<String, V
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::Other,
                     format!(
-                        "Mod id in file name does not match metadata id: {} != {}",
+                        "Mod id in file name does not match metadata id: {:?} != {:?}",
                         file_name_parts[1], metadata.mod_id
                     ),
                 )));
@@ -48,7 +49,7 @@ pub(crate) fn read_pak_files(mod_files: &Vec<fs::DirEntry>) -> HashMap<String, V
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::Other,
                     format!(
-                        "Version in file name does not match metadata version: {} != {}",
+                        "Version in file name does not match metadata version: {:?} != {:?}",
                         file_name_parts[2], metadata.mod_version
                     ),
                 )));
@@ -69,14 +70,14 @@ pub(crate) fn read_pak_files(mod_files: &Vec<fs::DirEntry>) -> HashMap<String, V
         })();
         match &file_result {
             Ok(_) => {
-                println!(
-                    "Successfully read metadata for {}",
+                debug!(
+                    "Successfully read metadata for {:?}",
                     file_path.file_name().to_str().unwrap()
                 );
             }
             Err(e) => {
-                println!(
-                    "Failed to read pak file {}, error: {}",
+                warn!(
+                    "Failed to read pak file {:?}, error: {}",
                     file_path.file_name().to_str().unwrap(),
                     e
                 );
@@ -121,13 +122,24 @@ pub(crate) fn insert_mods_from_readdata(
                 download_url: None,
                 metadata: Some(read_data.1.clone()),
             };
-            let key: Version =
-                Version::try_from(&version.metadata.as_ref().unwrap().mod_version).unwrap();
+            let key: Result<Version, _> =
+                Version::try_from(&version.metadata.as_ref().unwrap().mod_version);
+
+            if key.is_err() {
+                warn!(
+                    "Failed to parse version {:?} from metadata for mod {:?}",
+                    version.metadata.as_ref().unwrap().mod_version,
+                    mod_id
+                );
+
+                continue;
+            }
+
             data.game_mods
-                .get_mut(&version.metadata.as_ref().unwrap().mod_id)
+                .get_mut(mod_id)
                 .unwrap()
                 .versions
-                .insert(key, version);
+                .insert(key.unwrap(), version);
         }
     }
 }

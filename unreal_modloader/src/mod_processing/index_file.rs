@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use log::{debug, warn};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use unreal_modintegrator::metadata::DownloadInfo;
@@ -28,11 +29,12 @@ pub(crate) fn download_index_files(
 
     let client = Client::new();
 
+    // TODO: parallelize
     for (mod_id, download_info) in index_files_info.iter() {
         let response = client.get(download_info.url.as_str()).send();
         if response.is_err() {
-            println!(
-                "Failed to download index file for {}: {}",
+            warn!(
+                "Failed to download index file for {:?}, {}",
                 mod_id,
                 response.unwrap_err()
             );
@@ -40,11 +42,21 @@ pub(crate) fn download_index_files(
             continue;
         }
 
-        let index_file =
-            serde_json::from_str::<IndexFile>(response.unwrap().text().unwrap().as_str());
+        let response = response.unwrap();
+        if !response.status().is_success() {
+            warn!(
+                "Failed to download index file for {:?}, {}",
+                mod_id,
+                response.status()
+            );
+
+            continue;
+        }
+
+        let index_file = serde_json::from_str::<IndexFile>(response.text().unwrap().as_str());
 
         if index_file.is_err() {
-            println!(
+            warn!(
                 "Failed to parse index file for {}: {}",
                 mod_id,
                 index_file.unwrap_err()
@@ -57,7 +69,7 @@ pub(crate) fn download_index_files(
         let index_file_mod = index_file.mods.get(mod_id);
 
         if index_file_mod.is_none() {
-            println!("Index file for {} does not contain that mod", mod_id);
+            warn!("Index file for {} does not contain that mod", mod_id);
 
             continue;
         }
@@ -92,9 +104,19 @@ pub(crate) fn insert_index_file_data(
     for (mod_id, index_file) in index_files.iter() {
         let game_mod = data.game_mods.get_mut(mod_id).unwrap();
 
-        for (version, version_info) in index_file.versions.iter() {
+        for (version_raw, version_info) in index_file.versions.iter() {
+            let version = Version::try_from(version_raw);
+            if version.is_err() {
+                warn!(
+                    "Failed to parse version {:?} from index file for mod {:?}",
+                    version_raw, mod_id
+                );
+
+                continue;
+            }
+
             game_mod.versions.insert(
-                Version::try_from(version).unwrap(),
+                version.unwrap(),
                 GameModVersion {
                     file_name: version_info.filename.clone(),
                     downloaded: true,
@@ -104,9 +126,18 @@ pub(crate) fn insert_index_file_data(
             );
         }
 
-        game_mod.selected_version =
-            SelectedVersion::Latest(Version::try_from(&index_file.latest_version).unwrap());
+        let latest_version = Version::try_from(&index_file.latest_version);
+        if latest_version.is_err() {
+            warn!(
+                "Failed to parse version {:?} from index file for mod {:?}",
+                index_file.latest_version, mod_id
+            );
 
-        println!("Loaded index file for {}", mod_id);
+            continue;
+        }
+
+        game_mod.selected_version = SelectedVersion::Latest(latest_version.unwrap());
+
+        debug!("Loaded index file for {}", mod_id);
     }
 }

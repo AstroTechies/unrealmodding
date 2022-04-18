@@ -1,8 +1,10 @@
-use crate::AppData;
 use std::error::Error;
 use std::fs;
 use std::sync::{Arc, Mutex};
 
+use log::debug;
+
+use crate::AppData;
 mod index_file;
 use index_file::{download_index_files, gather_index_files, insert_index_file_data};
 mod pakfile_reading;
@@ -14,6 +16,11 @@ pub(crate) fn process_modfiles(
     mod_files: &Vec<fs::DirEntry>,
     data: &Arc<Mutex<AppData>>,
 ) -> Result<(), Box<dyn Error>> {
+    debug!(
+        "Processing mod files: {:?}",
+        mod_files.iter().map(|x| x.path()).collect::<Vec<_>>()
+    );
+
     // read metadata from pak files and collect for each mod_id
     let mods_read = read_pak_files(mod_files);
 
