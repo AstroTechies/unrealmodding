@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::fs;
 use std::io;
@@ -42,7 +42,7 @@ pub struct AppData {
 
     pub game_build: Option<GameBuild>,
 
-    pub game_mods: HashMap<String, GameMod>,
+    pub game_mods: BTreeMap<String, GameMod>,
 }
 
 pub fn run<'a, C, D, T, E: std::error::Error>(config: C)
@@ -57,7 +57,7 @@ where
         install_path: None,
         game_build: None,
 
-        game_mods: HashMap::new(),
+        game_mods: BTreeMap::new(),
     }));
 
     let should_exit = Arc::new(AtomicBool::new(false));
