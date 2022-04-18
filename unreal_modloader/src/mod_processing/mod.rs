@@ -4,7 +4,7 @@ use std::fs;
 use std::sync::{Arc, Mutex};
 
 mod index_file;
-use index_file::{download_index_files, gather_index_files};
+use index_file::{download_index_files, gather_index_files, insert_index_file_data};
 mod pakfile_reading;
 use pakfile_reading::{insert_mods_from_readdata, read_pak_files};
 mod version_handling;
@@ -29,11 +29,12 @@ pub(crate) fn process_modfiles(
     set_mod_data_from_version(&mut *data_guard);
 
     // fetch index files
-    let index_files = gather_index_files(&mut *data_guard);
-    println!("Index files: {:#?}", index_files);
+    let index_files_info = gather_index_files(&mut *data_guard);
+    // drop guard to allow UI to render while index files are being downloaded
     drop(data_guard);
-
-    download_index_files(index_files);
+    let index_files = download_index_files(index_files_info);
+    let mut data_guard = data.lock().unwrap();
+    insert_index_file_data(&index_files, &mut *data_guard);
 
     Ok(())
 }

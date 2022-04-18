@@ -44,7 +44,7 @@ impl epi::App for App {
                             )
                             .column(Size::initial(42.0).at_least(40.0))
                             .column(Size::initial(200.0).at_least(20.0))
-                            .column(Size::initial(60.0).at_least(20.0))
+                            .column(Size::initial(92.0).at_least(20.0))
                             .column(Size::initial(70.0).at_least(20.0))
                             .column(Size::remainder().at_least(20.0))
                             .resizable(true)
