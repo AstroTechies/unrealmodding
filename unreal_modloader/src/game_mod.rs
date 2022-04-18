@@ -53,5 +53,6 @@ pub struct GameMod {
 pub struct GameModVersion {
     pub file_name: String,
     pub downloaded: bool,
+    pub download_url: Option<String>,
     pub metadata: Option<Metadata>,
 }

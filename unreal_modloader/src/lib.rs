@@ -11,6 +11,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use eframe::egui;
+use reqwest::blocking::Client;
+use unreal_modintegrator::metadata::DownloadInfo;
 use unreal_modintegrator::{
     metadata::{Metadata, SyncMode},
     IntegratorConfig,
@@ -129,10 +131,19 @@ where
                 // set top level data
                 set_mod_data_from_version(&mut *data_guard);
 
+                // fetch index files
+                let index_files = gather_index_files(&mut *data_guard);
+                println!("Index files: {:#?}", index_files);
+                drop(data_guard);
+
+                download_index_files(index_files);
+
+                let mut data_guard = data.lock().unwrap();
+
                 // load config
                 modconfig::load_config(&mut *data_guard);
 
-                println!("{:#?}", data_guard.game_mods);
+                //println!("{:#?}", data_guard.game_mods);
             }
 
             println!(
@@ -297,6 +308,7 @@ fn insert_mods_from_readdata(mods_read: &HashMap<String, Vec<ReadData>>, data: &
             let version = GameModVersion {
                 file_name: read_data.0.clone(),
                 downloaded: true,
+                download_url: None,
                 metadata: Some(read_data.1.clone()),
             };
             let key: Version =
@@ -345,5 +357,33 @@ fn set_mod_data_from_version(data: &mut AppData) {
             .unwrap()
             .join(version_data.file_name.clone());
         game_mod.size = fs::metadata(&path).unwrap().len();
+    }
+}
+
+fn gather_index_files(data: &mut AppData) -> HashMap<String, DownloadInfo> {
+    let mut index_files: HashMap<String, DownloadInfo> = HashMap::new();
+
+    for (mod_id, game_mod) in data.game_mods.iter() {
+        let download_info = game_mod.download.clone();
+        if let Some(download_info) = download_info {
+            index_files.insert(mod_id.to_owned(), download_info);
+        }
+    }
+
+    index_files
+}
+
+fn download_index_files(index_files: HashMap<String, DownloadInfo>) {
+    let mut index_file_data: HashMap<String, String> = HashMap::new();
+
+    let client = Client::new();
+
+    for (mod_id, download_info) in index_files.iter() {
+        println!("Downloading index file for {}", mod_id);
+        let response = client.get(download_info.url.as_str()).send().unwrap();
+
+        println!("{:?}", response);
+
+        index_file_data.insert(mod_id.to_owned(), response.text().unwrap());
     }
 }
