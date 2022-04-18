@@ -6,6 +6,10 @@ use unreal_modloader::config::GameConfig;
 mod astro_integrator;
 use astro_integrator::AstroIntegratorConfig;
 
+mod logging;
+
+use log::info;
+
 struct AstroGameConfig;
 
 impl<T, E: std::error::Error> GameConfig<'static, AstroIntegratorConfig, T, E> for AstroGameConfig
@@ -30,7 +34,9 @@ where
 }
 
 fn main() {
-    println!("Astroneer Modloader");
+    logging::init().unwrap();
+
+    info!("Astroneer Modloader");
 
     let config = AstroGameConfig;
 

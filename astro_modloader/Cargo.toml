@@ -9,3 +9,6 @@ unreal_modintegrator = { version = "0.1.0", path = "../unreal_modintegrator" }
 unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
 unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 serde_json = "1.0.79"
+log = "0.4.16"
+colored = "2.0.0"
+lazy_static = "1.4.0"
