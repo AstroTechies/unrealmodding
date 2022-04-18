@@ -1015,7 +1015,7 @@ impl<'a> Asset {
     pub fn write_data(
         &self,
         cursor: &mut Cursor<Vec<u8>>,
-        uexp_cursor: &mut Option<Cursor<Vec<u8>>>,
+        uexp_cursor: Option<&mut Cursor<Vec<u8>>>,
     ) -> Result<(), Error> {
         if self.use_separate_bulk_data_files != uexp_cursor.is_some() {
             return Err(Error::no_data(format!(
@@ -1149,7 +1149,7 @@ impl<'a> Asset {
 
         let final_cursor_pos = cursor.position();
         let bulk_cursor = match self.use_separate_bulk_data_files {
-            true => uexp_cursor.as_mut().unwrap(),
+            true => uexp_cursor.unwrap(),
             false => cursor,
         };
 
