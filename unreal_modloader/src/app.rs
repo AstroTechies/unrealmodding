@@ -5,7 +5,7 @@ use std::sync::{
     Arc, Mutex,
 };
 
-pub struct App {
+pub(crate) struct App {
     pub data: Arc<Mutex<crate::AppData>>,
 
     pub window_title: String,
@@ -30,7 +30,11 @@ impl epi::App for App {
                 .size(Size::remainder())
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
-                        ui.heading(self.window_title.as_str());
+                        if !self.working.load(Ordering::Relaxed) {
+                            ui.heading(self.window_title.as_str());
+                        } else {
+                            ui.heading(format!("{} - Working...", self.window_title.as_str()));
+                        }
                     });
                     strip.cell(|ui| {
                         TableBuilder::new(ui)

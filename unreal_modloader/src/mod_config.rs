@@ -26,7 +26,7 @@ struct ModConfigData {
     version: String,
 }
 
-pub fn load_config(data: &mut AppData) {
+pub(crate) fn load_config(data: &mut AppData) {
     let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
     if config_path.is_file() {
         let config_str = fs::read_to_string(config_path).unwrap();
