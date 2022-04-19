@@ -5,10 +5,10 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").unwrap();
 
     let project_dir = Path::new(&out_dir).join("ModIntegrator");
-    fs::remove_dir_all(&project_dir);
+    fs::remove_dir_all(&project_dir).unwrap();
 
     let mut git = Command::new("git")
-        .args(["clone", "git@github.com:AstroTechies/ModIntegrator.git"])
+        .args(["clone", "https://github.com/AstroTechies/ModIntegrator.git"])
         .current_dir(&out_dir)
         .spawn()
         .expect("failed to clone repo");

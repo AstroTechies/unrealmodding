@@ -54,12 +54,12 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
         handlers
     }
 
-    fn get_integrator_version(&self) -> String {
-        String::from("0.1.0")
+    fn get_game_name(&self) -> String {
+        String::from("ExampleGame")
     }
 
-    fn get_refuse_mismatched_connections(&self) -> bool {
-        true
+    fn get_integrator_version(&self) -> String {
+        String::from("0.1.0")
     }
 
     fn get_engine_version(&self) -> i32 {
@@ -76,5 +76,5 @@ fn main() {
 
     let game_path = args[0].clone();
     let mods_path = args[1].clone();
-    unreal_modintegrator::integrate_mods(&config, &mods_path, &game_path).unwrap();
+    unreal_modintegrator::integrate_mods(&config, &mods_path, &game_path, true).unwrap();
 }

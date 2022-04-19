@@ -20,10 +20,6 @@ where
         &astro_integrator::AstroIntegratorConfig
     }
 
-    fn get_game_name(&self) -> String {
-        "Astro".to_string()
-    }
-
     fn get_app_id(&self) -> u32 {
         361420
     }

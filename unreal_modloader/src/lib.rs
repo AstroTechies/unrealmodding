@@ -83,8 +83,9 @@ where
             let start = Instant::now();
 
             // get paths
-            data.lock().unwrap().base_path =
-                determine_paths::dertermine_base_path(config.get_game_name().as_str());
+            data.lock().unwrap().base_path = determine_paths::dertermine_base_path(
+                config.get_integrator_config().get_game_name().as_str(),
+            );
             data.lock().unwrap().install_path =
                 determine_paths::dertermine_install_path(config.get_app_id());
 

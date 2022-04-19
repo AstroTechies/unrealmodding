@@ -54,12 +54,12 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
         handlers
     }
 
-    fn get_integrator_version(&self) -> String {
-        String::from("0.1.0")
+    fn get_game_name(&self) -> String {
+        "Astro".to_string()
     }
 
-    fn get_refuse_mismatched_connections(&self) -> bool {
-        true
+    fn get_integrator_version(&self) -> String {
+        String::from("0.1.0")
     }
 
     fn get_engine_version(&self) -> i32 {
