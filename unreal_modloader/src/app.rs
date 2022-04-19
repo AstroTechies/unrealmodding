@@ -32,10 +32,17 @@ impl epi::App for App {
                 .size(Size::remainder())
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
+                        let title = format!(
+                            "Mods ({})",
+                            match data.game_build {
+                                Some(ref build) => build.to_string(),
+                                None => "<unknown>".to_owned(),
+                            }
+                        );
                         if !self.working.load(Ordering::Relaxed) {
-                            ui.heading(self.window_title.as_str());
+                            ui.heading(title);
                         } else {
-                            ui.heading(format!("{} - Working...", self.window_title.as_str()));
+                            ui.heading(format!("{} - Working...", title));
                         }
                     });
                     strip.cell(|ui| {
@@ -127,6 +134,16 @@ impl epi::App for App {
                             Some(ref path) => path.to_str().unwrap(),
                             None => "No install path",
                         });
+
+                        if ui
+                            .checkbox(
+                                &mut data.refuse_mismatched_connections,
+                                "Refuse mismatched connections",
+                            )
+                            .changed()
+                        {
+                            should_integrate.store(true, Ordering::Relaxed);
+                        };
 
                         egui::warn_if_debug_build(ui);
                     });

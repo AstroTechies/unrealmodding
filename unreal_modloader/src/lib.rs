@@ -37,6 +37,7 @@ pub(crate) struct AppData {
     pub install_path: Option<PathBuf>,
 
     pub game_build: Option<GameBuild>,
+    pub refuse_mismatched_connections: bool,
 
     pub game_mods: BTreeMap<String, GameMod>,
 }
@@ -52,6 +53,7 @@ where
         paks_path: None,
         install_path: None,
         game_build: None,
+        refuse_mismatched_connections: true,
 
         game_mods: BTreeMap::new(),
     }));
@@ -123,7 +125,7 @@ where
                 let mut data_guard = data.lock().unwrap();
                 load_config(&mut *data_guard);
 
-                //trace!("{:#?}", data_guard.game_mods);
+                debug!("{:#?}", data_guard.game_mods);
             }
 
             debug!(
