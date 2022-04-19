@@ -7,10 +7,8 @@ use std::fs::{DirEntry, File, OpenOptions};
 use std::io::Cursor;
 use std::path::Path;
 use unreal_asset::exports::data_table_export::DataTable;
-use unreal_asset::exports::normal_export::NormalExport;
 use unreal_asset::exports::Export;
 use unreal_asset::properties::int_property::{BoolProperty, ByteProperty};
-use unreal_asset::properties::object_property::ObjectProperty;
 use unreal_asset::properties::str_property::StrProperty;
 use unreal_asset::properties::struct_property::StructProperty;
 use unreal_asset::properties::{Property, PropertyDataTrait};
@@ -20,7 +18,7 @@ mod assets;
 pub mod error;
 pub mod metadata;
 use serde_json::Value;
-use unreal_asset::{Asset, Import};
+use unreal_asset::Asset;
 use unreal_pak::PakFile;
 
 use crate::error::Error;
@@ -268,7 +266,7 @@ fn bake_integrator_data(
         .into(),
     ]);
 
-    match asset.exports[1] {
+    match &mut asset.exports[1] {
         Export::NormalExport(e) => {
             e.properties = properties;
             Ok(())
@@ -286,7 +284,7 @@ pub fn integrate_mods<
     integrator_config: &C,
     paks_path: &str,
     install_path: &str,
-    refuse_mismatched_connections: bool
+    refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
     let mods_dir = fs::read_dir(paks_path)?;
     let mod_files: Vec<DirEntry> = mods_dir
