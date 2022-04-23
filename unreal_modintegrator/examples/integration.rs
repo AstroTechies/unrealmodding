@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::{collections::HashMap, env, io};
 
 use unreal_asset::ue4version::VER_UE4_23;
@@ -76,5 +77,11 @@ fn main() {
 
     let game_path = args[0].clone();
     let mods_path = args[1].clone();
-    unreal_modintegrator::integrate_mods(&config, &mods_path, &game_path, true).unwrap();
+    unreal_modintegrator::integrate_mods(
+        &config,
+        &PathBuf::from(&mods_path),
+        &PathBuf::from(&game_path),
+        true,
+    )
+    .unwrap();
 }

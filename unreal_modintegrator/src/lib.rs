@@ -282,8 +282,8 @@ pub fn integrate_mods<
     C: IntegratorConfig<'data, T, E>,
 >(
     integrator_config: &C,
-    paks_path: &str,
-    install_path: &str,
+    paks_path: &Path,
+    install_path: &Path,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
     let mods_dir = fs::read_dir(paks_path)?;
