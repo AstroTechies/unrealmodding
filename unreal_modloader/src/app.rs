@@ -166,7 +166,8 @@ impl epi::App for App {
         // We need to keep the paint loop constantly running when shutting down,
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
-        if self.should_exit.load(Ordering::Relaxed) {
+        // Or keep it running while the background is actively working.
+        if self.should_exit.load(Ordering::Relaxed) || self.working.load(Ordering::Relaxed) {
             ctx.request_repaint();
         }
 
