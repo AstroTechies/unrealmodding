@@ -1,4 +1,7 @@
 use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_JSON};
+#[cfg(feature = "bulk_data")]
+use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
+
 use error::IntegrationError;
 use metadata::{Metadata, SyncMode};
 use std::collections::HashMap;
@@ -7,7 +10,7 @@ use std::fs::{DirEntry, File, OpenOptions};
 use std::io::Cursor;
 use std::path::Path;
 use unreal_asset::exports::data_table_export::DataTable;
-use unreal_asset::exports::Export;
+use unreal_asset::exports::{Export, ExportUnknownTrait};
 use unreal_asset::properties::int_property::{BoolProperty, ByteProperty};
 use unreal_asset::properties::str_property::StrProperty;
 use unreal_asset::properties::struct_property::StructProperty;
@@ -245,7 +248,7 @@ fn bake_integrator_data(
     integrator_version: String,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
-    if asset.exports.len() != 2 {
+    if asset.exports.len() != 4 {
         return Err(IntegrationError::corrupted_starter_pak().into());
     }
 
@@ -266,7 +269,17 @@ fn bake_integrator_data(
         .into(),
     ]);
 
-    match &mut asset.exports[1] {
+    let export = asset
+        .exports
+        .iter_mut()
+        .filter(|e| e.get_unknown_export().object_name.content == "Default__IntegratorStatics_BP_C")
+        .next();
+    if export.is_none() {
+        return Err(IntegrationError::corrupted_starter_pak().into());
+    }
+
+    let export = export.unwrap();
+    match export {
         Export::NormalExport(e) => {
             e.properties = properties;
             Ok(())
@@ -334,9 +347,14 @@ pub fn integrate_mods<
         let mut generated_pak = PakFile::new(&file);
         generated_pak.init_empty(8)?;
 
+        #[cfg(not(feature = "bulk_data"))]
+        let list_of_mods_bulk = None;
+        #[cfg(feature = "bulk_data")]
+        let list_of_mods_bulk = Some(LIST_OF_MODS_BULK.to_vec());
+
         let mut list_of_mods = read_in_memory(
             LIST_OF_MODS_ASSET.to_vec(),
-            None,
+            list_of_mods_bulk,
             integrator_config.get_engine_version(),
         )?;
         bake_mod_data(&mut list_of_mods, &mods)?;
@@ -346,9 +364,9 @@ pub fn integrate_mods<
             &(integrator_config.get_game_name() + "/Content/Integrator/ListOfMods.uasset"),
         )?;
 
-        #[cfg(not(bulk_data))]
+        #[cfg(not(feature = "bulk_data"))]
         let integrator_statics_bulk = None;
-        #[cfg(bulk_data)]
+        #[cfg(feature = "bulk_data")]
         let integrator_statics_bulk = Some(INTEGRATOR_STATICS_BULK.to_vec());
 
         let mut integrator_statics = read_in_memory(
