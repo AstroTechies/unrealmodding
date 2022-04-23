@@ -5,7 +5,7 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").unwrap();
 
     let project_dir = Path::new(&out_dir).join("ModIntegrator");
-    fs::remove_dir_all(&project_dir).unwrap();
+    fs::remove_dir_all(&project_dir).unwrap_or(());
 
     let mut git = Command::new("git")
         .args(["clone", "https://github.com/AstroTechies/ModIntegrator.git"])
