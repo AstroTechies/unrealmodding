@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use eframe::egui;
 use log::{debug, error};
-use unreal_modintegrator::IntegratorConfig;
+use unreal_modintegrator::{integrate_mods, IntegratorConfig};
 
 mod app;
 pub mod config;
@@ -42,7 +42,7 @@ pub(crate) struct AppData {
     pub game_mods: BTreeMap<String, GameMod>,
 }
 
-pub fn run<'a, C, D, T, E: std::error::Error>(config: C)
+pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error>(config: C)
 where
     D: 'static + IntegratorConfig<'a, T, E>,
     C: 'static + config::GameConfig<'a, D, T, E>,
@@ -163,6 +163,8 @@ where
 
                     let mods_path = data.data_path.as_ref().unwrap().to_owned();
                     let paks_path = data.paks_path.as_ref().unwrap().to_owned();
+                    let install_path = data.install_path.as_ref().unwrap().to_owned();
+                    let refuse_mismatched_connections = data.refuse_mismatched_connections;
                     drop(data);
 
                     // TODO: download mods
@@ -190,11 +192,18 @@ where
                         });
                     }
 
-                    // TODO: run integrator
-                    debug!(
-                        "Integrating mods with config engine_version: {:?}",
-                        config.get_integrator_config().get_engine_version()
-                    );
+                    // run integrator
+                    debug!("Integrating mods");
+                    integrate_mods(
+                        config.get_integrator_config(),
+                        &paks_path,
+                        &install_path
+                            .join(config.get_integrator_config().get_game_name())
+                            .join("Content")
+                            .join("Paks"),
+                        refuse_mismatched_connections,
+                    )
+                    .unwrap();
 
                     working.store(false, Ordering::Relaxed);
                 } else {
