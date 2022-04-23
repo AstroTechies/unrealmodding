@@ -125,7 +125,7 @@ where
                 let mut data_guard = data.lock().unwrap();
                 load_config(&mut *data_guard);
 
-                debug!("{:#?}", data_guard.game_mods);
+                // debug!("{:#?}", data_guard.game_mods);
             }
 
             debug!(
@@ -145,17 +145,56 @@ where
 
                 let data = data.lock().unwrap();
                 if should_integrate.load(Ordering::Relaxed) && data.base_path.is_some() {
+                    working.store(true, Ordering::Relaxed);
+                    should_integrate.store(false, Ordering::Relaxed);
+
+                    // gather mods to be installed
+                    let mods_to_install = data
+                        .game_mods
+                        .iter()
+                        .filter(|(_, m)| m.active)
+                        .map(|(_, m)| {
+                            m.versions
+                                .get(&m.selected_version.unwrap())
+                                .unwrap()
+                                .clone()
+                        })
+                        .collect::<Vec<_>>();
+
+                    let mods_path = data.data_path.as_ref().unwrap().to_owned();
+                    let paks_path = data.paks_path.as_ref().unwrap().to_owned();
                     drop(data);
+
+                    // TODO: download mods
+
+                    // move mods
+                    // remove all old files
+                    fs::remove_dir_all(&paks_path).unwrap_or_else(|_| {
+                        error!("Failed to remove paks directory");
+                        panic!();
+                    });
+                    fs::create_dir(&paks_path).unwrap_or_else(|_| {
+                        error!("Failed to create paks directory");
+                        panic!();
+                    });
+
+                    // copy new files
+                    for mod_version in mods_to_install {
+                        fs::copy(
+                            mods_path.join(mod_version.file_name.as_str()),
+                            paks_path.join(mod_version.file_name.as_str()),
+                        )
+                        .unwrap_or_else(|_| {
+                            error!("Failed to copy pak file {}", mod_version.file_name);
+                            panic!();
+                        });
+                    }
+
+                    // TODO: run integrator
                     debug!(
                         "Integrating mods with config engine_version: {:?}",
                         config.get_integrator_config().get_engine_version()
                     );
-
-                    working.store(true, Ordering::Relaxed);
-                    should_integrate.store(false, Ordering::Relaxed);
-
-                    // TODO: move mods
-                    // TODO: run integrator
 
                     working.store(false, Ordering::Relaxed);
                 } else {
