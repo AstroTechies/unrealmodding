@@ -15,6 +15,16 @@ pub enum SelectedVersion {
     Specific(Version),
 }
 
+impl SelectedVersion {
+    pub fn unwrap(self) -> Version {
+        match self {
+            SelectedVersion::Latest(version) => version,
+            SelectedVersion::LatestIndirect(version) => version.unwrap(),
+            SelectedVersion::Specific(version) => version,
+        }
+    }
+}
+
 impl fmt::Display for SelectedVersion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

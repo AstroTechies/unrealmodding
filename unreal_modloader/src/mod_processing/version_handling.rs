@@ -34,13 +34,10 @@ pub(crate) fn auto_pick_versions(data: &mut AppData) {
 /// Will panic if any versions are LatestIndirect with no version set.
 pub(crate) fn set_mod_data_from_version(data: &mut AppData) {
     for (mod_id, game_mod) in data.game_mods.iter_mut() {
-        let use_version = match game_mod.selected_version {
-            SelectedVersion::Latest(version) => version,
-            SelectedVersion::Specific(version) => version,
-            SelectedVersion::LatestIndirect(version) => version.unwrap(),
-        };
-
-        let version_data = game_mod.versions.get(&use_version).unwrap();
+        let version_data = game_mod
+            .versions
+            .get(&game_mod.selected_version.unwrap())
+            .unwrap();
         let metadata = version_data.metadata.as_ref().unwrap();
 
         game_mod.name = metadata.name.to_owned();
