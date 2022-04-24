@@ -336,7 +336,7 @@ pub fn integrate_mods<
     }
 
     if mods.len() > 0 {
-        let path = Path::new(install_path).join("999-Mods_P.pak");
+        let path = Path::new(paks_path).join("999-Mods_P.pak");
         OpenOptions::new()
             .create(true)
             .write(true)
