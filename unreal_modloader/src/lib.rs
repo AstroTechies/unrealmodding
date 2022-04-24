@@ -89,8 +89,16 @@ where
             data.lock().unwrap().base_path = determine_paths::dertermine_base_path(
                 config.get_integrator_config().get_game_name().as_str(),
             );
-            data.lock().unwrap().install_path =
-                determine_paths::dertermine_install_path(config.get_app_id());
+            // we can later add support for non-steam installs
+            let install_path = determine_paths::dertermine_install_path_steam(config.get_app_id());
+            if install_path.is_some()
+                && determine_paths::verify_install_path(
+                    install_path.as_ref().unwrap(),
+                    &config.get_integrator_config().get_game_name(),
+                )
+            {
+                data.lock().unwrap().install_path = install_path;
+            }
 
             if data.lock().unwrap().base_path.is_some() {
                 let mut data_guard = data.lock().unwrap();
