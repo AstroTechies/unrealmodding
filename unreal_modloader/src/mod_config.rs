@@ -69,3 +69,39 @@ pub(crate) fn load_config(data: &mut AppData) {
         }
     }
 }
+
+pub(crate) fn write_config(data: &mut AppData) {
+    let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
+    let mut config = ModConfig {
+        install_path: data
+            .install_path
+            .as_ref()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        refuse_mismatched_connections: data.refuse_mismatched_connections,
+        current: ModsConfigData {
+            mods: HashMap::new(),
+        },
+        profiles: HashMap::new(),
+    };
+
+    for (mod_id, game_mod) in data.game_mods.iter() {
+        let mod_config = ModConfigData {
+            force_latest: Some(match game_mod.selected_version {
+                SelectedVersion::Latest(_) => true,
+                SelectedVersion::LatestIndirect(_) => true,
+                SelectedVersion::Specific(_) => false,
+            }),
+            priority: 0,
+            enabled: game_mod.active,
+            version: game_mod.selected_version.unwrap().to_string(),
+        };
+
+        config.current.mods.insert(mod_id.to_owned(), mod_config);
+    }
+
+    let config_str = serde_json::to_string(&config).unwrap();
+    fs::write(config_path, config_str).unwrap();
+}

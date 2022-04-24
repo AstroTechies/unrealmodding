@@ -22,7 +22,7 @@ mod mod_processing;
 pub mod version;
 
 use game_mod::GameMod;
-use mod_config::load_config;
+use mod_config::{load_config, write_config};
 use mod_processing::process_modfiles;
 use version::GameBuild;
 
@@ -252,7 +252,10 @@ where
                     )
                     .unwrap();
 
-                    // TODO: update config file
+                    let mut data_guard = data.lock().unwrap();
+
+                    // update config file
+                    write_config(&mut data_guard);
 
                     working.store(false, Ordering::Relaxed);
                 } else {
