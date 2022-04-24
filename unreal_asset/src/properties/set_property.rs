@@ -13,7 +13,7 @@ use crate::{
 
 use super::array_property::ArrayProperty;
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

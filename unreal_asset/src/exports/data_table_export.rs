@@ -16,6 +16,7 @@ use super::{
 };
 use crate::exports::ExportTrait;
 
+#[derive(Clone)]
 pub struct DataTable {
     pub data: Vec<StructProperty>,
 }
@@ -26,6 +27,7 @@ impl DataTable {
     }
 }
 
+#[derive(Clone)]
 pub struct DataTableExport {
     pub normal_export: NormalExport,
     pub table: DataTable,

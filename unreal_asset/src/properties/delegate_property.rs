@@ -10,13 +10,13 @@ use crate::{
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct MulticastDelegate {
     number: i32,
     delegate: FName,
 }
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct MulticastDelegateProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

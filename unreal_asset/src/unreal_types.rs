@@ -56,7 +56,7 @@ impl FName {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct NamespacedString {
     pub namespace: Option<String>,
     pub value: Option<String>,
@@ -68,7 +68,7 @@ impl NamespacedString {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StringTable {
     pub namespace: Option<String>,
     pub value: HashMap<String, String>,
@@ -112,7 +112,7 @@ impl PackageIndex {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct FieldPath {
     pub path: Vec<FName>,
     pub resolved_owner: PackageIndex,

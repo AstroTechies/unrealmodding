@@ -16,6 +16,7 @@ use crate::ue4version::VER_UE4_16;
 use crate::unreal_types::PackageIndex;
 use crate::uproperty::UField;
 
+#[derive(Clone)]
 pub struct StructExport {
     pub normal_export: NormalExport,
 

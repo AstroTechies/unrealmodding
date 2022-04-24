@@ -17,7 +17,7 @@ use crate::{
 };
 
 //todo: what is this file even doing in properties?
-
+#[derive(Clone)]
 pub struct FWorldTileLayer {
     pub name: Option<String>,
     pub reserved_0: i32,
@@ -53,6 +53,7 @@ impl FWorldTileLayer {
     }
 }
 
+#[derive(Clone)]
 pub struct FWorldTileLODInfo {
     pub relative_streaming_distance: i32,
     pub reserved_0: f32,
@@ -73,6 +74,7 @@ impl FWorldTileLODInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct FWorldTileInfo {
     position: Vector<i32>,
     pub bounds: BoxProperty,

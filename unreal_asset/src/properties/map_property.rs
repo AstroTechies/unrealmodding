@@ -15,7 +15,7 @@ use crate::{
 
 use super::Property;
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct MapProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

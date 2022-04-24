@@ -17,7 +17,7 @@ use crate::{
 
 use super::{struct_property::StructProperty, Property};
 
-#[derive(Default, Hash, PartialEq, Eq)]
+#[derive(Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

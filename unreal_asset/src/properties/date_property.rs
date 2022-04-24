@@ -11,7 +11,7 @@ use crate::{
     Asset,
 };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TimeSpanProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -20,7 +20,7 @@ pub struct TimeSpanProperty {
 }
 impl_property_data_trait!(TimeSpanProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateTimeProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

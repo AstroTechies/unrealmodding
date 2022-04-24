@@ -8,6 +8,7 @@ use std::io::Cursor;
 
 use super::ExportNormalTrait;
 
+#[derive(Clone)]
 pub struct NormalExport {
     pub unknown_export: UnknownExport,
     pub extras: Vec<u8>,

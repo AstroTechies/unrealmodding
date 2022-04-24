@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -23,7 +23,7 @@ pub struct ObjectProperty {
 }
 impl_property_data_trait!(ObjectProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -32,7 +32,7 @@ pub struct AssetObjectProperty {
 }
 impl_property_data_trait!(AssetObjectProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

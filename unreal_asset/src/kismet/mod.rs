@@ -224,6 +224,7 @@ fn write_kismet_string(string: &String, cursor: &mut Cursor<Vec<u8>>) -> Result<
 
 macro_rules! declare_expression {
     ($name:ident, $($v:ident: $t:ty),*) => {
+        #[derive(Clone)]
         pub struct $name {
             pub token: EExprToken,
             $(
@@ -244,6 +245,7 @@ macro_rules! declare_expression {
 macro_rules! implement_expression {
     ($($name:ident),*) => {
         $(
+            #[derive(Clone)]
             pub struct $name { pub token: EExprToken }
 
             impl KismetExpressionTrait for $name {
@@ -317,6 +319,7 @@ macro_rules! implement_value_expression {
     };
 }
 
+#[derive(Clone)]
 pub struct FScriptText {
     text_literal_type: EBlueprintTextLiteralType,
     localized_source: Option<KismetExpression>,
@@ -460,7 +463,7 @@ impl FScriptText {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct KismetPropertyPointer {
     pub old: Option<PackageIndex>,
     pub new: Option<FieldPath>,
@@ -521,6 +524,7 @@ impl KismetPropertyPointer {
     }
 }
 
+#[derive(Clone)]
 pub struct KismetSwitchCase {
     case_index_value_term: KismetExpression,
     next_offset: u32,
@@ -656,6 +660,106 @@ pub enum KismetExpression {
     ExArrayGetByRef,
     ExClassSparseDataVariable,
     ExFieldPathConst,
+}
+
+impl Clone for KismetExpression {
+    fn clone(&self) -> Self {
+        match self {
+            Self::ExLocalVariable(arg0) => Self::ExLocalVariable(arg0.clone()),
+            Self::ExInstanceVariable(arg0) => Self::ExInstanceVariable(arg0.clone()),
+            Self::ExDefaultVariable(arg0) => Self::ExDefaultVariable(arg0.clone()),
+            Self::ExReturn(arg0) => Self::ExReturn(arg0.clone()),
+            Self::ExJump(arg0) => Self::ExJump(arg0.clone()),
+            Self::ExJumpIfNot(arg0) => Self::ExJumpIfNot(arg0.clone()),
+            Self::ExAssert(arg0) => Self::ExAssert(arg0.clone()),
+            Self::ExNothing(arg0) => Self::ExNothing(arg0.clone()),
+            Self::ExLet(arg0) => Self::ExLet(arg0.clone()),
+            Self::ExClassContext(arg0) => Self::ExClassContext(arg0.clone()),
+            Self::ExMetaCast(arg0) => Self::ExMetaCast(arg0.clone()),
+            Self::ExLetBool(arg0) => Self::ExLetBool(arg0.clone()),
+            Self::ExEndParmValue(arg0) => Self::ExEndParmValue(arg0.clone()),
+            Self::ExEndFunctionParms(arg0) => Self::ExEndFunctionParms(arg0.clone()),
+            Self::ExSelf(arg0) => Self::ExSelf(arg0.clone()),
+            Self::ExSkip(arg0) => Self::ExSkip(arg0.clone()),
+            Self::ExContext(arg0) => Self::ExContext(arg0.clone()),
+            Self::ExContextFailSilent(arg0) => Self::ExContextFailSilent(arg0.clone()),
+            Self::ExVirtualFunction(arg0) => Self::ExVirtualFunction(arg0.clone()),
+            Self::ExFinalFunction(arg0) => Self::ExFinalFunction(arg0.clone()),
+            Self::ExIntConst(arg0) => Self::ExIntConst(arg0.clone()),
+            Self::ExFloatConst(arg0) => Self::ExFloatConst(arg0.clone()),
+            Self::ExStringConst(arg0) => Self::ExStringConst(arg0.clone()),
+            Self::ExObjectConst(arg0) => Self::ExObjectConst(arg0.clone()),
+            Self::ExNameConst(arg0) => Self::ExNameConst(arg0.clone()),
+            Self::ExRotationConst(arg0) => Self::ExRotationConst(arg0.clone()),
+            Self::ExVectorConst(arg0) => Self::ExVectorConst(arg0.clone()),
+            Self::ExByteConst(arg0) => Self::ExByteConst(arg0.clone()),
+            Self::ExIntZero(arg0) => Self::ExIntZero(arg0.clone()),
+            Self::ExIntOne(arg0) => Self::ExIntOne(arg0.clone()),
+            Self::ExTrue(arg0) => Self::ExTrue(arg0.clone()),
+            Self::ExFalse(arg0) => Self::ExFalse(arg0.clone()),
+            Self::ExTextConst(arg0) => Self::ExTextConst(arg0.clone()),
+            Self::ExNoObject(arg0) => Self::ExNoObject(arg0.clone()),
+            Self::ExTransformConst(arg0) => Self::ExTransformConst(arg0.clone()),
+            Self::ExIntConstByte(arg0) => Self::ExIntConstByte(arg0.clone()),
+            Self::ExNoInterface(arg0) => Self::ExNoInterface(arg0.clone()),
+            Self::ExDynamicCast(arg0) => Self::ExDynamicCast(arg0.clone()),
+            Self::ExStructConst(arg0) => Self::ExStructConst(arg0.clone()),
+            Self::ExEndStructConst(arg0) => Self::ExEndStructConst(arg0.clone()),
+            Self::ExSetArray(arg0) => Self::ExSetArray(arg0.clone()),
+            Self::ExEndArray(arg0) => Self::ExEndArray(arg0.clone()),
+            Self::ExPropertyConst(arg0) => Self::ExPropertyConst(arg0.clone()),
+            Self::ExUnicodeStringConst(arg0) => Self::ExUnicodeStringConst(arg0.clone()),
+            Self::ExInt64Const(arg0) => Self::ExInt64Const(arg0.clone()),
+            Self::ExUInt64Const(arg0) => Self::ExUInt64Const(arg0.clone()),
+            Self::ExPrimitiveCast(arg0) => Self::ExPrimitiveCast(arg0.clone()),
+            Self::ExSetSet(arg0) => Self::ExSetSet(arg0.clone()),
+            Self::ExEndSet(arg0) => Self::ExEndSet(arg0.clone()),
+            Self::ExSetMap(arg0) => Self::ExSetMap(arg0.clone()),
+            Self::ExEndMap(arg0) => Self::ExEndMap(arg0.clone()),
+            Self::ExSetConst(arg0) => Self::ExSetConst(arg0.clone()),
+            Self::ExEndSetConst(arg0) => Self::ExEndSetConst(arg0.clone()),
+            Self::ExMapConst(arg0) => Self::ExMapConst(arg0.clone()),
+            Self::ExEndMapConst(arg0) => Self::ExEndMapConst(arg0.clone()),
+            Self::ExStructMemberContext(arg0) => Self::ExStructMemberContext(arg0.clone()),
+            Self::ExLetMulticastDelegate(arg0) => Self::ExLetMulticastDelegate(arg0.clone()),
+            Self::ExLetDelegate(arg0) => Self::ExLetDelegate(arg0.clone()),
+            Self::ExLocalVirtualFunction(arg0) => Self::ExLocalVirtualFunction(arg0.clone()),
+            Self::ExLocalFinalFunction(arg0) => Self::ExLocalFinalFunction(arg0.clone()),
+            Self::ExLocalOutVariable(arg0) => Self::ExLocalOutVariable(arg0.clone()),
+            Self::ExDeprecatedOp4A(arg0) => Self::ExDeprecatedOp4A(arg0.clone()),
+            Self::ExInstanceDelegate(arg0) => Self::ExInstanceDelegate(arg0.clone()),
+            Self::ExPushExecutionFlow(arg0) => Self::ExPushExecutionFlow(arg0.clone()),
+            Self::ExPopExecutionFlow(arg0) => Self::ExPopExecutionFlow(arg0.clone()),
+            Self::ExComputedJump(arg0) => Self::ExComputedJump(arg0.clone()),
+            Self::ExPopExecutionFlowIfNot(arg0) => Self::ExPopExecutionFlowIfNot(arg0.clone()),
+            Self::ExBreakpoint(arg0) => Self::ExBreakpoint(arg0.clone()),
+            Self::ExInterfaceContext(arg0) => Self::ExInterfaceContext(arg0.clone()),
+            Self::ExObjToInterfaceCast(arg0) => Self::ExObjToInterfaceCast(arg0.clone()),
+            Self::ExEndOfScript(arg0) => Self::ExEndOfScript(arg0.clone()),
+            Self::ExCrossInterfaceCast(arg0) => Self::ExCrossInterfaceCast(arg0.clone()),
+            Self::ExInterfaceToObjCast(arg0) => Self::ExInterfaceToObjCast(arg0.clone()),
+            Self::ExWireTracepoint(arg0) => Self::ExWireTracepoint(arg0.clone()),
+            Self::ExSkipOffsetConst(arg0) => Self::ExSkipOffsetConst(arg0.clone()),
+            Self::ExAddMulticastDelegate(arg0) => Self::ExAddMulticastDelegate(arg0.clone()),
+            Self::ExClearMulticastDelegate(arg0) => Self::ExClearMulticastDelegate(arg0.clone()),
+            Self::ExTracepoint(arg0) => Self::ExTracepoint(arg0.clone()),
+            Self::ExLetObj(arg0) => Self::ExLetObj(arg0.clone()),
+            Self::ExLetWeakObjPtr(arg0) => Self::ExLetWeakObjPtr(arg0.clone()),
+            Self::ExBindDelegate(arg0) => Self::ExBindDelegate(arg0.clone()),
+            Self::ExRemoveMulticastDelegate(arg0) => Self::ExRemoveMulticastDelegate(arg0.clone()),
+            Self::ExCallMulticastDelegate(arg0) => Self::ExCallMulticastDelegate(arg0.clone()),
+            Self::ExLetValueOnPersistentFrame(arg0) => Self::ExLetValueOnPersistentFrame(arg0.clone()),
+            Self::ExArrayConst(arg0) => Self::ExArrayConst(arg0.clone()),
+            Self::ExEndArrayConst(arg0) => Self::ExEndArrayConst(arg0.clone()),
+            Self::ExSoftObjectConst(arg0) => Self::ExSoftObjectConst(arg0.clone()),
+            Self::ExCallMath(arg0) => Self::ExCallMath(arg0.clone()),
+            Self::ExSwitchValue(arg0) => Self::ExSwitchValue(arg0.clone()),
+            Self::ExInstrumentationEvent(arg0) => Self::ExInstrumentationEvent(arg0.clone()),
+            Self::ExArrayGetByRef(arg0) => Self::ExArrayGetByRef(arg0.clone()),
+            Self::ExClassSparseDataVariable(arg0) => Self::ExClassSparseDataVariable(arg0.clone()),
+            Self::ExFieldPathConst(arg0) => Self::ExFieldPathConst(arg0.clone()),
+        }
+    }
 }
 
 impl KismetExpression {

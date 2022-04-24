@@ -10,6 +10,7 @@ use std::io::Cursor;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
+        #[derive(Clone)]
         pub struct $prop_name {
             pub generic_property: FGenericProperty,
         }
@@ -33,6 +34,7 @@ macro_rules! parse_simple_property {
 
 macro_rules! parse_simple_property_index {
     ($prop_name:ident, $($index_name:ident),*) => {
+        #[derive(Clone)]
         pub struct $prop_name {
             pub generic_property: FGenericProperty,
             $(
@@ -64,7 +66,8 @@ macro_rules! parse_simple_property_index {
 }
 
 macro_rules! parse_simple_property_prop {
-    ($prop_name:ident, $($prop:ident),*) => {
+    ($prop_name:ident, $($prop:ident),*) => {    
+        #[derive(Clone)]
         pub struct $prop_name {
             pub generic_property: FGenericProperty,
             $(
@@ -119,6 +122,30 @@ pub enum FProperty {
     FByteProperty,
     FStructProperty,
     FNumericProperty,
+}
+
+impl Clone for FProperty {
+    fn clone(&self) -> Self {
+        match self {
+            Self::FGenericProperty(arg0) => Self::FGenericProperty(arg0.clone()),
+            Self::FEnumProperty(arg0) => Self::FEnumProperty(arg0.clone()),
+            Self::FArrayProperty(arg0) => Self::FArrayProperty(arg0.clone()),
+            Self::FSetProperty(arg0) => Self::FSetProperty(arg0.clone()),
+            Self::FObjectProperty(arg0) => Self::FObjectProperty(arg0.clone()),
+            Self::FSoftObjectProperty(arg0) => Self::FSoftObjectProperty(arg0.clone()),
+            Self::FClassProperty(arg0) => Self::FClassProperty(arg0.clone()),
+            Self::FSoftClassProperty(arg0) => Self::FSoftClassProperty(arg0.clone()),
+            Self::FDelegateProperty(arg0) => Self::FDelegateProperty(arg0.clone()),
+            Self::FMulticastDelegateProperty(arg0) => Self::FMulticastDelegateProperty(arg0.clone()),
+            Self::FMulticastInlineDelegateProperty(arg0) => Self::FMulticastInlineDelegateProperty(arg0.clone()),
+            Self::FInterfaceProperty(arg0) => Self::FInterfaceProperty(arg0.clone()),
+            Self::FMapProperty(arg0) => Self::FMapProperty(arg0.clone()),
+            Self::FBoolProperty(arg0) => Self::FBoolProperty(arg0.clone()),
+            Self::FByteProperty(arg0) => Self::FByteProperty(arg0.clone()),
+            Self::FStructProperty(arg0) => Self::FStructProperty(arg0.clone()),
+            Self::FNumericProperty(arg0) => Self::FNumericProperty(arg0.clone()),
+        }
+    }
 }
 
 impl FProperty {
@@ -193,6 +220,7 @@ impl ToFName for FProperty {
     }
 }
 
+#[derive(Clone)]
 pub struct FGenericProperty {
     pub name: FName,
     pub flags: EObjectFlags,
@@ -205,12 +233,14 @@ pub struct FGenericProperty {
     pub serialized_type: Option<FName>,
 }
 
+#[derive(Clone)]
 pub struct FEnumProperty {
     generic_property: FGenericProperty,
     enum_value: PackageIndex,
     underlying_prop: Box<FProperty>,
 }
 
+#[derive(Clone)]
 pub struct FBoolProperty {
     generic_property: FGenericProperty,
 

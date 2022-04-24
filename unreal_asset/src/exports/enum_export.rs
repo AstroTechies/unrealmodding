@@ -23,6 +23,7 @@ pub enum ECppForm {
     EnumClass,
 }
 
+#[derive(Clone)]
 pub struct UEnum {
     pub names: Vec<(FName, i64)>,
     pub cpp_form: ECppForm,
@@ -110,6 +111,7 @@ impl UEnum {
     }
 }
 
+#[derive(Clone)]
 pub struct EnumExport {
     pub normal_export: NormalExport,
 

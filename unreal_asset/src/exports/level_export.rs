@@ -11,6 +11,7 @@ use crate::Asset;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Cursor, Read};
 
+#[derive(Clone)]
 pub struct LevelExport {
     normal_export: NormalExport,
 

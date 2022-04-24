@@ -6,6 +6,7 @@ use std::io::{Cursor, Read, Write};
 
 use super::ExportNormalTrait;
 
+#[derive(Clone)]
 pub struct RawExport {
     unknown_export: UnknownExport,
 

@@ -11,6 +11,7 @@ use std::io::Cursor;
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
 
+#[derive(Clone)]
 pub struct PropertyExport {
     pub normal_export: NormalExport,
 

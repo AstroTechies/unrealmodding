@@ -504,8 +504,7 @@ impl<'a> Asset {
 
     pub fn add_import(&mut self, import: Import) -> i32 {
         let index = -(self.imports.len() as i32) - 1;
-        let mut import = import.clone();
-        import.outer_index = index;
+        let import = import.clone();
         self.imports.push(import);
         index
     }

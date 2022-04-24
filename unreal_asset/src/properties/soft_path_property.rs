@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -23,7 +23,7 @@ pub struct SoftAssetPathProperty {
 }
 impl_property_data_trait!(SoftAssetPathProperty);
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SoftObjectPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -34,7 +34,7 @@ pub struct SoftObjectPathProperty {
 }
 impl_property_data_trait!(SoftObjectPathProperty);
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SoftClassPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

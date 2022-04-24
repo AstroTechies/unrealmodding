@@ -12,6 +12,7 @@ use std::io::Cursor;
 use super::ExportNormalTrait;
 use super::ExportUnknownTrait;
 
+#[derive(Clone)]
 pub struct StringTableExport {
     normal_export: NormalExport,
 

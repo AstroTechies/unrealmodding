@@ -16,6 +16,7 @@ use std::mem::size_of;
 
 use super::ExportNormalTrait;
 
+#[derive(Clone)]
 pub struct SerializedInterfaceReference {
     pub class: i32,
     pub pointer_offset: i32,
@@ -32,6 +33,7 @@ impl SerializedInterfaceReference {
     }
 }
 
+#[derive(Clone)]
 pub struct ClassExport {
     pub struct_export: StructExport,
 
