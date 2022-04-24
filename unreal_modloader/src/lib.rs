@@ -153,10 +153,16 @@ where
                     break;
                 }
 
-                let data_guard = data.lock().unwrap();
+                let mut data_guard = data.lock().unwrap();
                 if should_integrate.load(Ordering::Relaxed) && data_guard.base_path.is_some() {
                     working.store(true, Ordering::Relaxed);
                     should_integrate.store(false, Ordering::Relaxed);
+
+                    // set game build
+                    if data_guard.install_path.is_some() {
+                        data_guard.game_build =
+                            config.get_game_build(data_guard.install_path.as_ref().unwrap());
+                    }
 
                     // gather mods to be installed
                     let mods_to_install = data_guard
