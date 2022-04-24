@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fs;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use log::debug;
@@ -12,19 +12,19 @@ use pakfile_reading::{insert_mods_from_readdata, read_pak_files};
 mod version_handling;
 use version_handling::{auto_pick_versions, set_mod_data_from_version};
 
+mod verify;
+
 pub(crate) fn process_modfiles(
-    mod_files: &Vec<fs::DirEntry>,
+    mod_files: &Vec<PathBuf>,
     data: &Arc<Mutex<AppData>>,
 ) -> Result<(), Box<dyn Error>> {
-    debug!(
-        "Processing mod files: {:?}",
-        mod_files.iter().map(|x| x.path()).collect::<Vec<_>>()
-    );
+    debug!("Processing mod files: {:?}", mod_files);
 
     // read metadata from pak files and collect for each mod_id
     let mods_read = read_pak_files(mod_files);
 
     let mut data_guard = data.lock().unwrap();
+    let filter = mods_read.keys().cloned().collect();
 
     // turn metadata into proper data structures
     insert_mods_from_readdata(&mods_read, &mut *data_guard);
@@ -33,10 +33,10 @@ pub(crate) fn process_modfiles(
     auto_pick_versions(&mut *data_guard);
 
     // set top level data
-    set_mod_data_from_version(&mut *data_guard);
+    set_mod_data_from_version(&mut *data_guard, &filter);
 
     // fetch index files
-    let index_files_info = gather_index_files(&mut *data_guard);
+    let index_files_info = gather_index_files(&mut *data_guard, &filter);
     // drop guard to allow UI to render while index files are being downloaded
     drop(data_guard);
     let index_files = download_index_files(index_files_info);

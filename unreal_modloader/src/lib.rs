@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -111,12 +112,13 @@ where
                     panic!();
                 });
 
-                let mod_files: Vec<fs::DirEntry> = mods_dir
+                let mod_files: Vec<PathBuf> = mods_dir
                     .filter_map(|e| e.ok())
                     .filter(|e| match e.file_name().into_string() {
                         Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
                         Err(_) => false,
                     })
+                    .map(|e| e.path())
                     .collect();
 
                 process_modfiles(&mod_files, &data).unwrap();
@@ -143,13 +145,13 @@ where
                     break;
                 }
 
-                let data = data.lock().unwrap();
-                if should_integrate.load(Ordering::Relaxed) && data.base_path.is_some() {
+                let data_guard = data.lock().unwrap();
+                if should_integrate.load(Ordering::Relaxed) && data_guard.base_path.is_some() {
                     working.store(true, Ordering::Relaxed);
                     should_integrate.store(false, Ordering::Relaxed);
 
                     // gather mods to be installed
-                    let mods_to_install = data
+                    let mods_to_install = data_guard
                         .game_mods
                         .iter()
                         .filter(|(_, m)| m.active)
@@ -161,13 +163,58 @@ where
                         })
                         .collect::<Vec<_>>();
 
-                    let mods_path = data.data_path.as_ref().unwrap().to_owned();
-                    let paks_path = data.paks_path.as_ref().unwrap().to_owned();
-                    let install_path = data.install_path.as_ref().unwrap().to_owned();
-                    let refuse_mismatched_connections = data.refuse_mismatched_connections;
-                    drop(data);
+                    let mods_path = data_guard.data_path.as_ref().unwrap().to_owned();
+                    let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
+                    let install_path = data_guard.install_path.as_ref().unwrap().to_owned();
+                    let refuse_mismatched_connections = data_guard.refuse_mismatched_connections;
+                    drop(data_guard);
 
-                    // TODO: download mods
+                    debug!(
+                        "Mods to install: {:?}",
+                        mods_to_install
+                            .iter()
+                            .map(|m| &m.file_name)
+                            .collect::<Vec<_>>()
+                    );
+
+                    // download mod versions not yet downloaded
+                    let files_to_downlaod: Vec<(String, String)> = mods_to_install
+                        .iter()
+                        .filter_map(|m| {
+                            if !m.downloaded && m.download_url.is_some() {
+                                Some((
+                                    m.file_name.clone(),
+                                    m.download_url.as_ref().unwrap().clone(),
+                                ))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    if files_to_downlaod.len() > 0 {
+                        // ? Maybe parallelize this?
+                        for (file_name, url) in &files_to_downlaod {
+                            debug!("Downloading {:?}", file_name);
+
+                            // this is safe because the filename has already been validated
+                            let file_path =
+                                PathBuf::from(mods_path.clone()).join(file_name.clone());
+                            let mut file = fs::File::create(&file_path).unwrap();
+
+                            let mut response = reqwest::blocking::get(url.as_str()).unwrap();
+                            io::copy(&mut response, &mut file).unwrap();
+                        }
+                        // process newly downlaoded files
+                        process_modfiles(
+                            &files_to_downlaod
+                                .iter()
+                                .map(|f| PathBuf::from(mods_path.clone()).join(f.0.clone()))
+                                .collect::<Vec<_>>(),
+                            &data,
+                        )
+                        .unwrap();
+                    }
 
                     // move mods
                     // remove all old files
@@ -187,7 +234,7 @@ where
                             paks_path.join(mod_version.file_name.as_str()),
                         )
                         .unwrap_or_else(|_| {
-                            error!("Failed to copy pak file {}", mod_version.file_name);
+                            error!("Failed to copy pak file {:?}", mod_version.file_name);
                             panic!();
                         });
                     }
@@ -205,9 +252,11 @@ where
                     )
                     .unwrap();
 
+                    // TODO: update config file
+
                     working.store(false, Ordering::Relaxed);
                 } else {
-                    drop(data);
+                    drop(data_guard);
                 }
 
                 thread::sleep(Duration::from_millis(50));

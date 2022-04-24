@@ -9,13 +9,18 @@ use crate::game_mod::{GameModVersion, SelectedVersion};
 use crate::version::Version;
 use crate::AppData;
 
-pub(crate) fn gather_index_files(data: &mut AppData) -> HashMap<String, DownloadInfo> {
+use super::verify;
+
+pub(crate) fn gather_index_files(
+    data: &mut AppData,
+    filter: &Vec<String>,
+) -> HashMap<String, DownloadInfo> {
     let mut index_files: HashMap<String, DownloadInfo> = HashMap::new();
 
     for (mod_id, game_mod) in data.game_mods.iter() {
-        let download_info = game_mod.download.clone();
-        if let Some(download_info) = download_info {
-            index_files.insert(mod_id.to_owned(), download_info);
+        if game_mod.download.is_some() && filter.contains(mod_id) {
+            let download_info = game_mod.download.as_ref().unwrap();
+            index_files.insert(mod_id.clone(), download_info.clone());
         }
     }
 
@@ -115,15 +120,33 @@ pub(crate) fn insert_index_file_data(
                 continue;
             }
 
-            game_mod.versions.insert(
-                version.unwrap(),
-                GameModVersion {
-                    file_name: version_info.filename.clone(),
-                    downloaded: true,
-                    download_url: Some(version_info.download_url.clone()),
-                    metadata: None,
-                },
-            );
+            if !verify::verify_mod_file_name(&version_info.filename) {
+                warn!(
+                    "Failed to verify filename {:?} from index file for mod {:?}",
+                    version_info.filename, mod_id
+                );
+
+                continue;
+            }
+
+            if game_mod.versions.contains_key(&version.as_ref().unwrap()) {
+                let mut existing_version_data = game_mod
+                    .versions
+                    .get_mut(&version.as_ref().unwrap())
+                    .unwrap();
+
+                existing_version_data.download_url = Some(version_info.download_url.clone());
+            } else {
+                game_mod.versions.insert(
+                    version.unwrap(),
+                    GameModVersion {
+                        file_name: version_info.filename.clone(),
+                        downloaded: false,
+                        download_url: Some(version_info.download_url.clone()),
+                        metadata: None,
+                    },
+                );
+            }
         }
 
         let latest_version = Version::try_from(&index_file.latest_version);

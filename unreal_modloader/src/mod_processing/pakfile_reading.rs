@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::io;
+use std::path::PathBuf;
 
 use log::{debug, warn};
 use unreal_modintegrator::metadata::{Metadata, SyncMode};
@@ -11,16 +12,18 @@ use crate::game_mod::{GameMod, GameModVersion, SelectedVersion};
 use crate::version::Version;
 use crate::AppData;
 
+use super::verify;
+
 #[derive(Debug)]
 pub(crate) struct ReadData(String, Metadata);
 
-pub(crate) fn read_pak_files(mod_files: &Vec<fs::DirEntry>) -> HashMap<String, Vec<ReadData>> {
+pub(crate) fn read_pak_files(mod_files: &Vec<PathBuf>) -> HashMap<String, Vec<ReadData>> {
     let mut mods_read: HashMap<String, Vec<ReadData>> = HashMap::new();
 
     // read metadata
     for file_path in mod_files.iter() {
         let file_result = (|| -> Result<(), Box<dyn Error>> {
-            let file = fs::File::open(&file_path.path())?;
+            let file = fs::File::open(&file_path)?;
             let mut pak = PakFile::new(&file);
 
             pak.load_records()?;
@@ -28,7 +31,16 @@ pub(crate) fn read_pak_files(mod_files: &Vec<fs::DirEntry>) -> HashMap<String, V
             let record = &pak.read_record(&String::from("metadata.json"))?;
             let metadata: Metadata = serde_json::from_slice(&record)?;
 
-            let file_name = file_path.file_name().to_str().unwrap().to_owned();
+            let file_name = file_path.file_name().unwrap().to_str().unwrap().to_owned();
+
+            // check that filename generally matches
+            if !verify::verify_mod_file_name(&file_name) {
+                return Err(Box::new(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Mod file {:?} does not match expected format", file_name),
+                )));
+            }
+
             let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
                 .split("-")
                 .collect::<Vec<&str>>();
@@ -72,13 +84,13 @@ pub(crate) fn read_pak_files(mod_files: &Vec<fs::DirEntry>) -> HashMap<String, V
             Ok(_) => {
                 debug!(
                     "Successfully read metadata for {:?}",
-                    file_path.file_name().to_str().unwrap()
+                    file_path.file_name().unwrap().to_str().unwrap()
                 );
             }
             Err(e) => {
                 warn!(
                     "Failed to read pak file {:?}, error: {}",
-                    file_path.file_name().to_str().unwrap(),
+                    file_path.file_name().unwrap().to_str().unwrap(),
                     e
                 );
             }
