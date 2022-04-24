@@ -10,9 +10,9 @@ fn handle_persistent_actors(
     _data: &(),
     _integrated_pak: &mut PakFile,
     _game_paks: &mut Vec<PakFile>,
-    actors: Vec<&serde_json::Value>,
+    _actors: Vec<&serde_json::Value>,
 ) -> Result<(), io::Error> {
-    println!("{:?}", actors);
+    //println!("{:?}", actors);
     Ok(())
 }
 
