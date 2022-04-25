@@ -542,9 +542,27 @@ impl<'a> Asset {
     ) -> Option<i32> {
         for i in 0..self.imports.len() {
             let import = &self.imports[i];
-            if import.class_name == *class_package
+            if import.class_package == *class_package
                 && import.class_name == *class_name
                 && import.outer_index == outer_index
+                && import.object_name == *object_name
+            {
+                return Some(-(i as i32));
+            }
+        }
+        None
+    }
+
+    pub fn find_import_no_index(
+        &self,
+        class_package: &FName,
+        class_name: &FName,
+        object_name: &FName,
+    ) -> Option<i32> {
+        for i in 0..self.imports.len() {
+            let import = &self.imports[i];
+            if import.class_package == *class_package
+                && import.class_name == *class_name
                 && import.object_name == *object_name
             {
                 return Some(-(i as i32));
