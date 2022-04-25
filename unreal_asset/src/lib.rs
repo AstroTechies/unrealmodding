@@ -5,6 +5,7 @@ use std::fmt::{Debug, Formatter};
 
 use std::hash::{Hash, Hasher};
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -655,14 +656,15 @@ impl<'a> Asset {
                 }
 
                 if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-                    export.first_export_dependency = self.cursor.read_i32::<LittleEndian>()?;
-                    export.serialization_before_serialization_dependencies =
+                    export.first_export_dependency_offset =
                         self.cursor.read_i32::<LittleEndian>()?;
-                    export.create_before_serialization_dependencies =
+                    export.serialization_before_serialization_dependencies_size =
                         self.cursor.read_i32::<LittleEndian>()?;
-                    export.serialization_before_create_dependencies =
+                    export.create_before_serialization_dependencies_size =
                         self.cursor.read_i32::<LittleEndian>()?;
-                    export.create_before_create_dependencies =
+                    export.serialization_before_create_dependencies_size =
+                        self.cursor.read_i32::<LittleEndian>()?;
+                    export.create_before_create_dependencies_size =
                         self.cursor.read_i32::<LittleEndian>()?;
                 }
 
@@ -711,6 +713,52 @@ impl<'a> Asset {
         }
 
         if self.use_separate_bulk_data_files {
+            for export in &mut self.exports {
+                let unk_export = export.get_unknown_export_mut();
+
+                self.cursor
+                    .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
+                self.cursor.seek(SeekFrom::Current(
+                    unk_export.first_export_dependency_offset as i64 * size_of::<i32>() as i64,
+                ))?;
+
+                let mut serialization_before_serialization_dependencies = Vec::with_capacity(
+                    unk_export.serialization_before_serialization_dependencies_size as usize,
+                );
+                for _ in 0..unk_export.serialization_before_serialization_dependencies_size {
+                    serialization_before_serialization_dependencies
+                        .push(self.cursor.read_i32::<LittleEndian>()?);
+                }
+                unk_export.serialization_before_serialization_dependencies =
+                    serialization_before_serialization_dependencies;
+
+                let mut create_before_serialization_dependencies = Vec::with_capacity(
+                    unk_export.create_before_serialization_dependencies_size as usize,
+                );
+                for _ in 0..unk_export.create_before_serialization_dependencies_size {
+                    create_before_serialization_dependencies
+                        .push(self.cursor.read_i32::<LittleEndian>()?);
+                }
+                unk_export.create_before_serialization_dependencies =
+                    create_before_serialization_dependencies;
+
+                let mut serialization_before_create_dependencies = Vec::with_capacity(
+                    unk_export.serialization_before_create_dependencies_size as usize,
+                );
+                for _ in 0..unk_export.serialization_before_create_dependencies_size {
+                    serialization_before_create_dependencies
+                        .push(self.cursor.read_i32::<LittleEndian>()?);
+                }
+                unk_export.serialization_before_create_dependencies =
+                    serialization_before_create_dependencies;
+
+                let mut create_before_create_dependencies =
+                    Vec::with_capacity(unk_export.create_before_create_dependencies_size as usize);
+                for _ in 0..unk_export.create_before_create_dependencies_size {
+                    create_before_create_dependencies.push(self.cursor.read_i32::<LittleEndian>()?);
+                }
+                unk_export.create_before_create_dependencies = create_before_create_dependencies;
+            }
             self.cursor
                 .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
             let mut preload_dependencies = Vec::new();
@@ -981,6 +1029,7 @@ impl<'a> Asset {
         cursor: &mut Cursor<Vec<u8>>,
         serial_size: i64,
         serial_offset: i64,
+        first_export_dependency_offset: i32,
     ) -> Result<(), Error> {
         cursor.write_i32::<LittleEndian>(unk.class_index)?;
         cursor.write_i32::<LittleEndian>(unk.super_index)?;
@@ -1031,12 +1080,17 @@ impl<'a> Asset {
         }
 
         if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-            cursor.write_i32::<LittleEndian>(unk.first_export_dependency)?;
-            cursor
-                .write_i32::<LittleEndian>(unk.serialization_before_serialization_dependencies)?;
-            cursor.write_i32::<LittleEndian>(unk.create_before_serialization_dependencies)?;
-            cursor.write_i32::<LittleEndian>(unk.serialization_before_create_dependencies)?;
-            cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies)?;
+            cursor.write_i32::<LittleEndian>(first_export_dependency_offset)?;
+            cursor.write_i32::<LittleEndian>(
+                unk.serialization_before_serialization_dependencies.len() as i32,
+            )?;
+            cursor.write_i32::<LittleEndian>(
+                unk.create_before_serialization_dependencies.len() as i32
+            )?;
+            cursor.write_i32::<LittleEndian>(
+                unk.serialization_before_create_dependencies.len() as i32
+            )?;
+            cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies.len() as i32)?;
         }
         Ok(())
     }
@@ -1105,7 +1159,13 @@ impl<'a> Asset {
 
         for export in &self.exports {
             let unk: &UnknownExport = export.get_unknown_export();
-            self.write_export_header(unk, cursor, unk.serial_size, unk.serial_offset)?;
+            self.write_export_header(
+                unk,
+                cursor,
+                unk.serial_size,
+                unk.serial_offset,
+                unk.first_export_dependency_offset,
+            )?;
         }
 
         let depends_offset = match self.depends_map {
@@ -1162,10 +1222,24 @@ impl<'a> Asset {
         };
 
         if self.use_separate_bulk_data_files {
-            for entry in self.preload_dependencies.as_ref().ok_or(Error::no_data(
-                "use_separate_bulk_data_files: true but no preload_dependencies found".to_string(),
-            ))? {
-                cursor.write_i32::<LittleEndian>(*entry)?;
+            for export in &self.exports {
+                let unk_export = export.get_unknown_export();
+
+                for element in &unk_export.serialization_before_serialization_dependencies {
+                    cursor.write_i32::<LittleEndian>(*element)?;
+                }
+
+                for element in &unk_export.create_before_serialization_dependencies {
+                    cursor.write_i32::<LittleEndian>(*element)?;
+                }
+
+                for element in &unk_export.serialization_before_create_dependencies {
+                    cursor.write_i32::<LittleEndian>(*element)?;
+                }
+
+                for element in &unk_export.create_before_create_dependencies {
+                    cursor.write_i32::<LittleEndian>(*element)?;
+                }
             }
         }
 
@@ -1204,6 +1278,7 @@ impl<'a> Asset {
 
         if self.exports.len() > 0 {
             cursor.seek(SeekFrom::Start(export_offset as u64))?;
+            let mut first_export_dependency_offset = 0;
             for i in 0..self.exports.len() {
                 let unk = &self.exports[i].get_unknown_export();
                 let next_loc = match self.exports.len() - 1 > i {
@@ -1215,7 +1290,13 @@ impl<'a> Asset {
                     cursor,
                     next_loc - category_starts[i] as i64,
                     category_starts[i] as i64,
+                    first_export_dependency_offset,
                 )?;
+                first_export_dependency_offset +=
+                    (unk.serialization_before_serialization_dependencies.len()
+                        + unk.create_before_serialization_dependencies.len()
+                        + unk.serialization_before_create_dependencies.len()
+                        + unk.create_before_create_dependencies.len()) as i32;
             }
         }
 

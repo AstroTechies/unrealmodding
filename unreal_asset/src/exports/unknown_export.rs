@@ -24,11 +24,18 @@ pub struct UnknownExport {
     pub package_flags: u32,
     pub not_always_loaded_for_editor_game: bool,
     pub is_asset: bool,
-    pub first_export_dependency: i32,
-    pub serialization_before_serialization_dependencies: i32,
-    pub create_before_serialization_dependencies: i32,
-    pub serialization_before_create_dependencies: i32,
-    pub create_before_create_dependencies: i32,
+    pub first_export_dependency_offset: i32,
+    pub serialization_before_serialization_dependencies: Vec<i32>,
+    pub(crate) serialization_before_serialization_dependencies_size: i32,
+
+    pub create_before_serialization_dependencies: Vec<i32>,
+    pub(crate) create_before_serialization_dependencies_size: i32,
+
+    pub serialization_before_create_dependencies: Vec<i32>,
+    pub(crate) serialization_before_create_dependencies_size: i32,
+
+    pub create_before_create_dependencies: Vec<i32>,
+    pub(crate) create_before_create_dependencies_size: i32
 }
 
 impl ExportNormalTrait for UnknownExport {
