@@ -61,12 +61,12 @@ macro_rules! cast {
     ($namespace:ident, $type:ident, $field:ident) => {
         match $field {
             $namespace::$type(e) => Some(e),
-            _ => None
+            _ => None,
         }
     };
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Import {
     pub class_package: FName,
     pub class_name: FName,
@@ -530,6 +530,26 @@ impl<'a> Asset {
         }
 
         Some(&self.imports[index as usize])
+    }
+
+    pub fn find_import(
+        &self,
+        class_package: &FName,
+        class_name: &FName,
+        outer_index: i32,
+        object_name: &FName,
+    ) -> Option<i32> {
+        for i in 0..self.imports.len() {
+            let import = &self.imports[i];
+            if import.class_name == *class_package
+                && import.class_name == *class_name
+                && import.outer_index == outer_index
+                && import.object_name == *object_name
+            {
+                return Some(-(i as i32));
+            }
+        }
+        None
     }
 
     pub fn get_export(&'a self, index: i32) -> Option<&'a Export> {
