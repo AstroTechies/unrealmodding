@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::fs;
 use std::io;
@@ -108,8 +108,9 @@ pub(crate) fn insert_mods_from_readdata(
         // check if mod is in global list, if not insert empty
         if !data.game_mods.contains_key(mod_id) {
             let game_mod = GameMod {
-                versions: HashMap::new(),
+                versions: BTreeMap::new(),
                 selected_version: SelectedVersion::LatestIndirect(None),
+                latest_version: None,
 
                 active: false,
 

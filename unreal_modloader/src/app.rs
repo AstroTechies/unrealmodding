@@ -7,6 +7,9 @@ use eframe::{egui, epi};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::info;
 
+use crate::game_mod::SelectedVersion;
+use crate::version::Version;
+
 pub(crate) struct App {
     pub data: Arc<Mutex<crate::AppData>>,
 
@@ -51,9 +54,9 @@ impl epi::App for App {
                             .cell_layout(
                                 egui::Layout::left_to_right().with_cross_align(egui::Align::Center),
                             )
-                            .column(Size::initial(42.0).at_least(40.0))
+                            .column(Size::initial(42.0).at_least(42.0))
                             .column(Size::initial(200.0).at_least(20.0))
-                            .column(Size::initial(92.0).at_least(20.0))
+                            .column(Size::initial(120.0).at_least(120.0))
                             .column(Size::initial(70.0).at_least(20.0))
                             .column(Size::remainder().at_least(20.0))
                             .resizable(true)
@@ -86,7 +89,61 @@ impl epi::App for App {
                                             ui.label(game_mod.name.as_str());
                                         });
                                         row.col(|ui| {
-                                            ui.label(format!("{}", game_mod.selected_version));
+                                            if egui::ComboBox::from_id_source(&game_mod.name)
+                                                .selected_text(format!(
+                                                    "{}",
+                                                    game_mod.selected_version
+                                                ))
+                                                .show_ui(ui, |ui| {
+                                                    // for when there is an Index file show force latest version, this to diecrtly indicate that there
+                                                    // is the possibility of an auto update vie an index file.
+                                                    if game_mod.download.is_some() {
+                                                        let latest_version =
+                                                            game_mod.latest_version.unwrap();
+                                                        ui.selectable_value(
+                                                            &mut game_mod.selected_version,
+                                                            SelectedVersion::Latest(
+                                                                latest_version.clone(),
+                                                            ),
+                                                            format!(
+                                                                "{}",
+                                                                SelectedVersion::Latest(
+                                                                    latest_version
+                                                                )
+                                                            ),
+                                                        );
+                                                    }
+
+                                                    // add all other versions to the drop down
+                                                    for version in game_mod.versions.iter() {
+                                                        // if the version is the latest version, set it as LatestIndirect so that if there is an upgrade it will
+                                                        // automatically be upgraded. This is under the assumption that if the user now has the latest version,
+                                                        // that they probably also want to have the latest in the future.
+                                                        let is_latest = *version.0
+                                                            == game_mod
+                                                                .latest_version
+                                                                .unwrap_or(Version::new(0, 0, 0));
+
+                                                        ui.selectable_value(
+                                                            &mut game_mod.selected_version,
+                                                            if is_latest {
+                                                                SelectedVersion::LatestIndirect(
+                                                                    Some(version.0.clone()),
+                                                                )
+                                                            } else {
+                                                                SelectedVersion::Specific(
+                                                                    version.0.clone(),
+                                                                )
+                                                            },
+                                                            format!("{}", version.0),
+                                                        );
+                                                    }
+                                                })
+                                                .response
+                                                .changed()
+                                            {
+                                                should_integrate.store(true, Ordering::Relaxed);
+                                            }
                                         });
                                         row.col(|ui| {
                                             ui.label(

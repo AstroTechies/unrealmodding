@@ -26,6 +26,8 @@ pub(crate) fn auto_pick_versions(data: &mut AppData) {
             versions.sort();
             game_mod.selected_version =
                 SelectedVersion::LatestIndirect(Some(**versions.last().unwrap()));
+
+            game_mod.latest_version = Some(**versions.last().unwrap());
         }
     }
 }

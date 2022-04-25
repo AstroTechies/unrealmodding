@@ -159,7 +159,9 @@ pub(crate) fn insert_index_file_data(
             continue;
         }
 
-        game_mod.selected_version = SelectedVersion::Latest(latest_version.unwrap());
+        game_mod.selected_version =
+            SelectedVersion::Latest(latest_version.as_ref().unwrap().clone());
+        game_mod.latest_version = Some(latest_version.unwrap());
 
         debug!("Loaded index file for {}", mod_id);
     }
