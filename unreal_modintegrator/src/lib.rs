@@ -42,9 +42,11 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     fn get_engine_version(&self) -> i32;
 }
 
-pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<Vec<u8>> {
-    for pak in paks {
-        pak.read_record(name).ok()?;
+pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<usize> {
+    for i in 0..paks.len() {
+        if let Ok(_) = paks[i].read_record(name) {
+            return Some(i);
+        }
     }
     None
 }
