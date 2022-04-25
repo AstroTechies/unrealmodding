@@ -59,7 +59,7 @@ use unreal_types::{FName, GenerationInfo};
 
 #[macro_export]
 macro_rules! cast {
-    ($namespace:ident, $type:ident, $field:ident) => {
+    ($namespace:ident, $type:ident, $field:expr) => {
         match $field {
             $namespace::$type(e) => Some(e),
             _ => None,
