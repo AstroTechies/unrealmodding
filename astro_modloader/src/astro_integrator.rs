@@ -186,7 +186,12 @@ fn handle_persistent_actors(
     game_paks: &mut Vec<PakFile>,
     persistent_actor_arrays: Vec<&serde_json::Value>,
 ) -> Result<(), io::Error> {
-    let level_asset = Asset::new(LEVEL_TEMPLATES_ASSET.to_vec(), None);
+    let mut level_asset = Asset::new(LEVEL_TEMPLATES_ASSET.to_vec(), None);
+    level_asset.engine_version = VER_UE4_23;
+    level_asset
+        .parse_data()
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+
     let actor_template = level_asset
         .get_export(2)
         .map(|e| match e {
@@ -587,9 +592,11 @@ fn handle_persistent_actors(
                 for export in &mut scene_exports {
                     if let Some(normal_export) = cast!(Export, NormalExport, export) {
                         for property in &mut normal_export.properties {
-                            if let Some(object_property) = cast!(Property, ObjectProperty, property) {
+                            if let Some(object_property) = cast!(Property, ObjectProperty, property)
+                            {
                                 if object_property.name.content == "AttachParent" {
-                                    object_property.value = old_export_to_new_export[&object_property.value];
+                                    object_property.value =
+                                        old_export_to_new_export[&object_property.value];
                                 }
                             }
                         }
@@ -598,15 +605,13 @@ fn handle_persistent_actors(
 
                 asset.exports.extend(scene_exports);
 
-                let mut template_prop_data: Vec<Property> = Vec::from([
-                    BoolProperty {
-                        name: FName::from_slice("bHidden"),
-                        property_guid: None,
-                        duplication_index: 0,
-                        value: true,
-                    }
-                    .into(),
-                ]);
+                let mut template_prop_data: Vec<Property> = Vec::from([BoolProperty {
+                    name: FName::from_slice("bHidden"),
+                    property_guid: None,
+                    duplication_index: 0,
+                    value: true,
+                }
+                .into()]);
 
                 let mut array_template_prop = ArrayProperty::default();
                 array_template_prop.name = FName::from_slice("BlueprintCreatedComponents");
