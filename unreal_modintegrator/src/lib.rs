@@ -79,7 +79,7 @@ fn read_in_memory(
     Ok(asset)
 }
 
-fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<(), Error> {
+pub fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<(), Error> {
     let mut uasset_cursor = Cursor::new(Vec::new());
     let mut uexp_cursor = match asset.use_separate_bulk_data_files {
         true => Some(Cursor::new(Vec::new())),
