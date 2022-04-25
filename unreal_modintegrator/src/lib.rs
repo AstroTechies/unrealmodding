@@ -52,7 +52,15 @@ pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<usize> {
 }
 
 pub fn read_asset(pak: &mut PakFile, engine_version: i32, name: &String) -> Result<Asset, Error> {
-    let uexp = pak.read_record(&name.replace(".uasset", ".uexp")).ok();
+    let uexp = pak
+        .read_record(
+            &Path::new(name)
+                .with_extension("uexp")
+                .to_str()
+                .unwrap()
+                .to_string(),
+        )
+        .ok();
     let uasset = pak.read_record(name)?;
     let mut asset = Asset::new(uasset, uexp);
     asset.engine_version = engine_version;
@@ -405,7 +413,8 @@ pub fn integrate_mods<
 
         let mut game_paks = Vec::new();
         for game_file in &game_files {
-            let pak = PakFile::new(&game_file);
+            let mut pak = PakFile::new(&game_file);
+            pak.load_records()?;
             game_paks.push(pak);
         }
 
