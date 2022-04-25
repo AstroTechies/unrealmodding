@@ -9,6 +9,7 @@ use unreal_modloader::version::GameBuild;
 mod astro_integrator;
 use astro_integrator::AstroIntegratorConfig;
 
+mod assets;
 mod logging;
 
 use log::info;
