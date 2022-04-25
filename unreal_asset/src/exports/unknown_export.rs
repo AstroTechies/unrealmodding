@@ -35,7 +35,7 @@ pub struct UnknownExport {
     pub(crate) serialization_before_create_dependencies_size: i32,
 
     pub create_before_create_dependencies: Vec<i32>,
-    pub(crate) create_before_create_dependencies_size: i32
+    pub(crate) create_before_create_dependencies_size: i32,
 }
 
 impl ExportNormalTrait for UnknownExport {

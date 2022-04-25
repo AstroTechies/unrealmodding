@@ -13,12 +13,12 @@ use std::io::{Cursor, Read};
 
 #[derive(Clone)]
 pub struct LevelExport {
-    normal_export: NormalExport,
+    pub normal_export: NormalExport,
 
-    index_data: Vec<i32>,
-    level_type: NamespacedString,
-    flags_probably: u64,
-    misc_category_data: Vec<i32>,
+    pub index_data: Vec<i32>,
+    pub level_type: NamespacedString,
+    pub flags_probably: u64,
+    pub misc_category_data: Vec<i32>,
 }
 
 implement_get!(LevelExport);
