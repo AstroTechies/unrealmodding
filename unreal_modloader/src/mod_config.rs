@@ -6,6 +6,7 @@ use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::game_mod::SelectedVersion;
+use crate::version::Version;
 use crate::AppData;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,19 +54,21 @@ pub(crate) fn load_config(data: &mut AppData) {
                 continue;
             }
             let game_mod = game_mod.unwrap();
-            let force_latest = mod_config.force_latest.unwrap_or(true);
-
-            if !force_latest {
-                game_mod.selected_version = match game_mod.selected_version {
-                    SelectedVersion::Latest(version) => SelectedVersion::Specific(version),
-                    SelectedVersion::LatestIndirect(version) => {
-                        SelectedVersion::Specific(version.unwrap())
-                    }
-                    SelectedVersion::Specific(version) => SelectedVersion::Specific(version),
-                };
-            }
 
             game_mod.active = mod_config.enabled;
+
+            if !mod_config.force_latest.unwrap_or(true) {
+                let config_version = Version::try_from(&mod_config.version);
+                if config_version.is_err() {
+                    warn!(
+                        "Failed to parse version {} for mod {}",
+                        mod_config.version, mod_id
+                    );
+                    continue;
+                }
+
+                game_mod.selected_version = SelectedVersion::Specific(config_version.unwrap());
+            }
         }
     }
 }
