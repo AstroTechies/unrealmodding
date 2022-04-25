@@ -56,6 +56,16 @@ pub mod uproperty;
 use custom_version::CustomVersion;
 use unreal_types::{FName, GenerationInfo};
 
+#[macro_export]
+macro_rules! cast {
+    ($namespace:ident, $type:ident, $field:ident) => {
+        match $field {
+            $namespace::$type(e) => Some(e),
+            _ => None
+        }
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Import {
     pub class_package: FName,

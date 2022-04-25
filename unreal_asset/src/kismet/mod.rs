@@ -748,7 +748,9 @@ impl Clone for KismetExpression {
             Self::ExBindDelegate(arg0) => Self::ExBindDelegate(arg0.clone()),
             Self::ExRemoveMulticastDelegate(arg0) => Self::ExRemoveMulticastDelegate(arg0.clone()),
             Self::ExCallMulticastDelegate(arg0) => Self::ExCallMulticastDelegate(arg0.clone()),
-            Self::ExLetValueOnPersistentFrame(arg0) => Self::ExLetValueOnPersistentFrame(arg0.clone()),
+            Self::ExLetValueOnPersistentFrame(arg0) => {
+                Self::ExLetValueOnPersistentFrame(arg0.clone())
+            }
             Self::ExArrayConst(arg0) => Self::ExArrayConst(arg0.clone()),
             Self::ExEndArrayConst(arg0) => Self::ExEndArrayConst(arg0.clone()),
             Self::ExSoftObjectConst(arg0) => Self::ExSoftObjectConst(arg0.clone()),

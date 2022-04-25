@@ -114,8 +114,12 @@ impl Clone for UProperty {
             Self::UClassProperty(arg0) => Self::UClassProperty(arg0.clone()),
             Self::USoftClassProperty(arg0) => Self::USoftClassProperty(arg0.clone()),
             Self::UDelegateProperty(arg0) => Self::UDelegateProperty(arg0.clone()),
-            Self::UMulticastDelegateProperty(arg0) => Self::UMulticastDelegateProperty(arg0.clone()),
-            Self::UMulticastInlineDelegateProperty(arg0) => Self::UMulticastInlineDelegateProperty(arg0.clone()),
+            Self::UMulticastDelegateProperty(arg0) => {
+                Self::UMulticastDelegateProperty(arg0.clone())
+            }
+            Self::UMulticastInlineDelegateProperty(arg0) => {
+                Self::UMulticastInlineDelegateProperty(arg0.clone())
+            }
             Self::UInterfaceProperty(arg0) => Self::UInterfaceProperty(arg0.clone()),
             Self::UMapProperty(arg0) => Self::UMapProperty(arg0.clone()),
             Self::UBoolProperty(arg0) => Self::UBoolProperty(arg0.clone()),

@@ -66,7 +66,7 @@ macro_rules! parse_simple_property_index {
 }
 
 macro_rules! parse_simple_property_prop {
-    ($prop_name:ident, $($prop:ident),*) => {    
+    ($prop_name:ident, $($prop:ident),*) => {
         #[derive(Clone)]
         pub struct $prop_name {
             pub generic_property: FGenericProperty,
@@ -136,8 +136,12 @@ impl Clone for FProperty {
             Self::FClassProperty(arg0) => Self::FClassProperty(arg0.clone()),
             Self::FSoftClassProperty(arg0) => Self::FSoftClassProperty(arg0.clone()),
             Self::FDelegateProperty(arg0) => Self::FDelegateProperty(arg0.clone()),
-            Self::FMulticastDelegateProperty(arg0) => Self::FMulticastDelegateProperty(arg0.clone()),
-            Self::FMulticastInlineDelegateProperty(arg0) => Self::FMulticastInlineDelegateProperty(arg0.clone()),
+            Self::FMulticastDelegateProperty(arg0) => {
+                Self::FMulticastDelegateProperty(arg0.clone())
+            }
+            Self::FMulticastInlineDelegateProperty(arg0) => {
+                Self::FMulticastInlineDelegateProperty(arg0.clone())
+            }
             Self::FInterfaceProperty(arg0) => Self::FInterfaceProperty(arg0.clone()),
             Self::FMapProperty(arg0) => Self::FMapProperty(arg0.clone()),
             Self::FBoolProperty(arg0) => Self::FBoolProperty(arg0.clone()),

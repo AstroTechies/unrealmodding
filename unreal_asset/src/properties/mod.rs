@@ -281,23 +281,45 @@ impl Clone for Property {
             Self::PerPlatformBoolProperty(arg0) => Self::PerPlatformBoolProperty(arg0.clone()),
             Self::PerPlatformIntProperty(arg0) => Self::PerPlatformIntProperty(arg0.clone()),
             Self::PerPlatformFloatProperty(arg0) => Self::PerPlatformFloatProperty(arg0.clone()),
-            Self::MaterialAttributesInputProperty(arg0) => Self::MaterialAttributesInputProperty(arg0.clone()),
+            Self::MaterialAttributesInputProperty(arg0) => {
+                Self::MaterialAttributesInputProperty(arg0.clone())
+            }
             Self::ExpressionInputProperty(arg0) => Self::ExpressionInputProperty(arg0.clone()),
-            Self::ColorMaterialInputProperty(arg0) => Self::ColorMaterialInputProperty(arg0.clone()),
-            Self::ScalarMaterialInputProperty(arg0) => Self::ScalarMaterialInputProperty(arg0.clone()),
-            Self::ShadingModelMaterialInputProperty(arg0) => Self::ShadingModelMaterialInputProperty(arg0.clone()),
-            Self::VectorMaterialInputProperty(arg0) => Self::VectorMaterialInputProperty(arg0.clone()),
-            Self::Vector2MaterialInputProperty(arg0) => Self::Vector2MaterialInputProperty(arg0.clone()),
-            Self::WeightedRandomSamplerProperty(arg0) => Self::WeightedRandomSamplerProperty(arg0.clone()),
-            Self::SkeletalMeshSamplingLODBuiltDataProperty(arg0) => Self::SkeletalMeshSamplingLODBuiltDataProperty(arg0.clone()),
-            Self::SkeletalMeshAreaWeightedTriangleSampler(arg0) => Self::SkeletalMeshAreaWeightedTriangleSampler(arg0.clone()),
+            Self::ColorMaterialInputProperty(arg0) => {
+                Self::ColorMaterialInputProperty(arg0.clone())
+            }
+            Self::ScalarMaterialInputProperty(arg0) => {
+                Self::ScalarMaterialInputProperty(arg0.clone())
+            }
+            Self::ShadingModelMaterialInputProperty(arg0) => {
+                Self::ShadingModelMaterialInputProperty(arg0.clone())
+            }
+            Self::VectorMaterialInputProperty(arg0) => {
+                Self::VectorMaterialInputProperty(arg0.clone())
+            }
+            Self::Vector2MaterialInputProperty(arg0) => {
+                Self::Vector2MaterialInputProperty(arg0.clone())
+            }
+            Self::WeightedRandomSamplerProperty(arg0) => {
+                Self::WeightedRandomSamplerProperty(arg0.clone())
+            }
+            Self::SkeletalMeshSamplingLODBuiltDataProperty(arg0) => {
+                Self::SkeletalMeshSamplingLODBuiltDataProperty(arg0.clone())
+            }
+            Self::SkeletalMeshAreaWeightedTriangleSampler(arg0) => {
+                Self::SkeletalMeshAreaWeightedTriangleSampler(arg0.clone())
+            }
             Self::SoftAssetPathProperty(arg0) => Self::SoftAssetPathProperty(arg0.clone()),
             Self::SoftObjectPathProperty(arg0) => Self::SoftObjectPathProperty(arg0.clone()),
             Self::SoftClassPathProperty(arg0) => Self::SoftClassPathProperty(arg0.clone()),
             Self::MulticastDelegateProperty(arg0) => Self::MulticastDelegateProperty(arg0.clone()),
             Self::RichCurveKeyProperty(arg0) => Self::RichCurveKeyProperty(arg0.clone()),
-            Self::ViewTargetBlendParamsProperty(arg0) => Self::ViewTargetBlendParamsProperty(arg0.clone()),
-            Self::GameplayTagContainerProperty(arg0) => Self::GameplayTagContainerProperty(arg0.clone()),
+            Self::ViewTargetBlendParamsProperty(arg0) => {
+                Self::ViewTargetBlendParamsProperty(arg0.clone())
+            }
+            Self::GameplayTagContainerProperty(arg0) => {
+                Self::GameplayTagContainerProperty(arg0.clone())
+            }
             Self::SmartNameProperty(arg0) => Self::SmartNameProperty(arg0.clone()),
             Self::StructProperty(arg0) => Self::StructProperty(arg0.clone()),
             Self::EnumProperty(arg0) => Self::EnumProperty(arg0.clone()),
