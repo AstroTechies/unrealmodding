@@ -8,9 +8,9 @@ use super::ExportNormalTrait;
 
 #[derive(Clone)]
 pub struct RawExport {
-    unknown_export: UnknownExport,
+    pub unknown_export: UnknownExport,
 
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl ExportNormalTrait for RawExport {
