@@ -89,7 +89,10 @@ impl epi::App for App {
                                             ui.label(game_mod.name.as_str());
                                         });
                                         row.col(|ui| {
-                                            if egui::ComboBox::from_id_source(&game_mod.name)
+                                            // becasue ComboBox .chnaged doesn't seem to work
+                                            let prev_selceted = game_mod.selected_version.clone();
+
+                                            egui::ComboBox::from_id_source(&game_mod.name)
                                                 .selected_text(format!(
                                                     "{}",
                                                     game_mod.selected_version
@@ -124,24 +127,26 @@ impl epi::App for App {
                                                                 .latest_version
                                                                 .unwrap_or(Version::new(0, 0, 0));
 
+                                                        let show_version = if is_latest {
+                                                            SelectedVersion::LatestIndirect(Some(
+                                                                version.0.clone(),
+                                                            ))
+                                                        } else {
+                                                            SelectedVersion::Specific(
+                                                                version.0.clone(),
+                                                            )
+                                                        };
+
                                                         ui.selectable_value(
                                                             &mut game_mod.selected_version,
-                                                            if is_latest {
-                                                                SelectedVersion::LatestIndirect(
-                                                                    Some(version.0.clone()),
-                                                                )
-                                                            } else {
-                                                                SelectedVersion::Specific(
-                                                                    version.0.clone(),
-                                                                )
-                                                            },
-                                                            format!("{}", version.0),
+                                                            show_version,
+                                                            format!("{}", show_version),
                                                         );
                                                     }
-                                                })
-                                                .response
-                                                .changed()
-                                            {
+                                                });
+
+                                            // this may look dumb but is what is needed
+                                            if prev_selceted != game_mod.selected_version {
                                                 should_integrate.store(true, Ordering::Relaxed);
                                             }
                                         });
