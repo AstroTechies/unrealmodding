@@ -10,7 +10,7 @@ use std::fs::{DirEntry, File, OpenOptions};
 use std::io::Cursor;
 use std::path::Path;
 use unreal_asset::exports::data_table_export::DataTable;
-use unreal_asset::exports::{Export, ExportUnknownTrait};
+use unreal_asset::exports::{Export, ExportBaseTrait};
 use unreal_asset::properties::int_property::{BoolProperty, ByteProperty};
 use unreal_asset::properties::str_property::StrProperty;
 use unreal_asset::properties::struct_property::StructProperty;
@@ -282,7 +282,7 @@ fn bake_integrator_data(
     let export = asset
         .exports
         .iter_mut()
-        .filter(|e| e.get_unknown_export().object_name.content == "Default__IntegratorStatics_BP_C")
+        .filter(|e| e.get_base_export().object_name.content == "Default__IntegratorStatics_BP_C")
         .next();
     if export.is_none() {
         return Err(IntegrationError::corrupted_starter_pak().into());
