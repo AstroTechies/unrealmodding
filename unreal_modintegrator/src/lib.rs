@@ -421,7 +421,10 @@ pub fn integrate_mods<
         for (name, mut exec) in integrator_config.get_handlers() {
             let all_mods: Vec<&Value> = optional_mods_data
                 .iter()
-                .filter(|e| e[name.clone()] != Value::Null)
+                .filter_map(|e| match e[name.clone()] != Value::Null {
+                    true => Some(&e[name.clone()]),
+                    false => None,
+                })
                 .collect();
             exec(
                 integrator_config.get_data(),
