@@ -59,16 +59,8 @@ impl MapProperty {
                         .map(|s| s.to_owned()),
                 }
                 .unwrap_or(String::from("Generic"));
-
-                Property::from_type(
-                    asset,
-                    &FName::new(struct_type.to_string(), 0),
-                    name,
-                    false,
-                    1,
-                    0,
-                    0,
-                )
+                let type_name = asset.add_fname(&struct_type);
+                Property::from_type(asset, &type_name, name, false, 1, 0, 0)
             }
             _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
         }
