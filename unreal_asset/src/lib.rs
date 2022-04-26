@@ -9,6 +9,7 @@ use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
+use crate::exports::base_export::BaseExport;
 use crate::exports::class_export::ClassExport;
 use crate::exports::data_table_export::DataTableExport;
 use crate::exports::enum_export::EnumExport;
@@ -18,8 +19,7 @@ use crate::exports::property_export::PropertyExport;
 use crate::exports::raw_export::RawExport;
 use crate::exports::string_table_export::StringTableExport;
 use crate::exports::struct_export::StructExport;
-use crate::exports::unknown_export::UnknownExport;
-use crate::exports::{ExportTrait, ExportUnknownTrait};
+use crate::exports::{ExportBaseTrait, ExportTrait};
 use crate::fproperty::FProperty;
 use crate::ue4version::{
     VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE,
@@ -638,7 +638,7 @@ impl<'a> Asset {
             self.cursor
                 .seek(SeekFrom::Start(self.export_offset as u64))?;
             for _i in 0..self.export_count {
-                let mut export = UnknownExport::default();
+                let mut export = BaseExport::default();
                 export.class_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
                 export.super_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
 
@@ -733,7 +733,7 @@ impl<'a> Asset {
 
         if self.use_separate_bulk_data_files {
             for export in &mut self.exports {
-                let unk_export = export.get_unknown_export_mut();
+                let unk_export = export.get_base_export_mut();
 
                 self.cursor
                     .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
@@ -791,19 +791,19 @@ impl<'a> Asset {
 
         if self.header_offset > 0 && self.exports.len() > 0 {
             for i in 0..self.exports.len() {
-                let unk_export = match &self.exports[i] {
-                    Export::UnknownExport(export) => Some(export.clone()),
+                let base_export = match &self.exports[i] {
+                    Export::BaseExport(export) => Some(export.clone()),
                     _ => None,
                 };
 
-                if let Some(unk_export) = unk_export {
-                    let export: Result<Export, Error> = match self.read_export(&unk_export, i) {
+                if let Some(base_export) = base_export {
+                    let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
                         Err(_e) => {
                             //todo: warning?
                             self.cursor
-                                .seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
-                            Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
+                                .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+                            Ok(RawExport::from_base(base_export.clone(), self)?.into())
                         }
                     };
                     self.exports[i] = export?;
@@ -824,35 +824,35 @@ impl<'a> Asset {
         Ok(())
     }
 
-    fn read_export(&mut self, unk_export: &UnknownExport, i: usize) -> Result<Export, Error> {
+    fn read_export(&mut self, base_export: &BaseExport, i: usize) -> Result<Export, Error> {
         let next_starting = match i < (self.exports.len() - 1) {
             true => match &self.exports[i + 1] {
-                Export::UnknownExport(next_export) => next_export.serial_offset as u64,
+                Export::BaseExport(next_export) => next_export.serial_offset as u64,
                 _ => self.data_length - 4,
             },
             false => self.data_length - 4,
         };
 
         self.cursor
-            .seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
+            .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
 
         //todo: manual skips
-        let export_class_type = self.get_export_class_type(unk_export.class_index).ok_or(
+        let export_class_type = self.get_export_class_type(base_export.class_index).ok_or(
             Error::invalid_package_index("Unknown class type".to_string()),
         )?;
         let mut export: Export = match export_class_type.content.as_str() {
-            "Level" => LevelExport::from_unk(unk_export, self, next_starting)?.into(),
-            "StringTable" => StringTableExport::from_unk(unk_export, self)?.into(),
-            "Enum" | "UserDefinedEnum" => EnumExport::from_unk(unk_export, self)?.into(),
-            "Function" => StructExport::from_unk(unk_export, self)?.into(),
+            "Level" => LevelExport::from_base(base_export, self, next_starting)?.into(),
+            "StringTable" => StringTableExport::from_base(base_export, self)?.into(),
+            "Enum" | "UserDefinedEnum" => EnumExport::from_base(base_export, self)?.into(),
+            "Function" => StructExport::from_base(base_export, self)?.into(),
             _ => {
                 if export_class_type.content.ends_with("DataTable") {
-                    DataTableExport::from_unk(unk_export, self)?.into()
+                    DataTableExport::from_base(base_export, self)?.into()
                 } else if export_class_type
                     .content
                     .ends_with("BlueprintGeneratedClass")
                 {
-                    let class_export = ClassExport::from_unk(unk_export, self)?;
+                    let class_export = ClassExport::from_base(base_export, self)?;
 
                     for entry in &class_export.struct_export.loaded_properties {
                         if let FProperty::FMapProperty(map) = entry {
@@ -892,9 +892,9 @@ impl<'a> Asset {
                     }
                     class_export.into()
                 } else if export_class_type.content.ends_with("Property") {
-                    PropertyExport::from_unk(unk_export, self)?.into()
+                    PropertyExport::from_base(base_export, self)?.into()
                 } else {
-                    NormalExport::from_unk(unk_export, self)?.into()
+                    NormalExport::from_base(base_export, self)?.into()
                 }
             }
         };
@@ -904,8 +904,8 @@ impl<'a> Asset {
             // todo: warning?
 
             self.cursor
-                .seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
-            return Ok(RawExport::from_unk(unk_export.clone(), self)?.into());
+                .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+            return Ok(RawExport::from_base(base_export.clone(), self)?.into());
         } else {
             if let Some(normal_export) = export.get_normal_export_mut() {
                 let mut extras = vec![0u8; extras_len as usize];
@@ -1045,7 +1045,7 @@ impl<'a> Asset {
 
     fn write_export_header(
         &self,
-        unk: &UnknownExport,
+        unk: &BaseExport,
         cursor: &mut Cursor<Vec<u8>>,
         serial_size: i64,
         serial_offset: i64,
@@ -1178,7 +1178,7 @@ impl<'a> Asset {
         };
 
         for export in &self.exports {
-            let unk: &UnknownExport = export.get_unknown_export();
+            let unk: &BaseExport = export.get_base_export();
             self.write_export_header(
                 unk,
                 cursor,
@@ -1243,7 +1243,7 @@ impl<'a> Asset {
 
         if self.use_separate_bulk_data_files {
             for export in &self.exports {
-                let unk_export = export.get_unknown_export();
+                let unk_export = export.get_base_export();
 
                 for element in &unk_export.serialization_before_serialization_dependencies {
                     cursor.write_i32::<LittleEndian>(element.index)?;
@@ -1300,7 +1300,7 @@ impl<'a> Asset {
             cursor.seek(SeekFrom::Start(export_offset as u64))?;
             let mut first_export_dependency_offset = 0;
             for i in 0..self.exports.len() {
-                let unk = &self.exports[i].get_unknown_export();
+                let unk = &self.exports[i].get_base_export();
                 let next_loc = match self.exports.len() - 1 > i {
                     true => category_starts[i + 1] as i64,
                     false => self.bulk_data_start_offset,

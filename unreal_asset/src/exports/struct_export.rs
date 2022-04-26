@@ -1,13 +1,13 @@
 use crate::custom_version::FCoreObjectVersion;
+use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
-use crate::exports::unknown_export::UnknownExport;
 use crate::implement_get;
 use crate::Asset;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
+use super::ExportBaseTrait;
 use super::ExportNormalTrait;
-use super::ExportUnknownTrait;
 use crate::error::Error;
 use crate::exports::ExportTrait;
 use crate::fproperty::FProperty;
@@ -32,8 +32,8 @@ pub struct StructExport {
 implement_get!(StructExport);
 
 impl StructExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let normal_export = NormalExport::from_unk(unk, asset)?;
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+        let normal_export = NormalExport::from_base(base, asset)?;
         asset.cursor.read_i32::<LittleEndian>()?;
         let field = UField::new(asset)?;
         let super_struct = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);

@@ -1,7 +1,7 @@
 use crate::error::Error;
+use crate::exports::base_export::BaseExport;
 use crate::exports::struct_export::StructExport;
-use crate::exports::unknown_export::UnknownExport;
-use crate::exports::{ExportTrait, ExportUnknownTrait};
+use crate::exports::{ExportBaseTrait, ExportTrait};
 use crate::flags::EClassFlags;
 use crate::ue4version::{
     VER_UE4_ADD_COOKED_TO_UCLASS, VER_UE4_CLASS_NOTPLACEABLE_ADDED,
@@ -49,8 +49,8 @@ pub struct ClassExport {
 }
 
 impl ClassExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let struct_export = StructExport::from_unk(unk, asset)?;
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+        let struct_export = StructExport::from_base(base, asset)?;
 
         let num_func_index_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
         let mut func_map = HashMap::with_capacity(num_func_index_entries);
@@ -159,13 +159,13 @@ impl ExportNormalTrait for ClassExport {
     }
 }
 
-impl ExportUnknownTrait for ClassExport {
-    fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport {
-        &self.struct_export.normal_export.unknown_export
+impl ExportBaseTrait for ClassExport {
+    fn get_base_export<'a>(&'a self) -> &'a BaseExport {
+        &self.struct_export.normal_export.base_export
     }
 
-    fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
-        &mut self.struct_export.normal_export.unknown_export
+    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
+        &mut self.struct_export.normal_export.base_export
     }
 }
 

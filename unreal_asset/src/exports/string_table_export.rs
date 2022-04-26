@@ -1,7 +1,7 @@
 use crate::cursor_ext::CursorExt;
 use crate::error::Error;
+use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
-use crate::exports::unknown_export::UnknownExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
 use crate::unreal_types::StringTable;
@@ -9,8 +9,8 @@ use crate::Asset;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
 
+use super::ExportBaseTrait;
 use super::ExportNormalTrait;
-use super::ExportUnknownTrait;
 
 #[derive(Clone)]
 pub struct StringTableExport {
@@ -22,8 +22,8 @@ pub struct StringTableExport {
 implement_get!(StringTableExport);
 
 impl StringTableExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let normal_export = NormalExport::from_unk(unk, asset)?;
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+        let normal_export = NormalExport::from_base(base, asset)?;
         asset.cursor.read_i32::<LittleEndian>()?;
 
         let mut table = StringTable::new(asset.cursor.read_string()?);

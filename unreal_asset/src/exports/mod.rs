@@ -1,3 +1,4 @@
+pub mod base_export;
 pub mod class_export;
 pub mod data_table_export;
 pub mod enum_export;
@@ -7,17 +8,16 @@ pub mod property_export;
 pub mod raw_export;
 pub mod string_table_export;
 pub mod struct_export;
-pub mod unknown_export;
 
 use std::io::Cursor;
 
 use enum_dispatch::enum_dispatch;
 
 use self::{
-    class_export::ClassExport, data_table_export::DataTableExport, enum_export::EnumExport,
-    level_export::LevelExport, normal_export::NormalExport, property_export::PropertyExport,
-    raw_export::RawExport, string_table_export::StringTableExport, struct_export::StructExport,
-    unknown_export::UnknownExport,
+    base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
+    enum_export::EnumExport, level_export::LevelExport, normal_export::NormalExport,
+    property_export::PropertyExport, raw_export::RawExport, string_table_export::StringTableExport,
+    struct_export::StructExport,
 };
 use super::error::Error;
 use super::Asset;
@@ -29,9 +29,9 @@ pub trait ExportNormalTrait {
 }
 
 #[enum_dispatch]
-pub trait ExportUnknownTrait {
-    fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport;
-    fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport;
+pub trait ExportBaseTrait {
+    fn get_base_export<'a>(&'a self) -> &'a BaseExport;
+    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport;
 }
 
 #[macro_export]
@@ -47,13 +47,13 @@ macro_rules! implement_get {
             }
         }
 
-        impl ExportUnknownTrait for $name {
-            fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport {
-                &self.normal_export.unknown_export
+        impl ExportBaseTrait for $name {
+            fn get_base_export<'a>(&'a self) -> &'a BaseExport {
+                &self.normal_export.base_export
             }
 
-            fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
-                &mut self.normal_export.unknown_export
+            fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
+                &mut self.normal_export.base_export
             }
         }
     };
@@ -64,9 +64,9 @@ pub trait ExportTrait {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
 }
 
-#[enum_dispatch(ExportTrait, ExportNormalTrait, ExportUnknownTrait)]
+#[enum_dispatch(ExportTrait, ExportNormalTrait, ExportBaseTrait)]
 pub enum Export {
-    UnknownExport,
+    BaseExport,
     ClassExport,
     EnumExport,
     LevelExport,

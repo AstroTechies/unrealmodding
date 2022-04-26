@@ -11,8 +11,7 @@ use crate::{
 };
 
 use super::{
-    normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait,
-    ExportUnknownTrait,
+    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
 };
 use crate::exports::ExportTrait;
 
@@ -36,8 +35,8 @@ pub struct DataTableExport {
 implement_get!(DataTableExport);
 
 impl DataTableExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let normal_export = NormalExport::from_unk(unk, asset)?;
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+        let normal_export = NormalExport::from_base(base, asset)?;
 
         let mut decided_struct_type = FName::new(String::from("Generic"), 0);
         for data in &normal_export.properties {

@@ -4,11 +4,11 @@ use crate::unreal_types::{FName, Guid, PackageIndex};
 use crate::Asset;
 use std::io::Cursor;
 
+use super::ExportBaseTrait;
 use super::ExportNormalTrait;
-use super::ExportUnknownTrait;
 
 #[derive(Debug, Default, Clone)]
-pub struct UnknownExport {
+pub struct BaseExport {
     pub class_index: PackageIndex,
     pub super_index: PackageIndex,
     pub template_index: PackageIndex,
@@ -38,7 +38,7 @@ pub struct UnknownExport {
     pub(crate) create_before_create_dependencies_size: i32,
 }
 
-impl ExportNormalTrait for UnknownExport {
+impl ExportNormalTrait for BaseExport {
     fn get_normal_export<'a>(&'a self) -> Option<&'a super::normal_export::NormalExport> {
         None
     }
@@ -50,17 +50,17 @@ impl ExportNormalTrait for UnknownExport {
     }
 }
 
-impl ExportUnknownTrait for UnknownExport {
-    fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport {
+impl ExportBaseTrait for BaseExport {
+    fn get_base_export<'a>(&'a self) -> &'a BaseExport {
         &self
     }
 
-    fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
+    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
         self
     }
 }
 
-impl ExportTrait for UnknownExport {
+impl ExportTrait for BaseExport {
     fn write(&self, _asset: &Asset, _cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         Ok(())
     }

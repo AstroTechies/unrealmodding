@@ -1,9 +1,9 @@
+use super::ExportBaseTrait;
 use super::ExportNormalTrait;
-use super::ExportUnknownTrait;
 use crate::cursor_ext::CursorExt;
 use crate::error::Error;
+use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
-use crate::exports::unknown_export::UnknownExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
 use crate::unreal_types::NamespacedString;
@@ -24,12 +24,12 @@ pub struct LevelExport {
 implement_get!(LevelExport);
 
 impl LevelExport {
-    pub fn from_unk(
-        unk: &UnknownExport,
+    pub fn from_base(
+        unk: &BaseExport,
         asset: &mut Asset,
         next_starting: u64,
     ) -> Result<Self, Error> {
-        let normal_export = NormalExport::from_unk(unk, asset)?;
+        let normal_export = NormalExport::from_base(unk, asset)?;
 
         asset.cursor.read_i32::<LittleEndian>()?;
 

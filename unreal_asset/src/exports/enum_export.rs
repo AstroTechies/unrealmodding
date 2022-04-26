@@ -1,6 +1,6 @@
 use crate::custom_version::FCoreObjectVersion;
+use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
-use crate::exports::unknown_export::UnknownExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
 use crate::ue4version::{VER_UE4_ENUM_CLASS_SUPPORT, VER_UE4_TIGHTLY_PACKED_ENUMS};
@@ -12,8 +12,8 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::collections::HashMap;
 use std::io::Cursor;
 
+use super::ExportBaseTrait;
 use super::ExportNormalTrait;
-use super::ExportUnknownTrait;
 
 #[derive(Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
@@ -121,9 +121,9 @@ pub struct EnumExport {
 implement_get!(EnumExport);
 
 impl EnumExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
         let _cursor = &mut asset.cursor;
-        let normal_export = NormalExport::from_unk(unk, asset)?;
+        let normal_export = NormalExport::from_base(base, asset)?;
         asset.cursor.read_i32::<LittleEndian>()?;
 
         let value = UEnum::new(asset)?;

@@ -1,5 +1,5 @@
+use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
-use crate::exports::unknown_export::UnknownExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
 use crate::uproperty::{UProperty, UPropertyTrait};
@@ -8,8 +8,8 @@ use crate::Error;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
 
+use super::ExportBaseTrait;
 use super::ExportNormalTrait;
-use super::ExportUnknownTrait;
 
 #[derive(Clone)]
 pub struct PropertyExport {
@@ -21,13 +21,13 @@ pub struct PropertyExport {
 implement_get!(PropertyExport);
 
 impl PropertyExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let normal_export = NormalExport::from_unk(unk, asset)?;
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+        let normal_export = NormalExport::from_base(base, asset)?;
 
         asset.cursor.read_i32::<LittleEndian>()?;
 
         let export_class_type = asset
-            .get_export_class_type(normal_export.unknown_export.class_index)
+            .get_export_class_type(normal_export.base_export.class_index)
             .ok_or(Error::invalid_package_index(
                 "No such class type".to_string(),
             ))?;
