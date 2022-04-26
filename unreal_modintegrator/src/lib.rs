@@ -94,7 +94,11 @@ pub fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<()
     )?;
     if let Some(cursor) = uexp_cursor {
         pak.write_record(
-            &name.to_owned().replace(".uasset", ".uexp"),
+            &Path::new(name)
+                .with_extension("uexp")
+                .to_str()
+                .unwrap()
+                .to_string(),
             &cursor.get_ref().to_owned(),
             &unreal_pak::CompressionMethod::Zlib,
         )?;
@@ -435,6 +439,7 @@ pub fn integrate_mods<
             .map_err(|e| Error::other(Box::new(e)))?;
         }
 
+        // generated_pak.write_records()?;
         generated_pak.write_index_and_footer()?;
         file.sync_data()?;
     }
