@@ -643,7 +643,8 @@ impl<'a> Asset {
                 export.super_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
 
                 if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
-                    export.template_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
+                    export.template_index =
+                        PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
                 }
 
                 export.outer_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
@@ -773,7 +774,8 @@ impl<'a> Asset {
                 let mut create_before_create_dependencies =
                     Vec::with_capacity(unk_export.create_before_create_dependencies_size as usize);
                 for _ in 0..unk_export.create_before_create_dependencies_size {
-                    create_before_create_dependencies.push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                    create_before_create_dependencies
+                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
                 }
                 unk_export.create_before_create_dependencies = create_before_create_dependencies;
             }
@@ -1408,7 +1410,6 @@ impl Debug for Asset {
             .finish()
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct EngineVersion {
