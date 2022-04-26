@@ -11,7 +11,6 @@ use unreal_asset::{
     cast,
     exports::Export,
     flags::EObjectFlags,
-    is_import,
     properties::{
         array_property::ArrayProperty, enum_property::EnumProperty, guid_property::GuidProperty,
         int_property::BoolProperty, object_property::ObjectProperty, str_property::NameProperty,
@@ -110,7 +109,7 @@ fn handle_mission_trailheads(
                 let package_import = Import {
                     class_package: FName::from_slice("/Script/CoreUObject"),
                     class_name: FName::from_slice("Package"),
-                    outer_index: 0,
+                    outer_index: PackageIndex::new(0),
                     object_name: FName::from_slice(trailhead),
                 };
                 let package_import = asset.add_import(package_import);
@@ -140,7 +139,7 @@ fn handle_mission_trailheads(
         for i in 0..asset.exports.len() {
             match &asset.exports[i] {
                 Export::NormalExport(e) => {
-                    if is_import(e.unknown_export.class_index) {
+                    if e.unknown_export.class_index.is_import() {
                         if asset
                             .get_import(e.unknown_export.class_index)
                             .map(|e| &e.object_name.content == "AstroSettings")
@@ -181,9 +180,9 @@ fn handle_mission_trailheads(
 #[derive(Default)]
 struct ScsNode {
     internal_variable_name: String,
-    type_link: i32,
-    attach_parent: Option<i32>,
-    original_category: i32,
+    type_link: PackageIndex,
+    attach_parent: Option<PackageIndex>,
+    original_category: PackageIndex,
 }
 
 fn handle_persistent_actors(
@@ -199,7 +198,7 @@ fn handle_persistent_actors(
         .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
 
     let actor_template = level_asset
-        .get_export(2)
+        .get_export(PackageIndex::new(2))
         .map(|e| match e {
             Export::NormalExport(e) => Some(e),
             _ => None,
@@ -208,7 +207,7 @@ fn handle_persistent_actors(
         .ok_or(io::Error::new(ErrorKind::Other, "Corrupted actor_template"))?;
 
     let scene_component = level_asset
-        .get_export(11)
+        .get_export(PackageIndex::new(11))
         .map(|e| match e {
             Export::NormalExport(e) => Some(e),
             _ => None,
@@ -291,7 +290,7 @@ fn handle_persistent_actors(
                 let first_import = Import {
                     class_package: FName::from_slice("/Script/CoreUObject"),
                     class_name: FName::from_slice("Package"),
-                    outer_index: 0,
+                    outer_index: PackageIndex::new(0),
                     object_name: FName::from_slice(actor_path_raw),
                 };
                 let first_import = asset.add_import(first_import);
@@ -316,7 +315,8 @@ fn handle_persistent_actors(
                 actor_template.unknown_export.class_index = blueprint_import;
                 actor_template.unknown_export.object_name = FName::from_slice(actor);
                 actor_template.unknown_export.template_index = component_import;
-                actor_template.unknown_export.outer_index = level_index as i32 + 1;
+                actor_template.unknown_export.outer_index =
+                    PackageIndex::new(level_index as i32 + 1);
 
                 let mut all_blueprint_created_components = Vec::new();
 
@@ -335,7 +335,7 @@ fn handle_persistent_actors(
                         let export = &game_asset.exports[i];
                         match export {
                             Export::NormalExport(normal_export) => {
-                                if is_import(normal_export.unknown_export.class_index) {
+                                if normal_export.unknown_export.class_index.is_import() {
                                     let is_scs = game_asset
                                         .get_import(normal_export.unknown_export.class_index)
                                         .map(|e| {
@@ -369,7 +369,7 @@ fn handle_persistent_actors(
                                         if let Some(object_property) =
                                             cast!(Property, ObjectProperty, array_element)
                                         {
-                                            if object_property.value > 0 {
+                                            if object_property.value.index > 0 {
                                                 known_node_categories.push(object_property.value);
                                             }
                                         }
@@ -381,13 +381,15 @@ fn handle_persistent_actors(
                         let mut known_parents = HashMap::new();
                         for known_node_category in known_node_categories {
                             let known_category =
-                                &game_asset.exports[known_node_category as usize - 1];
+                                &game_asset.exports[known_node_category.index as usize - 1];
                             if let Some(known_normal_category) =
                                 cast!(Export, NormalExport, known_category)
                             {
-                                let is_scs_node = match is_import(
-                                    known_normal_category.unknown_export.class_index,
-                                ) {
+                                let is_scs_node = match known_normal_category
+                                    .unknown_export
+                                    .class_index
+                                    .is_import()
+                                {
                                     true => game_asset
                                         .get_import(
                                             known_normal_category.unknown_export.class_index,
@@ -486,7 +488,7 @@ fn handle_persistent_actors(
                                     );
                                     let new_type_import = match new_type_import {
                                         Some(_) => asset.add_import(import_1.clone()),
-                                        None => 0,
+                                        None => PackageIndex::new(0),
                                     };
                                     new_scs.type_link = new_type_import;
                                 }
@@ -524,7 +526,8 @@ fn handle_persistent_actors(
                         blueprint_created_component.internal_variable_name.clone(),
                         0,
                     );
-                    scene_export.unknown_export.outer_index = template_category_pointer;
+                    scene_export.unknown_export.outer_index =
+                        PackageIndex::new(template_category_pointer);
 
                     let mut prop_data: Vec<Property> = Vec::from([
                         BoolProperty {
@@ -566,7 +569,7 @@ fn handle_persistent_actors(
                             name: FName::from_slice("BlueprintCreatedComponents"),
                             property_guid: None,
                             duplication_index: 0,
-                            value: count,
+                            value: PackageIndex::new(count),
                         }
                         .into(),
                     );
@@ -601,8 +604,9 @@ fn handle_persistent_actors(
                             if let Some(object_property) = cast!(Property, ObjectProperty, property)
                             {
                                 if object_property.name.content == "AttachParent" {
-                                    object_property.value =
-                                        old_export_to_new_export[&object_property.value];
+                                    object_property.value = PackageIndex::new(
+                                        old_export_to_new_export[&object_property.value],
+                                    );
                                 }
                             }
                         }
@@ -632,7 +636,7 @@ fn handle_persistent_actors(
                                 name: FName::from_slice("RootComponent"),
                                 property_guid: None,
                                 duplication_index: 0,
-                                value: export_index,
+                                value: PackageIndex::new(export_index),
                             }
                             .into(),
                         );
@@ -642,7 +646,7 @@ fn handle_persistent_actors(
                             name: FName::new(node_name, 0),
                             property_guid: None,
                             duplication_index: 0,
-                            value: export_index,
+                            value: PackageIndex::new(export_index),
                         }
                         .into(),
                     );
@@ -659,7 +663,7 @@ fn handle_persistent_actors(
                 actor_template
                     .unknown_export
                     .create_before_create_dependencies
-                    .push(level_index as i32 + 1);
+                    .push(PackageIndex::new(level_index as i32 + 1));
                 actor_template.extras = [0u8; 4].to_vec();
                 actor_template.properties = template_prop_data;
                 asset.exports.push(actor_template.into());
@@ -673,7 +677,7 @@ fn handle_persistent_actors(
                     .normal_export
                     .unknown_export
                     .create_before_serialization_dependencies
-                    .push(len);
+                    .push(PackageIndex::new(len));
             }
         }
 
@@ -743,10 +747,9 @@ fn handle_linked_actor_components(
     }
 
     for (name, components) in &new_components {
-        let game_asset_pak =
-            find_asset(game_paks, name).ok_or(io::Error::new(ErrorKind::Other, "No such asset"))?;
-        let mut asset = read_asset(&mut game_paks[game_asset_pak], VER_UE4_23, name)
-            .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+        let name = game_to_absolute(&name)
+            .ok_or(io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
+        let mut asset = get_asset(integrated_pak, game_paks, &name, VER_UE4_23)?;
 
         let mut scs_location = None;
         let mut bgc_location = None;
@@ -756,7 +759,7 @@ fn handle_linked_actor_components(
         for i in 0..asset.exports.len() {
             let export = &asset.exports[i];
             if let Some(normal_export) = cast!(Export, NormalExport, export) {
-                let name = match is_import(normal_export.unknown_export.class_index) {
+                let name = match normal_export.unknown_export.class_index.is_import() {
                     true => {
                         let import = asset
                             .get_import(normal_export.unknown_export.class_index)
@@ -867,7 +870,7 @@ fn handle_linked_actor_components(
             let package_import = Import {
                 class_package: FName::from_slice("/Script/CoreUObject"),
                 class_name: FName::from_slice("Package"),
-                outer_index: 0,
+                outer_index: PackageIndex::new(0),
                 object_name: FName::from_slice(component_path),
             };
             let package_import = asset.add_import(package_import);
@@ -894,9 +897,11 @@ fn handle_linked_actor_components(
                 FName::new(String::from(component) + "_GEN_VARIABLE", 0);
             template_export.unknown_export.template_index = default_import;
 
-            object_property_template.unknown_export.class_index = object_property_import;
+            object_property_template.unknown_export.class_index =
+                PackageIndex::new(object_property_import);
             object_property_template.unknown_export.object_name = FName::from_slice("SCS_Node");
-            object_property_template.unknown_export.template_index = default_scs_node_import;
+            object_property_template.unknown_export.template_index =
+                PackageIndex::new(default_scs_node_import);
 
             let mut raw_data = Vec::new();
 
@@ -909,16 +914,17 @@ fn handle_linked_actor_components(
             ]);
             raw_data.extend(none_ref);
             raw_data.push(0);
-            raw_data.extend(blueprint_generated_class_import.to_le_bytes());
+            raw_data.extend(blueprint_generated_class_import.index.to_le_bytes());
 
-            object_property_template.unknown_export.outer_index = bgc_location + 1;
-            template_export.unknown_export.outer_index = bgc_location + 1;
-            scs_node_template.unknown_export.outer_index = scs_location + 1;
+            object_property_template.unknown_export.outer_index =
+                PackageIndex::new(bgc_location + 1);
+            template_export.unknown_export.outer_index = PackageIndex::new(bgc_location + 1);
+            scs_node_template.unknown_export.outer_index = PackageIndex::new(scs_location + 1);
 
             template_export
                 .unknown_export
                 .serialization_before_serialization_dependencies
-                .push(bgc_location + 1);
+                .push(PackageIndex::new(bgc_location + 1));
             template_export
                 .unknown_export
                 .serialization_before_create_dependencies
@@ -930,7 +936,7 @@ fn handle_linked_actor_components(
             template_export
                 .unknown_export
                 .create_before_create_dependencies
-                .push(bgc_location + 1);
+                .push(PackageIndex::new(bgc_location + 1));
             template_export.extras = [0u8; 4].to_vec();
             template_export.properties = Vec::from([BoolProperty {
                 name: FName::from_slice("bAutoActivate"),
@@ -951,7 +957,7 @@ fn handle_linked_actor_components(
             cdo_export
                 .unknown_export
                 .serialization_before_serialization_dependencies
-                .push(exports_len);
+                .push(PackageIndex::new(exports_len));
 
             object_property_template
                 .unknown_export
@@ -960,7 +966,7 @@ fn handle_linked_actor_components(
             object_property_template
                 .unknown_export
                 .create_before_create_dependencies
-                .push(bgc_location + 1);
+                .push(PackageIndex::new(bgc_location + 1));
             object_property_template.data = raw_data;
             asset.exports.push(object_property_template.into());
 
@@ -975,19 +981,19 @@ fn handle_linked_actor_components(
             scs_node_template
                 .unknown_export
                 .create_before_serialization_dependencies
-                .push(asset.exports.len() as i32 - 1);
+                .push(PackageIndex::new(asset.exports.len() as i32 - 1));
             scs_node_template
                 .unknown_export
                 .serialization_before_create_dependencies
-                .push(scs_node_import);
+                .push(PackageIndex::new(scs_node_import));
             scs_node_template
                 .unknown_export
                 .serialization_before_create_dependencies
-                .push(default_scs_node_import);
+                .push(PackageIndex::new(default_scs_node_import));
             scs_node_template
                 .unknown_export
                 .create_before_create_dependencies
-                .push(scs_location + 1);
+                .push(PackageIndex::new(scs_location + 1));
             scs_node_template.properties = Vec::from([
                 ObjectProperty {
                     name: FName::from_slice("ComponentClass"),
@@ -1000,7 +1006,7 @@ fn handle_linked_actor_components(
                     name: FName::from_slice("ComponentTemplate"),
                     property_guid: None,
                     duplication_index: 0,
-                    value: asset.exports.len() as i32 - 1,
+                    value: PackageIndex::new(asset.exports.len() as i32 - 1),
                 }
                 .into(),
                 StructProperty {
@@ -1049,11 +1055,11 @@ fn handle_linked_actor_components(
             scs_export
                 .unknown_export
                 .create_before_serialization_dependencies
-                .push(exports_len);
+                .push(PackageIndex::new(exports_len));
             scs_export
                 .unknown_export
                 .serialization_before_serialization_dependencies
-                .push(exports_len);
+                .push(PackageIndex::new(exports_len));
 
             let mut new_scs_node_name_index = None;
             for property in &mut scs_export.properties {
@@ -1066,7 +1072,7 @@ fn handle_linked_actor_components(
                                     name: array_property.name.clone(),
                                     property_guid: None,
                                     duplication_index: 0,
-                                    value: exports_len, // SCS_Node
+                                    value: PackageIndex::new(exports_len), // SCS_Node
                                 }
                                 .into(),
                             )
@@ -1088,12 +1094,77 @@ fn handle_linked_actor_components(
             .index = new_scs_node_name_index;
         }
 
-        write_asset(integrated_pak, &asset, name)
+        write_asset(integrated_pak, &asset, &name)
             .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
     }
     Ok(())
 }
 
+fn handle_item_list_entries(
+    _data: &(),
+    integrated_pak: &mut PakFile,
+    game_paks: &mut Vec<PakFile>,
+    item_list_entires_maps: Vec<&serde_json::Value>,
+) -> Result<(), io::Error> {
+    let mut new_items = HashMap::new();
+
+    for item_list_entries_map in &item_list_entires_maps {
+        let item_list_entries_map = item_list_entries_map.as_object().ok_or(io::Error::new(
+            ErrorKind::Other,
+            "Invalid item_list_entries",
+        ))?;
+
+        for (name, item_list_entries) in item_list_entries_map {
+            let item_list_entries = item_list_entries.as_object().ok_or(io::Error::new(
+                ErrorKind::Other,
+                "Invalid item_list_entries",
+            ))?;
+            let new_items_entry = new_items
+                .entry(name.clone())
+                .or_insert_with(|| HashMap::new());
+
+            for (item_name, entries) in item_list_entries {
+                let entries = entries.as_array().ok_or(io::Error::new(
+                    ErrorKind::Other,
+                    "Invalid item_list_entries",
+                ))?;
+
+                let new_items_entry_map = new_items_entry
+                    .entry(item_name.clone())
+                    .or_insert_with(|| Vec::new());
+                for entry in entries {
+                    let entry = entry.as_str().ok_or(io::Error::new(
+                        ErrorKind::Other,
+                        "Invalid item_list_entries",
+                    ))?;
+                    new_items_entry_map.push(String::from(entry));
+                }
+            }
+        }
+    }
+
+    for (name, entries) in &new_items {
+        let name = game_to_absolute(&name)
+            .ok_or(io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
+        let mut asset = get_asset(integrated_pak, game_paks, &name, VER_UE4_23)?;
+
+        for export in &asset.exports {
+            if let Some(normal_export) = cast!(Export, NormalExport, export) {
+                for property in &normal_export.properties {
+                    for (name, _) in &new_items {
+                        match name.contains(".") {
+                            true => {
+                                let split: Vec<&str> = name.split(".").collect();
+                            }
+                            false => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
 impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
     fn get_data(&self) -> &'data () {
         &()
@@ -1137,6 +1208,11 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
         handlers.insert(
             String::from("linked_actor_components"),
             Box::new(handle_linked_actor_components),
+        );
+
+        handlers.insert(
+            String::from("item_list_entries"),
+            Box::new(handle_item_list_entries),
         );
 
         handlers
