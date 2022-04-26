@@ -3,6 +3,7 @@ use std::mem::size_of;
 
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::unreal_types::PackageIndex;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     unreal_types::{FName, Guid},
@@ -12,7 +13,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub struct MulticastDelegate {
-    number: i32,
+    object: PackageIndex,
     delegate: FName,
 }
 
@@ -26,8 +27,8 @@ pub struct MulticastDelegateProperty {
 impl_property_data_trait!(MulticastDelegateProperty);
 
 impl MulticastDelegate {
-    pub fn new(number: i32, delegate: FName) -> Self {
-        MulticastDelegate { number, delegate }
+    pub fn new(object: PackageIndex, delegate: FName) -> Self {
+        MulticastDelegate { object, delegate }
     }
 }
 
@@ -45,7 +46,7 @@ impl MulticastDelegateProperty {
         let mut value = Vec::with_capacity(length as usize);
         for _i in 0..length as usize {
             value.push(MulticastDelegate::new(
-                asset.cursor.read_i32::<LittleEndian>()?,
+                PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
                 asset.read_fname()?,
             ));
         }
@@ -70,7 +71,7 @@ impl PropertyTrait for MulticastDelegateProperty {
 
         cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
         for entry in &self.value {
-            cursor.write_i32::<LittleEndian>(entry.number)?;
+            cursor.write_i32::<LittleEndian>(entry.object.index)?;
             asset.write_fname(cursor, &entry.delegate)?;
         }
         Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())

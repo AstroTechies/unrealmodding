@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::error::Error;
 use crate::{
-    implement_get, is_import,
+    implement_get,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait},
     unreal_types::FName,
     Asset,
@@ -42,7 +42,7 @@ impl DataTableExport {
         let mut decided_struct_type = FName::new(String::from("Generic"), 0);
         for data in &normal_export.properties {
             if let Property::ObjectProperty(property) = data {
-                if property.name.content.as_str() == "RowStruct" && is_import(property.value) {
+                if property.name.content.as_str() == "RowStruct" && property.value.is_import() {
                     if let Some(import) = asset.get_import(property.value) {
                         decided_struct_type = import.object_name.clone();
                     }

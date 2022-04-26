@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::exports::ExportTrait;
-use crate::unreal_types::{FName, Guid};
+use crate::unreal_types::{FName, Guid, PackageIndex};
 use crate::Asset;
 use std::io::Cursor;
 
@@ -9,10 +9,10 @@ use super::ExportUnknownTrait;
 
 #[derive(Debug, Default, Clone)]
 pub struct UnknownExport {
-    pub class_index: i32,
-    pub super_index: i32,
-    pub template_index: i32,
-    pub outer_index: i32,
+    pub class_index: PackageIndex,
+    pub super_index: PackageIndex,
+    pub template_index: PackageIndex,
+    pub outer_index: PackageIndex,
     pub object_name: FName,
     pub object_flags: u32,
     pub serial_size: i64,
@@ -25,16 +25,16 @@ pub struct UnknownExport {
     pub not_always_loaded_for_editor_game: bool,
     pub is_asset: bool,
     pub first_export_dependency_offset: i32,
-    pub serialization_before_serialization_dependencies: Vec<i32>,
+    pub serialization_before_serialization_dependencies: Vec<PackageIndex>,
     pub(crate) serialization_before_serialization_dependencies_size: i32,
 
-    pub create_before_serialization_dependencies: Vec<i32>,
+    pub create_before_serialization_dependencies: Vec<PackageIndex>,
     pub(crate) create_before_serialization_dependencies_size: i32,
 
-    pub serialization_before_create_dependencies: Vec<i32>,
+    pub serialization_before_create_dependencies: Vec<PackageIndex>,
     pub(crate) serialization_before_create_dependencies_size: i32,
 
-    pub create_before_create_dependencies: Vec<i32>,
+    pub create_before_create_dependencies: Vec<PackageIndex>,
     pub(crate) create_before_create_dependencies_size: i32,
 }
 
