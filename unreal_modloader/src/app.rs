@@ -31,7 +31,7 @@ impl epi::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
                 .size(Size::exact(30.0))
-                .size(Size::exact(200.0))
+                .size(Size::relative(0.45))
                 .size(Size::remainder())
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
@@ -55,7 +55,7 @@ impl epi::App for App {
                                 egui::Layout::left_to_right().with_cross_align(egui::Align::Center),
                             )
                             .column(Size::initial(42.0).at_least(42.0))
-                            .column(Size::initial(200.0).at_least(20.0))
+                            .column(Size::initial(170.0).at_least(20.0))
                             .column(Size::initial(120.0).at_least(120.0))
                             .column(Size::initial(70.0).at_least(20.0))
                             .column(Size::remainder().at_least(20.0))
