@@ -236,7 +236,6 @@ fn main() {
             pak.write().expect("Failed to write");
         }
     }
-
     println!(
         "upakcli took {:?} seconds...",
         start.elapsed().unwrap().as_secs_f32()
