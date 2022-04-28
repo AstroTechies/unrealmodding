@@ -40,7 +40,7 @@ use sha1::{Digest, Sha1};
 mod buf_ext;
 pub mod error;
 pub mod pakversion;
-use error::UpakError;
+use error::UnrealPakError;
 
 const UE4_PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
 
@@ -84,7 +84,7 @@ impl PakRecord {
         file_name: String,
         uncompressed_data: Vec<u8>,
         compression_method: CompressionMethod,
-    ) -> Result<Self, UpakError> {
+    ) -> Result<Self, UnrealPakError> {
         let record = PakRecord {
             file_name,
             offset: 0,
@@ -100,11 +100,13 @@ impl PakRecord {
         Ok(record)
     }
 
-    fn read_header<R>(reader: &mut R, file_version: PakVersion) -> Result<Self, UpakError>
+    fn read_header<R>(reader: &mut R, file_version: PakVersion) -> Result<Self, UnrealPakError>
     where
         R: Read + Seek,
     {
-        let file_name = reader.read_string()?.ok_or(UpakError::invalid_pak_file())?;
+        let file_name = reader
+            .read_string()?
+            .ok_or(UnrealPakError::invalid_pak_file())?;
         let offset = reader.read_u64::<LittleEndian>()?;
         let compressed_size = reader.read_u64::<LittleEndian>()?;
         let decompressed_size = reader.read_u64::<LittleEndian>()?;
@@ -159,7 +161,11 @@ impl PakRecord {
         })
     }
 
-    fn read_data<R>(&mut self, reader: &mut R, file_version: PakVersion) -> Result<(), UpakError>
+    fn read_data<R>(
+        &mut self,
+        reader: &mut R,
+        file_version: PakVersion,
+    ) -> Result<(), UnrealPakError>
     where
         R: Read + Seek,
     {
@@ -176,7 +182,7 @@ impl PakRecord {
                 let compression_blocks = self
                     .compression_blocks
                     .as_ref()
-                    .ok_or(UpakError::invalid_record())?;
+                    .ok_or(UnrealPakError::invalid_record())?;
                 for block in compression_blocks {
                     let offset = block.start;
 
@@ -194,12 +200,14 @@ impl PakRecord {
 
                 Ok(())
             }
-            _ => Err(UpakError::unsupported_compression(self.compression_method)),
+            _ => Err(UnrealPakError::unsupported_compression(
+                self.compression_method,
+            )),
         }?;
         Ok(())
     }
 
-    fn write_header<W>(&self, writer: &mut W, include_name: bool) -> Result<(), UpakError>
+    fn write_header<W>(&self, writer: &mut W, include_name: bool) -> Result<(), UnrealPakError>
     where
         W: Write + Seek,
     {
@@ -247,7 +255,7 @@ impl PakRecord {
         Ok(())
     }
 
-    fn write<W>(&mut self, writer: &mut W, block_size: u32) -> Result<(), UpakError>
+    fn write<W>(&mut self, writer: &mut W, block_size: u32) -> Result<(), UnrealPakError>
     where
         W: Write + Seek,
     {
@@ -285,7 +293,7 @@ impl PakRecord {
                 Ok(&compressed_data)
             }
             CompressionMethod::None => Ok(self.data.as_ref().unwrap()),
-            _ => Err(UpakError::invalid_record()),
+            _ => Err(UnrealPakError::invalid_record()),
         }?;
 
         self.decompressed_size = self.data.as_ref().unwrap().len() as u64;
@@ -330,9 +338,9 @@ impl<'data> PakFile<'data> {
         }
     }
 
-    pub fn load_records(&mut self) -> Result<(), UpakError> {
+    pub fn load_records(&mut self) -> Result<(), UnrealPakError> {
         if self.reader.is_none() {
-            return Err(UpakError::invalid_pak_file());
+            return Err(UnrealPakError::invalid_pak_file());
         }
         let mut reader = self.reader.as_mut().unwrap();
 
@@ -342,16 +350,16 @@ impl<'data> PakFile<'data> {
 
         let is_encrypted = reader.read_u8()?;
         if is_encrypted != 0 {
-            return Err(UpakError::enrcryption_unsupported());
+            return Err(UnrealPakError::enrcryption_unsupported());
         }
 
         let magic = reader.read_u32::<BigEndian>()?;
         if magic != UE4_PAK_MAGIC {
-            return Err(UpakError::invalid_pak_file());
+            return Err(UnrealPakError::invalid_pak_file());
         }
 
         let file_version = PakVersion::try_from(reader.read_i32::<LittleEndian>()?)
-            .map_err(|_| UpakError::invalid_pak_file())?;
+            .map_err(|_| UnrealPakError::invalid_pak_file())?;
         self.file_version = file_version;
 
         let index_offset = reader.read_u64::<LittleEndian>()?;
@@ -372,26 +380,26 @@ impl<'data> PakFile<'data> {
         Ok(())
     }
 
-    pub fn add_record(&mut self, record: PakRecord) -> Result<(), UpakError> {
+    pub fn add_record(&mut self, record: PakRecord) -> Result<(), UnrealPakError> {
         self.records.remove(&record.file_name);
         self.records.insert(record.file_name.clone(), record);
         Ok(())
     }
 
-    pub fn get_record(&mut self, name: &String) -> Result<&PakRecord, UpakError> {
+    pub fn get_record(&mut self, name: &String) -> Result<&PakRecord, UnrealPakError> {
         let record = self
             .records
             .get_mut(name)
-            .ok_or(UpakError::record_not_found(name.clone()))?;
+            .ok_or(UnrealPakError::record_not_found(name.clone()))?;
         if record.data.is_none() {
             record.read_data(self.reader.as_mut().unwrap(), self.file_version)?;
         }
         Ok(record)
     }
 
-    pub fn write(&mut self) -> Result<(), UpakError> {
+    pub fn write(&mut self) -> Result<(), UnrealPakError> {
         if self.writer.is_none() {
-            return Err(UpakError::invalid_pak_file());
+            return Err(UnrealPakError::invalid_pak_file());
         }
 
         let mut writer = self.writer.as_mut().unwrap();
@@ -448,7 +456,7 @@ impl<'data> PakFile<'data> {
                 writer.write_all(&[0u8; 4])?;
                 Ok(())
             }
-            _ => Err(UpakError::unsupported_compression(compression_method)),
+            _ => Err(UnrealPakError::unsupported_compression(compression_method)),
         }?;
 
         writer.write_all(&[0u8; 0x9c])?;
