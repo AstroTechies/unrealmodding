@@ -345,10 +345,7 @@ pub fn integrate_mods<
     let mut optional_mods_data = Vec::new();
     for mod_file in &mod_files {
         let stream = File::open(&mod_file.path())?;
-        let mut pak = PakFile::reader(
-            PakVersion::PakFileVersionFnameBasedCompressionMethod,
-            &stream,
-        );
+        let mut pak = PakFile::reader(&stream);
         pak.load_records()?;
 
         let record = pak
@@ -433,10 +430,7 @@ pub fn integrate_mods<
 
         let mut game_paks = Vec::new();
         for game_file in &game_files {
-            let mut pak = PakFile::reader(
-                PakVersion::PakFileVersionFnameBasedCompressionMethod,
-                &game_file,
-            );
+            let mut pak = PakFile::reader(&game_file);
             pak.load_records()?;
             game_paks.push(pak);
         }
