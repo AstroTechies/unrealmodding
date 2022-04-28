@@ -2,6 +2,7 @@ use std::error;
 use std::fmt;
 use std::io;
 
+use crate::pakversion::PakVersion;
 use crate::CompressionMethod;
 
 #[derive(Debug)]
@@ -10,7 +11,7 @@ pub struct UpakError {
 }
 
 impl UpakError {
-    pub fn unsupported_pak_version(version: u32) -> Self {
+    pub fn unsupported_pak_version(version: PakVersion) -> Self {
         UpakError {
             kind: UpakErrorKind::UnsupportedPakVersion(version),
         }
@@ -35,13 +36,18 @@ impl UpakError {
             kind: UpakErrorKind::EncryptionUnsupported,
         }
     }
+    pub fn invalid_record() -> Self {
+        UpakError {
+            kind: UpakErrorKind::InvalidRecord,
+        }
+    }
 }
 
 impl fmt::Display for UpakError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let err_msg = match self.kind {
             UpakErrorKind::UnsupportedPakVersion(ref version) => {
-                format!("Unsupported pak version: {}", version)
+                format!("Unsupported pak version: {}", *version as u32)
             }
             UpakErrorKind::UnsupportedCompression(ref method) => {
                 format!("Unsupported compression method: {:?}", method)
@@ -54,6 +60,7 @@ impl fmt::Display for UpakError {
             UpakErrorKind::IoError(ref err) => {
                 format!("IO error: {}", err)
             }
+            UpakErrorKind::InvalidRecord => "Invalid record".to_string(),
         };
 
         write!(f, "{}", err_msg)
@@ -72,10 +79,11 @@ impl error::Error for UpakError {}
 
 #[derive(Debug)]
 pub enum UpakErrorKind {
-    UnsupportedPakVersion(u32),
+    UnsupportedPakVersion(PakVersion),
     UnsupportedCompression(CompressionMethod),
     InvalidPakFile,
     RecordNotFound(String),
     EncryptionUnsupported,
     IoError(io::Error),
+    InvalidRecord,
 }
