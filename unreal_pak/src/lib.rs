@@ -166,14 +166,14 @@ impl PakRecord {
         R: Read + Seek,
     {
         reader.seek(SeekFrom::Start(self.offset))?;
-        let data = match self.compression_method {
+        match self.compression_method {
             CompressionMethod::None => {
-                let mut buf = vec![0u8; self.decompressed_size as usize];
-                reader.read_exact(&mut buf)?;
-                Ok(buf)
+                self.data = Some(vec![0u8; self.decompressed_size as usize]);
+                reader.read_exact(self.data.as_mut().unwrap())?;
+                Ok(())
             }
             CompressionMethod::Zlib => {
-                let mut decompressed_data = Vec::new();
+                self.data = Some(Vec::with_capacity(self.decompressed_size as usize));
 
                 let compression_blocks = self
                     .compression_blocks
@@ -190,17 +190,14 @@ impl PakRecord {
 
                     let mut compressed_data = vec![0u8; block.size as usize];
                     reader.read_exact(&mut compressed_data)?;
-                    let decoder = ZlibDecoder::new(&compressed_data[..]);
-                    let decompressed_block: Vec<u8> = decoder.bytes().map(|e| e.unwrap()).collect();
-
-                    decompressed_data.extend(decompressed_block);
+                    let mut decoder = ZlibDecoder::new(&compressed_data[..]);
+                    while decoder.read(self.data.as_mut().unwrap())? != 0 {}
                 }
 
-                Ok(decompressed_data)
+                Ok(())
             }
             _ => Err(UpakError::unsupported_compression(self.compression_method)),
         }?;
-        self.data = Some(data);
         Ok(())
     }
 

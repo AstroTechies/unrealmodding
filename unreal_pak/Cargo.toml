@@ -8,3 +8,9 @@ num_enum = "0.5.7"
 byteorder = "1.4.3"
 flate2 = { version = "1.0.22", features = ["zlib"], default-features = false }
 sha-1 = "0.10.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+debug = true
