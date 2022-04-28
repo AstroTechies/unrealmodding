@@ -1,5 +1,5 @@
 /*
-Unreal pak format
+Unreal pak format (version 8)
 File parts:
     - recordss
         - header
