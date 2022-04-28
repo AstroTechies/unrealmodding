@@ -74,14 +74,6 @@ static LOGGER: SimpleLogger = SimpleLogger;
 static mut LOG_FILE: Option<fs::File> = None;
 
 pub fn init() -> Result<(), SetLoggerError> {
-    // wipe old file
-    fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open("modloader_log.txt")
-        .unwrap();
-
     // open file
     // unsafe because I'm too lazy to properly handle the file
     unsafe {
@@ -89,7 +81,7 @@ pub fn init() -> Result<(), SetLoggerError> {
             fs::OpenOptions::new()
                 .write(true)
                 .create(true)
-                .append(true)
+                .truncate(true)
                 .open("modloader_log.txt")
                 .unwrap(),
         );
