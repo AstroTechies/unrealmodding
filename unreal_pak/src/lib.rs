@@ -359,9 +359,12 @@ impl<'data> PakFile<'data> {
 
         reader.seek(SeekFrom::Start(index_offset))?;
 
-        let _mount_point = reader.read_string()?;
-        let record_count = reader.read_u32::<LittleEndian>()?;
+        let mount_point = reader.read_string()?;
+        if mount_point.is_some() {
+            self.mount_point = mount_point.unwrap().as_bytes().to_vec();
+        }
 
+        let record_count = reader.read_u32::<LittleEndian>()?;
         for _ in 0..record_count {
             let record = PakRecord::read_header(&mut reader, file_version)?;
             self.records.insert(record.file_name.clone(), record);
@@ -400,7 +403,8 @@ impl<'data> PakFile<'data> {
         let index_offset = writer.stream_position()?;
 
         let mut header_writer = Cursor::new(Vec::new());
-        header_writer.write_string(Some("../../../"))?;
+
+        header_writer.write_string(Some(&String::from_utf8_lossy(&self.mount_point)))?;
         header_writer.write_i32::<LittleEndian>(self.records.len() as i32)?;
 
         for (_, record) in &self.records {
