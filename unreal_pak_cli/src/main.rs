@@ -1,8 +1,5 @@
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::BufWriter;
-use std::io::Read;
-use std::io::Seek;
 use std::io::Write;
 use std::path::Path;
 use std::process::exit;
@@ -194,7 +191,7 @@ fn main() {
 
             let mut pak = unreal_pak::PakFile::writer(
                 unreal_pak::pakversion::PakVersion::PakFileVersionFnameBasedCompressionMethod,
-                BufWriter::new(&file),
+                &file,
             );
 
             let compression_method = if no_compression {
@@ -252,10 +249,7 @@ fn open_file(path: &Path) -> File {
     }
 }
 
-fn check_header<'data, R>(pak: &mut unreal_pak::PakFile<'data, R>)
-where
-    &'data R: Read + Seek + Write,
-{
+fn check_header(pak: &mut unreal_pak::PakFile) {
     match pak.load_records() {
         Ok(_) => println!("Header is ok"),
         Err(e) => {
