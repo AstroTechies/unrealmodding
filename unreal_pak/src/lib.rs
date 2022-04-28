@@ -189,7 +189,7 @@ impl PakRecord {
                     let mut compressed_data = vec![0u8; block.size as usize];
                     reader.read_exact(&mut compressed_data)?;
                     let mut decoder = ZlibDecoder::new(&compressed_data[..]);
-                    while decoder.read(self.data.as_mut().unwrap())? != 0 {}
+                    decoder.read_to_end(self.data.as_mut().unwrap())?;
                 }
 
                 Ok(())
