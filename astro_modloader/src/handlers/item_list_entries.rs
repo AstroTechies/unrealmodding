@@ -6,13 +6,13 @@ use std::{
 
 use unreal_asset::{
     cast,
-    exports::Export,
+    exports::{Export, ExportBaseTrait, ExportNormalTrait},
     properties::{
         object_property::{ObjectProperty, SoftObjectProperty},
         Property,
     },
     ue4version::VER_UE4_23,
-    unreal_types::{FName, PackageIndex},
+    unreal_types::{FName, PackageIndex, ToFName},
     Import,
 };
 use unreal_modintegrator::write_asset;
@@ -63,56 +63,53 @@ pub(crate) fn handle_item_list_entries(
         }
     }
 
-    for (name, entries) in &new_items {
-        let name = game_to_absolute(&name)
+    for (asset_name, entries) in &new_items {
+        let asset_name = game_to_absolute(&asset_name)
             .ok_or(io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
-        let mut asset = get_asset(integrated_pak, game_paks, &name, VER_UE4_23)?;
-        let mut item_types_property = HashMap::new();
+        let mut asset = get_asset(integrated_pak, game_paks, &asset_name, VER_UE4_23)?;
 
+        let mut item_types_property: HashMap<String, Vec<(usize, usize, String)>> = HashMap::new();
         for i in 0..asset.exports.len() {
-            let export = &asset.exports[i];
-            if let Some(normal_export) = cast!(Export, NormalExport, export) {
-                for property in &normal_export.properties {
-                    for (name, _) in &new_items {
-                        let arr_name = match name.contains(".") {
-                            true => {
-                                let split: Vec<&str> = name.split(".").collect();
-                                let category_name = split[0];
-                                let object_name =
-                                    match normal_export.base_export.class_index.is_import() {
-                                        true => asset
-                                            .get_import(normal_export.base_export.class_index)
-                                            .map(|e| e.object_name.content.clone())
-                                            .ok_or(io::Error::new(
-                                                ErrorKind::Other,
-                                                "No such import",
-                                            ))?,
-                                        false => String::new(),
-                                    };
-                                if object_name != category_name {
+            if let Some(normal_export) = asset.exports[i].get_normal_export() {
+                for j in 0..normal_export.properties.len() {
+                    let property = &normal_export.properties[j];
+                    for (arr_name, _) in entries {
+                        let mut arr_name = arr_name.clone();
+                        if arr_name.contains(".") {
+                            let split: Vec<&str> = arr_name.split(".").collect();
+                            let export_name = split[0].to_lowercase();
+                            arr_name = split[1].to_owned();
+
+                            if normal_export.base_export.class_index.is_import() {
+                                if asset
+                                    .get_import(normal_export.base_export.class_index)
+                                    .map(|e| e.class_name.content != export_name)
+                                    .unwrap_or(true)
+                                {
                                     continue;
                                 }
-                                String::from(split[1])
+                            } else {
+                                continue;
                             }
-                            false => name.clone(),
-                        };
+                        }
 
                         if let Some(array_property) = cast!(Property, ArrayProperty, property) {
                             if array_property.name.content == arr_name {
                                 item_types_property
-                                    .entry(name.clone())
+                                    .entry(arr_name.clone())
                                     .or_insert_with(|| Vec::new())
                                     .push((
                                         i,
+                                        j,
                                         array_property
                                             .array_type
                                             .as_ref()
-                                            .map(|e| e.content.clone())
                                             .ok_or(io::Error::new(
                                                 ErrorKind::Other,
-                                                "Unknown array type",
-                                            ))?,
-                                        name.clone(),
+                                                "Invalid array_property",
+                                            ))?
+                                            .content
+                                            .clone(),
                                     ));
                             }
                         }
@@ -120,20 +117,18 @@ pub(crate) fn handle_item_list_entries(
                 }
             }
         }
-
-        for (name, paths) in entries {
+        for (name, item_paths) in entries {
             if !item_types_property.contains_key(name) {
                 continue;
             }
-
-            for item_path in paths {
+            for item_path in item_paths {
                 let (real_name, class_name, soft_class_name) = match item_path.contains(".") {
                     true => {
                         let split: Vec<&str> = item_path.split(".").collect();
                         (
-                            String::from(split[0]),
-                            String::from(split[1]),
-                            String::from(split[1]),
+                            split[0].to_string(),
+                            split[1].to_string(),
+                            split[1].to_string(),
                         )
                     }
                     false => (
@@ -148,72 +143,78 @@ pub(crate) fn handle_item_list_entries(
                             .file_stem()
                             .map(|e| e.to_str())
                             .flatten()
-                            .map(|e| String::from(e))
+                            .map(|e| e.to_string())
                             .ok_or(io::Error::new(ErrorKind::Other, "Invalid item_path"))?,
                     ),
                 };
 
-                let mut blueprint_generated_class_import = None;
+                let mut new_import = PackageIndex::new(0);
 
-                for (export_index, array_type, name) in item_types_property.get(item_path).unwrap()
+                for (export_index, property_index, array_type) in
+                    item_types_property.get(name).unwrap()
                 {
                     match array_type.as_str() {
                         "ObjectProperty" => {
-                            if blueprint_generated_class_import.is_none() {
-                                asset.add_fname(&real_name);
-                                asset.add_fname(&class_name);
+                            if new_import.index == 0 {
+                                asset.add_name_reference(real_name.clone(), false);
+                                asset.add_name_reference(class_name.clone(), false);
 
-                                let package_import = Import {
+                                let inner_import = Import {
                                     class_package: FName::from_slice("/Script/CoreUObject"),
                                     class_name: FName::from_slice("Package"),
                                     outer_index: PackageIndex::new(0),
-                                    object_name: FName::from_slice(&real_name),
+                                    object_name: FName::new(real_name.clone(), 0),
                                 };
-                                let package_import = asset.add_import(package_import);
+                                let inner_import = asset.add_import(inner_import);
 
-                                let new_import = Import {
+                                let import = Import {
                                     class_package: FName::from_slice("/Script/Engine"),
                                     class_name: FName::from_slice("BlueprintGeneratedClass"),
-                                    outer_index: package_import,
-                                    object_name: FName::from_slice(&class_name),
+                                    outer_index: inner_import,
+                                    object_name: FName::new(class_name.clone(), 0),
                                 };
-                                blueprint_generated_class_import =
-                                    Some(asset.add_import(new_import));
+                                new_import = asset.add_import(import);
                             }
 
-                            let export = asset
-                                .exports
-                                .get_mut(*export_index)
-                                .map(|e| cast!(Export, NormalExport, e))
-                                .flatten()
-                                .expect("Corrupted memory");
-                            export.properties.push(
+                            let export =
+                                cast!(Export, NormalExport, &mut asset.exports[*export_index])
+                                    .expect("Corrupted memory");
+                            let property = cast!(
+                                Property,
+                                ArrayProperty,
+                                &mut export.properties[*property_index]
+                            )
+                            .expect("Corrupted memory");
+                            println!("Adding {} to {}", real_name, property.name.content);
+                            property.value.push(
                                 ObjectProperty {
-                                    name: FName::from_slice(name),
+                                    name: property.name.clone(),
                                     property_guid: None,
                                     duplication_index: 0,
-                                    value: blueprint_generated_class_import.unwrap(),
+                                    value: new_import,
                                 }
                                 .into(),
                             );
                         }
                         "SoftObjectProperty" => {
-                            asset.add_fname(&real_name);
+                            asset.add_name_reference(real_name.clone(), false);
                             asset.add_name_reference(
                                 real_name.clone() + "." + &soft_class_name,
                                 false,
                             );
 
-                            let export = asset
-                                .exports
-                                .get_mut(*export_index)
-                                .map(|e| cast!(Export, NormalExport, e))
-                                .flatten()
-                                .expect("Corrupted memory");
-
-                            export.properties.push(
+                            let export =
+                                cast!(Export, NormalExport, &mut asset.exports[*export_index])
+                                    .expect("Corrupted memory");
+                            let property = cast!(
+                                Property,
+                                ArrayProperty,
+                                &mut export.properties[*property_index]
+                            )
+                            .expect("Corrupted memory");
+                            property.value.push(
                                 SoftObjectProperty {
-                                    name: FName::from_slice(name),
+                                    name: property.name.clone(),
                                     property_guid: None,
                                     duplication_index: 0,
                                     value: FName::new(
@@ -230,8 +231,10 @@ pub(crate) fn handle_item_list_entries(
                 }
             }
         }
-        write_asset(integrated_pak, &asset, &name)
+
+        write_asset(integrated_pak, &asset, &asset_name)
             .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
     }
+
     Ok(())
 }
