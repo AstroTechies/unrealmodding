@@ -109,7 +109,7 @@ fn main() {
             for (i, (record_name, _)) in pak.records.clone().iter().enumerate() {
                 match pak.get_record(&record_name) {
                     Ok(record_data) => {
-                        let path = Path::new(output_folder).join(&record_name[1..]);
+                        let path = Path::new(output_folder).join(&record_name[..]);
                         let dir_path = match path.parent() {
                             Some(dir) => dir,
                             None => {
