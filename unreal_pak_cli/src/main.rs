@@ -57,18 +57,12 @@ fn main() {
     match args.commands {
         Commands::CheckHeader { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = unreal_pak::PakFile::reader(
-                unreal_pak::pakversion::PakVersion::PakFileVersionFnameBasedCompressionMethod,
-                &file,
-            );
+            let mut pak = unreal_pak::PakFile::reader(&file);
             check_header(&mut pak);
         }
         Commands::Check { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = unreal_pak::PakFile::reader(
-                unreal_pak::pakversion::PakVersion::PakFileVersionFnameBasedCompressionMethod,
-                &file,
-            );
+            let mut pak = unreal_pak::PakFile::reader(&file);
             check_header(&mut pak);
 
             // TODO: get rid of this clone
@@ -92,10 +86,7 @@ fn main() {
         Commands::Extract { pakfile, outdir } => {
             let path = Path::new(&pakfile);
             let file = open_file(&path);
-            let mut pak = unreal_pak::PakFile::reader(
-                unreal_pak::pakversion::PakVersion::PakFileVersionFnameBasedCompressionMethod,
-                &file,
-            );
+            let mut pak = unreal_pak::PakFile::reader(&file);
             check_header(&mut pak);
 
             // temp values required to extend lifetimes outside of match scope
