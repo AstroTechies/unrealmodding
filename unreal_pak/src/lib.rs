@@ -241,7 +241,8 @@ impl PakRecord {
         }
 
         writer.write_u8(0)?; // is_encrypted
-        writer.write_u32::<LittleEndian>(max_block_size as u32)?;
+        writer.write_u32::<LittleEndian>(65536)?;
+        // writer.write_u32::<LittleEndian>(max_block_size as u32)?;
 
         Ok(())
     }
@@ -379,7 +380,9 @@ impl<'data> PakFile<'data> {
             .records
             .get_mut(name)
             .ok_or(UpakError::record_not_found(name.clone()))?;
-        record.read_data(self.reader.as_mut().unwrap(), self.file_version)?;
+        if record.data.is_none() {
+            record.read_data(self.reader.as_mut().unwrap(), self.file_version)?;
+        }
         Ok(record)
     }
 
