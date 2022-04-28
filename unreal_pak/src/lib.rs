@@ -26,6 +26,7 @@ header:
 */
 
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{BufReader, BufWriter, Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
@@ -54,16 +55,13 @@ pub enum CompressionMethod {
 }
 
 #[derive(Debug)]
-pub struct PakFile<'data, R>
-where
-    &'data R: Read + Write + Seek,
-{
+pub struct PakFile<'data> {
     pub file_version: PakVersion,
     pub mount_point: Vec<u8>,
     pub block_size: u32,
     pub records: HashMap<String, PakRecord>,
-    reader: Option<BufReader<&'data R>>,
-    writer: Option<BufWriter<&'data R>>,
+    reader: Option<BufReader<&'data File>>,
+    writer: Option<BufWriter<&'data File>>,
 }
 
 #[derive(Debug, Clone)]
@@ -308,11 +306,8 @@ struct Block {
     pub size: u64,
 }
 
-impl<'data, R> PakFile<'data, R>
-where
-    &'data R: Write + Read + Seek,
-{
-    pub fn reader(file_version: PakVersion, data: &'data R) -> Self {
+impl<'data> PakFile<'data> {
+    pub fn reader(file_version: PakVersion, data: &'data File) -> Self {
         PakFile {
             file_version,
             mount_point: "../../../".as_bytes().to_vec(),
@@ -323,14 +318,14 @@ where
         }
     }
 
-    pub fn writer(file_version: PakVersion, writer: BufWriter<&'data R>) -> Self {
+    pub fn writer(file_version: PakVersion, writer: &'data File) -> Self {
         PakFile {
             file_version,
             mount_point: "../../../".as_bytes().to_vec(),
             block_size: 0x10000,
             records: HashMap::new(),
             reader: None,
-            writer: Some(writer),
+            writer: Some(BufWriter::new(writer)),
         }
     }
 
