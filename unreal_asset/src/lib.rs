@@ -811,16 +811,6 @@ impl<'a> Asset {
             }
         }
 
-        // // ------------------------------------------------------------
-        // header end, main data start
-        // ------------------------------------------------------------
-
-        /*println!(
-            "data (len: {:?}): {:02X?}",
-            self.cursor.get_ref().len(),
-            self.cursor.get_ref()
-        );*/
-
         Ok(())
     }
 
@@ -1288,13 +1278,10 @@ impl<'a> Asset {
         }
         bulk_cursor.write(&[0xc1, 0x83, 0x2a, 0x9e])?;
 
-        let bulk_data_start_offset = match self.exports.len() != 0 {
-            true => match self.use_separate_bulk_data_files {
-                true => final_cursor_pos as i64 + bulk_cursor.position() as i64,
-                false => cursor.position() as i64,
-            },
-            false => 0,
-        };
+        let bulk_data_start_offset = match self.use_separate_bulk_data_files {
+            true => final_cursor_pos as i64 + bulk_cursor.position() as i64,
+            false => cursor.position() as i64,
+        } - 4;
 
         if self.exports.len() > 0 {
             cursor.seek(SeekFrom::Start(export_offset as u64))?;
@@ -1303,7 +1290,7 @@ impl<'a> Asset {
                 let unk = &self.exports[i].get_base_export();
                 let next_loc = match self.exports.len() - 1 > i {
                     true => category_starts[i + 1] as i64,
-                    false => self.bulk_data_start_offset,
+                    false => bulk_data_start_offset,
                 };
                 self.write_export_header(
                     unk,

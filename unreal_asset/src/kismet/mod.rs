@@ -881,7 +881,7 @@ impl KismetExpression {
     pub fn read_arr(asset: &mut Asset, end_token: EExprToken) -> Result<Vec<Self>, Error> {
         let mut data = Vec::new();
         let mut current_expr: Option<KismetExpression> = None;
-        while current_expr.is_none() || current_expr.as_ref().unwrap().enum_eq(&end_token) {
+        while current_expr.is_none() || !current_expr.as_ref().unwrap().enum_eq(&end_token) {
             if let Some(expr) = current_expr {
                 data.push(expr);
             }
