@@ -307,9 +307,9 @@ struct Block {
 }
 
 impl<'data> PakFile<'data> {
-    pub fn reader(file_version: PakVersion, data: &'data File) -> Self {
+    pub fn reader(data: &'data File) -> Self {
         PakFile {
-            file_version,
+            file_version: PakVersion::PakFileVersionInvalid,
             mount_point: "../../../".as_bytes().to_vec(),
             block_size: 0x10000,
             records: HashMap::new(),
@@ -351,6 +351,8 @@ impl<'data> PakFile<'data> {
 
         let file_version = PakVersion::try_from(reader.read_i32::<LittleEndian>()?)
             .map_err(|_| UpakError::invalid_pak_file())?;
+        self.file_version = file_version;
+
         let index_offset = reader.read_u64::<LittleEndian>()?;
         let _index_size = reader.read_u64::<LittleEndian>()?;
 
