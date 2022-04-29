@@ -15,7 +15,7 @@ use crate::unreal_types::{FName, FieldPath, PackageIndex};
 
 use super::error::KismetError;
 
-#[derive(PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EExprToken {
     // A local variable.
@@ -188,6 +188,15 @@ pub enum EExprToken {
     ExClassSparseDataVariable = 0x6C,
     ExFieldPathConst = 0x6D,
     ExMax = 0xff,
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
+pub enum ECastToken {
+    ObjectToInterface = 0x46,
+    ObjectToBool = 0x47,
+    InterfaceToBool = 0x49,
+    Max = 0xFF,
 }
 
 fn read_kismet_string(cursor: &mut Cursor<Vec<u8>>) -> Result<String, Error> {
@@ -1149,6 +1158,7 @@ impl ExBindDelegate {
 }
 impl KismetExpressionTrait for ExBindDelegate {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+        asset.write_fname(cursor, &self.function_name)?;
         let offset = 12 /* FScriptName's iCode offset */ +
             KismetExpression::write(self.delegate.as_ref(), asset, cursor)? +
             KismetExpression::write(self.object_term.as_ref(), asset, cursor)?;
@@ -1525,18 +1535,28 @@ impl KismetExpressionTrait for ExJumpIfNot {
         Ok(offset)
     }
 }
-declare_expression!(ExLet, value: KismetPropertyPointer);
+declare_expression!(
+    ExLet,
+    value: KismetPropertyPointer,
+    variable: Box<KismetExpression>,
+    expression: Box<KismetExpression>
+);
 impl ExLet {
     pub fn new(asset: &mut Asset) -> Result<Self, Error> {
         Ok(ExLet {
             token: EExprToken::ExLet,
             value: KismetPropertyPointer::new(asset)?,
+            variable: Box::new(KismetExpression::new(asset)?),
+            expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExLet {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
-        self.value.write(asset, cursor)
+        let mut offset = self.value.write(asset, cursor)?;
+        offset += KismetExpression::write(self.variable.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.expression.as_ref(), asset, cursor)?;
+        Ok(offset)
     }
 }
 declare_expression!(
@@ -1840,7 +1860,7 @@ impl KismetExpressionTrait for ExPopExecutionFlowIfNot {
 }
 declare_expression!(
     ExPrimitiveCast,
-    conversion_type: EExprToken,
+    conversion_type: ECastToken,
     target: Box<KismetExpression>
 );
 impl ExPrimitiveCast {
@@ -1940,7 +1960,7 @@ impl KismetExpressionTrait for ExRotationConst {
         cursor.write_i32::<LittleEndian>(self.pitch)?;
         cursor.write_i32::<LittleEndian>(self.yaw)?;
         cursor.write_i32::<LittleEndian>(self.roll)?;
-        Ok(size_of::<i32>())
+        Ok(size_of::<i32>() * 3)
     }
 }
 declare_expression!(

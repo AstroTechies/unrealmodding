@@ -8,6 +8,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use exports::function_export::FunctionExport;
 
 use crate::exports::base_export::BaseExport;
 use crate::exports::class_export::ClassExport;
@@ -18,7 +19,7 @@ use crate::exports::normal_export::NormalExport;
 use crate::exports::property_export::PropertyExport;
 use crate::exports::raw_export::RawExport;
 use crate::exports::string_table_export::StringTableExport;
-use crate::exports::struct_export::StructExport;
+
 use crate::exports::{ExportBaseTrait, ExportTrait};
 use crate::fproperty::FProperty;
 use crate::ue4version::{
@@ -834,7 +835,7 @@ impl<'a> Asset {
             "Level" => LevelExport::from_base(base_export, self, next_starting)?.into(),
             "StringTable" => StringTableExport::from_base(base_export, self)?.into(),
             "Enum" | "UserDefinedEnum" => EnumExport::from_base(base_export, self)?.into(),
-            "Function" => StructExport::from_base(base_export, self)?.into(),
+            "Function" => FunctionExport::from_base(base_export, self)?.into(),
             _ => {
                 if export_class_type.content.ends_with("DataTable") {
                     DataTableExport::from_base(base_export, self)?.into()

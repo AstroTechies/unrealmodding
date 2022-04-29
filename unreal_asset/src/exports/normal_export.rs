@@ -40,7 +40,6 @@ impl NormalExport {
     pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
         let _cursor = &mut asset.cursor;
         let mut properties = Vec::new();
-
         while let Some(e) = Property::new(asset, true)? {
             properties.push(e);
         }

@@ -2,6 +2,7 @@ pub mod base_export;
 pub mod class_export;
 pub mod data_table_export;
 pub mod enum_export;
+pub mod function_export;
 pub mod level_export;
 pub mod normal_export;
 pub mod property_export;
@@ -15,9 +16,9 @@ use enum_dispatch::enum_dispatch;
 
 use self::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
-    enum_export::EnumExport, level_export::LevelExport, normal_export::NormalExport,
-    property_export::PropertyExport, raw_export::RawExport, string_table_export::StringTableExport,
-    struct_export::StructExport,
+    enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
+    normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
+    string_table_export::StringTableExport, struct_export::StructExport,
 };
 use super::error::Error;
 use super::Asset;
@@ -75,6 +76,7 @@ pub enum Export {
     RawExport,
     StringTableExport,
     StructExport,
+    FunctionExport,
     DataTableExport,
 }
 
