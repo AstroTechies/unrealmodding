@@ -6,13 +6,13 @@ use std::{
 
 use unreal_asset::{
     cast,
-    exports::{Export, ExportBaseTrait, ExportNormalTrait},
+    exports::{Export, ExportNormalTrait},
     properties::{
         object_property::{ObjectProperty, SoftObjectProperty},
         Property,
     },
     ue4version::VER_UE4_23,
-    unreal_types::{FName, PackageIndex, ToFName},
+    unreal_types::{FName, PackageIndex},
     Import,
 };
 use unreal_modintegrator::write_asset;
@@ -185,7 +185,6 @@ pub(crate) fn handle_item_list_entries(
                                 &mut export.properties[*property_index]
                             )
                             .expect("Corrupted memory");
-                            println!("Adding {} to {}", real_name, property.name.content);
                             property.value.push(
                                 ObjectProperty {
                                     name: property.name.clone(),
