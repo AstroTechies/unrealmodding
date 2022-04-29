@@ -31,7 +31,7 @@ pub enum ViewTargetBlendFunction {
     VtBlendMax,
 }
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct ViewTargetBlendParamsProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

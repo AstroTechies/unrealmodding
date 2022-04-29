@@ -5,6 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::unreal_types::PackageIndex;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     {
@@ -14,16 +15,16 @@ use crate::{
     },
 };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub value: i32,
+    pub value: PackageIndex,
 }
 impl_property_data_trait!(ObjectProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -32,7 +33,7 @@ pub struct AssetObjectProperty {
 }
 impl_property_data_trait!(AssetObjectProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -55,7 +56,7 @@ impl ObjectProperty {
             name,
             property_guid,
             duplication_index,
-            value,
+            value: PackageIndex::new(value),
         })
     }
 }
@@ -68,7 +69,7 @@ impl PropertyTrait for ObjectProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i32::<LittleEndian>(self.value)?;
+        cursor.write_i32::<LittleEndian>(self.value.index)?;
         Ok(size_of::<i32>())
     }
 }

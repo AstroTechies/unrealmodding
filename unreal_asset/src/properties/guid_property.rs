@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct GuidProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

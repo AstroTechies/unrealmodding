@@ -41,7 +41,7 @@ pub enum RichCurveTangentWeightMode {
     WeightedBoth,
 }
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct RichCurveKeyProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

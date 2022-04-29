@@ -1,20 +1,16 @@
-use std::{collections::HashMap, io};
+use std::{
+    collections::HashMap,
+    io::{self},
+};
 
 use unreal_asset::ue4version::VER_UE4_23;
 use unreal_modintegrator::IntegratorConfig;
-use unreal_pak::PakFile;
+
+use crate::handlers::{
+    item_list_entries, linked_actor_components, mission_trailheads, persistent_actors,
+};
 
 pub struct AstroIntegratorConfig;
-
-fn handle_persistent_actors(
-    _data: &(),
-    _integrated_pak: &mut PakFile,
-    _game_paks: &mut Vec<PakFile>,
-    _actors: Vec<&serde_json::Value>,
-) -> Result<(), io::Error> {
-    //println!("{:?}", actors);
-    Ok(())
-}
 
 impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
     fn get_data(&self) -> &'data () {
@@ -48,7 +44,22 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
 
         handlers.insert(
             String::from("persistent_actors"),
-            Box::new(handle_persistent_actors),
+            Box::new(persistent_actors::handle_persistent_actors),
+        );
+
+        handlers.insert(
+            String::from("mission_trailheads"),
+            Box::new(mission_trailheads::handle_mission_trailheads),
+        );
+
+        handlers.insert(
+            String::from("linked_actor_components"),
+            Box::new(linked_actor_components::handle_linked_actor_components),
+        );
+
+        handlers.insert(
+            String::from("item_list_entries"),
+            Box::new(item_list_entries::handle_item_list_entries),
         );
 
         handlers

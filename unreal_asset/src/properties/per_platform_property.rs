@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -24,7 +24,7 @@ pub struct PerPlatformBoolProperty {
 }
 impl_property_data_trait!(PerPlatformBoolProperty);
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -33,7 +33,7 @@ pub struct PerPlatformIntProperty {
 }
 impl_property_data_trait!(PerPlatformIntProperty);
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

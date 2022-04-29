@@ -1,4 +1,4 @@
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector<T> {
     pub x: T,
     pub y: T,
@@ -11,7 +11,7 @@ impl<T> Vector<T> {
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector4<T> {
     pub x: T,
     pub y: T,
@@ -25,7 +25,7 @@ impl<T> Vector4<T> {
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Color<T> {
     pub r: T,
     pub g: T,
@@ -54,6 +54,7 @@ impl Color<u8> {
     }
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Transform<T> {
     pub rotation: Vector4<T>,
     pub translation: Vector<T>,

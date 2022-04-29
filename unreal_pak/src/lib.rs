@@ -1,5 +1,5 @@
 /*
-Unreal pak format
+Unreal pak format (version 8)
 File parts:
     - recordss
         - header
@@ -27,20 +27,25 @@ header:
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Cursor, Read, Seek, SeekFrom, Write};
+use std::mem::size_of;
 
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use buf_ext::{BufReaderExt, BufWriterExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use pakversion::PakVersion;
 use sha1::{Digest, Sha1};
 
+mod buf_ext;
 pub mod error;
-use error::UpakError;
+pub mod pakversion;
+use error::UnrealPakError;
 
 const UE4_PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
 
 #[derive(PartialEq, Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
-#[repr(u32)]
+#[repr(i32)]
 pub enum CompressionMethod {
     None = 0,
     Zlib = 1,
@@ -50,23 +55,258 @@ pub enum CompressionMethod {
 }
 
 #[derive(Debug)]
-pub struct PakFile<'file> {
-    pub file_version: u32,
+pub struct PakFile<'data> {
+    pub file_version: PakVersion,
     pub mount_point: Vec<u8>,
     pub block_size: u32,
     pub records: HashMap<String, PakRecord>,
-    reader: BufReader<&'file File>,
+    reader: Option<BufReader<&'data File>>,
+    writer: Option<BufWriter<&'data File>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PakRecord {
-    pub file_version: u32,
+    pub file_name: String,
     pub offset: u64,
-    pub size: u64,
+    pub compressed_size: u64,
     pub decompressed_size: u64,
     pub compression_method: CompressionMethod,
-    compression_blocks: Vec<SimpleBlock>,
-    hash: Vec<u8>,
+    pub compression_block_size: Option<u32>,
+    pub flags: Option<u8>,
+    pub hash: Vec<u8>,
+    pub data: Option<Vec<u8>>,
+
+    compression_blocks: Option<Vec<Block>>,
+}
+
+impl PakRecord {
+    pub fn new(
+        file_name: String,
+        uncompressed_data: Vec<u8>,
+        compression_method: CompressionMethod,
+    ) -> Result<Self, UnrealPakError> {
+        let record = PakRecord {
+            file_name,
+            offset: 0,
+            compressed_size: 0,
+            decompressed_size: 0,
+            compression_method,
+            compression_block_size: None,
+            flags: None,
+            hash: Vec::new(),
+            compression_blocks: None,
+            data: Some(uncompressed_data),
+        };
+        Ok(record)
+    }
+
+    fn read_header<R>(reader: &mut R, file_version: PakVersion) -> Result<Self, UnrealPakError>
+    where
+        R: Read + Seek,
+    {
+        let file_name = reader
+            .read_string()?
+            .ok_or(UnrealPakError::invalid_pak_file())?;
+        let offset = reader.read_u64::<LittleEndian>()?;
+        let compressed_size = reader.read_u64::<LittleEndian>()?;
+        let decompressed_size = reader.read_u64::<LittleEndian>()?;
+        let compression_method =
+            match CompressionMethod::try_from_primitive(reader.read_i32::<LittleEndian>()?) {
+                Ok(compression_method) => compression_method,
+                Err(_) => CompressionMethod::Unknown,
+            };
+
+        if file_version <= PakVersion::PakFileVersionInitial {
+            let _timestamp = reader.read_u64::<LittleEndian>()?;
+        }
+
+        let mut hash = [0u8; 20];
+        reader.read_exact(&mut hash)?;
+
+        let mut compression_blocks = None;
+        let mut flags = None;
+        let mut compression_block_size = None;
+
+        if file_version >= PakVersion::PakFileVersionCompressionEncryption {
+            if compression_method != CompressionMethod::None {
+                let block_count = reader.read_u32::<LittleEndian>()? as usize;
+                let mut compression_blocks_inner = Vec::with_capacity(block_count);
+
+                for _ in 0..block_count {
+                    let start_offset = reader.read_u64::<LittleEndian>()?;
+                    let end_offset = reader.read_u64::<LittleEndian>()?;
+                    compression_blocks_inner.push(Block {
+                        start: start_offset,
+                        size: end_offset - start_offset,
+                    });
+                }
+                compression_blocks = Some(compression_blocks_inner);
+            }
+
+            flags = Some(reader.read_u8()?);
+            compression_block_size = Some(reader.read_u32::<LittleEndian>()?);
+        }
+
+        Ok(PakRecord {
+            file_name,
+            offset,
+            compressed_size,
+            decompressed_size,
+            compression_method,
+            compression_block_size,
+            compression_blocks,
+            flags,
+            hash: hash.to_vec(),
+            data: None,
+        })
+    }
+
+    fn read_data<R>(
+        &mut self,
+        reader: &mut R,
+        file_version: PakVersion,
+    ) -> Result<(), UnrealPakError>
+    where
+        R: Read + Seek,
+    {
+        reader.seek(SeekFrom::Start(self.offset))?;
+        match self.compression_method {
+            CompressionMethod::None => {
+                self.data = Some(vec![0u8; self.decompressed_size as usize]);
+                reader.read_exact(self.data.as_mut().unwrap())?;
+                Ok(())
+            }
+            CompressionMethod::Zlib => {
+                self.data = Some(Vec::with_capacity(self.decompressed_size as usize));
+
+                let compression_blocks = self
+                    .compression_blocks
+                    .as_ref()
+                    .ok_or(UnrealPakError::invalid_record())?;
+                for block in compression_blocks {
+                    let offset = block.start;
+
+                    if file_version >= PakVersion::PakFileVersionRelativeChunkOffsets {
+                        reader.seek(SeekFrom::Start(self.offset + offset))?;
+                    } else {
+                        reader.seek(SeekFrom::Start(offset))?;
+                    }
+
+                    let mut compressed_data = vec![0u8; block.size as usize];
+                    reader.read_exact(&mut compressed_data)?;
+                    let mut decoder = ZlibDecoder::new(&compressed_data[..]);
+                    decoder.read_to_end(self.data.as_mut().unwrap())?;
+                }
+
+                Ok(())
+            }
+            _ => Err(UnrealPakError::unsupported_compression(
+                self.compression_method,
+            )),
+        }?;
+        Ok(())
+    }
+
+    fn write_header<W>(&self, writer: &mut W, include_name: bool) -> Result<(), UnrealPakError>
+    where
+        W: Write + Seek,
+    {
+        if include_name {
+            writer.write_string(Some(&self.file_name))?;
+        }
+
+        let begin = writer.stream_position()?;
+        writer.write_u64::<LittleEndian>(self.offset)?;
+        writer.write_u64::<LittleEndian>(self.compressed_size)?;
+        writer.write_u64::<LittleEndian>(self.decompressed_size)?;
+        writer.write_i32::<LittleEndian>(self.compression_method.into())?;
+
+        //todo: <= handling
+        writer.write_all(&self.hash)?;
+
+        let mut max_block_size = 0;
+        if self.compression_method != CompressionMethod::None {
+            writer
+                .write_u32::<LittleEndian>(self.compression_blocks.as_ref().unwrap().len() as u32)?;
+            let size = writer.stream_position()? - begin;
+            let compression_block_offset = size
+                + size_of::<u32>() as u64
+                + size_of::<u8>() as u64
+                + ((size_of::<u64>() * 2 * self.compression_blocks.as_ref().unwrap().len()) as u64);
+
+            let compression_blocks_iter = self.compression_blocks.as_ref().unwrap().iter();
+            for compression_block in compression_blocks_iter {
+                if max_block_size < compression_block.size {
+                    max_block_size = compression_block.size;
+                }
+                writer.write_u64::<LittleEndian>(
+                    compression_block.start + compression_block_offset,
+                )?;
+                writer.write_u64::<LittleEndian>(
+                    compression_block.start + compression_block.size + compression_block_offset,
+                )?;
+            }
+        }
+
+        writer.write_u8(0)?; // is_encrypted
+        writer.write_u32::<LittleEndian>(65536)?;
+        // writer.write_u32::<LittleEndian>(max_block_size as u32)?;
+
+        Ok(())
+    }
+
+    fn write<W>(&mut self, writer: &mut W, block_size: u32) -> Result<(), UnrealPakError>
+    where
+        W: Write + Seek,
+    {
+        self.offset = writer.stream_position()?;
+
+        let mut compressed_data = Vec::new();
+        let data = match self.compression_method {
+            CompressionMethod::Zlib => {
+                self.compression_blocks = Some(Vec::new());
+                let num_blocks =
+                    (self.data.as_ref().unwrap().len() as f64 / block_size as f64).ceil() as u32;
+
+                for i in 0..num_blocks {
+                    let block_start = i as u64 * block_size as u64;
+                    let mut block_end = (i + 1) as u64 * block_size as u64;
+                    if block_end > self.data.as_ref().unwrap().len() as u64 {
+                        block_end = self.data.as_ref().unwrap().len() as u64;
+                    }
+
+                    let block_uncompressed_data =
+                        &self.data.as_ref().unwrap()[block_start as usize..block_end as usize];
+
+                    let begin = compressed_data.len() as u64;
+
+                    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+                    encoder.write_all(&block_uncompressed_data)?;
+                    let block_compressed_data = encoder.finish()?;
+                    compressed_data.extend_from_slice(&block_compressed_data);
+
+                    self.compression_blocks.as_mut().unwrap().push(Block {
+                        start: begin,
+                        size: block_compressed_data.len() as u64,
+                    });
+                }
+                Ok(&compressed_data)
+            }
+            CompressionMethod::None => Ok(self.data.as_ref().unwrap()),
+            _ => Err(UnrealPakError::invalid_record()),
+        }?;
+
+        self.decompressed_size = self.data.as_ref().unwrap().len() as u64;
+        self.compressed_size = data.len() as u64;
+
+        let mut hasher = Sha1::new();
+        hasher.update(&data);
+        self.hash = hasher.finalize().to_vec();
+
+        self.write_header(writer, false)?;
+        writer.write_all(&data)?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -75,456 +315,152 @@ struct Block {
     pub size: u64,
 }
 
-#[derive(Debug, Clone)]
-struct SimpleBlock {
-    pub start: u64,
-    pub end: u64,
-}
-
-impl<'file> PakFile<'file> {
-    pub fn new(file: &'file File) -> Self {
-        let reader = BufReader::new(file);
+impl<'data> PakFile<'data> {
+    pub fn reader(data: &'data File) -> Self {
         PakFile {
-            file_version: 0,
-            mount_point: Vec::new(),
-            block_size: 0,
+            file_version: PakVersion::PakFileVersionInvalid,
+            mount_point: "../../../".as_bytes().to_vec(),
+            block_size: 0x10000,
             records: HashMap::new(),
-            reader,
+            reader: Some(BufReader::new(data)),
+            writer: None,
         }
     }
 
-    pub fn load_records(&mut self) -> Result<(), UpakError> {
-        // seek to header at the bottom of the file
-        self.reader.seek(SeekFrom::End(-204))?;
+    pub fn writer(file_version: PakVersion, writer: &'data File) -> Self {
+        PakFile {
+            file_version,
+            mount_point: "../../../".as_bytes().to_vec(),
+            block_size: 0x10000,
+            records: HashMap::new(),
+            reader: None,
+            writer: Some(BufWriter::new(writer)),
+        }
+    }
 
-        // read and check magic bytes
-        if self.reader.read_u32::<BigEndian>()? != UE4_PAK_MAGIC {
-            return Err(UpakError::invalid_pak_file());
+    pub fn load_records(&mut self) -> Result<(), UnrealPakError> {
+        if self.reader.is_none() {
+            return Err(UnrealPakError::invalid_pak_file());
+        }
+        let mut reader = self.reader.as_mut().unwrap();
+
+        reader.seek(SeekFrom::End(-221))?;
+        let mut _encryption_key_guid = [0u8; 16];
+        reader.read_exact(&mut _encryption_key_guid)?;
+
+        let is_encrypted = reader.read_u8()?;
+        if is_encrypted != 0 {
+            return Err(UnrealPakError::enrcryption_unsupported());
         }
 
-        // read and check file version
-        let file_version = self.reader.read_u32::<LittleEndian>()?;
-        if file_version != 8 {
-            return Err(UpakError::unsupported_pak_version(file_version));
+        let magic = reader.read_u32::<BigEndian>()?;
+        if magic != UE4_PAK_MAGIC {
+            return Err(UnrealPakError::invalid_pak_file());
         }
+
+        let file_version = PakVersion::try_from(reader.read_i32::<LittleEndian>()?)
+            .map_err(|_| UnrealPakError::invalid_pak_file())?;
         self.file_version = file_version;
 
-        if self.file_version == 8 {
-            // read index offset
-            let offset = self.reader.read_u64::<LittleEndian>()?;
-            self.reader.seek(SeekFrom::Start(offset))?;
+        let index_offset = reader.read_u64::<LittleEndian>()?;
+        let _index_size = reader.read_u64::<LittleEndian>()?;
 
-            // read mount point
-            let mount_point_len = self.reader.read_u32::<LittleEndian>()?;
-            let mut mount_point_buf = vec![0u8; mount_point_len as usize];
-            self.reader.read_exact(&mut mount_point_buf)?;
-            self.mount_point = mount_point_buf;
+        reader.seek(SeekFrom::Start(index_offset))?;
 
-            // read record count
-            let record_count = self.reader.read_u32::<LittleEndian>()?;
-
-            // read records data
-            for _i in 0..record_count {
-                // read record name
-                let record_name_len = self.reader.read_u32::<LittleEndian>()?;
-                let mut record_name_buf = vec![0u8; record_name_len as usize];
-                self.reader.read_exact(&mut record_name_buf)?;
-                let mut record_name = match String::from_utf8(record_name_buf) {
-                    Ok(record_name) => record_name,
-                    Err(_) => {
-                        return Err(UpakError::invalid_pak_file());
-                    }
-                };
-                record_name.pop();
-
-                // read record offset
-                let record_offset = self.reader.read_u64::<LittleEndian>()?;
-                // read record size
-                let record_size = self.reader.read_u64::<LittleEndian>()?;
-                // read record decompressed size
-                let record_decompressed_size = self.reader.read_u64::<LittleEndian>()?;
-                // read record compression method
-                let record_compression_method = match CompressionMethod::try_from_primitive(
-                    self.reader.read_u32::<LittleEndian>()?,
-                ) {
-                    Ok(compression_method) => compression_method,
-                    Err(_) => CompressionMethod::Unknown,
-                };
-
-                // seek over hash
-                self.reader.seek_relative(20)?;
-
-                if record_compression_method != CompressionMethod::None {
-                    // read block count
-                    let block_count = self.reader.read_u32::<LittleEndian>()?;
-
-                    // seek over block data
-                    self.reader
-                        .seek(SeekFrom::Current(16 * block_count as i64))?;
-                }
-
-                // skip is_encrypted and block size
-                self.reader.seek(SeekFrom::Current(5))?;
-
-                // add record
-                self.records.insert(
-                    record_name,
-                    PakRecord {
-                        file_version: self.file_version,
-                        offset: record_offset,
-                        size: record_size,
-                        decompressed_size: record_decompressed_size,
-                        compression_method: record_compression_method,
-                        compression_blocks: Vec::new(),
-                        hash: Vec::new(),
-                    },
-                );
-            }
-        } else {
-            return Err(UpakError::unsupported_pak_version(self.file_version));
+        let mount_point = reader.read_string()?;
+        if mount_point.is_some() {
+            self.mount_point = mount_point.unwrap().as_bytes().to_vec();
         }
 
+        let record_count = reader.read_u32::<LittleEndian>()?;
+        for _ in 0..record_count {
+            let record = PakRecord::read_header(&mut reader, file_version)?;
+            self.records.insert(record.file_name.clone(), record);
+        }
         Ok(())
     }
 
-    pub fn read_record(&mut self, record_name: &String) -> Result<Vec<u8>, UpakError> {
-        // find record
-        let record = match self.records.get(record_name) {
-            Some(record) => record,
-            None => {
-                return Err(UpakError::record_not_found(record_name.clone()));
-            }
-        };
-
-        if self.file_version == 8 {
-            if record.compression_method == CompressionMethod::None {
-                // seek to data
-                self.reader.seek(SeekFrom::Start(record.offset + 0x35))?;
-
-                let mut buf = vec![0u8; record.decompressed_size as usize];
-                self.reader.read_exact(&mut buf)?;
-
-                return Ok(buf);
-            } else if record.compression_method == CompressionMethod::Zlib {
-                // skip unimportant data
-                self.reader.seek(SeekFrom::Start(record.offset + 0x30))?;
-
-                // read blocks
-                let mut blocks = Vec::new();
-
-                // read block count
-                let block_count = self.reader.read_u32::<LittleEndian>()?;
-
-                // read blocks
-                for _i in 0..block_count {
-                    // read block start
-                    let block_start = self.reader.read_u64::<LittleEndian>()?;
-                    // read block end
-                    let block_end = self.reader.read_u64::<LittleEndian>()?;
-
-                    // add block
-                    blocks.push(Block {
-                        start: block_start,
-                        size: block_end - block_start,
-                    });
-                }
-
-                // is_encrypted byte
-                let mut buf1 = [0u8; 1];
-                self.reader.read_exact(&mut buf1)?;
-                let is_encrypted = buf1[0] != 0;
-                // if is_encrypted return error
-                if is_encrypted {
-                    return Err(UpakError::enrcryption_unsupported());
-                }
-
-                // read block size
-                let block_size = self.reader.read_u32::<LittleEndian>()?;
-
-                // calculate header size and sub from blocks
-                let header_size = self.reader.stream_position()? - record.offset;
-                blocks = blocks
-                    .iter()
-                    .map(|block| Block {
-                        start: block.start - header_size,
-                        size: block.size,
-                    })
-                    .collect();
-
-                // allocate buffers
-                let mut record_data = vec![0u8; record.decompressed_size as usize];
-                let mut compressed_data = vec![0u8; record.size as usize];
-
-                // read all record compressed data (we are already at the start of the first block)
-                self.reader.read_exact(&mut compressed_data)?;
-
-                for i in 0..blocks.len() {
-                    let block = &blocks[i];
-
-                    let block_compressed_data =
-                        &compressed_data[block.start as usize..(block.start + block.size) as usize];
-
-                    // decompress block
-                    let mut decoder = ZlibDecoder::new(&block_compressed_data[..]);
-
-                    // read decompressed data
-                    let decompressed_start = block_size as usize * i;
-                    let mut decompressed_end = block_size as usize * (i + 1);
-                    if decompressed_end > record.decompressed_size as usize {
-                        decompressed_end = record.decompressed_size as usize;
-                    }
-
-                    decoder.read_exact(&mut record_data[decompressed_start..decompressed_end])?;
-                }
-
-                return Ok(record_data);
-            } else {
-                return Err(UpakError::unsupported_compression(
-                    record.compression_method,
-                ));
-            }
-        } else {
-            return Err(UpakError::unsupported_pak_version(self.file_version));
-        }
-    }
-
-    pub fn init_empty(&mut self, file_version: u32) -> Result<(), UpakError> {
-        if file_version == 8 {
-            self.file_version = file_version;
-            self.mount_point = b"../../../\0".iter().map(|&x| x).collect::<Vec<u8>>();
-            self.block_size = 0x10000;
-            self.records.clear();
-        } else {
-            return Err(UpakError::unsupported_pak_version(file_version));
-        }
-
+    pub fn add_record(&mut self, record: PakRecord) -> Result<(), UnrealPakError> {
+        self.records.remove(&record.file_name);
+        self.records.insert(record.file_name.clone(), record);
         Ok(())
     }
 
-    pub fn write_record(
-        &mut self,
-        record_name: &String,
-        record_data: &Vec<u8>,
-        compression_method: &CompressionMethod,
-    ) -> Result<(), UpakError> {
-        let mut record = PakRecord {
-            file_version: self.file_version,
-            offset: 0,
-            size: 0,
-            decompressed_size: record_data.len() as u64,
-            compression_method: compression_method.clone(),
-            compression_blocks: Vec::new(),
-            hash: Vec::new(),
-        };
-
-        if self.file_version == 8 {
-            // allocate buffer for final data
-            let mut compressed_data: Vec<u8> = Vec::new();
-
-            if compression_method == &CompressionMethod::None || record_data.len() < 10 {
-                // simply clone data when no compression is used
-                compressed_data = record_data.clone();
-                record.compression_method = CompressionMethod::None;
-            } else if compression_method == &CompressionMethod::Zlib {
-                // split into blocks
-                let num_blocks = (record_data.len() as f64 / self.block_size as f64).ceil() as u32;
-
-                for i in 0..num_blocks {
-                    let block_start = i as u64 * self.block_size as u64;
-                    let mut block_end = (i + 1) as u64 * self.block_size as u64;
-                    if block_end > record_data.len() as u64 {
-                        block_end = record_data.len() as u64;
-                    }
-
-                    let block_uncompressed_data =
-                        &record_data[block_start as usize..block_end as usize];
-
-                    let length_before = compressed_data.len();
-
-                    // compress data
-                    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-                    encoder.write_all(&block_uncompressed_data)?;
-                    let block_compressed_data = encoder.finish()?;
-
-                    compressed_data.extend_from_slice(&block_compressed_data);
-
-                    record.compression_blocks.push(SimpleBlock {
-                        start: length_before as u64,
-                        end: compressed_data.len() as u64,
-                    });
-                }
-            }
-
-            // set size
-            record.size = compressed_data.len() as u64;
-
-            // compute sha1 hash
-            let mut hasher = Sha1::new();
-            hasher.update(&compressed_data);
-            record.hash = hasher.finalize().to_vec();
-
-            // store offset
-            let record_offset = self.reader.stream_position()?;
-
-            // generate and write header
-            self.reader
-                .get_mut()
-                .write_all(&Self::generate_header(&record, self.block_size))?;
-
-            // write data
-            self.reader.get_mut().write_all(&compressed_data)?;
-
-            // update record with offset
-            record.offset = record_offset;
-        } else {
-            return Err(UpakError::unsupported_pak_version(self.file_version));
+    pub fn get_record(&mut self, name: &String) -> Result<&PakRecord, UnrealPakError> {
+        let record = self
+            .records
+            .get_mut(name)
+            .ok_or(UnrealPakError::record_not_found(name.clone()))?;
+        if record.data.is_none() {
+            record.read_data(self.reader.as_mut().unwrap(), self.file_version)?;
         }
-
-        // add record
-        self.records.insert(record_name.to_string(), record);
-
-        Ok(())
+        Ok(record)
     }
 
-    pub fn write_index_and_footer(&mut self) -> Result<(), UpakError> {
-        if self.file_version == 8 {
-            let file = self.reader.get_mut();
-            let index_offset = file.stream_position()?;
-
-            // generate index
-            let mut index_data: Vec<u8> = Vec::new();
-
-            // write mount point length
-            let mount_point_length = (self.mount_point.len() as u32).to_le_bytes();
-            index_data.extend(&mount_point_length);
-            // write mount point
-            index_data.extend(&self.mount_point);
-
-            // write record count
-            let record_count = (self.records.len() as u32).to_le_bytes();
-            index_data.extend(&record_count);
-
-            // write records
-            let mut record_names = self.records.keys().collect::<Vec<&String>>();
-            record_names.sort();
-            for record_name in record_names {
-                let record = self.records.get(record_name).unwrap();
-
-                // write record name length
-                let record_name_length = (record_name.len() as u32 + 1).to_le_bytes();
-                index_data.extend(&record_name_length);
-                // write record name
-                index_data.extend(record_name.as_bytes());
-                // write extra null byte
-                index_data.extend(&[0x00]);
-
-                // write record
-                index_data.extend(&Self::generate_header(&record, self.block_size));
-            }
-
-            // write index to file
-            file.write_all(&index_data)?;
-
-            let index_size = file.stream_position()? - index_offset;
-
-            // write footer
-            // write 16 empty bytes
-            file.write_all(&[0; 17])?;
-
-            // write magic
-            file.write_all(&UE4_PAK_MAGIC.to_be_bytes())?;
-
-            // write file version
-            file.write_all(&self.file_version.to_le_bytes())?;
-
-            // write index offset
-            file.write_all(&index_offset.to_le_bytes())?;
-
-            // write index size
-            file.write_all(&index_size.to_le_bytes())?;
-
-            // write index hash
-            let mut hasher = Sha1::new();
-            hasher.update(&index_data);
-            file.write_all(&hasher.finalize().to_vec())?;
-
-            // write "Zlib" text
-            file.write_all(b"Zlib")?;
-
-            // write 0x9C empty bytes
-            file.write_all(&[0; 0x9C])?;
-        } else {
-            return Err(UpakError::unsupported_pak_version(self.file_version));
+    pub fn write(&mut self) -> Result<(), UnrealPakError> {
+        if self.writer.is_none() {
+            return Err(UnrealPakError::invalid_pak_file());
         }
+
+        let mut writer = self.writer.as_mut().unwrap();
+
+        for (_, record) in &mut self.records {
+            record.write(&mut writer, self.block_size)?;
+        }
+
+        let index_offset = writer.stream_position()?;
+
+        let mut header_writer = Cursor::new(Vec::new());
+
+        header_writer.write_string(Some(&String::from_utf8_lossy(&self.mount_point)))?;
+        header_writer.write_i32::<LittleEndian>(self.records.len() as i32)?;
+
+        for (_, record) in &self.records {
+            record.write_header(&mut header_writer, true)?;
+        }
+        header_writer.flush()?;
+        writer.write_all(header_writer.get_ref())?;
+
+        let index_length = writer.stream_position()? - index_offset;
+
+        if self.file_version >= PakVersion::PakFileVersionEncryptionKeyGuid {
+            writer.write_all(&[0u8; 16])?;
+        }
+        writer.write_u8(0)?; // is_encrypted
+        writer.write_u32::<BigEndian>(UE4_PAK_MAGIC)?;
+
+        let file_version: i32 = self.file_version.into();
+        writer.write_i32::<LittleEndian>(file_version)?;
+        writer.write_u64::<LittleEndian>(index_offset)?;
+        writer.write_u64::<LittleEndian>(index_length)?;
+
+        let header = header_writer.get_ref();
+        let mut hasher = Sha1::new();
+        hasher.update(&header);
+        let hash = hasher.finalize().to_vec();
+        writer.write_all(&hash)?;
+
+        let compression_method = self
+            .records
+            .values()
+            .next()
+            .map(|e| e.compression_method)
+            .unwrap_or(CompressionMethod::None);
+
+        match compression_method {
+            CompressionMethod::Zlib => {
+                writer.write_all(b"Zlib")?;
+                Ok(())
+            }
+            CompressionMethod::None => {
+                writer.write_all(&[0u8; 4])?;
+                Ok(())
+            }
+            _ => Err(UnrealPakError::unsupported_compression(compression_method)),
+        }?;
+
+        writer.write_all(&[0u8; 0x9c])?;
 
         Ok(())
-    }
-
-    fn generate_header(record: &PakRecord, block_size: u32) -> Vec<u8> {
-        // calculate header size
-        let header_size = 8
-            + 8
-            + 8
-            + 4
-            + 20
-            + if record.compression_method != CompressionMethod::None {
-                record.compression_blocks.len() as u64 * 16 + 4
-            } else {
-                0
-            }
-            + 1
-            + 4;
-
-        // allocate buffer
-        let mut header = vec![0u8; header_size as usize];
-
-        // write offset
-        header[0..8].copy_from_slice(&record.offset.to_le_bytes());
-
-        // write size
-        header[8..16].copy_from_slice(&record.size.to_le_bytes());
-
-        // write decompressed size
-        header[16..24].copy_from_slice(&record.decompressed_size.to_le_bytes());
-
-        // write compression method
-        let compression_method: u32 = record.compression_method.into();
-        header[24..28].copy_from_slice(&compression_method.to_le_bytes());
-
-        // write sha1 hash
-        header[28..48].copy_from_slice(&record.hash);
-
-        // write compression blocks
-        if record.compression_method != CompressionMethod::None {
-            // write block count
-            header[48..52].copy_from_slice(&(record.compression_blocks.len() as u32).to_le_bytes());
-
-            for i in 0..record.compression_blocks.len() {
-                let block = &record.compression_blocks[i];
-
-                // write block start
-                header[52 + i * 16..52 + i * 16 + 8]
-                    .copy_from_slice(&(block.start + header_size).to_le_bytes());
-
-                // write block end
-                header[52 + i * 16 + 8..52 + i * 16 + 16]
-                    .copy_from_slice(&(block.end + header_size).to_le_bytes());
-            }
-        }
-
-        // write is encrypted flag
-        header[header_size as usize - 5] = 0u8;
-
-        // write block size
-        let mut use_block_size = block_size;
-        if (use_block_size as u64) > record.decompressed_size {
-            use_block_size = record.decompressed_size as u32;
-        }
-        if record.compression_method == CompressionMethod::None {
-            use_block_size = 0;
-        }
-        header[header_size as usize - 4..].copy_from_slice(&use_block_size.to_le_bytes());
-
-        header
     }
 }

@@ -17,7 +17,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct StrProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -26,7 +26,7 @@ pub struct StrProperty {
 }
 impl_property_data_trait!(StrProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TextProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -40,7 +40,7 @@ pub struct TextProperty {
 }
 impl_property_data_trait!(TextProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct NameProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

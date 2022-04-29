@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -25,7 +25,7 @@ pub struct WeightedRandomSamplerProperty {
 }
 impl_property_data_trait!(WeightedRandomSamplerProperty);
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshAreaWeightedTriangleSampler {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -36,7 +36,7 @@ pub struct SkeletalMeshAreaWeightedTriangleSampler {
 }
 impl_property_data_trait!(SkeletalMeshAreaWeightedTriangleSampler);
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

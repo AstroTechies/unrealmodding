@@ -15,7 +15,7 @@ use crate::{
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct VectorProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -24,7 +24,7 @@ pub struct VectorProperty {
 }
 impl_property_data_trait!(VectorProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct IntPointProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -34,7 +34,7 @@ pub struct IntPointProperty {
 }
 impl_property_data_trait!(IntPointProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector4Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -43,7 +43,7 @@ pub struct Vector4Property {
 }
 impl_property_data_trait!(Vector4Property);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector2DProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -53,7 +53,7 @@ pub struct Vector2DProperty {
 }
 impl_property_data_trait!(Vector2DProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct QuatProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -62,7 +62,7 @@ pub struct QuatProperty {
 }
 impl_property_data_trait!(QuatProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct RotatorProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -71,7 +71,7 @@ pub struct RotatorProperty {
 }
 impl_property_data_trait!(RotatorProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct BoxProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

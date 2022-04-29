@@ -31,6 +31,7 @@ use crate::unreal_types::{Guid, ToFName};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
+use std::hash::Hash;
 use std::io::Cursor;
 use std::io::{Seek, SeekFrom};
 
@@ -182,7 +183,6 @@ pub trait PropertyTrait {
     ) -> Result<usize, Error>;
 }
 
-#[derive(Hash, PartialEq, Eq)]
 #[enum_dispatch(PropertyTrait, PropertyDataTrait)]
 pub enum Property {
     BoolProperty,
@@ -241,6 +241,246 @@ pub enum Property {
     StructProperty,
     EnumProperty,
     UnknownProperty,
+}
+
+impl Hash for Property {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Property::BoolProperty(prop) => prop.hash(state),
+            Property::UInt16Property(prop) => prop.hash(state),
+            Property::UInt32Property(prop) => prop.hash(state),
+            Property::UInt64Property(prop) => prop.hash(state),
+            Property::FloatProperty(prop) => prop.hash(state),
+            Property::Int16Property(prop) => prop.hash(state),
+            Property::Int64Property(prop) => prop.hash(state),
+            Property::Int8Property(prop) => prop.hash(state),
+            Property::IntProperty(prop) => prop.hash(state),
+            Property::ByteProperty(prop) => prop.hash(state),
+            Property::DoubleProperty(prop) => prop.hash(state),
+            Property::NameProperty(prop) => prop.hash(state),
+            Property::StrProperty(prop) => prop.hash(state),
+            Property::TextProperty(prop) => prop.hash(state),
+            Property::ObjectProperty(prop) => prop.hash(state),
+            Property::AssetObjectProperty(prop) => prop.hash(state),
+            Property::SoftObjectProperty(prop) => prop.hash(state),
+            Property::IntPointProperty(prop) => prop.hash(state),
+            Property::VectorProperty(prop) => prop.hash(state),
+            Property::Vector4Property(prop) => prop.hash(state),
+            Property::Vector2DProperty(prop) => prop.hash(state),
+            Property::BoxProperty(prop) => prop.hash(state),
+            Property::QuatProperty(prop) => prop.hash(state),
+            Property::RotatorProperty(prop) => prop.hash(state),
+            Property::LinearColorProperty(prop) => prop.hash(state),
+            Property::ColorProperty(prop) => prop.hash(state),
+            Property::TimeSpanProperty(prop) => prop.hash(state),
+            Property::DateTimeProperty(prop) => prop.hash(state),
+            Property::GuidProperty(prop) => prop.hash(state),
+            Property::SetProperty(prop) => prop.hash(state),
+            Property::ArrayProperty(prop) => prop.hash(state),
+            Property::MapProperty(prop) => prop.hash(state),
+            Property::PerPlatformBoolProperty(prop) => prop.hash(state),
+            Property::PerPlatformIntProperty(prop) => prop.hash(state),
+            Property::PerPlatformFloatProperty(prop) => prop.hash(state),
+            Property::MaterialAttributesInputProperty(prop) => prop.hash(state),
+            Property::ExpressionInputProperty(prop) => prop.hash(state),
+            Property::ColorMaterialInputProperty(prop) => prop.hash(state),
+            Property::ScalarMaterialInputProperty(prop) => prop.hash(state),
+            Property::ShadingModelMaterialInputProperty(prop) => prop.hash(state),
+            Property::VectorMaterialInputProperty(prop) => prop.hash(state),
+            Property::Vector2MaterialInputProperty(prop) => prop.hash(state),
+            Property::WeightedRandomSamplerProperty(prop) => prop.hash(state),
+            Property::SkeletalMeshSamplingLODBuiltDataProperty(prop) => prop.hash(state),
+            Property::SkeletalMeshAreaWeightedTriangleSampler(prop) => prop.hash(state),
+            Property::SoftAssetPathProperty(prop) => prop.hash(state),
+            Property::SoftObjectPathProperty(prop) => prop.hash(state),
+            Property::SoftClassPathProperty(prop) => prop.hash(state),
+            Property::MulticastDelegateProperty(prop) => prop.hash(state),
+            Property::RichCurveKeyProperty(prop) => prop.hash(state),
+            Property::ViewTargetBlendParamsProperty(prop) => prop.hash(state),
+            Property::GameplayTagContainerProperty(prop) => prop.hash(state),
+            Property::SmartNameProperty(prop) => prop.hash(state),
+            Property::StructProperty(prop) => prop.hash(state),
+            Property::EnumProperty(prop) => prop.hash(state),
+            Property::UnknownProperty(prop) => prop.hash(state),
+        }
+    }
+}
+
+impl PartialEq for Property {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::BoolProperty(l0), Self::BoolProperty(r0)) => l0 == r0,
+            (Self::UInt16Property(l0), Self::UInt16Property(r0)) => l0 == r0,
+            (Self::UInt32Property(l0), Self::UInt32Property(r0)) => l0 == r0,
+            (Self::UInt64Property(l0), Self::UInt64Property(r0)) => l0 == r0,
+            (Self::FloatProperty(l0), Self::FloatProperty(r0)) => l0 == r0,
+            (Self::Int16Property(l0), Self::Int16Property(r0)) => l0 == r0,
+            (Self::Int64Property(l0), Self::Int64Property(r0)) => l0 == r0,
+            (Self::Int8Property(l0), Self::Int8Property(r0)) => l0 == r0,
+            (Self::IntProperty(l0), Self::IntProperty(r0)) => l0 == r0,
+            (Self::ByteProperty(l0), Self::ByteProperty(r0)) => l0 == r0,
+            (Self::DoubleProperty(l0), Self::DoubleProperty(r0)) => l0 == r0,
+            (Self::NameProperty(l0), Self::NameProperty(r0)) => l0 == r0,
+            (Self::StrProperty(l0), Self::StrProperty(r0)) => l0 == r0,
+            (Self::TextProperty(l0), Self::TextProperty(r0)) => l0 == r0,
+            (Self::ObjectProperty(l0), Self::ObjectProperty(r0)) => l0 == r0,
+            (Self::AssetObjectProperty(l0), Self::AssetObjectProperty(r0)) => l0 == r0,
+            (Self::SoftObjectProperty(l0), Self::SoftObjectProperty(r0)) => l0 == r0,
+            (Self::IntPointProperty(l0), Self::IntPointProperty(r0)) => l0 == r0,
+            (Self::VectorProperty(l0), Self::VectorProperty(r0)) => l0 == r0,
+            (Self::Vector4Property(l0), Self::Vector4Property(r0)) => l0 == r0,
+            (Self::Vector2DProperty(l0), Self::Vector2DProperty(r0)) => l0 == r0,
+            (Self::BoxProperty(l0), Self::BoxProperty(r0)) => l0 == r0,
+            (Self::QuatProperty(l0), Self::QuatProperty(r0)) => l0 == r0,
+            (Self::RotatorProperty(l0), Self::RotatorProperty(r0)) => l0 == r0,
+            (Self::LinearColorProperty(l0), Self::LinearColorProperty(r0)) => l0 == r0,
+            (Self::ColorProperty(l0), Self::ColorProperty(r0)) => l0 == r0,
+            (Self::TimeSpanProperty(l0), Self::TimeSpanProperty(r0)) => l0 == r0,
+            (Self::DateTimeProperty(l0), Self::DateTimeProperty(r0)) => l0 == r0,
+            (Self::GuidProperty(l0), Self::GuidProperty(r0)) => l0 == r0,
+            (Self::SetProperty(l0), Self::SetProperty(r0)) => l0 == r0,
+            (Self::ArrayProperty(l0), Self::ArrayProperty(r0)) => l0 == r0,
+            (Self::MapProperty(l0), Self::MapProperty(r0)) => l0 == r0,
+            (Self::PerPlatformBoolProperty(l0), Self::PerPlatformBoolProperty(r0)) => l0 == r0,
+            (Self::PerPlatformIntProperty(l0), Self::PerPlatformIntProperty(r0)) => l0 == r0,
+            (Self::PerPlatformFloatProperty(l0), Self::PerPlatformFloatProperty(r0)) => l0 == r0,
+            (
+                Self::MaterialAttributesInputProperty(l0),
+                Self::MaterialAttributesInputProperty(r0),
+            ) => l0 == r0,
+            (Self::ExpressionInputProperty(l0), Self::ExpressionInputProperty(r0)) => l0 == r0,
+            (Self::ColorMaterialInputProperty(l0), Self::ColorMaterialInputProperty(r0)) => {
+                l0 == r0
+            }
+            (Self::ScalarMaterialInputProperty(l0), Self::ScalarMaterialInputProperty(r0)) => {
+                l0 == r0
+            }
+            (
+                Self::ShadingModelMaterialInputProperty(l0),
+                Self::ShadingModelMaterialInputProperty(r0),
+            ) => l0 == r0,
+            (Self::VectorMaterialInputProperty(l0), Self::VectorMaterialInputProperty(r0)) => {
+                l0 == r0
+            }
+            (Self::Vector2MaterialInputProperty(l0), Self::Vector2MaterialInputProperty(r0)) => {
+                l0 == r0
+            }
+            (Self::WeightedRandomSamplerProperty(l0), Self::WeightedRandomSamplerProperty(r0)) => {
+                l0 == r0
+            }
+            (
+                Self::SkeletalMeshSamplingLODBuiltDataProperty(l0),
+                Self::SkeletalMeshSamplingLODBuiltDataProperty(r0),
+            ) => l0 == r0,
+            (
+                Self::SkeletalMeshAreaWeightedTriangleSampler(l0),
+                Self::SkeletalMeshAreaWeightedTriangleSampler(r0),
+            ) => l0 == r0,
+            (Self::SoftAssetPathProperty(l0), Self::SoftAssetPathProperty(r0)) => l0 == r0,
+            (Self::SoftObjectPathProperty(l0), Self::SoftObjectPathProperty(r0)) => l0 == r0,
+            (Self::SoftClassPathProperty(l0), Self::SoftClassPathProperty(r0)) => l0 == r0,
+            (Self::MulticastDelegateProperty(l0), Self::MulticastDelegateProperty(r0)) => l0 == r0,
+            (Self::RichCurveKeyProperty(l0), Self::RichCurveKeyProperty(r0)) => l0 == r0,
+            (Self::ViewTargetBlendParamsProperty(l0), Self::ViewTargetBlendParamsProperty(r0)) => {
+                l0 == r0
+            }
+            (Self::GameplayTagContainerProperty(l0), Self::GameplayTagContainerProperty(r0)) => {
+                l0 == r0
+            }
+            (Self::SmartNameProperty(l0), Self::SmartNameProperty(r0)) => l0 == r0,
+            (Self::StructProperty(l0), Self::StructProperty(r0)) => l0 == r0,
+            (Self::EnumProperty(l0), Self::EnumProperty(r0)) => l0 == r0,
+            (Self::UnknownProperty(l0), Self::UnknownProperty(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Property {}
+
+impl Clone for Property {
+    fn clone(&self) -> Self {
+        match self {
+            Self::BoolProperty(arg0) => Self::BoolProperty(arg0.clone()),
+            Self::UInt16Property(arg0) => Self::UInt16Property(arg0.clone()),
+            Self::UInt32Property(arg0) => Self::UInt32Property(arg0.clone()),
+            Self::UInt64Property(arg0) => Self::UInt64Property(arg0.clone()),
+            Self::FloatProperty(arg0) => Self::FloatProperty(arg0.clone()),
+            Self::Int16Property(arg0) => Self::Int16Property(arg0.clone()),
+            Self::Int64Property(arg0) => Self::Int64Property(arg0.clone()),
+            Self::Int8Property(arg0) => Self::Int8Property(arg0.clone()),
+            Self::IntProperty(arg0) => Self::IntProperty(arg0.clone()),
+            Self::ByteProperty(arg0) => Self::ByteProperty(arg0.clone()),
+            Self::DoubleProperty(arg0) => Self::DoubleProperty(arg0.clone()),
+            Self::NameProperty(arg0) => Self::NameProperty(arg0.clone()),
+            Self::StrProperty(arg0) => Self::StrProperty(arg0.clone()),
+            Self::TextProperty(arg0) => Self::TextProperty(arg0.clone()),
+            Self::ObjectProperty(arg0) => Self::ObjectProperty(arg0.clone()),
+            Self::AssetObjectProperty(arg0) => Self::AssetObjectProperty(arg0.clone()),
+            Self::SoftObjectProperty(arg0) => Self::SoftObjectProperty(arg0.clone()),
+            Self::IntPointProperty(arg0) => Self::IntPointProperty(arg0.clone()),
+            Self::VectorProperty(arg0) => Self::VectorProperty(arg0.clone()),
+            Self::Vector4Property(arg0) => Self::Vector4Property(arg0.clone()),
+            Self::Vector2DProperty(arg0) => Self::Vector2DProperty(arg0.clone()),
+            Self::BoxProperty(arg0) => Self::BoxProperty(arg0.clone()),
+            Self::QuatProperty(arg0) => Self::QuatProperty(arg0.clone()),
+            Self::RotatorProperty(arg0) => Self::RotatorProperty(arg0.clone()),
+            Self::LinearColorProperty(arg0) => Self::LinearColorProperty(arg0.clone()),
+            Self::ColorProperty(arg0) => Self::ColorProperty(arg0.clone()),
+            Self::TimeSpanProperty(arg0) => Self::TimeSpanProperty(arg0.clone()),
+            Self::DateTimeProperty(arg0) => Self::DateTimeProperty(arg0.clone()),
+            Self::GuidProperty(arg0) => Self::GuidProperty(arg0.clone()),
+            Self::SetProperty(arg0) => Self::SetProperty(arg0.clone()),
+            Self::ArrayProperty(arg0) => Self::ArrayProperty(arg0.clone()),
+            Self::MapProperty(arg0) => Self::MapProperty(arg0.clone()),
+            Self::PerPlatformBoolProperty(arg0) => Self::PerPlatformBoolProperty(arg0.clone()),
+            Self::PerPlatformIntProperty(arg0) => Self::PerPlatformIntProperty(arg0.clone()),
+            Self::PerPlatformFloatProperty(arg0) => Self::PerPlatformFloatProperty(arg0.clone()),
+            Self::MaterialAttributesInputProperty(arg0) => {
+                Self::MaterialAttributesInputProperty(arg0.clone())
+            }
+            Self::ExpressionInputProperty(arg0) => Self::ExpressionInputProperty(arg0.clone()),
+            Self::ColorMaterialInputProperty(arg0) => {
+                Self::ColorMaterialInputProperty(arg0.clone())
+            }
+            Self::ScalarMaterialInputProperty(arg0) => {
+                Self::ScalarMaterialInputProperty(arg0.clone())
+            }
+            Self::ShadingModelMaterialInputProperty(arg0) => {
+                Self::ShadingModelMaterialInputProperty(arg0.clone())
+            }
+            Self::VectorMaterialInputProperty(arg0) => {
+                Self::VectorMaterialInputProperty(arg0.clone())
+            }
+            Self::Vector2MaterialInputProperty(arg0) => {
+                Self::Vector2MaterialInputProperty(arg0.clone())
+            }
+            Self::WeightedRandomSamplerProperty(arg0) => {
+                Self::WeightedRandomSamplerProperty(arg0.clone())
+            }
+            Self::SkeletalMeshSamplingLODBuiltDataProperty(arg0) => {
+                Self::SkeletalMeshSamplingLODBuiltDataProperty(arg0.clone())
+            }
+            Self::SkeletalMeshAreaWeightedTriangleSampler(arg0) => {
+                Self::SkeletalMeshAreaWeightedTriangleSampler(arg0.clone())
+            }
+            Self::SoftAssetPathProperty(arg0) => Self::SoftAssetPathProperty(arg0.clone()),
+            Self::SoftObjectPathProperty(arg0) => Self::SoftObjectPathProperty(arg0.clone()),
+            Self::SoftClassPathProperty(arg0) => Self::SoftClassPathProperty(arg0.clone()),
+            Self::MulticastDelegateProperty(arg0) => Self::MulticastDelegateProperty(arg0.clone()),
+            Self::RichCurveKeyProperty(arg0) => Self::RichCurveKeyProperty(arg0.clone()),
+            Self::ViewTargetBlendParamsProperty(arg0) => {
+                Self::ViewTargetBlendParamsProperty(arg0.clone())
+            }
+            Self::GameplayTagContainerProperty(arg0) => {
+                Self::GameplayTagContainerProperty(arg0.clone())
+            }
+            Self::SmartNameProperty(arg0) => Self::SmartNameProperty(arg0.clone()),
+            Self::StructProperty(arg0) => Self::StructProperty(arg0.clone()),
+            Self::EnumProperty(arg0) => Self::EnumProperty(arg0.clone()),
+            Self::UnknownProperty(arg0) => Self::UnknownProperty(arg0.clone()),
+        }
+    }
 }
 
 impl Property {

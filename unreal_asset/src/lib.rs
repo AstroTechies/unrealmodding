@@ -5,9 +5,12 @@ use std::fmt::{Debug, Formatter};
 
 use std::hash::{Hash, Hasher};
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use exports::function_export::FunctionExport;
 
+use crate::exports::base_export::BaseExport;
 use crate::exports::class_export::ClassExport;
 use crate::exports::data_table_export::DataTableExport;
 use crate::exports::enum_export::EnumExport;
@@ -16,9 +19,8 @@ use crate::exports::normal_export::NormalExport;
 use crate::exports::property_export::PropertyExport;
 use crate::exports::raw_export::RawExport;
 use crate::exports::string_table_export::StringTableExport;
-use crate::exports::struct_export::StructExport;
-use crate::exports::unknown_export::UnknownExport;
-use crate::exports::{ExportTrait, ExportUnknownTrait};
+
+use crate::exports::{ExportBaseTrait, ExportTrait};
 use crate::fproperty::FProperty;
 use crate::ue4version::{
     VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE,
@@ -54,13 +56,23 @@ pub mod ue4version;
 pub mod unreal_types;
 pub mod uproperty;
 use custom_version::CustomVersion;
-use unreal_types::{FName, GenerationInfo};
+use unreal_types::{FName, GenerationInfo, PackageIndex};
 
-#[derive(Debug, Clone)]
+#[macro_export]
+macro_rules! cast {
+    ($namespace:ident, $type:ident, $field:expr) => {
+        match $field {
+            $namespace::$type(e) => Some(e),
+            _ => None,
+        }
+    };
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Import {
     pub class_package: FName,
     pub class_name: FName,
-    pub outer_index: i32,
+    pub outer_index: PackageIndex,
     pub object_name: FName,
 }
 
@@ -68,7 +80,7 @@ impl Import {
     pub fn new(
         class_package: FName,
         class_name: FName,
-        outer_index: i32,
+        outer_index: PackageIndex,
         object_name: FName,
     ) -> Self {
         Import {
@@ -502,20 +514,19 @@ impl<'a> Asset {
         Ok(())
     }
 
-    pub fn add_import(&mut self, import: Import) -> i32 {
+    pub fn add_import(&mut self, import: Import) -> PackageIndex {
         let index = -(self.imports.len() as i32) - 1;
-        let mut import = import.clone();
-        import.outer_index = index;
+        let import = import.clone();
         self.imports.push(import);
-        index
+        PackageIndex::new(index)
     }
 
-    pub fn get_import(&'a self, index: i32) -> Option<&'a Import> {
-        if !is_import(index) {
+    pub fn get_import(&'a self, index: PackageIndex) -> Option<&'a Import> {
+        if !index.is_import() {
             return None;
         }
 
-        let index = -index - 1;
+        let index = -index.index - 1;
         if index < 0 || index > self.imports.len() as i32 {
             return None;
         }
@@ -523,12 +534,50 @@ impl<'a> Asset {
         Some(&self.imports[index as usize])
     }
 
-    pub fn get_export(&'a self, index: i32) -> Option<&'a Export> {
-        if !is_export(index) {
+    pub fn find_import(
+        &self,
+        class_package: &FName,
+        class_name: &FName,
+        outer_index: PackageIndex,
+        object_name: &FName,
+    ) -> Option<i32> {
+        for i in 0..self.imports.len() {
+            let import = &self.imports[i];
+            if import.class_package == *class_package
+                && import.class_name == *class_name
+                && import.outer_index == outer_index
+                && import.object_name == *object_name
+            {
+                return Some(-(i as i32));
+            }
+        }
+        None
+    }
+
+    pub fn find_import_no_index(
+        &self,
+        class_package: &FName,
+        class_name: &FName,
+        object_name: &FName,
+    ) -> Option<i32> {
+        for i in 0..self.imports.len() {
+            let import = &self.imports[i];
+            if import.class_package == *class_package
+                && import.class_name == *class_name
+                && import.object_name == *object_name
+            {
+                return Some(-(i as i32));
+            }
+        }
+        None
+    }
+
+    pub fn get_export(&'a self, index: PackageIndex) -> Option<&'a Export> {
+        if !index.is_export() {
             return None;
         }
 
-        let index = index - 1;
+        let index = index.index - 1;
 
         if index < 0 || index >= self.exports.len() as i32 {
             return None;
@@ -537,12 +586,12 @@ impl<'a> Asset {
         Some(&self.exports[index as usize])
     }
 
-    pub fn get_export_mut(&'a mut self, index: i32) -> Option<&'a mut Export> {
-        if !is_export(index) {
+    pub fn get_export_mut(&'a mut self, index: PackageIndex) -> Option<&'a mut Export> {
+        if !index.is_export() {
             return None;
         }
 
-        let index = index - 1;
+        let index = index.index - 1;
 
         if index < 0 || index >= self.exports.len() as i32 {
             return None;
@@ -551,10 +600,10 @@ impl<'a> Asset {
         Some(&mut self.exports[index as usize])
     }
 
-    fn get_export_class_type(&'a self, index: i32) -> Option<FName> {
-        match is_import(index) {
+    fn get_export_class_type(&'a self, index: PackageIndex) -> Option<FName> {
+        match index.is_import() {
             true => self.get_import(index).map(|e| e.object_name.clone()),
-            false => Some(FName::new(index.to_string(), 0)),
+            false => Some(FName::new(index.index.to_string(), 0)),
         }
     }
 
@@ -579,7 +628,7 @@ impl<'a> Asset {
                 let import = Import::new(
                     self.read_fname()?,
                     self.read_fname()?,
-                    self.cursor.read_i32::<LittleEndian>()?,
+                    PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?),
                     self.read_fname()?,
                 );
                 self.imports.push(import);
@@ -590,15 +639,16 @@ impl<'a> Asset {
             self.cursor
                 .seek(SeekFrom::Start(self.export_offset as u64))?;
             for _i in 0..self.export_count {
-                let mut export = UnknownExport::default();
-                export.class_index = self.cursor.read_i32::<LittleEndian>()?;
-                export.super_index = self.cursor.read_i32::<LittleEndian>()?;
+                let mut export = BaseExport::default();
+                export.class_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
+                export.super_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
 
                 if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
-                    export.template_index = self.cursor.read_i32::<LittleEndian>()?;
+                    export.template_index =
+                        PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
                 }
 
-                export.outer_index = self.cursor.read_i32::<LittleEndian>()?;
+                export.outer_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
                 export.object_name = self.read_fname()?;
                 export.object_flags = self.cursor.read_u32::<LittleEndian>()?;
 
@@ -626,14 +676,15 @@ impl<'a> Asset {
                 }
 
                 if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-                    export.first_export_dependency = self.cursor.read_i32::<LittleEndian>()?;
-                    export.serialization_before_serialization_dependencies =
+                    export.first_export_dependency_offset =
                         self.cursor.read_i32::<LittleEndian>()?;
-                    export.create_before_serialization_dependencies =
+                    export.serialization_before_serialization_dependencies_size =
                         self.cursor.read_i32::<LittleEndian>()?;
-                    export.serialization_before_create_dependencies =
+                    export.create_before_serialization_dependencies_size =
                         self.cursor.read_i32::<LittleEndian>()?;
-                    export.create_before_create_dependencies =
+                    export.serialization_before_create_dependencies_size =
+                        self.cursor.read_i32::<LittleEndian>()?;
+                    export.create_before_create_dependencies_size =
                         self.cursor.read_i32::<LittleEndian>()?;
                 }
 
@@ -682,6 +733,53 @@ impl<'a> Asset {
         }
 
         if self.use_separate_bulk_data_files {
+            for export in &mut self.exports {
+                let unk_export = export.get_base_export_mut();
+
+                self.cursor
+                    .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
+                self.cursor.seek(SeekFrom::Current(
+                    unk_export.first_export_dependency_offset as i64 * size_of::<i32>() as i64,
+                ))?;
+
+                let mut serialization_before_serialization_dependencies = Vec::with_capacity(
+                    unk_export.serialization_before_serialization_dependencies_size as usize,
+                );
+                for _ in 0..unk_export.serialization_before_serialization_dependencies_size {
+                    serialization_before_serialization_dependencies
+                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                }
+                unk_export.serialization_before_serialization_dependencies =
+                    serialization_before_serialization_dependencies;
+
+                let mut create_before_serialization_dependencies = Vec::with_capacity(
+                    unk_export.create_before_serialization_dependencies_size as usize,
+                );
+                for _ in 0..unk_export.create_before_serialization_dependencies_size {
+                    create_before_serialization_dependencies
+                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                }
+                unk_export.create_before_serialization_dependencies =
+                    create_before_serialization_dependencies;
+
+                let mut serialization_before_create_dependencies = Vec::with_capacity(
+                    unk_export.serialization_before_create_dependencies_size as usize,
+                );
+                for _ in 0..unk_export.serialization_before_create_dependencies_size {
+                    serialization_before_create_dependencies
+                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                }
+                unk_export.serialization_before_create_dependencies =
+                    serialization_before_create_dependencies;
+
+                let mut create_before_create_dependencies =
+                    Vec::with_capacity(unk_export.create_before_create_dependencies_size as usize);
+                for _ in 0..unk_export.create_before_create_dependencies_size {
+                    create_before_create_dependencies
+                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                }
+                unk_export.create_before_create_dependencies = create_before_create_dependencies;
+            }
             self.cursor
                 .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
             let mut preload_dependencies = Vec::new();
@@ -694,19 +792,19 @@ impl<'a> Asset {
 
         if self.header_offset > 0 && self.exports.len() > 0 {
             for i in 0..self.exports.len() {
-                let unk_export = match &self.exports[i] {
-                    Export::UnknownExport(export) => Some(export.clone()),
+                let base_export = match &self.exports[i] {
+                    Export::BaseExport(export) => Some(export.clone()),
                     _ => None,
                 };
 
-                if let Some(unk_export) = unk_export {
-                    let export: Result<Export, Error> = match self.read_export(&unk_export, i) {
+                if let Some(base_export) = base_export {
+                    let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
                         Err(_e) => {
                             //todo: warning?
                             self.cursor
-                                .seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
-                            Ok(RawExport::from_unk(unk_export.clone(), self)?.into())
+                                .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+                            Ok(RawExport::from_base(base_export.clone(), self)?.into())
                         }
                     };
                     self.exports[i] = export?;
@@ -714,56 +812,46 @@ impl<'a> Asset {
             }
         }
 
-        // // ------------------------------------------------------------
-        // header end, main data start
-        // ------------------------------------------------------------
-
-        /*println!(
-            "data (len: {:?}): {:02X?}",
-            self.cursor.get_ref().len(),
-            self.cursor.get_ref()
-        );*/
-
         Ok(())
     }
 
-    fn read_export(&mut self, unk_export: &UnknownExport, i: usize) -> Result<Export, Error> {
+    fn read_export(&mut self, base_export: &BaseExport, i: usize) -> Result<Export, Error> {
         let next_starting = match i < (self.exports.len() - 1) {
             true => match &self.exports[i + 1] {
-                Export::UnknownExport(next_export) => next_export.serial_offset as u64,
+                Export::BaseExport(next_export) => next_export.serial_offset as u64,
                 _ => self.data_length - 4,
             },
             false => self.data_length - 4,
         };
 
         self.cursor
-            .seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
+            .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
 
         //todo: manual skips
-        let export_class_type = self.get_export_class_type(unk_export.class_index).ok_or(
+        let export_class_type = self.get_export_class_type(base_export.class_index).ok_or(
             Error::invalid_package_index("Unknown class type".to_string()),
         )?;
         let mut export: Export = match export_class_type.content.as_str() {
-            "Level" => LevelExport::from_unk(unk_export, self, next_starting)?.into(),
-            "StringTable" => StringTableExport::from_unk(unk_export, self)?.into(),
-            "Enum" | "UserDefinedEnum" => EnumExport::from_unk(unk_export, self)?.into(),
-            "Function" => StructExport::from_unk(unk_export, self)?.into(),
+            "Level" => LevelExport::from_base(base_export, self, next_starting)?.into(),
+            "StringTable" => StringTableExport::from_base(base_export, self)?.into(),
+            "Enum" | "UserDefinedEnum" => EnumExport::from_base(base_export, self)?.into(),
+            "Function" => FunctionExport::from_base(base_export, self)?.into(),
             _ => {
                 if export_class_type.content.ends_with("DataTable") {
-                    DataTableExport::from_unk(unk_export, self)?.into()
+                    DataTableExport::from_base(base_export, self)?.into()
                 } else if export_class_type
                     .content
                     .ends_with("BlueprintGeneratedClass")
                 {
-                    let class_export = ClassExport::from_unk(unk_export, self)?;
+                    let class_export = ClassExport::from_base(base_export, self)?;
 
                     for entry in &class_export.struct_export.loaded_properties {
                         if let FProperty::FMapProperty(map) = entry {
                             let key_override = match &*map.key_prop {
                                 FProperty::FStructProperty(struct_property) => {
-                                    match is_import(struct_property.struct_value.index) {
+                                    match struct_property.struct_value.is_import() {
                                         true => self
-                                            .get_import(struct_property.struct_value.index)
+                                            .get_import(struct_property.struct_value)
                                             .map(|e| e.object_name.content.to_owned()),
                                         false => None,
                                     }
@@ -777,9 +865,9 @@ impl<'a> Asset {
 
                             let value_override = match &*map.key_prop {
                                 FProperty::FStructProperty(struct_property) => {
-                                    match is_import(struct_property.struct_value.index) {
+                                    match struct_property.struct_value.is_import() {
                                         true => self
-                                            .get_import(struct_property.struct_value.index)
+                                            .get_import(struct_property.struct_value)
                                             .map(|e| e.object_name.content.to_owned()),
                                         false => None,
                                     }
@@ -795,9 +883,9 @@ impl<'a> Asset {
                     }
                     class_export.into()
                 } else if export_class_type.content.ends_with("Property") {
-                    PropertyExport::from_unk(unk_export, self)?.into()
+                    PropertyExport::from_base(base_export, self)?.into()
                 } else {
-                    NormalExport::from_unk(unk_export, self)?.into()
+                    NormalExport::from_base(base_export, self)?.into()
                 }
             }
         };
@@ -807,8 +895,8 @@ impl<'a> Asset {
             // todo: warning?
 
             self.cursor
-                .seek(SeekFrom::Start(unk_export.serial_offset as u64))?;
-            return Ok(RawExport::from_unk(unk_export.clone(), self)?.into());
+                .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+            return Ok(RawExport::from_base(base_export.clone(), self)?.into());
         } else {
             if let Some(normal_export) = export.get_normal_export_mut() {
                 let mut extras = vec![0u8; extras_len as usize];
@@ -948,19 +1036,20 @@ impl<'a> Asset {
 
     fn write_export_header(
         &self,
-        unk: &UnknownExport,
+        unk: &BaseExport,
         cursor: &mut Cursor<Vec<u8>>,
         serial_size: i64,
         serial_offset: i64,
+        first_export_dependency_offset: i32,
     ) -> Result<(), Error> {
-        cursor.write_i32::<LittleEndian>(unk.class_index)?;
-        cursor.write_i32::<LittleEndian>(unk.super_index)?;
+        cursor.write_i32::<LittleEndian>(unk.class_index.index)?;
+        cursor.write_i32::<LittleEndian>(unk.super_index.index)?;
 
         if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
-            cursor.write_i32::<LittleEndian>(unk.template_index)?;
+            cursor.write_i32::<LittleEndian>(unk.template_index.index)?;
         }
 
-        cursor.write_i32::<LittleEndian>(unk.outer_index)?;
+        cursor.write_i32::<LittleEndian>(unk.outer_index.index)?;
         self.write_fname(cursor, &unk.object_name)?;
         cursor.write_u32::<LittleEndian>(unk.object_flags)?;
 
@@ -1002,12 +1091,17 @@ impl<'a> Asset {
         }
 
         if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-            cursor.write_i32::<LittleEndian>(unk.first_export_dependency)?;
-            cursor
-                .write_i32::<LittleEndian>(unk.serialization_before_serialization_dependencies)?;
-            cursor.write_i32::<LittleEndian>(unk.create_before_serialization_dependencies)?;
-            cursor.write_i32::<LittleEndian>(unk.serialization_before_create_dependencies)?;
-            cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies)?;
+            cursor.write_i32::<LittleEndian>(first_export_dependency_offset)?;
+            cursor.write_i32::<LittleEndian>(
+                unk.serialization_before_serialization_dependencies.len() as i32,
+            )?;
+            cursor.write_i32::<LittleEndian>(
+                unk.create_before_serialization_dependencies.len() as i32
+            )?;
+            cursor.write_i32::<LittleEndian>(
+                unk.serialization_before_create_dependencies.len() as i32
+            )?;
+            cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies.len() as i32)?;
         }
         Ok(())
     }
@@ -1065,7 +1159,7 @@ impl<'a> Asset {
         for import in &self.imports {
             self.write_fname(cursor, &import.class_package)?;
             self.write_fname(cursor, &import.class_name)?;
-            cursor.write_i32::<LittleEndian>(import.outer_index)?;
+            cursor.write_i32::<LittleEndian>(import.outer_index.index)?;
             self.write_fname(cursor, &import.object_name)?;
         }
 
@@ -1075,8 +1169,14 @@ impl<'a> Asset {
         };
 
         for export in &self.exports {
-            let unk: &UnknownExport = export.get_unknown_export();
-            self.write_export_header(unk, cursor, unk.serial_size, unk.serial_offset)?;
+            let unk: &BaseExport = export.get_base_export();
+            self.write_export_header(
+                unk,
+                cursor,
+                unk.serial_size,
+                unk.serial_offset,
+                unk.first_export_dependency_offset,
+            )?;
         }
 
         let depends_offset = match self.depends_map {
@@ -1133,10 +1233,24 @@ impl<'a> Asset {
         };
 
         if self.use_separate_bulk_data_files {
-            for entry in self.preload_dependencies.as_ref().ok_or(Error::no_data(
-                "use_separate_bulk_data_files: true but no preload_dependencies found".to_string(),
-            ))? {
-                cursor.write_i32::<LittleEndian>(*entry)?;
+            for export in &self.exports {
+                let unk_export = export.get_base_export();
+
+                for element in &unk_export.serialization_before_serialization_dependencies {
+                    cursor.write_i32::<LittleEndian>(element.index)?;
+                }
+
+                for element in &unk_export.create_before_serialization_dependencies {
+                    cursor.write_i32::<LittleEndian>(element.index)?;
+                }
+
+                for element in &unk_export.serialization_before_create_dependencies {
+                    cursor.write_i32::<LittleEndian>(element.index)?;
+                }
+
+                for element in &unk_export.create_before_create_dependencies {
+                    cursor.write_i32::<LittleEndian>(element.index)?;
+                }
             }
         }
 
@@ -1165,28 +1279,32 @@ impl<'a> Asset {
         }
         bulk_cursor.write(&[0xc1, 0x83, 0x2a, 0x9e])?;
 
-        let bulk_data_start_offset = match self.exports.len() != 0 {
-            true => match self.use_separate_bulk_data_files {
-                true => final_cursor_pos as i64 + bulk_cursor.position() as i64,
-                false => cursor.position() as i64,
-            },
-            false => 0,
-        };
+        let bulk_data_start_offset = match self.use_separate_bulk_data_files {
+            true => final_cursor_pos as i64 + bulk_cursor.position() as i64,
+            false => cursor.position() as i64,
+        } - 4;
 
         if self.exports.len() > 0 {
             cursor.seek(SeekFrom::Start(export_offset as u64))?;
+            let mut first_export_dependency_offset = 0;
             for i in 0..self.exports.len() {
-                let unk = &self.exports[i].get_unknown_export();
+                let unk = &self.exports[i].get_base_export();
                 let next_loc = match self.exports.len() - 1 > i {
                     true => category_starts[i + 1] as i64,
-                    false => self.bulk_data_start_offset,
+                    false => bulk_data_start_offset,
                 };
                 self.write_export_header(
                     unk,
                     cursor,
                     next_loc - category_starts[i] as i64,
                     category_starts[i] as i64,
+                    first_export_dependency_offset,
                 )?;
+                first_export_dependency_offset +=
+                    (unk.serialization_before_serialization_dependencies.len()
+                        + unk.create_before_serialization_dependencies.len()
+                        + unk.serialization_before_create_dependencies.len()
+                        + unk.create_before_create_dependencies.len()) as i32;
             }
         }
 
@@ -1279,14 +1397,6 @@ impl Debug for Asset {
             .field("preload_dependency_offset", &self.preload_dependency_offset)
             .finish()
     }
-}
-
-pub fn is_import(index: i32) -> bool {
-    return index < 0;
-}
-
-pub fn is_export(index: i32) -> bool {
-    return index > 0;
 }
 
 #[derive(Debug, Clone)]

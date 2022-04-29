@@ -13,7 +13,7 @@ use crate::{
     Asset,
 };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ColorProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -22,7 +22,7 @@ pub struct ColorProperty {
 }
 impl_property_data_trait!(ColorProperty);
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct LinearColorProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

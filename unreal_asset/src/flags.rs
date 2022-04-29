@@ -258,4 +258,39 @@ bitflags! {
         // Class has been consigned to oblivion as part of a blueprint recompile, and a newer version currently exists.
         const CLASS_NEWER_VERSION_EXISTS = 0x80000000;
     }
+
+    pub struct EFunctionFlags : u32 {
+        const FUNC_NONE = 0x00000000;
+        const FUNC_FINAL = 0x00000001;
+        const FUNC_REQUIRED_API = 0x00000002;
+        const FUNC_BLUEPRINT_AUTHORITY_ONLY = 0x00000004;
+        const FUNC_BLUEPRINT_COSMETIC = 0x00000008;
+        const FUNC_NET = 0x00000040;
+        const FUNC_NET_RELIABLE = 0x00000080;
+        const FUNC_NET_REQUEST = 0x00000100;
+        const FUNC_EXEC = 0x00000200;
+        const FUNC_NATIVE = 0x00000400;
+        const FUNC_EVENT = 0x00000800;
+        const FUNC_NETRESPONSE = 0x00001000;
+        const FUNC_STATIC = 0x00002000;
+        const FUNC_NETMULTICAST = 0x00004000;
+        const FUNC_UBERGRAPHFUNCTION = 0x00008000;
+        const FUNC_MULTICASTDELEGATE = 0x00010000;
+        const FUNC_PUBLIC = 0x00020000;
+        const FUNC_PRIVATE = 0x00040000;
+        const FUNC_PROTECTED = 0x00080000;
+        const FUNC_DELEGATE = 0x00100000;
+        const FUNC_NETSERVER = 0x00200000;
+        const FUNC_HASOUTPARMS = 0x00400000;
+        const FUNC_HASDEFAULTS = 0x00800000;
+        const FUNC_NETCLIENT = 0x01000000;
+        const FUNC_DLLIMPORT = 0x02000000;
+        const FUNC_BLUEPRINTCALLABLE = 0x04000000;
+        const FUNC_BLUEPRINTEVENT = 0x08000000;
+        const FUNC_BLUEPRINTPURE = 0x10000000;
+        const FUNC_EDITORONLY = 0x20000000;
+        const FUNC_CONST = 0x40000000;
+        const FUNC_NETVALIDATE = 0x80000000;
+        const FUNC_ALLFLAGS = 0xFFFFFFFF;
+    }
 }

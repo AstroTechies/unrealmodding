@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct GameplayTagContainerProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

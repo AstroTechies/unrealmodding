@@ -10,19 +10,20 @@ use std::fs::{DirEntry, File, OpenOptions};
 use std::io::Cursor;
 use std::path::Path;
 use unreal_asset::exports::data_table_export::DataTable;
-use unreal_asset::exports::{Export, ExportUnknownTrait};
+use unreal_asset::exports::{Export, ExportBaseTrait};
 use unreal_asset::properties::int_property::{BoolProperty, ByteProperty};
 use unreal_asset::properties::str_property::StrProperty;
 use unreal_asset::properties::struct_property::StructProperty;
 use unreal_asset::properties::{Property, PropertyDataTrait};
 use unreal_asset::unreal_types::FName;
+use unreal_pak::pakversion::PakVersion;
 
 mod assets;
 pub mod error;
 pub mod metadata;
 use serde_json::Value;
 use unreal_asset::Asset;
-use unreal_pak::PakFile;
+use unreal_pak::{PakFile, PakRecord};
 
 use crate::error::Error;
 
@@ -42,16 +43,29 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     fn get_engine_version(&self) -> i32;
 }
 
-pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<Vec<u8>> {
-    for pak in paks {
-        pak.read_record(name).ok()?;
+pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<usize> {
+    for i in 0..paks.len() {
+        if paks[i].records.contains_key(name) {
+            return Some(i);
+        }
     }
     None
 }
 
 pub fn read_asset(pak: &mut PakFile, engine_version: i32, name: &String) -> Result<Asset, Error> {
-    let uexp = pak.read_record(&name.replace(".uasset", ".uexp")).ok();
-    let uasset = pak.read_record(name)?;
+    let uexp = pak
+        .get_record(
+            &Path::new(name)
+                .with_extension("uexp")
+                .to_str()
+                .unwrap()
+                .to_string(),
+        )
+        .ok()
+        .map(|e| e.data.clone())
+        .flatten();
+
+    let uasset = pak.get_record(name)?.data.as_ref().unwrap().clone();
     let mut asset = Asset::new(uasset, uexp);
     asset.engine_version = engine_version;
     asset.parse_data()?;
@@ -69,7 +83,7 @@ fn read_in_memory(
     Ok(asset)
 }
 
-fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<(), Error> {
+pub fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<(), Error> {
     let mut uasset_cursor = Cursor::new(Vec::new());
     let mut uexp_cursor = match asset.use_separate_bulk_data_files {
         true => Some(Cursor::new(Vec::new())),
@@ -77,17 +91,24 @@ fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<(), Er
     };
     asset.write_data(&mut uasset_cursor, uexp_cursor.as_mut())?;
 
-    pak.write_record(
-        name,
-        &uasset_cursor.get_ref().to_owned(),
-        &unreal_pak::CompressionMethod::Zlib,
+    let record = PakRecord::new(
+        name.clone(),
+        uasset_cursor.get_ref().to_owned(),
+        unreal_pak::CompressionMethod::Zlib,
     )?;
+    pak.add_record(record)?;
+
     if let Some(cursor) = uexp_cursor {
-        pak.write_record(
-            &name.to_owned().replace(".uasset", ".uexp"),
-            &cursor.get_ref().to_owned(),
-            &unreal_pak::CompressionMethod::Zlib,
+        let uexp_record = PakRecord::new(
+            Path::new(name)
+                .with_extension("uexp")
+                .to_str()
+                .unwrap()
+                .to_string(),
+            cursor.get_ref().to_owned(),
+            unreal_pak::CompressionMethod::Zlib,
         )?;
+        pak.add_record(uexp_record)?;
     }
     Ok(())
 }
@@ -272,7 +293,7 @@ fn bake_integrator_data(
     let export = asset
         .exports
         .iter_mut()
-        .filter(|e| e.get_unknown_export().object_name.content == "Default__IntegratorStatics_BP_C")
+        .filter(|e| e.get_base_export().object_name.content == "Default__IntegratorStatics_BP_C")
         .next();
     if export.is_none() {
         return Err(IntegrationError::corrupted_starter_pak().into());
@@ -324,10 +345,14 @@ pub fn integrate_mods<
     let mut optional_mods_data = Vec::new();
     for mod_file in &mod_files {
         let stream = File::open(&mod_file.path())?;
-        let mut pak = PakFile::new(&stream);
+        let mut pak = PakFile::reader(&stream);
         pak.load_records()?;
 
-        let record = &pak.read_record(&String::from("metadata.json"))?;
+        let record = pak
+            .get_record(&String::from("metadata.json"))?
+            .data
+            .as_ref()
+            .unwrap();
         let metadata: Metadata = serde_json::from_slice(&record)?;
         mods.push(metadata.clone());
 
@@ -344,8 +369,8 @@ pub fn integrate_mods<
             .open(&path)?;
 
         let file = OpenOptions::new().append(true).open(&path)?;
-        let mut generated_pak = PakFile::new(&file);
-        generated_pak.init_empty(8)?;
+        let mut generated_pak =
+            PakFile::writer(PakVersion::PakFileVersionFnameBasedCompressionMethod, &file);
 
         #[cfg(not(feature = "bulk_data"))]
         let list_of_mods_bulk = None;
@@ -387,30 +412,36 @@ pub fn integrate_mods<
                 + "/Content/Integrator/IntegratorStatics_BP.uasset"),
         )?;
 
-        generated_pak.write_record(
-            &String::from("metadata.json"),
-            &METADATA_JSON.to_vec(),
-            &unreal_pak::CompressionMethod::Zlib,
+        let metadata_record = PakRecord::new(
+            String::from("metadata.json"),
+            METADATA_JSON.to_vec(),
+            unreal_pak::CompressionMethod::Zlib,
         )?;
+        generated_pak.add_record(metadata_record)?;
 
         for entry in &COPY_OVER {
-            generated_pak.write_record(
-                &(integrator_config.get_game_name() + "/Content/Integrator/" + entry.1),
-                &entry.0.to_vec(),
-                &unreal_pak::CompressionMethod::Zlib,
+            let record = PakRecord::new(
+                integrator_config.get_game_name() + "/Content/Integrator/" + entry.1,
+                entry.0.to_vec(),
+                unreal_pak::CompressionMethod::Zlib,
             )?;
+            generated_pak.add_record(record)?;
         }
 
         let mut game_paks = Vec::new();
         for game_file in &game_files {
-            let pak = PakFile::new(&game_file);
+            let mut pak = PakFile::reader(&game_file);
+            pak.load_records()?;
             game_paks.push(pak);
         }
 
         for (name, mut exec) in integrator_config.get_handlers() {
             let all_mods: Vec<&Value> = optional_mods_data
                 .iter()
-                .filter(|e| e[name.clone()] != Value::Null)
+                .filter_map(|e| match e[name.clone()] != Value::Null {
+                    true => Some(&e[name.clone()]),
+                    false => None,
+                })
                 .collect();
             exec(
                 integrator_config.get_data(),
@@ -421,7 +452,7 @@ pub fn integrate_mods<
             .map_err(|e| Error::other(Box::new(e)))?;
         }
 
-        generated_pak.write_index_and_footer()?;
+        generated_pak.write()?;
         file.sync_data()?;
     }
 

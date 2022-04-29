@@ -56,7 +56,7 @@ impl FName {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct NamespacedString {
     pub namespace: Option<String>,
     pub value: Option<String>,
@@ -68,7 +68,7 @@ impl NamespacedString {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StringTable {
     pub namespace: Option<String>,
     pub value: HashMap<String, String>,
@@ -83,7 +83,7 @@ impl StringTable {
     }
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Hash, Copy, Clone, Default, PartialEq, Eq)]
 pub struct PackageIndex {
     pub index: i32,
 }
@@ -91,6 +91,14 @@ pub struct PackageIndex {
 impl PackageIndex {
     pub fn new(index: i32) -> Self {
         PackageIndex { index }
+    }
+
+    pub fn is_import(&self) -> bool {
+        self.index < 0
+    }
+
+    pub fn is_export(&self) -> bool {
+        self.index > 0
     }
 
     pub fn from_import(import_index: i32) -> Result<Self, Error> {
@@ -112,7 +120,7 @@ impl PackageIndex {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct FieldPath {
     pub path: Vec<FName>,
     pub resolved_owner: PackageIndex,

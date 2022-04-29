@@ -24,11 +24,15 @@ pub(crate) fn read_pak_files(mod_files: &Vec<PathBuf>) -> HashMap<String, Vec<Re
     for file_path in mod_files.iter() {
         let file_result = (|| -> Result<(), Box<dyn Error>> {
             let file = fs::File::open(&file_path)?;
-            let mut pak = PakFile::new(&file);
+            let mut pak = PakFile::reader(&file);
 
             pak.load_records()?;
 
-            let record = &pak.read_record(&String::from("metadata.json"))?;
+            let record = pak
+                .get_record(&String::from("metadata.json"))?
+                .data
+                .as_ref()
+                .unwrap();
             let metadata: Metadata = serde_json::from_slice(&record)?;
 
             let file_name = file_path.file_name().unwrap().to_str().unwrap().to_owned();

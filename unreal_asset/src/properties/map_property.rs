@@ -13,9 +13,10 @@ use crate::{
     },
 };
 
+use super::struct_property::StructProperty;
 use super::Property;
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct MapProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -48,7 +49,7 @@ impl MapProperty {
     ) -> Result<Property, Error> {
         match type_name.content.as_str() {
             "StructProperty" => {
-                let struct_type = match is_key {
+                let _struct_type = match is_key {
                     true => asset
                         .map_key_override
                         .get(&name.content)
@@ -59,15 +60,9 @@ impl MapProperty {
                         .map(|s| s.to_owned()),
                 }
                 .unwrap_or(String::from("Generic"));
-
-                Property::from_type(
-                    asset,
-                    &FName::new(struct_type.to_string(), 0),
-                    name,
-                    false,
-                    1,
-                    0,
-                    0,
+                Ok(
+                    StructProperty::new(asset, name.clone(), false, 1, 0, asset.engine_version)?
+                        .into(),
                 )
             }
             _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
@@ -110,7 +105,7 @@ impl MapProperty {
         }
 
         let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
-        let mut values = HashMap::new();
+        let mut values: HashMap<Property, Property> = HashMap::new();
 
         for _ in 0..num_entries {
             let key = MapProperty::map_type_to_class(
@@ -129,7 +124,6 @@ impl MapProperty {
                 false,
                 false,
             )?;
-
             values.insert(key, value);
         }
 

@@ -1,6 +1,6 @@
 use crate::error::Error;
-use crate::exports::unknown_export::UnknownExport;
-use crate::exports::{ExportTrait, ExportUnknownTrait};
+use crate::exports::base_export::BaseExport;
+use crate::exports::{ExportBaseTrait, ExportTrait};
 use crate::properties::Property;
 use crate::unreal_types::FName;
 use crate::Asset;
@@ -8,8 +8,9 @@ use std::io::Cursor;
 
 use super::ExportNormalTrait;
 
+#[derive(Clone)]
 pub struct NormalExport {
-    pub unknown_export: UnknownExport,
+    pub base_export: BaseExport,
     pub extras: Vec<u8>,
 
     pub properties: Vec<Property>,
@@ -25,27 +26,26 @@ impl ExportNormalTrait for NormalExport {
     }
 }
 
-impl ExportUnknownTrait for NormalExport {
-    fn get_unknown_export<'a>(&'a self) -> &'a UnknownExport {
-        &self.unknown_export
+impl ExportBaseTrait for NormalExport {
+    fn get_base_export<'a>(&'a self) -> &'a BaseExport {
+        &self.base_export
     }
 
-    fn get_unknown_export_mut<'a>(&'a mut self) -> &'a mut UnknownExport {
-        &mut self.unknown_export
+    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
+        &mut self.base_export
     }
 }
 
 impl NormalExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
         let _cursor = &mut asset.cursor;
         let mut properties = Vec::new();
-
         while let Some(e) = Property::new(asset, true)? {
             properties.push(e);
         }
 
         Ok(NormalExport {
-            unknown_export: unk.clone(),
+            base_export: base.clone(),
             extras: Vec::new(),
 
             properties,

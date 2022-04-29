@@ -6,6 +6,7 @@ use std::process::exit;
 use std::time::SystemTime;
 
 use clap::{Parser, Subcommand};
+use unreal_pak::PakRecord;
 use walkdir::WalkDir;
 
 use unreal_pak;
@@ -56,19 +57,19 @@ fn main() {
     match args.commands {
         Commands::CheckHeader { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = unreal_pak::PakFile::new(&file);
+            let mut pak = unreal_pak::PakFile::reader(&file);
             check_header(&mut pak);
         }
         Commands::Check { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = unreal_pak::PakFile::new(&file);
+            let mut pak = unreal_pak::PakFile::reader(&file);
             check_header(&mut pak);
 
             // TODO: get rid of this clone
             for (i, (record_name, _)) in pak.records.clone().iter().enumerate() {
                 println!("Record {}: {}", i.to_string(), record_name);
 
-                match pak.read_record(&record_name) {
+                match pak.get_record(&record_name) {
                     Ok(_) => (),
                     Err(e) => {
                         eprintln!(
@@ -85,7 +86,7 @@ fn main() {
         Commands::Extract { pakfile, outdir } => {
             let path = Path::new(&pakfile);
             let file = open_file(&path);
-            let mut pak = unreal_pak::PakFile::new(&file);
+            let mut pak = unreal_pak::PakFile::reader(&file);
             check_header(&mut pak);
 
             // temp values required to extend lifetimes outside of match scope
@@ -106,9 +107,9 @@ fn main() {
 
             // TODO: get rid of this clone
             for (i, (record_name, _)) in pak.records.clone().iter().enumerate() {
-                match pak.read_record(&record_name) {
+                match pak.get_record(&record_name) {
                     Ok(record_data) => {
-                        let path = Path::new(output_folder).join(&record_name);
+                        let path = Path::new(output_folder).join(&record_name[..]);
                         let dir_path = match path.parent() {
                             Some(dir) => dir,
                             None => {
@@ -137,7 +138,7 @@ fn main() {
                                     }
                                 };
                                 // Write the file
-                                match file.write_all(&record_data) {
+                                match file.write_all(record_data.data.as_ref().unwrap()) {
                                     Ok(_) => {
                                         println!("Record {}: {}", i.to_string(), record_name);
                                     }
@@ -179,8 +180,10 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak = unreal_pak::PakFile::new(&file);
-            pak.init_empty(8).unwrap();
+            let mut pak = unreal_pak::PakFile::writer(
+                unreal_pak::pakversion::PakVersion::PakFileVersionFnameBasedCompressionMethod,
+                &file,
+            );
 
             let compression_method = if no_compression {
                 unreal_pak::CompressionMethod::None
@@ -211,20 +214,16 @@ fn main() {
                         }
                     };
 
-                    match pak.write_record(&record_name, &file_data, &compression_method) {
-                        Ok(_) => (),
-                        Err(_) => {
-                            eprintln!("Error writing record {}", record_name);
-                            exit(1);
-                        }
-                    }
+                    let record = PakRecord::new(record_name.clone(), file_data, compression_method)
+                        .expect(&format!("Error creating record {}", record_name.clone()));
+                    pak.add_record(record)
+                        .expect(&format!("Error adding record {}", record_name));
                 }
             }
 
-            pak.write_index_and_footer().unwrap();
+            pak.write().expect("Failed to write");
         }
     }
-
     println!(
         "upakcli took {:?} seconds...",
         start.elapsed().unwrap().as_secs_f32()

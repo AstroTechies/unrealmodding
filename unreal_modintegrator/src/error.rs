@@ -29,7 +29,7 @@ impl Display for IntegrationError {
 pub enum ErrorCode {
     Io(io::Error),
     Uasset(unreal_asset::error::Error),
-    Upak(unreal_pak::error::UpakError),
+    UnrealPak(unreal_pak::error::UnrealPakError),
     Json(serde_json::Error),
     Integration(IntegrationError),
     Other(Box<dyn std::error::Error>),
@@ -40,7 +40,7 @@ impl Display for ErrorCode {
         match *self {
             ErrorCode::Io(ref err) => Display::fmt(err, f),
             ErrorCode::Uasset(ref err) => Display::fmt(err, f),
-            ErrorCode::Upak(ref err) => Display::fmt(err, f),
+            ErrorCode::UnrealPak(ref err) => Display::fmt(err, f),
             ErrorCode::Json(ref err) => Display::fmt(err, f),
             ErrorCode::Integration(ref err) => Display::fmt(err, f),
             ErrorCode::Other(ref err) => Display::fmt(err, f),
@@ -85,10 +85,10 @@ impl From<unreal_asset::error::Error> for Error {
     }
 }
 
-impl From<unreal_pak::error::UpakError> for Error {
-    fn from(e: unreal_pak::error::UpakError) -> Self {
+impl From<unreal_pak::error::UnrealPakError> for Error {
+    fn from(e: unreal_pak::error::UnrealPakError) -> Self {
         Error {
-            code: ErrorCode::Upak(e),
+            code: ErrorCode::UnrealPak(e),
         }
     }
 }

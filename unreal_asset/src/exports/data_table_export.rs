@@ -4,18 +4,18 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::error::Error;
 use crate::{
-    implement_get, is_import,
+    implement_get,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait},
     unreal_types::FName,
     Asset,
 };
 
 use super::{
-    normal_export::NormalExport, unknown_export::UnknownExport, ExportNormalTrait,
-    ExportUnknownTrait,
+    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
 };
 use crate::exports::ExportTrait;
 
+#[derive(Clone)]
 pub struct DataTable {
     pub data: Vec<StructProperty>,
 }
@@ -26,6 +26,7 @@ impl DataTable {
     }
 }
 
+#[derive(Clone)]
 pub struct DataTableExport {
     pub normal_export: NormalExport,
     pub table: DataTable,
@@ -34,13 +35,13 @@ pub struct DataTableExport {
 implement_get!(DataTableExport);
 
 impl DataTableExport {
-    pub fn from_unk(unk: &UnknownExport, asset: &mut Asset) -> Result<Self, Error> {
-        let normal_export = NormalExport::from_unk(unk, asset)?;
+    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+        let normal_export = NormalExport::from_base(base, asset)?;
 
         let mut decided_struct_type = FName::new(String::from("Generic"), 0);
         for data in &normal_export.properties {
             if let Property::ObjectProperty(property) = data {
-                if property.name.content.as_str() == "RowStruct" && is_import(property.value) {
+                if property.name.content.as_str() == "RowStruct" && property.value.is_import() {
                     if let Some(import) = asset.get_import(property.value) {
                         decided_struct_type = import.object_name.clone();
                     }

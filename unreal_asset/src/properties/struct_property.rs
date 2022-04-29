@@ -13,7 +13,7 @@ use crate::{
 
 use super::Property;
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct StructProperty {
     pub name: FName,
     pub struct_type: Option<FName>,
