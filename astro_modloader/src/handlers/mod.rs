@@ -16,7 +16,7 @@ pub(crate) mod mission_trailheads;
 pub mod persistent_actors;
 
 lazy_static! {
-    static ref GAME_REGEX: Regex = Regex::new("^/Game/").expect("Failed to compile GAME_REGEX");
+    static ref GAME_REGEX: Regex = Regex::new("^/Game/").unwrap();
 }
 
 static MAP_PATHS: [&'static str; 3] = [
