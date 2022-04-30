@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::thread;
 
 use log::{debug, warn};
 use reqwest::blocking::Client;
@@ -30,56 +31,69 @@ pub(crate) fn gather_index_files(
 pub(crate) fn download_index_files(
     index_files_info: HashMap<String, DownloadInfo>,
 ) -> HashMap<String, IndexFileMod> {
+    let handles = index_files_info
+        .into_iter()
+        .map(|(mod_id, download_info)| {
+            thread::spawn(move || {
+                let client = Client::new();
+                let response = client.get(download_info.url.as_str()).send();
+                if response.is_err() {
+                    warn!(
+                        "Failed to download index file for {:?}, {}",
+                        mod_id,
+                        response.unwrap_err()
+                    );
+
+                    return None;
+                }
+
+                let response = response.unwrap();
+                if !response.status().is_success() {
+                    warn!(
+                        "Failed to download index file for {:?}, {}",
+                        mod_id,
+                        response.status()
+                    );
+
+                    return None;
+                }
+
+                let index_file =
+                    serde_json::from_str::<IndexFile>(response.text().unwrap().as_str());
+
+                if index_file.is_err() {
+                    warn!(
+                        "Failed to parse index file for {}: {}",
+                        mod_id,
+                        index_file.unwrap_err()
+                    );
+
+                    return None;
+                }
+                let index_file = index_file.unwrap();
+
+                let index_file_mod = index_file.mods.get(&mod_id);
+
+                if index_file_mod.is_none() {
+                    warn!("Index file for {} does not contain that mod", mod_id);
+
+                    return None;
+                }
+
+                return Some((mod_id, index_file_mod.unwrap().clone()));
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let index_file_data = handles
+        .into_iter()
+        .filter_map(|handle| handle.join().ok())
+        .flatten()
+        .collect::<Vec<_>>();
+
     let mut index_files: HashMap<String, IndexFileMod> = HashMap::new();
-
-    let client = Client::new();
-
-    // TODO: parallelize
-    for (mod_id, download_info) in index_files_info.iter() {
-        let response = client.get(download_info.url.as_str()).send();
-        if response.is_err() {
-            warn!(
-                "Failed to download index file for {:?}, {}",
-                mod_id,
-                response.unwrap_err()
-            );
-
-            continue;
-        }
-
-        let response = response.unwrap();
-        if !response.status().is_success() {
-            warn!(
-                "Failed to download index file for {:?}, {}",
-                mod_id,
-                response.status()
-            );
-
-            continue;
-        }
-
-        let index_file = serde_json::from_str::<IndexFile>(response.text().unwrap().as_str());
-
-        if index_file.is_err() {
-            warn!(
-                "Failed to parse index file for {}: {}",
-                mod_id,
-                index_file.unwrap_err()
-            );
-
-            continue;
-        }
-        let index_file = index_file.unwrap();
-
-        let index_file_mod = index_file.mods.get(mod_id);
-
-        if index_file_mod.is_none() {
-            warn!("Index file for {} does not contain that mod", mod_id);
-
-            continue;
-        }
-
-        index_files.insert(mod_id.to_owned(), index_file_mod.unwrap().to_owned());
+    for (mod_id, download_info) in index_file_data.iter() {
+        index_files.insert(mod_id.to_owned(), download_info.to_owned());
     }
 
     index_files
