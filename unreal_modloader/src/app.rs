@@ -3,16 +3,16 @@ use std::sync::{
     Arc, Mutex,
 };
 
-use eframe::{egui, epi};
+use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::info;
 
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
-use crate::AppData;
+use crate::ModLoaderAppData;
 
-pub(crate) struct App {
-    pub data: Arc<Mutex<crate::AppData>>,
+pub(crate) struct ModLoaderApp {
+    pub data: Arc<Mutex<crate::ModLoaderAppData>>,
 
     pub window_title: String,
     pub dropped_files: Vec<egui::DroppedFile>,
@@ -24,8 +24,8 @@ pub(crate) struct App {
     pub working: Arc<AtomicBool>,
 }
 
-impl epi::App for App {
-    fn update(&mut self, ctx: &egui::Context, mut frame: &mut epi::Frame) {
+impl App for ModLoaderApp {
+    fn update(&mut self, ctx: &egui::Context, mut frame: &mut eframe::Frame) {
         let mut data = self.data.lock().unwrap();
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -83,8 +83,8 @@ impl epi::App for App {
     }
 }
 
-impl App {
-    fn show_title(&self, ui: &mut egui::Ui, data: &mut AppData) {
+impl ModLoaderApp {
+    fn show_title(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
         let title = format!(
             "Mods ({})",
             match data.game_build {
@@ -99,7 +99,7 @@ impl App {
         }
     }
 
-    fn show_table(&self, ui: &mut egui::Ui, data: &mut AppData) {
+    fn show_table(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
         TableBuilder::new(ui)
             .striped(true)
             .cell_layout(egui::Layout::left_to_right().with_cross_align(egui::Align::Center))
@@ -210,7 +210,12 @@ impl App {
             });
     }
 
-    fn show_bottom(&self, ui: &mut egui::Ui, data: &mut AppData, frame: &mut epi::Frame) {
+    fn show_bottom(
+        &self,
+        ui: &mut egui::Ui,
+        data: &mut ModLoaderAppData,
+        frame: &mut eframe::Frame,
+    ) {
         ui.label("Mod config");
         ui.label("TODO");
 

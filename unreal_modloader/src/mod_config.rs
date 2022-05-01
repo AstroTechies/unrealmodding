@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::game_mod::SelectedVersion;
 use crate::version::Version;
-use crate::AppData;
+use crate::ModLoaderAppData;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfig {
@@ -31,7 +31,7 @@ struct ModConfigData {
     version: String,
 }
 
-pub(crate) fn load_config(data: &mut AppData) {
+pub(crate) fn load_config(data: &mut ModLoaderAppData) {
     let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
     if config_path.is_file() {
         let config_str = fs::read_to_string(config_path).unwrap();
@@ -73,7 +73,7 @@ pub(crate) fn load_config(data: &mut AppData) {
     }
 }
 
-pub(crate) fn write_config(data: &mut AppData) {
+pub(crate) fn write_config(data: &mut ModLoaderAppData) {
     let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
     let mut config = ModConfig {
         install_path: data

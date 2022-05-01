@@ -10,7 +10,7 @@ use unreal_pak::PakFile;
 
 use crate::game_mod::{GameMod, GameModVersion, SelectedVersion};
 use crate::version::Version;
-use crate::AppData;
+use crate::ModLoaderAppData;
 
 use super::verify;
 
@@ -106,7 +106,7 @@ pub(crate) fn read_pak_files(mod_files: &Vec<PathBuf>) -> HashMap<String, Vec<Re
 
 pub(crate) fn insert_mods_from_readdata(
     mods_read: &HashMap<String, Vec<ReadData>>,
-    data: &mut AppData,
+    data: &mut ModLoaderAppData,
 ) {
     for (mod_id, mod_files) in mods_read.iter() {
         // check if mod is in global list, if not insert empty

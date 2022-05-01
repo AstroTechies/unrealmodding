@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use log::debug;
 
-use crate::AppData;
+use crate::ModLoaderAppData;
 mod index_file;
 use index_file::{download_index_files, gather_index_files, insert_index_file_data};
 mod pakfile_reading;
@@ -16,7 +16,7 @@ mod verify;
 
 pub(crate) fn process_modfiles(
     mod_files: &Vec<PathBuf>,
-    data: &Arc<Mutex<AppData>>,
+    data: &Arc<Mutex<ModLoaderAppData>>,
 ) -> Result<(), Box<dyn Error>> {
     debug!("Processing mod files: {:?}", mod_files);
 

@@ -5,9 +5,9 @@ use unreal_modintegrator::metadata::SyncMode;
 
 use crate::game_mod::SelectedVersion;
 use crate::version::{GameBuild, Version};
-use crate::AppData;
+use crate::ModLoaderAppData;
 
-pub(crate) fn auto_pick_versions(data: &mut AppData) {
+pub(crate) fn auto_pick_versions(data: &mut ModLoaderAppData) {
     // check that there is even a version to pick
     let mut to_remove = Vec::new();
     for (mod_id, game_mod) in data.game_mods.iter() {
@@ -34,7 +34,7 @@ pub(crate) fn auto_pick_versions(data: &mut AppData) {
 
 /// Sets top-level fields from the metadata of the selected version.
 /// Will panic if any versions are LatestIndirect with no version set.
-pub(crate) fn set_mod_data_from_version(data: &mut AppData, filter: &Vec<String>) {
+pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &Vec<String>) {
     for (mod_id, game_mod) in data.game_mods.iter_mut() {
         if !filter.contains(&mod_id) {
             continue;

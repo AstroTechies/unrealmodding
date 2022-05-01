@@ -27,7 +27,7 @@ use mod_processing::process_modfiles;
 use version::GameBuild;
 
 #[derive(Debug)]
-pub(crate) struct AppData {
+pub(crate) struct ModLoaderAppData {
     /// %LocalAppData%\[GameName]\Saved
     pub base_path: Option<PathBuf>,
     /// %LocalAppData%\[GameName]\Saved\Mods
@@ -48,7 +48,7 @@ where
     D: 'static + IntegratorConfig<'a, T, E>,
     C: 'static + config::GameConfig<'a, D, T, E>,
 {
-    let data = Arc::new(Mutex::new(AppData {
+    let data = Arc::new(Mutex::new(ModLoaderAppData {
         base_path: None,
         data_path: None,
         paks_path: None,
@@ -65,7 +65,7 @@ where
     let working = Arc::new(AtomicBool::new(true));
 
     // instantiate the GUI app
-    let app = app::App {
+    let app = app::ModLoaderApp {
         data: Arc::clone(&data),
         window_title: config.get_window_title(),
         dropped_files: Vec::new(),

@@ -8,12 +8,12 @@ use unreal_modintegrator::metadata::DownloadInfo;
 
 use crate::game_mod::{GameModVersion, SelectedVersion};
 use crate::version::Version;
-use crate::AppData;
+use crate::ModLoaderAppData;
 
 use super::verify;
 
 pub(crate) fn gather_index_files(
-    data: &mut AppData,
+    data: &mut ModLoaderAppData,
     filter: &Vec<String>,
 ) -> HashMap<String, DownloadInfo> {
     let mut index_files: HashMap<String, DownloadInfo> = HashMap::new();
@@ -118,7 +118,7 @@ pub(crate) struct IndexFileModVersion {
 
 pub(crate) fn insert_index_file_data(
     index_files: &HashMap<String, IndexFileMod>,
-    data: &mut AppData,
+    data: &mut ModLoaderAppData,
 ) {
     for (mod_id, index_file) in index_files.iter() {
         let game_mod = data.game_mods.get_mut(mod_id).unwrap();
