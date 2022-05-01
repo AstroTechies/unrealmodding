@@ -7,8 +7,9 @@ use eframe::{egui, epi};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::info;
 
-use crate::game_mod::SelectedVersion;
+use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
+use crate::AppData;
 
 pub(crate) struct App {
     pub data: Arc<Mutex<crate::AppData>>,
@@ -24,9 +25,8 @@ pub(crate) struct App {
 }
 
 impl epi::App for App {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut epi::Frame) {
+    fn update(&mut self, ctx: &egui::Context, mut frame: &mut epi::Frame) {
         let mut data = self.data.lock().unwrap();
-        let should_integrate = &self.should_integrate;
 
         egui::CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
@@ -35,179 +35,13 @@ impl epi::App for App {
                 .size(Size::remainder())
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
-                        let title = format!(
-                            "Mods ({})",
-                            match data.game_build {
-                                Some(ref build) => build.to_string(),
-                                None => "<unknown>".to_owned(),
-                            }
-                        );
-                        if !self.working.load(Ordering::Relaxed) {
-                            ui.heading(title);
-                        } else {
-                            ui.heading(format!("{} - Working...", title));
-                        }
+                        self.show_title(ui, &mut data);
                     });
                     strip.cell(|ui| {
-                        TableBuilder::new(ui)
-                            .striped(true)
-                            .cell_layout(
-                                egui::Layout::left_to_right().with_cross_align(egui::Align::Center),
-                            )
-                            .column(Size::initial(42.0).at_least(42.0))
-                            .column(Size::initial(170.0).at_least(20.0))
-                            .column(Size::initial(120.0).at_least(120.0))
-                            .column(Size::initial(70.0).at_least(20.0))
-                            .column(Size::remainder().at_least(20.0))
-                            .resizable(true)
-                            .header(20.0, |mut header| {
-                                header.col(|ui| {
-                                    ui.strong("Active");
-                                });
-                                header.col(|ui| {
-                                    ui.strong("Name");
-                                });
-                                header.col(|ui| {
-                                    ui.strong("Version");
-                                });
-                                header.col(|ui| {
-                                    ui.strong("Author");
-                                });
-                                header.col(|ui| {
-                                    ui.strong("Game build");
-                                });
-                            })
-                            .body(|mut body| {
-                                for (_, game_mod) in data.game_mods.iter_mut() {
-                                    body.row(18.0, |mut row| {
-                                        row.col(|ui| {
-                                            if ui.checkbox(&mut game_mod.active, "").changed() {
-                                                should_integrate.store(true, Ordering::Relaxed);
-                                            };
-                                        });
-                                        row.col(|ui| {
-                                            ui.label(game_mod.name.as_str());
-                                        });
-                                        row.col(|ui| {
-                                            // becasue ComboBox .chnaged doesn't seem to work
-                                            let prev_selceted = game_mod.selected_version.clone();
-
-                                            egui::ComboBox::from_id_source(&game_mod.name)
-                                                .selected_text(format!(
-                                                    "{}",
-                                                    game_mod.selected_version
-                                                ))
-                                                .show_ui(ui, |ui| {
-                                                    // for when there is an Index file show force latest version, this to diecrtly indicate that there
-                                                    // is the possibility of an auto update vie an index file.
-                                                    if game_mod.download.is_some() {
-                                                        let latest_version =
-                                                            game_mod.latest_version.unwrap();
-                                                        ui.selectable_value(
-                                                            &mut game_mod.selected_version,
-                                                            SelectedVersion::Latest(
-                                                                latest_version.clone(),
-                                                            ),
-                                                            format!(
-                                                                "{}",
-                                                                SelectedVersion::Latest(
-                                                                    latest_version
-                                                                )
-                                                            ),
-                                                        );
-                                                    }
-
-                                                    // add all other versions to the drop down
-                                                    for version in game_mod.versions.iter() {
-                                                        // if the version is the latest version, set it as LatestIndirect so that if there is an upgrade it will
-                                                        // automatically be upgraded. This is under the assumption that if the user now has the latest version,
-                                                        // that they probably also want to have the latest in the future.
-                                                        let is_latest = *version.0
-                                                            == game_mod
-                                                                .latest_version
-                                                                .unwrap_or(Version::new(0, 0, 0));
-
-                                                        let show_version = if is_latest {
-                                                            SelectedVersion::LatestIndirect(Some(
-                                                                version.0.clone(),
-                                                            ))
-                                                        } else {
-                                                            SelectedVersion::Specific(
-                                                                version.0.clone(),
-                                                            )
-                                                        };
-
-                                                        ui.selectable_value(
-                                                            &mut game_mod.selected_version,
-                                                            show_version,
-                                                            format!("{}", show_version),
-                                                        );
-                                                    }
-                                                });
-
-                                            // this may look dumb but is what is needed
-                                            if prev_selceted != game_mod.selected_version {
-                                                should_integrate.store(true, Ordering::Relaxed);
-                                            }
-                                        });
-                                        row.col(|ui| {
-                                            ui.label(
-                                                game_mod
-                                                    .author
-                                                    .as_ref()
-                                                    .unwrap_or(&"No author".to_owned())
-                                                    .as_str(),
-                                            );
-                                        });
-                                        row.col(|ui| {
-                                            let temp: String;
-                                            ui.label(match game_mod.game_build {
-                                                Some(ref b) => {
-                                                    temp = b.to_string();
-                                                    temp.as_str()
-                                                }
-                                                None => "Any",
-                                            });
-                                        });
-                                    });
-                                }
-                            });
+                        self.show_table(ui, &mut data);
                     });
                     strip.cell(|ui| {
-                        ui.label("Mod config");
-                        ui.label("TODO");
-
-                        ui.horizontal(|ui| {
-                            if ui.button("Quit").clicked() {
-                                frame.quit();
-                            }
-
-                            if self.should_exit.load(Ordering::Relaxed) {
-                                ui.label("Exiting...");
-                            }
-                        });
-
-                        ui.label(match data.base_path {
-                            Some(ref path) => path.to_str().unwrap(),
-                            None => "No base path",
-                        });
-
-                        ui.label(match data.install_path {
-                            Some(ref path) => path.to_str().unwrap(),
-                            None => "No install path",
-                        });
-
-                        if ui
-                            .checkbox(
-                                &mut data.refuse_mismatched_connections,
-                                "Refuse mismatched connections",
-                            )
-                            .changed()
-                        {
-                            should_integrate.store(true, Ordering::Relaxed);
-                        };
-
-                        egui::warn_if_debug_build(ui);
+                        self.show_bottom(ui, &mut data, &mut frame);
                     });
                 });
         });
@@ -250,6 +84,169 @@ impl epi::App for App {
 }
 
 impl App {
+    fn show_title(&self, ui: &mut egui::Ui, data: &mut AppData) {
+        let title = format!(
+            "Mods ({})",
+            match data.game_build {
+                Some(ref build) => build.to_string(),
+                None => "<unknown>".to_owned(),
+            }
+        );
+        if !self.working.load(Ordering::Relaxed) {
+            ui.heading(title);
+        } else {
+            ui.heading(format!("{} - Working...", title));
+        }
+    }
+
+    fn show_table(&self, ui: &mut egui::Ui, data: &mut AppData) {
+        TableBuilder::new(ui)
+            .striped(true)
+            .cell_layout(egui::Layout::left_to_right().with_cross_align(egui::Align::Center))
+            .column(Size::initial(42.0).at_least(42.0))
+            .column(Size::initial(170.0).at_least(20.0))
+            .column(Size::initial(120.0).at_least(120.0))
+            .column(Size::initial(70.0).at_least(20.0))
+            .column(Size::remainder().at_least(20.0))
+            .resizable(true)
+            .header(20.0, |mut header| {
+                header.col(|ui| {
+                    ui.strong("Active");
+                });
+                header.col(|ui| {
+                    ui.strong("Name");
+                });
+                header.col(|ui| {
+                    ui.strong("Version");
+                });
+                header.col(|ui| {
+                    ui.strong("Author");
+                });
+                header.col(|ui| {
+                    ui.strong("Game build");
+                });
+            })
+            .body(|mut body| {
+                for (_, mut game_mod) in data.game_mods.iter_mut() {
+                    body.row(18.0, |mut row| {
+                        row.col(|ui| {
+                            if ui.checkbox(&mut game_mod.active, "").changed() {
+                                self.should_integrate.store(true, Ordering::Relaxed);
+                            };
+                        });
+                        row.col(|ui| {
+                            ui.label(game_mod.name.as_str());
+                        });
+                        row.col(|ui| {
+                            // becasue ComboBox .chnaged doesn't seem to work
+                            let prev_selceted = game_mod.selected_version.clone();
+
+                            self.show_version_select(ui, &mut game_mod);
+
+                            // this may look dumb but is what is needed
+                            if prev_selceted != game_mod.selected_version {
+                                self.should_integrate.store(true, Ordering::Relaxed);
+                            }
+                        });
+                        row.col(|ui| {
+                            ui.label(
+                                game_mod
+                                    .author
+                                    .as_ref()
+                                    .unwrap_or(&"No author".to_owned())
+                                    .as_str(),
+                            );
+                        });
+                        row.col(|ui| {
+                            let temp: String;
+                            ui.label(match game_mod.game_build {
+                                Some(ref b) => {
+                                    temp = b.to_string();
+                                    temp.as_str()
+                                }
+                                None => "Any",
+                            });
+                        });
+                    });
+                }
+            });
+    }
+
+    fn show_version_select(&self, ui: &mut egui::Ui, game_mod: &mut GameMod) {
+        egui::ComboBox::from_id_source(&game_mod.name)
+            .selected_text(format!("{}", game_mod.selected_version))
+            .show_ui(ui, |ui| {
+                // for when there is an Index file show force latest version, this to diecrtly indicate that there
+                // is the possibility of an auto update vie an index file.
+                if game_mod.download.is_some() {
+                    let latest_version = game_mod.latest_version.unwrap();
+                    ui.selectable_value(
+                        &mut game_mod.selected_version,
+                        SelectedVersion::Latest(latest_version.clone()),
+                        format!("{}", SelectedVersion::Latest(latest_version)),
+                    );
+                }
+
+                // add all other versions to the drop down
+                for version in game_mod.versions.iter() {
+                    // if the version is the latest version, set it as LatestIndirect so that if there is an upgrade it will
+                    // automatically be upgraded. This is under the assumption that if the user now has the latest version,
+                    // that they probably also want to have the latest in the future.
+                    let is_latest =
+                        *version.0 == game_mod.latest_version.unwrap_or(Version::new(0, 0, 0));
+
+                    let show_version = if is_latest {
+                        SelectedVersion::LatestIndirect(Some(version.0.clone()))
+                    } else {
+                        SelectedVersion::Specific(version.0.clone())
+                    };
+
+                    ui.selectable_value(
+                        &mut game_mod.selected_version,
+                        show_version,
+                        format!("{}", show_version),
+                    );
+                }
+            });
+    }
+
+    fn show_bottom(&self, ui: &mut egui::Ui, data: &mut AppData, frame: &mut epi::Frame) {
+        ui.label("Mod config");
+        ui.label("TODO");
+
+        ui.horizontal(|ui| {
+            if ui.button("Quit").clicked() {
+                frame.quit();
+            }
+
+            if self.should_exit.load(Ordering::Relaxed) {
+                ui.label("Exiting...");
+            }
+        });
+
+        ui.label(match data.base_path {
+            Some(ref path) => path.to_str().unwrap(),
+            None => "No base path",
+        });
+
+        ui.label(match data.install_path {
+            Some(ref path) => path.to_str().unwrap(),
+            None => "No install path",
+        });
+
+        if ui
+            .checkbox(
+                &mut data.refuse_mismatched_connections,
+                "Refuse mismatched connections",
+            )
+            .changed()
+        {
+            self.should_integrate.store(true, Ordering::Relaxed);
+        };
+
+        egui::warn_if_debug_build(ui);
+    }
+
     fn detect_files_being_dropped(&mut self, ctx: &egui::Context) {
         use egui::*;
 
