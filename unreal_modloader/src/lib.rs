@@ -253,6 +253,8 @@ where
                         });
                     }
 
+                    let start = Instant::now();
+
                     // run integrator
                     debug!("Integrating mods");
                     integrate_mods(
@@ -265,6 +267,11 @@ where
                         refuse_mismatched_connections,
                     )
                     .unwrap();
+
+                    debug!(
+                        "Integration took {} milliseconds",
+                        start.elapsed().as_millis()
+                    );
 
                     let mut data_guard = data.lock().unwrap();
 
