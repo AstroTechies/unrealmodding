@@ -19,7 +19,7 @@ lazy_static! {
     static ref GAME_REGEX: Regex = Regex::new("^/Game/").unwrap();
 }
 
-static MAP_PATHS: [&'static str; 3] = [
+static MAP_PATHS: [&str; 3] = [
     "Astro/Content/Maps/Staging_T2.umap",
     "Astro/Content/Maps/Staging_T2_PackedPlanets_Switch.umap",
     //"Astro/Content/Maps/TutorialMoon_Prototype_v2.umap", // Tutorial not integrated for performance
@@ -35,8 +35,8 @@ fn get_asset(
     if let Ok(asset) = read_asset(integrated_pak, version, name) {
         return Ok(asset);
     }
-    let original_asset =
-        find_asset(game_paks, name).ok_or(io::Error::new(ErrorKind::Other, "No such ass"))?;
+    let original_asset = find_asset(game_paks, name)
+        .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such ass"))?;
 
     read_asset(&mut game_paks[original_asset], version, name)
         .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))

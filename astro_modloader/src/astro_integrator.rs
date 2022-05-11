@@ -30,17 +30,14 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
             ) -> Result<(), io::Error>,
         >,
     > {
-        let mut handlers: std::collections::HashMap<
-            String,
-            Box<
-                dyn FnMut(
-                    &(),
-                    &mut unreal_pak::PakFile,
-                    &mut Vec<unreal_pak::PakFile>,
-                    Vec<&serde_json::Value>,
-                ) -> Result<(), io::Error>,
-            >,
-        > = HashMap::new();
+        type HandlerFn = dyn FnMut(
+            &(),
+            &mut unreal_pak::PakFile,
+            &mut Vec<unreal_pak::PakFile>,
+            Vec<&serde_json::Value>,
+        ) -> Result<(), io::Error>;
+
+        let mut handlers: std::collections::HashMap<String, Box<HandlerFn>> = HashMap::new();
 
         handlers.insert(
             String::from("persistent_actors"),

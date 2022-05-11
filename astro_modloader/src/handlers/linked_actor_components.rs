@@ -39,53 +39,45 @@ pub(crate) fn handle_linked_actor_components(
     let object_property_template = actor_asset
         .exports
         .get(6)
-        .map(|e| cast!(Export, RawExport, e))
-        .flatten()
-        .ok_or(io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
+        .and_then(|e| cast!(Export, RawExport, e))
+        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
 
     let template_export = actor_asset
         .exports
         .get(5)
-        .map(|e| cast!(Export, NormalExport, e))
-        .flatten()
-        .ok_or(io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
+        .and_then(|e| cast!(Export, NormalExport, e))
+        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
 
     let scs_node_template = actor_asset
         .exports
         .get(10)
-        .map(|e| cast!(Export, NormalExport, e))
-        .flatten()
-        .ok_or(io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
+        .and_then(|e| cast!(Export, NormalExport, e))
+        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
 
     let mut new_components = HashMap::new();
 
     for linked_actor_map in &linked_actors_maps {
-        let linked_actors_map = linked_actor_map.as_object().ok_or(io::Error::new(
-            ErrorKind::Other,
-            "Invalid linked_actor_components",
-        ))?;
+        let linked_actors_map = linked_actor_map
+            .as_object()
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid linked_actor_components"))?;
         for (name, components) in linked_actors_map.iter() {
-            let components = components.as_array().ok_or(io::Error::new(
-                ErrorKind::Other,
-                "Invalid linked_actor_components",
-            ))?;
+            let components = components.as_array().ok_or_else(|| {
+                io::Error::new(ErrorKind::Other, "Invalid linked_actor_components")
+            })?;
 
-            let entry = new_components
-                .entry(name.clone())
-                .or_insert_with(|| Vec::new());
+            let entry = new_components.entry(name.clone()).or_insert_with(Vec::new);
             for component in components {
-                let component_name = component.as_str().ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Invalid linked_actor_components",
-                ))?;
+                let component_name = component.as_str().ok_or_else(|| {
+                    io::Error::new(ErrorKind::Other, "Invalid linked_actor_components")
+                })?;
                 entry.push(String::from(component_name));
             }
         }
     }
 
     for (name, components) in &new_components {
-        let name = game_to_absolute(&name)
-            .ok_or(io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
+        let name = game_to_absolute(name)
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
         let mut asset = get_asset(integrated_pak, game_paks, &name, VER_UE4_23)?;
 
         let mut scs_location = None;
@@ -100,7 +92,7 @@ pub(crate) fn handle_linked_actor_components(
                     true => {
                         let import = asset
                             .get_import(normal_export.base_export.class_index)
-                            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
+                            .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such import"))?;
                         import.class_name.content.clone()
                     }
                     false => String::new(),
@@ -114,7 +106,7 @@ pub(crate) fn handle_linked_actor_components(
                 };
                 if (EObjectFlags::RF_CLASS_DEFAULT_OBJECT
                     & EObjectFlags::from_bits(normal_export.base_export.object_flags)
-                        .ok_or(io::Error::new(ErrorKind::Other, "Invalid export"))?)
+                        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid export"))?)
                     == EObjectFlags::RF_CLASS_DEFAULT_OBJECT
                 {
                     cdo_location = Some(i);
@@ -124,15 +116,15 @@ pub(crate) fn handle_linked_actor_components(
 
         let (scs_location, bgc_location, cdo_location) = {
             (
-                scs_location.ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Unable to find SimpleConstructionScript",
-                ))? as i32,
-                bgc_location.ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Unable to find BlueprintGeneratedClass",
-                ))? as i32,
-                cdo_location.ok_or(io::Error::new(ErrorKind::Other, "Unable to find CDO"))? as i32,
+                scs_location.ok_or_else(|| {
+                    io::Error::new(ErrorKind::Other, "Unable to find SimpleConstructionScript")
+                })? as i32,
+                bgc_location.ok_or_else(|| {
+                    io::Error::new(ErrorKind::Other, "Unable to find BlueprintGeneratedClass")
+                })? as i32,
+                cdo_location
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Unable to find CDO"))?
+                    as i32,
             )
         };
 
@@ -142,14 +134,14 @@ pub(crate) fn handle_linked_actor_components(
                 &FName::from_slice("Clawss"),
                 &FName::from_slice("ObjectProperty"),
             )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such import"))?;
         let _default_object_property_import = asset
             .find_import_no_index(
                 &FName::from_slice("/Script/CoreUObject"),
                 &FName::from_slice("ObjectProperty"),
                 &FName::from_slice("Default__ObjectProperty"),
             )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such import"))?;
 
         let scs_node_import = asset
             .find_import_no_index(
@@ -157,20 +149,19 @@ pub(crate) fn handle_linked_actor_components(
                 &FName::from_slice("Class"),
                 &FName::from_slice("SCS_Node"),
             )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such import"))?;
         let default_scs_node_import = asset
             .find_import_no_index(
                 &FName::from_slice("/Script/CoreUObject"),
                 &FName::from_slice("SCS_Node"),
                 &FName::from_slice("Default__SCS_Node"),
             )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such import"))?;
         let none_ref = asset
             .search_name_reference(&String::from("None"))
-            .ok_or(io::Error::new(
-                ErrorKind::Other,
-                "Name reference to \"None\" not found",
-            ))?
+            .ok_or_else(|| {
+                io::Error::new(ErrorKind::Other, "Name reference to \"None\" not found")
+            })?
             .to_le_bytes();
         asset.add_fname("bAutoActivate");
 
@@ -182,16 +173,14 @@ pub(crate) fn handle_linked_actor_components(
             let component_path = component_path_raw.as_str();
             let component = Path::new(component_path_raw)
                 .file_stem()
-                .map(|e| e.to_str())
-                .flatten()
-                .ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Invalid linked actor component",
-                ))?;
+                .and_then(|e| e.to_str())
+                .ok_or_else(|| {
+                    io::Error::new(ErrorKind::Other, "Invalid linked actor component")
+                })?;
 
-            let (component_path, component) = match component.contains(".") {
+            let (component_path, component) = match component.contains('.') {
                 true => {
-                    let split: Vec<&str> = component.split(".").collect();
+                    let split: Vec<&str> = component.split('.').collect();
                     (split[0], &split[1][..split[1].len() - 2])
                 }
                 false => (component_path, component_path),
@@ -418,7 +407,7 @@ pub(crate) fn handle_linked_actor_components(
                 }
             }
             let new_scs_node_name_index = new_scs_node_name_index
-                .ok_or(io::Error::new(ErrorKind::Other, "Corrupted ActorTemplate"))?;
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted ActorTemplate"))?;
             cast!(
                 Export,
                 NormalExport,

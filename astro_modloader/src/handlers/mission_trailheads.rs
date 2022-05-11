@@ -34,18 +34,17 @@ pub(crate) fn handle_mission_trailheads(
         for trailheads in &trailhead_arrays {
             let trailheads = trailheads
                 .as_array()
-                .ok_or(io::Error::new(ErrorKind::Other, "Invalid trailheads"))?;
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid trailheads"))?;
             for trailhead in trailheads {
                 asset.add_name_reference(String::from("AstroMissionDataAsset"), false);
 
                 let trailhead = trailhead
                     .as_str()
-                    .ok_or(io::Error::new(ErrorKind::Other, "Invalid trailheads"))?;
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid trailheads"))?;
                 let soft_class_name = Path::new(trailhead)
                     .file_stem()
-                    .map(|e| e.to_str())
-                    .flatten()
-                    .ok_or(io::Error::new(ErrorKind::Other, "Invalid trailheads"))?;
+                    .and_then(|e| e.to_str())
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid trailheads"))?;
 
                 asset.add_name_reference(String::from(trailhead), false);
                 asset.add_name_reference(String::from(soft_class_name), false);
@@ -81,36 +80,27 @@ pub(crate) fn handle_mission_trailheads(
         let mut export_index = None;
 
         for i in 0..asset.exports.len() {
-            match &asset.exports[i] {
-                Export::NormalExport(e) => {
-                    if e.base_export.class_index.is_import() {
-                        if asset
-                            .get_import(e.base_export.class_index)
-                            .map(|e| &e.object_name.content == "AstroSettings")
-                            .unwrap_or(false)
-                        {
-                            export_index = Some(i);
-                            break;
-                        }
-                    }
+            if let Export::NormalExport(e) = &asset.exports[i] {
+                if e.base_export.class_index.is_import()
+                    && asset
+                        .get_import(e.base_export.class_index)
+                        .map(|e| &e.object_name.content == "AstroSettings")
+                        .unwrap_or(false)
+                {
+                    export_index = Some(i);
+                    break;
                 }
-                _ => {}
             }
         }
 
         if let Some(export_index) = export_index {
             let export = &mut asset.exports[export_index];
-            match export {
-                Export::NormalExport(export) => {
-                    additional_properties.iter_mut().for_each(|e| match e {
-                        Property::ObjectProperty(e) => {
-                            e.name = export.base_export.object_name.clone()
-                        }
-                        _ => panic!("Corrupted memory"),
-                    });
-                    export.properties.extend(additional_properties);
-                }
-                _ => {}
+            if let Export::NormalExport(export) = export {
+                additional_properties.iter_mut().for_each(|e| match e {
+                    Property::ObjectProperty(e) => e.name = export.base_export.object_name.clone(),
+                    _ => panic!("Corrupted memory"),
+                });
+                export.properties.extend(additional_properties);
             }
         }
 
