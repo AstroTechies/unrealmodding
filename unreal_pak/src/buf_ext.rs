@@ -24,7 +24,9 @@ where
         let mut buf = vec![0u8; len as usize - 1];
         self.read_exact(&mut buf)?;
         self.seek(SeekFrom::Current(1))?;
-        Ok(Some(String::from_utf8(buf).unwrap_or(String::from("None"))))
+        Ok(Some(
+            String::from_utf8(buf).unwrap_or_else(|_| String::from("None")),
+        ))
     }
 }
 
@@ -37,15 +39,15 @@ where
             self.write_i32::<LittleEndian>(0)?;
             return Ok(());
         }
-        let string = string.clone().unwrap();
+        let string = string.unwrap();
         let is_unicode = string.len() != string.chars().count();
         match is_unicode {
             true => self.write_i32::<LittleEndian>(-(string.len() as i32) + 1)?,
             false => self.write_i32::<LittleEndian>(string.len() as i32 + 1)?,
         };
-        let bytes = string.clone().as_bytes();
-        self.write(&bytes)?;
-        self.write(&[0u8; 1])?;
+        let bytes = string.as_bytes();
+        self.write_all(bytes)?;
+        self.write_all(&[0u8; 1])?;
         Ok(())
     }
 }
