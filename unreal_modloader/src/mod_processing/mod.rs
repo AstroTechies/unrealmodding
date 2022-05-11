@@ -1,9 +1,9 @@
-use std::error::Error;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use log::debug;
 
+use crate::error::ModLoaderWarning;
 use crate::ModLoaderAppData;
 mod index_file;
 use index_file::{download_index_files, gather_index_files, insert_index_file_data};
@@ -17,11 +17,14 @@ mod verify;
 pub(crate) fn process_modfiles(
     mod_files: &Vec<PathBuf>,
     data: &Arc<Mutex<ModLoaderAppData>>,
-) -> Result<(), Box<dyn Error>> {
+) -> Vec<ModLoaderWarning> {
     debug!("Processing mod files: {:?}", mod_files);
 
+    let mut warnings = Vec::new();
+
     // read metadata from pak files and collect for each mod_id
-    let mods_read = read_pak_files(mod_files);
+    let (mods_read, read_warnings) = read_pak_files(mod_files);
+    warnings.extend(read_warnings);
 
     let mut data_guard = data.lock().unwrap();
     let filter = mods_read.keys().cloned().collect();
@@ -36,12 +39,20 @@ pub(crate) fn process_modfiles(
     set_mod_data_from_version(&mut *data_guard, &filter);
 
     // fetch index files
+
+    // gather index files from all the mods
     let index_files_info = gather_index_files(&mut *data_guard, &filter);
+
     // drop guard to allow UI to render while index files are being downloaded
     drop(data_guard);
-    let index_files = download_index_files(index_files_info);
-    let mut data_guard = data.lock().unwrap();
-    insert_index_file_data(&index_files, &mut *data_guard);
 
-    Ok(())
+    // actually download index files
+    let (index_files, index_file_warnings) = download_index_files(index_files_info);
+    warnings.extend(index_file_warnings);
+
+    let mut data_guard = data.lock().unwrap();
+    let insert_warnings = insert_index_file_data(&index_files, &mut *data_guard);
+    warnings.extend(insert_warnings);
+
+    warnings
 }

@@ -46,16 +46,55 @@ impl App for ModLoaderApp {
                 });
         });
 
-        if data.base_path.is_none() {
-            egui::Window::new("Can't find data directory").show(ctx, |ui| {
-                ui.label("Failed to find local application data directory.");
+        let mut should_darken = false;
+        if data.error.is_some() {
+            egui::Window::new("Critical Error")
+                .resizable(false)
+                .collapsible(false)
+                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+                .fixed_size((600.0, 400.0))
+                .show(ctx, |ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
 
-                if ui.button("Quit").clicked() {
-                    frame.quit();
-                }
-            });
+                    ui.label(format!("{}", data.error.as_ref().unwrap()));
+
+                    if ui.button("Quit").clicked() {
+                        frame.quit();
+                    }
+                });
+
+            should_darken = true;
+        } else if data.warnings.len() > 0 {
+            egui::Window::new("Warning")
+                .resizable(false)
+                .collapsible(false)
+                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+                .fixed_size((600.0, 400.0))
+                .show(ctx, |ui| {
+                    //ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
+
+                    //ui.label(format!("{}", data.error.as_ref().unwrap()));
+                    for warning in &data.warnings {
+                        ui.label(format!("{}", warning));
+                    }
+
+                    ui.label("");
+                    ui.label("See modloader_log.txt for more details.");
+                    ui.label("");
+
+                    if ui.button("Ok").clicked() {
+                        data.warnings.clear();
+                    }
+                });
+
+            should_darken = true;
         }
+
         drop(data);
+
+        if should_darken {
+            self.darken_background(ctx);
+        }
 
         self.detect_files_being_dropped(ctx);
 
@@ -252,6 +291,17 @@ impl ModLoaderApp {
         egui::warn_if_debug_build(ui);
     }
 
+    fn darken_background(&mut self, ctx: &egui::Context) {
+        let painter = ctx.layer_painter(egui::LayerId::new(
+            egui::Order::PanelResizeLine,
+            egui::Id::new("panel_darken"),
+        ));
+
+        let screen_rect = ctx.input().screen_rect();
+        painter.rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(192));
+    }
+
+    // from https://github.com/emilk/egui/blob/master/examples/file_dialog/src/main.rs
     fn detect_files_being_dropped(&mut self, ctx: &egui::Context) {
         use egui::*;
 

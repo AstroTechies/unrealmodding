@@ -8,17 +8,6 @@ use crate::version::{GameBuild, Version};
 use crate::ModLoaderAppData;
 
 pub(crate) fn auto_pick_versions(data: &mut ModLoaderAppData) {
-    // check that there is even a version to pick
-    let mut to_remove = Vec::new();
-    for (mod_id, game_mod) in data.game_mods.iter() {
-        if game_mod.versions.is_empty() {
-            to_remove.push(mod_id.to_owned());
-        }
-    }
-    for mod_id in to_remove {
-        data.game_mods.remove(&mod_id);
-    }
-
     for (_, game_mod) in data.game_mods.iter_mut() {
         // if using latest indirect, find version
         if let SelectedVersion::LatestIndirect(None) = game_mod.selected_version {

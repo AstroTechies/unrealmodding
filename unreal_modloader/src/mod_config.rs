@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
+use crate::determine_paths::verify_install_path;
 use crate::game_mod::SelectedVersion;
 use crate::version::Version;
 use crate::ModLoaderAppData;
@@ -31,7 +32,7 @@ struct ModConfigData {
     version: String,
 }
 
-pub(crate) fn load_config(data: &mut ModLoaderAppData) {
+pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
     let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
     if config_path.is_file() {
         let config_str = fs::read_to_string(config_path).unwrap();
@@ -41,8 +42,11 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
         });
 
         data.refuse_mismatched_connections = config.refuse_mismatched_connections;
-        // TODO: properly check this
-        data.install_path = Some(PathBuf::from(config.install_path));
+
+        let install_path = PathBuf::from(config.install_path);
+        if verify_install_path(&install_path, game_name) {
+            data.install_path = Some(install_path);
+        }
 
         for (mod_id, mod_config) in config.current.mods.iter() {
             let game_mod = data.game_mods.get_mut(mod_id);
