@@ -24,6 +24,7 @@ use crate::assets::ACTOR_TEMPLATE_ASSET;
 
 use super::{game_to_absolute, get_asset};
 
+#[allow(clippy::ptr_arg)]
 pub(crate) fn handle_linked_actor_components(
     _data: &(),
     integrated_pak: &mut PakFile,

@@ -25,14 +25,6 @@ where
         &astro_integrator::AstroIntegratorConfig
     }
 
-    fn get_app_id(&self) -> u32 {
-        361420
-    }
-
-    fn get_window_title(&self) -> String {
-        "Astroneer Modloader".to_string()
-    }
-
     fn get_game_build(&self, install_path: &Path) -> Option<GameBuild> {
         let version_file_path = install_path.join("build.version");
         if !version_file_path.is_file() {
@@ -45,6 +37,9 @@ where
 
         GameBuild::try_from(&game_build_string).ok()
     }
+
+    const APP_ID: u32 = 361420;
+    const WINDOW_TITLE: &'static str = "Astroneer Modloader";
 }
 
 fn main() {

@@ -28,7 +28,7 @@ static MAP_PATHS: [&str; 3] = [
 
 fn get_asset(
     integrated_pak: &mut PakFile,
-    game_paks: &mut Vec<PakFile>,
+    game_paks: &mut [PakFile],
     name: &String,
     version: i32,
 ) -> Result<Asset, io::Error> {

@@ -28,6 +28,7 @@ struct ScsNode {
     original_category: PackageIndex,
 }
 
+#[allow(clippy::ptr_arg)]
 pub(crate) fn handle_persistent_actors(
     _data: &(),
     integrated_pak: &mut PakFile,

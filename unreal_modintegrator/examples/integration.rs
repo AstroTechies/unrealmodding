@@ -55,17 +55,20 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
         handlers
     }
 
-    fn get_game_name(&self) -> String {
-        String::from("ExampleGame")
-    }
+    // fn get_game_name(&self) -> String {
+    //     String::from("ExampleGame")
+    // }
+    const GAME_NAME: &'static str = "ExampleGame";
 
-    fn get_integrator_version(&self) -> String {
-        String::from("0.1.0")
-    }
+    // fn get_integrator_version(&self) -> String {
+    //     String::from("0.1.0")
+    // }
+    const INTEGRATOR_VERSION: &'static str = "0.1.0";
 
-    fn get_engine_version(&self) -> i32 {
-        VER_UE4_23
-    }
+    // fn get_engine_version(&self) -> i32 {
+    //     VER_UE4_23
+    // }
+    const ENGINE_VERSION: i32 = VER_UE4_23;
 }
 
 fn main() {

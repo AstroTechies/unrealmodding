@@ -39,9 +39,9 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
         Box<dyn FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>>,
     >;
 
-    fn get_game_name(&self) -> String;
-    fn get_integrator_version(&self) -> String;
-    fn get_engine_version(&self) -> i32;
+    const GAME_NAME: &'static str;
+    const INTEGRATOR_VERSION: &'static str;
+    const ENGINE_VERSION: i32;
 }
 
 pub fn find_asset(paks: &mut [PakFile], name: &String) -> Option<usize> {
@@ -356,13 +356,13 @@ pub fn integrate_mods<
         let mut list_of_mods = read_in_memory(
             LIST_OF_MODS_ASSET.to_vec(),
             list_of_mods_bulk,
-            integrator_config.get_engine_version(),
+            C::ENGINE_VERSION,
         )?;
         bake_mod_data(&mut list_of_mods, &mods)?;
         write_asset(
             &mut generated_pak,
             &list_of_mods,
-            &(integrator_config.get_game_name() + "/Content/Integrator/ListOfMods.uasset"),
+            &(C::GAME_NAME.to_owned() + "/Content/Integrator/ListOfMods.uasset"),
         )?;
 
         #[cfg(not(feature = "bulk_data"))]
@@ -373,19 +373,18 @@ pub fn integrate_mods<
         let mut integrator_statics = read_in_memory(
             INTEGRATOR_STATICS_ASSET.to_vec(),
             integrator_statics_bulk,
-            integrator_config.get_engine_version(),
+            C::ENGINE_VERSION,
         )?;
 
         bake_integrator_data(
             &mut integrator_statics,
-            integrator_config.get_integrator_version(),
+            C::INTEGRATOR_VERSION.to_owned(),
             refuse_mismatched_connections,
         )?;
         write_asset(
             &mut generated_pak,
             &integrator_statics,
-            &(integrator_config.get_game_name()
-                + "/Content/Integrator/IntegratorStatics_BP.uasset"),
+            &(C::GAME_NAME.to_owned() + "/Content/Integrator/IntegratorStatics_BP.uasset"),
         )?;
 
         let metadata_record = PakRecord::new(
@@ -397,7 +396,7 @@ pub fn integrate_mods<
 
         for entry in &COPY_OVER {
             let record = PakRecord::new(
-                integrator_config.get_game_name() + "/Content/Integrator/" + entry.1,
+                C::GAME_NAME.to_owned() + "/Content/Integrator/" + entry.1,
                 entry.0.to_vec(),
                 unreal_pak::CompressionMethod::Zlib,
             )?;

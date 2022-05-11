@@ -20,6 +20,7 @@ use unreal_pak::PakFile;
 
 use super::{game_to_absolute, get_asset};
 
+#[allow(clippy::ptr_arg)]
 pub(crate) fn handle_item_list_entries(
     _data: &(),
     integrated_pak: &mut PakFile,

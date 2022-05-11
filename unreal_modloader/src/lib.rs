@@ -76,7 +76,7 @@ where
     // instantiate the GUI app
     let app = app::ModLoaderApp {
         data: Arc::clone(&data),
-        window_title: config.get_window_title(),
+        window_title: C::WINDOW_TITLE.to_owned(),
         dropped_files: Vec::new(),
 
         should_exit: Arc::clone(&should_exit),
@@ -95,9 +95,7 @@ where
             let start = Instant::now();
 
             // get paths
-            let base_path = determine_paths::dertermine_base_path(
-                config.get_integrator_config().get_game_name().as_str(),
-            );
+            let base_path = determine_paths::dertermine_base_path(D::GAME_NAME);
             if base_path.is_none() {
                 error!("Could not determine base path");
                 data.lock().unwrap().error = Some(ModLoaderError::no_base_path());
@@ -106,11 +104,11 @@ where
             }
 
             // we can later add support for non-steam installs
-            let install_path = determine_paths::dertermine_install_path_steam(config.get_app_id());
+            let install_path = determine_paths::dertermine_install_path_steam(C::APP_ID);
             if install_path.is_ok()
                 && determine_paths::verify_install_path(
                     install_path.as_ref().unwrap(),
-                    &config.get_integrator_config().get_game_name(),
+                    D::GAME_NAME,
                 )
             {
                 data.lock().unwrap().install_path = install_path.ok();
@@ -159,10 +157,7 @@ where
                     data_guard.warnings.extend(warnings);
 
                     // load config
-                    load_config(
-                        &mut *data_guard,
-                        &config.get_integrator_config().get_game_name(),
-                    );
+                    load_config(&mut *data_guard, D::GAME_NAME);
 
                     // debug!("{:#?}", data_guard.game_mods);
                     Ok(())
@@ -308,10 +303,7 @@ where
                         integrate_mods(
                             config.get_integrator_config(),
                             &paks_path,
-                            &install_path
-                                .join(config.get_integrator_config().get_game_name())
-                                .join("Content")
-                                .join("Paks"),
+                            &install_path.join(D::GAME_NAME).join("Content").join("Paks"),
                             refuse_mismatched_connections,
                         )?;
 

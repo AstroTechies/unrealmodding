@@ -15,6 +15,7 @@ use unreal_pak::PakFile;
 
 use super::{get_asset, MAP_PATHS};
 
+#[allow(clippy::ptr_arg)]
 pub(crate) fn handle_mission_trailheads(
     _data: &(),
     integrated_pak: &mut PakFile,
