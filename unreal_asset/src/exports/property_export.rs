@@ -28,9 +28,7 @@ impl PropertyExport {
 
         let export_class_type = asset
             .get_export_class_type(normal_export.base_export.class_index)
-            .ok_or(Error::invalid_package_index(
-                "No such class type".to_string(),
-            ))?;
+            .ok_or_else(|| Error::invalid_package_index("No such class type".to_string()))?;
         let property = UProperty::new(asset, export_class_type)?;
 
         Ok(PropertyExport {

@@ -224,10 +224,10 @@ fn read_kismet_unicode_string(cursor: &mut Cursor<Vec<u8>>) -> Result<String, Er
     Ok(String::from_utf16(&data)?)
 }
 
-fn write_kismet_string(string: &String, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
+fn write_kismet_string(string: &str, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
     let begin = cursor.position();
-    cursor.write(string.as_bytes())?;
-    cursor.write(&[0u8; 1])?;
+    cursor.write_all(string.as_bytes())?;
+    cursor.write_all(&[0u8; 1])?;
     Ok((cursor.position() - begin) as usize)
 }
 
@@ -396,76 +396,91 @@ impl FScriptText {
         match self.text_literal_type {
             EBlueprintTextLiteralType::Empty => {}
             EBlueprintTextLiteralType::LocalizedText => {
-                offset = offset
-                    + KismetExpression::write(
-                        self.localized_source.as_ref().ok_or(Error::no_data(
+                offset += KismetExpression::write(
+                    self.localized_source.as_ref().ok_or_else(|| {
+                        Error::no_data(
                             "text_literal_type is LocalizedText but localized_source is None"
                                 .to_string(),
-                        ))?,
-                        asset,
-                        cursor,
-                    )?;
-                offset = offset
-                    + KismetExpression::write(
-                        self.localized_key.as_ref().ok_or(Error::no_data(
+                        )
+                    })?,
+                    asset,
+                    cursor,
+                )?;
+                offset += KismetExpression::write(
+                    self.localized_key.as_ref().ok_or_else(|| {
+                        Error::no_data(
                             "text_literal_type is LocalizedText but localized_key is None"
                                 .to_string(),
-                        ))?,
-                        asset,
-                        cursor,
-                    )?;
-                offset = offset
-                    + KismetExpression::write(
-                        self.localized_namespace.as_ref().ok_or(Error::no_data(
+                        )
+                    })?,
+                    asset,
+                    cursor,
+                )?;
+                offset += KismetExpression::write(
+                    self.localized_namespace.as_ref().ok_or_else(|| {
+                        Error::no_data(
                             "text_literal_type is LocalizedText but localized_namespace is None"
                                 .to_string(),
-                        ))?,
-                        asset,
-                        cursor,
-                    )?;
+                        )
+                    })?,
+                    asset,
+                    cursor,
+                )?;
             }
             EBlueprintTextLiteralType::InvariantText => {
-                offset = offset + KismetExpression::write(self.invariant_literal_string.as_ref().ok_or(Error::no_data("text_literal_type is InvariantText but invariant_literal_string is None".to_string()))?, asset, cursor)?;
+                offset += KismetExpression::write(
+                    self.invariant_literal_string.as_ref().ok_or_else(|| {
+                        Error::no_data(
+                        "text_literal_type is InvariantText but invariant_literal_string is None"
+                            .to_string(),
+                    )
+                    })?,
+                    asset,
+                    cursor,
+                )?;
             }
             EBlueprintTextLiteralType::LiteralString => {
-                offset = offset
-                    + KismetExpression::write(
-                        self.literal_string.as_ref().ok_or(Error::no_data(
+                offset += KismetExpression::write(
+                    self.literal_string.as_ref().ok_or_else(|| {
+                        Error::no_data(
                             "text_literal_type is LiteralString but literal_string is None"
                                 .to_string(),
-                        ))?,
-                        asset,
-                        cursor,
-                    )?;
+                        )
+                    })?,
+                    asset,
+                    cursor,
+                )?;
             }
             EBlueprintTextLiteralType::StringTableEntry => {
                 cursor.write_i32::<LittleEndian>(
-                    self.string_table_asset
-                        .map(|e| e.index)
-                        .ok_or(Error::no_data(
+                    self.string_table_asset.map(|e| e.index).ok_or_else(|| {
+                        Error::no_data(
                             "text_literal_type is StringTableEntry but string_table_asset is None"
                                 .to_string(),
-                        ))?,
+                        )
+                    })?,
                 )?;
-                offset = offset + size_of::<u64>();
-                offset = offset
-                    + KismetExpression::write(
-                        self.string_table_id.as_ref().ok_or(Error::no_data(
+                offset += size_of::<u64>();
+                offset += KismetExpression::write(
+                    self.string_table_id.as_ref().ok_or_else(|| {
+                        Error::no_data(
                             "text_literal_type is StringTalbleEntry but string_table_id is None"
                                 .to_string(),
-                        ))?,
-                        asset,
-                        cursor,
-                    )?;
-                offset = offset
-                    + KismetExpression::write(
-                        self.string_table_key.as_ref().ok_or(Error::no_data(
+                        )
+                    })?,
+                    asset,
+                    cursor,
+                )?;
+                offset += KismetExpression::write(
+                    self.string_table_key.as_ref().ok_or_else(|| {
+                        Error::no_data(
                             "text_literal_type is StringTableEntry but string_table_key is None"
                                 .to_string(),
-                        ))?,
-                        asset,
-                        cursor,
-                    )?;
+                        )
+                    })?,
+                    asset,
+                    cursor,
+                )?;
             }
         }
         Ok(offset)
@@ -514,20 +529,22 @@ impl KismetPropertyPointer {
 
     pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         if asset.engine_version >= VER_UE4_ADDED_PACKAGE_OWNER {
-            let new = self.new.as_ref().ok_or(Error::no_data(
-                "engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string(),
-            ))?;
+            let new = self.new.as_ref().ok_or_else(|| {
+                Error::no_data(
+                    "engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string(),
+                )
+            })?;
             cursor.write_i32::<LittleEndian>(new.path.len() as i32)?;
             for entry in &new.path {
                 asset.write_fname(cursor, entry)?;
             }
             cursor.write_i32::<LittleEndian>(new.resolved_owner.index)?;
         } else {
-            cursor.write_i32::<LittleEndian>(self.old.map(|e| e.index).ok_or(
+            cursor.write_i32::<LittleEndian>(self.old.map(|e| e.index).ok_or_else(|| {
                 Error::no_data(
                     "engine_version < UE4_ADDED_PAFCKAGE_OWNER but old is None".to_string(),
-                ),
-            )?)?;
+                )
+            })?)?;
         }
         Ok(size_of::<u64>())
     }
@@ -1086,10 +1103,9 @@ impl KismetExpressionTrait for ExArrayConst {
         cursor.write_i32::<LittleEndian>(self.inner_property.index)?;
         cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
-            offset = offset + KismetExpression::write(element, asset, cursor)?;
+            offset += KismetExpression::write(element, asset, cursor)?;
         }
-        offset =
-            offset + KismetExpression::write(&ExEndArrayConst::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndArrayConst::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1184,10 +1200,9 @@ impl KismetExpressionTrait for ExCallMath {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
         for parameter in &self.parameters {
-            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+            offset += KismetExpression::write(parameter, asset, cursor)?;
         }
-        offset =
-            offset + KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1210,10 +1225,9 @@ impl KismetExpressionTrait for ExCallMulticastDelegate {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
         for parameter in &self.parameters {
-            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+            offset += KismetExpression::write(parameter, asset, cursor)?;
         }
-        offset =
-            offset + KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1238,10 +1252,10 @@ impl ExClassContext {
 impl KismetExpressionTrait for ExClassContext {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
-        offset = offset + KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
         cursor.write_u32::<LittleEndian>(self.offset)?;
-        offset = offset + self.r_value_pointer.write(asset, cursor)?;
-        offset = offset + KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
+        offset += self.r_value_pointer.write(asset, cursor)?;
+        offset += KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1314,10 +1328,10 @@ impl ExContext {
 impl KismetExpressionTrait for ExContext {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
-        offset = offset + KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
         cursor.write_u32::<LittleEndian>(self.offset)?;
-        offset = offset + self.r_value_pointer.write(asset, cursor)?;
-        offset = offset + KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
+        offset += self.r_value_pointer.write(asset, cursor)?;
+        offset += KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1342,10 +1356,10 @@ impl ExContextFailSilent {
 impl KismetExpressionTrait for ExContextFailSilent {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
-        offset = offset + KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.object_expression.as_ref(), asset, cursor)?;
         cursor.write_u32::<LittleEndian>(self.offset)?;
-        offset = offset + self.r_value_pointer.write(asset, cursor)?;
-        offset = offset + KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
+        offset += self.r_value_pointer.write(asset, cursor)?;
+        offset += KismetExpression::write(self.context_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1367,7 +1381,7 @@ impl KismetExpressionTrait for ExCrossInterfaceCast {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
-        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.target.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1403,7 +1417,7 @@ impl KismetExpressionTrait for ExDynamicCast {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
-        offset = offset + KismetExpression::write(self.target_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.target_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1426,10 +1440,9 @@ impl KismetExpressionTrait for ExFinalFunction {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
         for parameter in &self.parameters {
-            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+            offset += KismetExpression::write(parameter, asset, cursor)?;
         }
-        offset =
-            offset + KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1494,7 +1507,7 @@ impl KismetExpressionTrait for ExInterfaceToObjCast {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
-        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.target.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1531,7 +1544,7 @@ impl KismetExpressionTrait for ExJumpIfNot {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         cursor.write_u32::<LittleEndian>(self.code_offset)?;
-        offset = offset + KismetExpression::write(self.boolean_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.boolean_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1704,10 +1717,9 @@ impl KismetExpressionTrait for ExLocalFinalFunction {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.stack_node.index)?;
         for parameter in &self.parameters {
-            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+            offset += KismetExpression::write(parameter, asset, cursor)?;
         }
-        offset =
-            offset + KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1758,7 +1770,7 @@ impl KismetExpressionTrait for ExLocalVirtualFunction {
         let mut offset = 12; // FScriptName's iCode offset
         asset.write_fname(cursor, &self.virtual_function_name)?;
         for parameter in &self.parameters {
-            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+            offset += KismetExpression::write(parameter, asset, cursor)?;
         }
         offset += KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
         Ok(offset)
@@ -1791,9 +1803,9 @@ impl KismetExpressionTrait for ExMapConst {
         cursor.write_i32::<LittleEndian>(self.value_property.index)?;
         cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
-            offset = offset + KismetExpression::write(element, asset, cursor)?;
+            offset += KismetExpression::write(element, asset, cursor)?;
         }
-        offset = offset + KismetExpression::write(&ExEndMapConst::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndMapConst::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1815,7 +1827,7 @@ impl KismetExpressionTrait for ExMetaCast {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
-        offset = offset + KismetExpression::write(self.target_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.target_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1837,7 +1849,7 @@ impl KismetExpressionTrait for ExObjToInterfaceCast {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.class_ptr.index)?;
-        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.target.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1876,7 +1888,7 @@ impl KismetExpressionTrait for ExPrimitiveCast {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u8>();
         cursor.write_u8(self.conversion_type.into())?;
-        offset = offset + KismetExpression::write(self.target.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.target.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -1991,23 +2003,32 @@ impl KismetExpressionTrait for ExSetArray {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = 0;
         if asset.engine_version >= VER_UE4_CHANGE_SETARRAY_BYTECODE {
-            offset = offset + KismetExpression::write(self.assigning_property.as_ref().ok_or(Error::no_data("engine_version >= UE4_CHANGE_SETARRAY_BYTECODE but assigning_property is None".to_string()))?, asset, cursor)?;
+            offset += KismetExpression::write(
+                self.assigning_property.as_ref().ok_or_else(|| {
+                    Error::no_data(
+                    "engine_version >= UE4_CHANGE_SETARRAY_BYTECODE but assigning_property is None"
+                        .to_string(),
+                )
+                })?,
+                asset,
+                cursor,
+            )?;
         } else {
             cursor.write_i32::<LittleEndian>(
-                self.array_inner_prop
-                    .map(|e| e.index)
-                    .ok_or(Error::no_data(
+                self.array_inner_prop.map(|e| e.index).ok_or_else(|| {
+                    Error::no_data(
                     "engine_version < UE4_CHANGE_SETARRAY_BYTECODE but array_inner_prop is None"
                         .to_string(),
-                ))?,
+                )
+                })?,
             )?;
-            offset = offset + size_of::<u64>();
+            offset += size_of::<u64>();
         }
 
         for element in &self.elements {
-            offset = offset + KismetExpression::write(element, asset, cursor)?;
+            offset += KismetExpression::write(element, asset, cursor)?;
         }
-        offset = offset + KismetExpression::write(&ExEndArray::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndArray::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2034,9 +2055,9 @@ impl KismetExpressionTrait for ExSetConst {
         cursor.write_i32::<LittleEndian>(self.inner_property.index)?;
         cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
-            offset = offset + KismetExpression::write(element, asset, cursor)?;
+            offset += KismetExpression::write(element, asset, cursor)?;
         }
-        offset = offset + KismetExpression::write(&ExEndSetConst::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndSetConst::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2060,12 +2081,12 @@ impl ExSetMap {
 impl KismetExpressionTrait for ExSetMap {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
-        offset = offset + KismetExpression::write(self.map_property.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.map_property.as_ref(), asset, cursor)?;
         cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
-            offset = offset + KismetExpression::write(element, asset, cursor)?;
+            offset += KismetExpression::write(element, asset, cursor)?;
         }
-        offset = offset + KismetExpression::write(&ExEndMap::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndMap::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2089,12 +2110,12 @@ impl ExSetSet {
 impl KismetExpressionTrait for ExSetSet {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
-        offset = offset + KismetExpression::write(self.set_property.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.set_property.as_ref(), asset, cursor)?;
         cursor.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
-            offset = offset + KismetExpression::write(element, asset, cursor)?;
+            offset += KismetExpression::write(element, asset, cursor)?;
         }
-        offset = offset + KismetExpression::write(&ExEndSet::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndSet::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2116,7 +2137,7 @@ impl KismetExpressionTrait for ExSkip {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         cursor.write_u32::<LittleEndian>(self.code_offset)?;
-        offset = offset + KismetExpression::write(self.skip_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.skip_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2142,10 +2163,9 @@ impl KismetExpressionTrait for ExStructConst {
         cursor.write_i32::<LittleEndian>(self.struct_value.index)?;
         cursor.write_i32::<LittleEndian>(self.struct_size)?;
         for entry in &self.value {
-            offset = offset + KismetExpression::write(entry, asset, cursor)?;
+            offset += KismetExpression::write(entry, asset, cursor)?;
         }
-        offset =
-            offset + KismetExpression::write(&ExEndStructConst::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndStructConst::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2167,7 +2187,7 @@ impl KismetExpressionTrait for ExStructMemberContext {
     fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         cursor.write_i32::<LittleEndian>(self.struct_member_expression.index)?;
-        offset = offset + KismetExpression::write(self.struct_expression.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.struct_expression.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2206,14 +2226,14 @@ impl KismetExpressionTrait for ExSwitchValue {
         let mut offset = size_of::<u16>() + size_of::<u32>();
         cursor.write_u16::<LittleEndian>(self.cases.len() as u16)?;
         cursor.write_u32::<LittleEndian>(self.end_goto_offset)?;
-        offset = offset + KismetExpression::write(self.index_term.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.index_term.as_ref(), asset, cursor)?;
         for case in &self.cases {
-            offset = offset + KismetExpression::write(&case.case_index_value_term, asset, cursor)?;
-            offset = offset + size_of::<u32>();
+            offset += KismetExpression::write(&case.case_index_value_term, asset, cursor)?;
+            offset += size_of::<u32>();
             cursor.write_u32::<LittleEndian>(case.next_offset)?;
-            offset = offset + KismetExpression::write(&case.case_term, asset, cursor)?;
+            offset += KismetExpression::write(&case.case_term, asset, cursor)?;
         }
-        offset = offset + KismetExpression::write(self.default_term.as_ref(), asset, cursor)?;
+        offset += KismetExpression::write(self.default_term.as_ref(), asset, cursor)?;
         Ok(offset)
     }
 }
@@ -2236,10 +2256,9 @@ impl KismetExpressionTrait for ExVirtualFunction {
         let mut offset = 12; // FScriptName's iCode offset
         asset.write_fname(cursor, &self.virtual_function_name)?;
         for parameter in &self.parameters {
-            offset = offset + KismetExpression::write(parameter, asset, cursor)?;
+            offset += KismetExpression::write(parameter, asset, cursor)?;
         }
-        offset =
-            offset + KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
+        offset += KismetExpression::write(&ExEndFunctionParms::default().into(), asset, cursor)?;
         Ok(offset)
     }
 }

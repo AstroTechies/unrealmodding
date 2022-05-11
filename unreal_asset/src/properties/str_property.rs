@@ -183,7 +183,7 @@ impl PropertyTrait for TextProperty {
         if asset.engine_version >= VER_UE4_FTEXT_HISTORY {
             let history_type = self
                 .history_type
-                .ok_or(PropertyError::property_field_none("history_type", "i8"))?;
+                .ok_or_else(|| PropertyError::property_field_none("history_type", "i8"))?;
             cursor.write_i8(history_type)?;
             let history_type = history_type.try_into()?;
             match history_type {
@@ -215,9 +215,9 @@ impl PropertyTrait for TextProperty {
                 TextHistoryType::StringTableEntry => {
                     asset.write_fname(
                         cursor,
-                        self.table_id
-                            .as_ref()
-                            .ok_or(PropertyError::property_field_none("table_id", "FName"))?,
+                        self.table_id.as_ref().ok_or_else(|| {
+                            PropertyError::property_field_none("table_id", "FName")
+                        })?,
                     )?;
                     cursor.write_string(&self.value)?;
                     Ok(())

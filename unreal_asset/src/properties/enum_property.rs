@@ -55,7 +55,9 @@ impl PropertyTrait for EnumProperty {
         if include_header {
             asset.write_fname(
                 cursor,
-                self.enum_type.as_ref().ok_or(PropertyError::headerless())?,
+                self.enum_type
+                    .as_ref()
+                    .ok_or_else(PropertyError::headerless)?,
             )?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }

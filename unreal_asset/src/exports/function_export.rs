@@ -17,7 +17,7 @@ impl FunctionExport {
     pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
         let struct_export = StructExport::from_base(base, asset)?;
         let function_flags = EFunctionFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?)
-            .ok_or(Error::invalid_file("Invalid function flags".to_string()))?;
+            .ok_or_else(|| Error::invalid_file("Invalid function flags".to_string()))?;
         Ok(FunctionExport {
             struct_export,
             function_flags,
@@ -34,23 +34,21 @@ impl ExportTrait for FunctionExport {
 }
 
 impl ExportNormalTrait for FunctionExport {
-    fn get_normal_export<'a>(&'a self) -> Option<&'a super::normal_export::NormalExport> {
+    fn get_normal_export(&'_ self) -> Option<&'_ super::normal_export::NormalExport> {
         self.struct_export.get_normal_export()
     }
 
-    fn get_normal_export_mut<'a>(
-        &'a mut self,
-    ) -> Option<&'a mut super::normal_export::NormalExport> {
+    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut super::normal_export::NormalExport> {
         self.struct_export.get_normal_export_mut()
     }
 }
 
 impl ExportBaseTrait for FunctionExport {
-    fn get_base_export<'a>(&'a self) -> &'a super::base_export::BaseExport {
+    fn get_base_export(&'_ self) -> &'_ super::base_export::BaseExport {
         self.struct_export.get_base_export()
     }
 
-    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut super::base_export::BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut super::base_export::BaseExport {
         self.struct_export.get_base_export_mut()
     }
 }

@@ -93,12 +93,9 @@ macro_rules! impl_soft_path_property {
                 } else {
                     asset.write_fname(
                         cursor,
-                        self.asset_path_name
-                            .as_ref()
-                            .ok_or(PropertyError::property_field_none(
-                                "asset_path_name",
-                                "FName",
-                            ))?,
+                        self.asset_path_name.as_ref().ok_or_else(|| {
+                            PropertyError::property_field_none("asset_path_name", "FName")
+                        })?,
                     )?;
                     cursor.write_string(&self.sub_path)?;
                 }

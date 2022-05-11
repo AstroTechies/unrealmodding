@@ -146,11 +146,11 @@ impl ExportTrait for StructExport {
             cursor.seek(SeekFrom::Start(end))?;
         } else {
             cursor.write_i32::<LittleEndian>(self.script_bytecode_size)?;
-            let raw_bytecode = self.script_bytecode_raw.as_ref().ok_or(Error::no_data(
-                "script_bytecode and raw_bytecode are None".to_string(),
-            ))?;
+            let raw_bytecode = self.script_bytecode_raw.as_ref().ok_or_else(|| {
+                Error::no_data("script_bytecode and raw_bytecode are None".to_string())
+            })?;
             cursor.write_i32::<LittleEndian>(raw_bytecode.len() as i32)?;
-            cursor.write(&raw_bytecode)?;
+            cursor.write_all(raw_bytecode)?;
         }
 
         Ok(())

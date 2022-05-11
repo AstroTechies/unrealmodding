@@ -28,7 +28,9 @@ impl CursorExt for Cursor<Vec<u8>> {
         let mut buf = vec![0u8; len as usize - 1];
         self.read_exact(&mut buf)?;
         self.seek(SeekFrom::Current(1))?;
-        Ok(Some(String::from_utf8(buf).unwrap_or(String::from("None"))))
+        Ok(Some(
+            String::from_utf8(buf).unwrap_or_else(|_| String::from("None")),
+        ))
     }
 
     fn read_bool(&mut self) -> Result<bool, Error> {
@@ -63,9 +65,9 @@ impl CursorExt for Cursor<Vec<u8>> {
             true => self.write_i32::<LittleEndian>(-(string.len() as i32) + 1)?,
             false => self.write_i32::<LittleEndian>(string.len() as i32 + 1)?,
         };
-        let bytes = string.clone().into_bytes();
-        self.write(&bytes)?;
-        self.write(&[0u8; 1])?;
+        let bytes = string.into_bytes();
+        self.write_all(&bytes)?;
+        self.write_all(&[0u8; 1])?;
         Ok(bytes.len())
     }
 

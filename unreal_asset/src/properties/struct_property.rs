@@ -117,7 +117,7 @@ impl StructProperty {
             )?;
             let value = vec![property];
 
-            return Ok(StructProperty {
+            Ok(StructProperty {
                 name,
                 struct_type,
                 struct_guid,
@@ -125,7 +125,7 @@ impl StructProperty {
                 duplication_index,
                 serialize_none: true,
                 value,
-            });
+            })
         } else {
             let mut values = Vec::new();
             let mut property = Property::new(asset, true)?;
@@ -134,7 +134,7 @@ impl StructProperty {
                 property = Property::new(asset, true)?;
             }
 
-            return Ok(StructProperty {
+            Ok(StructProperty {
                 name,
                 struct_type,
                 struct_guid,
@@ -142,7 +142,7 @@ impl StructProperty {
                 duplication_index,
                 serialize_none: true,
                 value: values,
-            });
+            })
         }
     }
 
@@ -156,10 +156,10 @@ impl StructProperty {
         if include_header {
             asset.write_fname(
                 cursor,
-                struct_type.as_ref().ok_or(PropertyError::headerless())?,
+                struct_type.as_ref().ok_or_else(PropertyError::headerless)?,
             )?;
             if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                cursor.write(&self.struct_guid.ok_or(PropertyError::headerless())?)?;
+                cursor.write_all(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
             }
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
@@ -183,20 +183,20 @@ impl StructProperty {
                     struct_type
                         .as_ref()
                         .map(|e| e.content.to_owned())
-                        .unwrap_or("Generic".to_string())
+                        .unwrap_or_else(|| "Generic".to_string())
                 ))
                 .into());
             }
-            return self.value[0].write(asset, cursor, false);
-        } else if self.value.len() == 0 && !self.serialize_none {
-            return Ok(0);
+            self.value[0].write(asset, cursor, false)
+        } else if self.value.is_empty() && !self.serialize_none {
+            Ok(0)
         } else {
             let begin = cursor.position();
             for entry in &self.value {
                 Property::write(entry, asset, cursor, true)?;
             }
             asset.write_fname(cursor, &FName::from_slice("None"))?;
-            return Ok((cursor.position() - begin) as usize);
+            Ok((cursor.position() - begin) as usize)
         }
     }
 }

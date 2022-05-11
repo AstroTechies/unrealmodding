@@ -34,11 +34,11 @@ impl StringTableExport {
                 asset
                     .cursor
                     .read_string()?
-                    .ok_or(Error::no_data("StringTable key is None".to_string()))?,
+                    .ok_or_else(|| Error::no_data("StringTable key is None".to_string()))?,
                 asset
                     .cursor
                     .read_string()?
-                    .ok_or(Error::no_data("StringTable value is None".to_string()))?,
+                    .ok_or_else(|| Error::no_data("StringTable value is None".to_string()))?,
             );
         }
 

@@ -121,7 +121,7 @@ impl MaterialExpression {
     ) -> Result<usize, Error> {
         cursor.write_i32::<LittleEndian>(self.output_index)?;
         asset.write_fname(cursor, &self.input_name)?;
-        cursor.write(&self.extras)?;
+        cursor.write_all(&self.extras)?;
         asset.write_fname(cursor, &self.expression_name)?;
         Ok(size_of::<i32>() * 4 + size_of::<i32>() + 20)
     }

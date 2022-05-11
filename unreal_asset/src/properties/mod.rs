@@ -504,7 +504,7 @@ impl Property {
             0,
             duplication_index,
         )
-        .map(|e| Some(e))
+        .map(Some)
     }
     pub fn from_type(
         asset: &mut Asset,
@@ -881,8 +881,8 @@ impl ToFName for Property {
             Property::UnknownProperty(unk) => unk
                 .serialized_type
                 .as_ref()
-                .map(|e| e.clone())
-                .unwrap_or(FName::from_slice("Generic")),
+                .cloned()
+                .unwrap_or_else(|| FName::from_slice("Generic")),
         }
     }
 }

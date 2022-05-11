@@ -220,10 +220,12 @@ impl UField {
         {
             cursor.write_i32::<LittleEndian>(
                 self.next
-                    .ok_or(Error::no_data(
-                        "FFrameworkObjectVersion < RemoveUfieldNext but no next index present"
-                            .to_string(),
-                    ))?
+                    .ok_or_else(|| {
+                        Error::no_data(
+                            "FFrameworkObjectVersion < RemoveUfieldNext but no next index present"
+                                .to_string(),
+                        )
+                    })?
                     .index,
             )?;
         }
@@ -238,7 +240,7 @@ impl UGenericProperty {
         let array_dim: EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into()?;
         let property_flags: EPropertyFlags =
             EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?)
-                .ok_or(Error::invalid_file("Invalid property flags".to_string()))?;
+                .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
         let rep_notify_func = asset.read_fname()?;
 
         let blueprint_replication_condition: Option<ELifetimeCondition> =
@@ -269,7 +271,11 @@ impl UPropertyTrait for UGenericProperty {
         if asset.get_custom_version::<FReleaseObjectVersion>().version
             >= FReleaseObjectVersion::PropertiesSerializeRepCondition as i32
         {
-            cursor.write_u8(self.blueprint_replication_condition.ok_or(Error::no_data("FReleaseObjectVersion >= PropertiesSerializeRepCondition but no blueprint_replication_condition found".to_string()))?.into())?;
+            cursor.write_u8(
+                self.blueprint_replication_condition.ok_or_else(
+                    || Error::no_data("FReleaseObjectVersion >= PropertiesSerializeRepCondition but no blueprint_replication_condition found".to_string())
+                )?.into()
+            )?;
         }
         Ok(())
     }
