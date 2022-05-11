@@ -312,7 +312,7 @@ fn bake_integrator_data(
 pub fn integrate_mods<
     'data,
     T: 'data,
-    E: 'static + std::error::Error,
+    E: 'static + std::error::Error + Send,
     C: IntegratorConfig<'data, T, E>,
 >(
     integrator_config: &C,

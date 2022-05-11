@@ -32,7 +32,7 @@ pub enum ErrorCode {
     UnrealPak(unreal_pak::error::UnrealPakError),
     Json(serde_json::Error),
     Integration(IntegrationError),
-    Other(Box<dyn std::error::Error>),
+    Other(Box<dyn std::error::Error + Send>),
 }
 
 impl Display for ErrorCode {
@@ -54,7 +54,7 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn other(error: Box<dyn std::error::Error>) -> Self {
+    pub fn other(error: Box<dyn std::error::Error + Send>) -> Self {
         Error {
             code: ErrorCode::Other(error),
         }
