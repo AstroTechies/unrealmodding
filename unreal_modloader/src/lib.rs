@@ -126,8 +126,8 @@ where
 
                 // set sub dirs
                 let base_path = data_guard.base_path.as_ref().unwrap().to_owned();
-                data_guard.data_path = Some(PathBuf::from(base_path.clone()).join("Mods"));
-                data_guard.paks_path = Some(PathBuf::from(base_path.clone()).join("Paks"));
+                data_guard.data_path = Some(base_path.join("Mods"));
+                data_guard.paks_path = Some(base_path.join("Paks"));
 
                 let data_path = data_guard.data_path.as_ref().unwrap().to_owned();
                 drop(data_guard);
@@ -249,15 +249,14 @@ where
                             })
                             .collect::<Vec<_>>();
 
-                        if files_to_downlaod.len() > 0 {
+                        if !files_to_downlaod.is_empty() {
                             // ? Maybe parallelize this?
                             for (file_name, url) in &files_to_downlaod {
                                 let downlaod = (|| -> Result<(), ModLoaderWarning> {
                                     debug!("Downloading {:?}", file_name);
 
                                     // this is safe because the filename has already been validated
-                                    let file_path =
-                                        PathBuf::from(mods_path.clone()).join(file_name.clone());
+                                    let file_path = mods_path.clone().join(file_name.clone());
                                     let mut file = fs::File::create(&file_path)?;
 
                                     let mut response = reqwest::blocking::get(url.as_str())
@@ -280,7 +279,7 @@ where
                             let warnings = process_modfiles(
                                 &files_to_downlaod
                                     .iter()
-                                    .map(|f| PathBuf::from(mods_path.clone()).join(f.0.clone()))
+                                    .map(|f| mods_path.clone().join(f.0.clone()))
                                     .collect::<Vec<_>>(),
                                 &data,
                             );

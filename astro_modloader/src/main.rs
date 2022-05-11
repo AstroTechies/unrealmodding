@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::PathBuf;
+use std::path::Path;
 
 use unreal_modintegrator::IntegratorConfig;
 use unreal_modloader::config::GameConfig;
@@ -33,7 +33,7 @@ where
         "Astroneer Modloader".to_string()
     }
 
-    fn get_game_build(&self, install_path: &PathBuf) -> Option<GameBuild> {
+    fn get_game_build(&self, install_path: &Path) -> Option<GameBuild> {
         let version_file_path = install_path.join("build.version");
         if !version_file_path.is_file() {
             info!("{:?} not found", version_file_path);

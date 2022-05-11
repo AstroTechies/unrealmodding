@@ -17,7 +17,7 @@ use super::verify;
 pub(crate) struct ReadData(String, Metadata);
 
 pub(crate) fn read_pak_files(
-    mod_files: &Vec<PathBuf>,
+    mod_files: &[PathBuf],
 ) -> (HashMap<String, Vec<ReadData>>, Vec<ModLoaderWarning>) {
     let mut mods_read: HashMap<String, Vec<ReadData>> = HashMap::new();
     let mut warnings = Vec::new();
@@ -55,7 +55,7 @@ pub(crate) fn read_pak_files(
             }
 
             let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
-                .split("-")
+                .split('-')
                 .collect::<Vec<&str>>();
 
             // check that mod id in file name matches metadata

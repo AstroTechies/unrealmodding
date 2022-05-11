@@ -25,7 +25,7 @@ pub(crate) struct ModLoaderApp {
 }
 
 impl App for ModLoaderApp {
-    fn update(&mut self, ctx: &egui::Context, mut frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         let mut data = self.data.lock().unwrap();
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -41,7 +41,7 @@ impl App for ModLoaderApp {
                         self.show_table(ui, &mut data);
                     });
                     strip.cell(|ui| {
-                        self.show_bottom(ui, &mut data, &mut frame);
+                        self.show_bottom(ui, &mut data, frame);
                     });
                 });
         });
@@ -64,7 +64,7 @@ impl App for ModLoaderApp {
                 });
 
             should_darken = true;
-        } else if data.warnings.len() > 0 {
+        } else if !data.warnings.is_empty() {
             egui::Window::new("Warning")
                 .resizable(false)
                 .collapsible(false)
@@ -166,7 +166,7 @@ impl ModLoaderApp {
                 });
             })
             .body(|mut body| {
-                for (_, mut game_mod) in data.game_mods.iter_mut() {
+                for (_, game_mod) in data.game_mods.iter_mut() {
                     body.row(18.0, |mut row| {
                         row.col(|ui| {
                             if ui.checkbox(&mut game_mod.active, "").changed() {
@@ -178,9 +178,9 @@ impl ModLoaderApp {
                         });
                         row.col(|ui| {
                             // becasue ComboBox .chnaged doesn't seem to work
-                            let prev_selceted = game_mod.selected_version.clone();
+                            let prev_selceted = game_mod.selected_version;
 
-                            self.show_version_select(ui, &mut game_mod);
+                            self.show_version_select(ui, game_mod);
 
                             // this may look dumb but is what is needed
                             if prev_selceted != game_mod.selected_version {
@@ -221,7 +221,7 @@ impl ModLoaderApp {
                     let latest_version = game_mod.latest_version.unwrap();
                     ui.selectable_value(
                         &mut game_mod.selected_version,
-                        SelectedVersion::Latest(latest_version.clone()),
+                        SelectedVersion::Latest(latest_version),
                         format!("{}", SelectedVersion::Latest(latest_version)),
                     );
                 }
@@ -231,13 +231,15 @@ impl ModLoaderApp {
                     // if the version is the latest version, set it as LatestIndirect so that if there is an upgrade it will
                     // automatically be upgraded. This is under the assumption that if the user now has the latest version,
                     // that they probably also want to have the latest in the future.
-                    let is_latest =
-                        *version.0 == game_mod.latest_version.unwrap_or(Version::new(0, 0, 0));
+                    let is_latest = *version.0
+                        == game_mod
+                            .latest_version
+                            .unwrap_or_else(|| Version::new(0, 0, 0));
 
                     let show_version = if is_latest {
-                        SelectedVersion::LatestIndirect(Some(version.0.clone()))
+                        SelectedVersion::LatestIndirect(Some(*version.0))
                     } else {
-                        SelectedVersion::Specific(version.0.clone())
+                        SelectedVersion::Specific(*version.0)
                     };
 
                     ui.selectable_value(

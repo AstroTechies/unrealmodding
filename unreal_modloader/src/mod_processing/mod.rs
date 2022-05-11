@@ -27,7 +27,7 @@ pub(crate) fn process_modfiles(
     warnings.extend(read_warnings);
 
     let mut data_guard = data.lock().unwrap();
-    let filter = mods_read.keys().cloned().collect();
+    let filter: Vec<String> = mods_read.keys().cloned().collect();
 
     // turn metadata into proper data structures
     insert_mods_from_readdata(&mods_read, &mut *data_guard);

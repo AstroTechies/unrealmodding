@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use unreal_modintegrator::IntegratorConfig;
 
@@ -11,5 +11,5 @@ where
     fn get_integrator_config(&self) -> &C;
     fn get_app_id(&self) -> u32;
     fn get_window_title(&self) -> String;
-    fn get_game_build(&self, install_path: &PathBuf) -> Option<GameBuild>;
+    fn get_game_build(&self, install_path: &Path) -> Option<GameBuild>;
 }

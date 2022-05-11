@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use directories::BaseDirs;
 use log::{trace, warn};
@@ -33,7 +33,7 @@ pub fn dertermine_install_path_steam(app_id: u32) -> Result<PathBuf, ModLoaderWa
     }
 }
 
-pub fn verify_install_path(install_path: &PathBuf, game_name: &str) -> bool {
+pub fn verify_install_path(install_path: &Path, game_name: &str) -> bool {
     let mut exe_name = game_name.to_owned();
     exe_name.push_str(".exe");
     let exe_path = install_path.join(exe_name);

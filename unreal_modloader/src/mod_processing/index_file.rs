@@ -32,7 +32,7 @@ pub(crate) struct IndexFileModVersion {
 
 pub(crate) fn gather_index_files(
     data: &mut ModLoaderAppData,
-    filter: &Vec<String>,
+    filter: &[String],
 ) -> HashMap<String, DownloadInfo> {
     let mut index_files: HashMap<String, DownloadInfo> = HashMap::new();
 
@@ -49,6 +49,8 @@ pub(crate) fn gather_index_files(
 pub(crate) fn download_index_files(
     index_files_info: HashMap<String, DownloadInfo>,
 ) -> (HashMap<String, IndexFileMod>, Vec<ModLoaderWarning>) {
+    // we need to collect to allow multi threading to actually happen
+    #[allow(clippy::needless_collect)]
     let handles = index_files_info
         .into_iter()
         .map(|(mod_id, download_info)| {
@@ -98,7 +100,7 @@ pub(crate) fn download_index_files(
                     return Err(ModLoaderWarning::index_file_missing_mod(mod_id));
                 }
 
-                return Ok((mod_id, index_file_mod.unwrap().clone()));
+                Ok((mod_id, index_file_mod.unwrap().clone()))
             })
         })
         .collect::<Vec<_>>();
@@ -166,10 +168,10 @@ pub(crate) fn insert_index_file_data(
                 continue;
             }
 
-            if game_mod.versions.contains_key(&version.as_ref().unwrap()) {
+            if game_mod.versions.contains_key(version.as_ref().unwrap()) {
                 let mut existing_version_data = game_mod
                     .versions
-                    .get_mut(&version.as_ref().unwrap())
+                    .get_mut(version.as_ref().unwrap())
                     .unwrap();
 
                 existing_version_data.download_url = Some(version_info.download_url.clone());
@@ -200,11 +202,11 @@ pub(crate) fn insert_index_file_data(
         match game_mod.selected_version {
             SelectedVersion::Latest(_) => {
                 game_mod.selected_version =
-                    SelectedVersion::Latest(latest_version.as_ref().unwrap().clone());
+                    SelectedVersion::Latest(*latest_version.as_ref().unwrap());
             }
             SelectedVersion::LatestIndirect(_) => {
                 game_mod.selected_version =
-                    SelectedVersion::Latest(latest_version.as_ref().unwrap().clone());
+                    SelectedVersion::Latest(*latest_version.as_ref().unwrap());
             }
             SelectedVersion::Specific(_) => {}
         }
