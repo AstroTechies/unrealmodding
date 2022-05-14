@@ -81,3 +81,21 @@ pub enum Export {
 }
 
 impl Export {}
+
+impl Clone for Export {
+    fn clone(&self) -> Self {
+        match self {
+            Self::BaseExport(arg0) => Self::BaseExport(arg0.clone()),
+            Self::ClassExport(arg0) => Self::ClassExport(arg0.clone()),
+            Self::EnumExport(arg0) => Self::EnumExport(arg0.clone()),
+            Self::LevelExport(arg0) => Self::LevelExport(arg0.clone()),
+            Self::NormalExport(arg0) => Self::NormalExport(arg0.clone()),
+            Self::PropertyExport(arg0) => Self::PropertyExport(arg0.clone()),
+            Self::RawExport(arg0) => Self::RawExport(arg0.clone()),
+            Self::StringTableExport(arg0) => Self::StringTableExport(arg0.clone()),
+            Self::StructExport(arg0) => Self::StructExport(arg0.clone()),
+            Self::FunctionExport(arg0) => Self::FunctionExport(arg0.clone()),
+            Self::DataTableExport(arg0) => Self::DataTableExport(arg0.clone()),
+        }
+    }
+}

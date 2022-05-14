@@ -154,7 +154,6 @@ pub struct Asset {
     depends_map: Option<Vec<Vec<i32>>>,
     soft_package_reference_list: Option<Vec<String>>,
     pub world_tile_info: Option<FWorldTileInfo>,
-    preload_dependencies: Option<Vec<i32>>,
 
     //todo: fill out with defaults
     pub map_key_override: HashMap<String, String>,
@@ -219,7 +218,6 @@ impl<'a> Asset {
             depends_map: None,
             soft_package_reference_list: None,
             world_tile_info: None,
-            preload_dependencies: None,
             map_key_override: HashMap::new(), // todo: preinit
             map_value_override: HashMap::new(),
         }
@@ -548,7 +546,7 @@ impl<'a> Asset {
                 && import.outer_index == outer_index
                 && import.object_name == *object_name
             {
-                return Some(-(i as i32));
+                return Some(-(i as i32) - 1);
             }
         }
         None
@@ -566,7 +564,7 @@ impl<'a> Asset {
                 && import.class_name == *class_name
                 && import.object_name == *object_name
             {
-                return Some(-(i as i32));
+                return Some(-(i as i32) - 1);
             }
         }
         None
@@ -782,12 +780,6 @@ impl<'a> Asset {
             }
             self.cursor
                 .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
-            let mut preload_dependencies = Vec::new();
-
-            for _i in 0..self.preload_dependency_count as usize {
-                preload_dependencies.push(self.cursor.read_i32::<LittleEndian>()?);
-            }
-            self.preload_dependencies = Some(preload_dependencies);
         }
 
         if self.header_offset > 0 && self.exports.len() > 0 {
@@ -918,6 +910,7 @@ impl<'a> Asset {
         soft_package_reference_offset: i32,
         asset_registry_data_offset: i32,
         world_tile_info_offset: i32,
+        preload_dependency_count: i32,
         preload_dependency_offset: i32,
         header_offset: i32,
         bulk_data_start_offset: i64,
@@ -1022,12 +1015,7 @@ impl<'a> Asset {
         }
 
         if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-            cursor.write_i32::<LittleEndian>(
-                self.preload_dependencies
-                    .as_ref()
-                    .map(|e| e.len())
-                    .unwrap_or(0) as i32,
-            )?;
+            cursor.write_i32::<LittleEndian>(preload_dependency_count)?;
             cursor.write_i32::<LittleEndian>(preload_dependency_offset)?;
         }
 
@@ -1130,6 +1118,7 @@ impl<'a> Asset {
             self.soft_package_reference_offset,
             self.asset_registry_data_offset,
             self.world_tile_info_offset,
+            0,
             self.preload_dependency_offset,
             self.header_offset,
             self.bulk_data_start_offset,
@@ -1227,6 +1216,7 @@ impl<'a> Asset {
             world_tile_info.write(self, cursor)?;
         }
 
+        let mut preload_dependency_count = 0;
         let preload_dependency_offset = match self.use_separate_bulk_data_files {
             true => cursor.position() as i32,
             false => 0,
@@ -1251,6 +1241,13 @@ impl<'a> Asset {
                 for element in &unk_export.create_before_create_dependencies {
                     cursor.write_i32::<LittleEndian>(element.index)?;
                 }
+
+                preload_dependency_count += unk_export
+                    .serialization_before_serialization_dependencies
+                    .len() as i32
+                    + unk_export.create_before_serialization_dependencies.len() as i32
+                    + unk_export.serialization_before_create_dependencies.len() as i32
+                    + unk_export.create_before_create_dependencies.len() as i32;
             }
         }
 
@@ -1318,6 +1315,7 @@ impl<'a> Asset {
             soft_package_reference_offset,
             asset_registry_data_offset,
             world_tile_info_offset,
+            preload_dependency_count,
             preload_dependency_offset,
             header_offset,
             bulk_data_start_offset,
