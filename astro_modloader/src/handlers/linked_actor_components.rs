@@ -55,14 +55,14 @@ pub(crate) fn handle_linked_actor_components(
             .as_object()
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid linked_actor_components"))?;
         for (name, components) in linked_actors_map.iter() {
-            let components = components.as_array().ok_or(io::Error::new(
+            let components = components.as_array().ok_or_else(|| io::Error::new(
                 ErrorKind::Other,
                 "Invalid linked_actor_components2",
             ))?;
 
             let entry = new_components.entry(name.clone()).or_insert_with(Vec::new);
             for component in components {
-                let component_name = component.as_str().ok_or(io::Error::new(
+                let component_name = component.as_str().ok_or_else(|| io::Error::new(
                     ErrorKind::Other,
                     "Invalid linked_actor_components3",
                 ))?;
@@ -154,16 +154,15 @@ pub(crate) fn handle_linked_actor_components(
 
             let component = Path::new(component_path_raw)
                 .file_stem()
-                .map(|e| e.to_str())
-                .flatten()
-                .ok_or(io::Error::new(
+                .and_then(|e| e.to_str())
+                .ok_or_else(|| io::Error::new(
                     ErrorKind::Other,
                     "Invalid persistent actors",
                 ))?;
 
-            let (component_path_raw, component) = match component.contains(".") {
+            let (component_path_raw, component) = match component.contains('.') {
                 true => {
-                    let split: Vec<&str> = component.split(".").collect();
+                    let split: Vec<&str> = component.split('.').collect();
                     (split[0].to_string(), &split[1][..split[1].len() - 2])
                 }
                 false => (component_path_raw.to_string(), component),
