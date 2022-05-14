@@ -67,6 +67,7 @@ impl ArrayProperty {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_no_header(
         asset: &mut Asset,
         name: FName,
