@@ -14,23 +14,21 @@ pub struct RawExport {
 }
 
 impl ExportNormalTrait for RawExport {
-    fn get_normal_export<'a>(&'a self) -> Option<&'a super::normal_export::NormalExport> {
+    fn get_normal_export(&'_ self) -> Option<&'_ super::normal_export::NormalExport> {
         None
     }
 
-    fn get_normal_export_mut<'a>(
-        &'a mut self,
-    ) -> Option<&'a mut super::normal_export::NormalExport> {
+    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut super::normal_export::NormalExport> {
         None
     }
 }
 
 impl ExportBaseTrait for RawExport {
-    fn get_base_export<'a>(&'a self) -> &'a BaseExport {
+    fn get_base_export(&'_ self) -> &'_ BaseExport {
         &self.base_export
     }
 
-    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport {
         &mut self.base_export
     }
 }
@@ -50,7 +48,7 @@ impl RawExport {
 
 impl ExportTrait for RawExport {
     fn write(&self, _asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-        cursor.write(&self.data)?;
+        cursor.write_all(&self.data)?;
         Ok(())
     }
 }

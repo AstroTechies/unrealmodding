@@ -324,7 +324,7 @@ impl BoxProperty {
             property_guid,
             duplication_index,
             v1: VectorProperty::new(asset, name.clone(), false, 0)?,
-            v2: VectorProperty::new(asset, name.clone(), false, 0)?,
+            v2: VectorProperty::new(asset, name, false, 0)?,
             is_valid: asset.cursor.read_bool()?,
         })
     }

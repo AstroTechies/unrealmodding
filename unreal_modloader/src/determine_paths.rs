@@ -1,8 +1,10 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use directories::BaseDirs;
 use log::{trace, warn};
 use steamlocate::SteamDir;
+
+use crate::error::ModLoaderWarning;
 
 pub fn dertermine_base_path(game_name: &str) -> Option<PathBuf> {
     let base_dirs = BaseDirs::new();
@@ -19,15 +21,19 @@ pub fn dertermine_base_path(game_name: &str) -> Option<PathBuf> {
     base_path
 }
 
-pub fn dertermine_install_path_steam(app_id: u32) -> Option<PathBuf> {
-    let mut steamdir = SteamDir::locate().unwrap();
-    match steamdir.app(&app_id) {
-        Some(app) => Some(app.path.clone()),
-        None => None,
+pub fn dertermine_install_path_steam(app_id: u32) -> Result<PathBuf, ModLoaderWarning> {
+    let steamdir = SteamDir::locate();
+    if steamdir.is_none() {
+        return Err(ModLoaderWarning::steam_error());
+    }
+
+    match steamdir.unwrap().app(&app_id) {
+        Some(app) => Ok(app.path.clone()),
+        None => Err(ModLoaderWarning::steam_error()),
     }
 }
 
-pub fn verify_install_path(install_path: &PathBuf, game_name: &str) -> bool {
+pub fn verify_install_path(install_path: &Path, game_name: &str) -> bool {
     let mut exe_name = game_name.to_owned();
     exe_name.push_str(".exe");
     let exe_path = install_path.join(exe_name);

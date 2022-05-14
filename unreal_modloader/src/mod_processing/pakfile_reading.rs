@@ -1,74 +1,79 @@
-use std::collections::HashMap;
-use std::error::Error;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::io;
 use std::path::PathBuf;
 
 use log::{debug, warn};
 use unreal_modintegrator::metadata::{Metadata, SyncMode};
 use unreal_pak::PakFile;
 
+use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, GameModVersion, SelectedVersion};
 use crate::version::Version;
-use crate::AppData;
+use crate::ModLoaderAppData;
 
 use super::verify;
 
 #[derive(Debug)]
 pub(crate) struct ReadData(String, Metadata);
 
-pub(crate) fn read_pak_files(mod_files: &Vec<PathBuf>) -> HashMap<String, Vec<ReadData>> {
+pub(crate) fn read_pak_files(
+    mod_files: &[PathBuf],
+) -> (HashMap<String, Vec<ReadData>>, Vec<ModLoaderWarning>) {
     let mut mods_read: HashMap<String, Vec<ReadData>> = HashMap::new();
+    let mut warnings = Vec::new();
 
     // read metadata
     for file_path in mod_files.iter() {
-        let file_result = (|| -> Result<(), Box<dyn Error>> {
-            let file = fs::File::open(&file_path)?;
+        let file_result = (|| -> Result<(), ModLoaderWarning> {
+            let file_name = file_path.file_name().unwrap().to_str().unwrap().to_owned();
+
+            let file = fs::File::open(&file_path)
+                .map_err(|err| ModLoaderWarning::from(err).with_mod_id(file_name.clone()))?;
             let mut pak = PakFile::reader(&file);
 
-            pak.load_records()?;
+            pak.load_records()
+                .map_err(|err| ModLoaderWarning::from(err).with_mod_id(file_name.clone()))?;
 
             let record = pak
                 .get_record(&String::from("metadata.json"))?
                 .data
-                .as_ref()
-                .unwrap();
-            let metadata: Metadata = serde_json::from_slice(&record)?;
+                .as_ref();
+            if record.is_none() {
+                return Err(ModLoaderWarning::missing_metadata(file_name));
+            }
+
+            let metadata: Metadata = serde_json::from_slice(record.unwrap()).map_err(|err| {
+                warn!("json error: {}", err);
+                ModLoaderWarning::invalid_metadata(file_name)
+            })?;
 
             let file_name = file_path.file_name().unwrap().to_str().unwrap().to_owned();
 
             // check that filename generally matches
             if !verify::verify_mod_file_name(&file_name) {
-                return Err(Box::new(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!("Mod file {:?} does not match expected format", file_name),
-                )));
+                return Err(ModLoaderWarning::invalid_mod_file_name(file_name));
             }
 
             let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
-                .split("-")
+                .split('-')
                 .collect::<Vec<&str>>();
 
             // check that mod id in file name matches metadata
             if file_name_parts[1] != metadata.mod_id {
-                return Err(Box::new(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!(
-                        "Mod id in file name does not match metadata id: {:?} != {:?}",
-                        file_name_parts[1], metadata.mod_id
-                    ),
-                )));
+                warn!(
+                    "Mod id in file name does not match metadata id: {:?} != {:?}",
+                    file_name_parts[1], metadata.mod_id
+                );
+                return Err(ModLoaderWarning::invalid_metadata(file_name));
             }
 
             // check that version in file name matches metadata
             if file_name_parts[2] != metadata.mod_version {
-                return Err(Box::new(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!(
-                        "Version in file name does not match metadata version: {:?} != {:?}",
-                        file_name_parts[2], metadata.mod_version
-                    ),
-                )));
+                warn!(
+                    "Version in file name does not match metadata version: {:?} != {:?}",
+                    file_name_parts[2], metadata.mod_version
+                );
+                return Err(ModLoaderWarning::invalid_metadata(file_name));
             }
 
             let mod_id = metadata.mod_id.to_owned();
@@ -84,7 +89,8 @@ pub(crate) fn read_pak_files(mod_files: &Vec<PathBuf>) -> HashMap<String, Vec<Re
 
             Ok(())
         })();
-        match &file_result {
+
+        match file_result {
             Ok(_) => {
                 debug!(
                     "Successfully read metadata for {:?}",
@@ -97,23 +103,25 @@ pub(crate) fn read_pak_files(mod_files: &Vec<PathBuf>) -> HashMap<String, Vec<Re
                     file_path.file_name().unwrap().to_str().unwrap(),
                     e
                 );
+                warnings.push(e);
             }
         }
     }
 
-    mods_read
+    (mods_read, warnings)
 }
 
 pub(crate) fn insert_mods_from_readdata(
     mods_read: &HashMap<String, Vec<ReadData>>,
-    data: &mut AppData,
+    data: &mut ModLoaderAppData,
 ) {
     for (mod_id, mod_files) in mods_read.iter() {
         // check if mod is in global list, if not insert empty
         if !data.game_mods.contains_key(mod_id) {
             let game_mod = GameMod {
-                versions: HashMap::new(),
+                versions: BTreeMap::new(),
                 selected_version: SelectedVersion::LatestIndirect(None),
+                latest_version: None,
 
                 active: false,
 
@@ -140,16 +148,6 @@ pub(crate) fn insert_mods_from_readdata(
             };
             let key: Result<Version, _> =
                 Version::try_from(&version.metadata.as_ref().unwrap().mod_version);
-
-            if key.is_err() {
-                warn!(
-                    "Failed to parse version {:?} from metadata for mod {:?}",
-                    version.metadata.as_ref().unwrap().mod_version,
-                    mod_id
-                );
-
-                continue;
-            }
 
             data.game_mods
                 .get_mut(mod_id)

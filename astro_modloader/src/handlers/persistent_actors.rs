@@ -28,6 +28,7 @@ struct ScsNode {
     original_category: PackageIndex,
 }
 
+#[allow(clippy::ptr_arg)]
 pub(crate) fn handle_persistent_actors(
     _data: &(),
     integrated_pak: &mut PakFile,
@@ -42,27 +43,22 @@ pub(crate) fn handle_persistent_actors(
 
     let actor_template = level_asset
         .get_export(PackageIndex::new(2))
-        .map(|e| {
+        .and_then(|e| {
             if let Export::NormalExport(e) = e {
                 Some(e)
             } else {
                 None
             }
         })
-        .flatten()
-        .ok_or(io::Error::new(ErrorKind::Other, "Corrupted actor_template"))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted actor_template"))?;
 
     let scene_component = level_asset
         .get_export(PackageIndex::new(11))
-        .map(|e| match e {
+        .and_then(|e| match e {
             Export::NormalExport(e) => Some(e),
             _ => None,
         })
-        .flatten()
-        .ok_or(io::Error::new(
-            ErrorKind::Other,
-            "Corrupted scene_component",
-        ))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted scene_component"))?;
 
     for map_path in MAP_PATHS {
         let mut asset = get_asset(
@@ -75,12 +71,9 @@ pub(crate) fn handle_persistent_actors(
         let mut level_index = None;
         for i in 0..asset.exports.len() {
             let export = &asset.exports[i];
-            match export {
-                Export::LevelExport(_) => {
-                    level_index = Some(i);
-                    break;
-                }
-                _ => {}
+            if let Export::LevelExport(_) = export {
+                level_index = Some(i);
+                break;
             }
         }
         if level_index.is_none() {
@@ -101,28 +94,22 @@ pub(crate) fn handle_persistent_actors(
         asset.add_fname("RootComponent");
 
         for persistent_actors in &persistent_actor_arrays {
-            let persistent_actors = persistent_actors.as_array().ok_or(io::Error::new(
-                ErrorKind::Other,
-                "Invalid persistent actors",
-            ))?;
+            let persistent_actors = persistent_actors
+                .as_array()
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid persistent actors"))?;
 
             for persistent_actor in persistent_actors {
-                let actor_path_raw = persistent_actor.as_str().ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Invalid persistent actors",
-                ))?;
+                let actor_path_raw = persistent_actor
+                    .as_str()
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid persistent actors"))?;
                 let actor = Path::new(actor_path_raw)
                     .file_stem()
-                    .map(|e| e.to_str())
-                    .flatten()
-                    .ok_or(io::Error::new(
-                        ErrorKind::Other,
-                        "Invalid persistent actors",
-                    ))?;
+                    .and_then(|e| e.to_str())
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid persistent actors"))?;
 
-                let (actor_path_raw, actor) = match actor.contains(".") {
+                let (actor_path_raw, actor) = match actor.contains('.') {
                     true => {
-                        let split: Vec<&str> = actor.split(".").collect();
+                        let split: Vec<&str> = actor.split('.').collect();
                         (split[0], &split[1][..split[1].len() - 2])
                     }
                     false => (actor_path_raw, actor),
@@ -165,36 +152,29 @@ pub(crate) fn handle_persistent_actors(
 
                 let mut all_blueprint_created_components = Vec::new();
 
-                let asset_name = game_to_absolute(actor).ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Invalid persistent actor path",
-                ))?;
+                let asset_name = game_to_absolute(actor).ok_or_else(|| {
+                    io::Error::new(ErrorKind::Other, "Invalid persistent actor path")
+                })?;
 
                 let game_asset = find_asset(game_paks, &asset_name)
-                    .map(|e| read_asset(&mut game_paks[e], VER_UE4_23, &asset_name).ok())
-                    .flatten();
+                    .and_then(|e| read_asset(&mut game_paks[e], VER_UE4_23, &asset_name).ok());
                 if let Some(game_asset) = game_asset {
                     let mut scs_export = None;
 
                     for i in 0..game_asset.exports.len() {
                         let export = &game_asset.exports[i];
-                        match export {
-                            Export::NormalExport(normal_export) => {
-                                if normal_export.base_export.class_index.is_import() {
-                                    let is_scs = game_asset
-                                        .get_import(normal_export.base_export.class_index)
-                                        .map(|e| {
-                                            &e.object_name.content == "SimpleConstructionScript"
-                                        })
-                                        .unwrap_or(false);
+                        if let Export::NormalExport(normal_export) = export {
+                            if normal_export.base_export.class_index.is_import() {
+                                let is_scs = game_asset
+                                    .get_import(normal_export.base_export.class_index)
+                                    .map(|e| &e.object_name.content == "SimpleConstructionScript")
+                                    .unwrap_or(false);
 
-                                    if is_scs {
-                                        scs_export = Some(normal_export);
-                                        break;
-                                    }
+                                if is_scs {
+                                    scs_export = Some(normal_export);
+                                    break;
                                 }
                             }
-                            _ => {}
                         }
                     }
 
@@ -244,9 +224,11 @@ pub(crate) fn handle_persistent_actors(
                                     continue;
                                 }
 
-                                let mut new_scs = ScsNode::default();
-                                new_scs.internal_variable_name = String::from("Unknown");
-                                new_scs.original_category = known_node_category;
+                                let mut new_scs = ScsNode {
+                                    internal_variable_name: String::from("Unknown"),
+                                    original_category: known_node_category,
+                                    ..Default::default()
+                                };
 
                                 let mut import_1 = None;
                                 let mut import_2 = None;
@@ -267,18 +249,22 @@ pub(crate) fn handle_persistent_actors(
                                             {
                                                 let import = game_asset
                                                     .get_import(object_property.value)
-                                                    .ok_or(io::Error::new(
-                                                        ErrorKind::Other,
-                                                        "No such link",
-                                                    ))?;
+                                                    .ok_or_else(|| {
+                                                        io::Error::new(
+                                                            ErrorKind::Other,
+                                                            "No such link",
+                                                        )
+                                                    })?;
                                                 import_1 = Some(import);
                                                 import_2 = Some(
                                                     game_asset
                                                         .get_import(import.outer_index)
-                                                        .ok_or(io::Error::new(
-                                                            ErrorKind::Other,
-                                                            "No such link",
-                                                        ))?,
+                                                        .ok_or_else(|| {
+                                                            io::Error::new(
+                                                                ErrorKind::Other,
+                                                                "No such link",
+                                                            )
+                                                        })?,
                                                 );
                                             }
                                         }
@@ -426,14 +412,13 @@ pub(crate) fn handle_persistent_actors(
                         class_package: FName::from_slice("/Script/Engine"),
                         class_name: asset
                             .get_import(blueprint_created_component.type_link)
-                            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?
+                            .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such import"))?
                             .object_name
                             .clone(),
                         outer_index: actor_template.base_export.class_index,
                         object_name: FName::new(
-                            String::from(
-                                blueprint_created_component.internal_variable_name.clone(),
-                            ) + "_GEN_VARIABLE",
+                            blueprint_created_component.internal_variable_name.clone()
+                                + "_GEN_VARIABLE",
                             0,
                         ),
                     };

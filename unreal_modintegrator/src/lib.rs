@@ -29,6 +29,7 @@ use crate::error::Error;
 
 pub trait IntegratorInfo {}
 
+#[allow(clippy::type_complexity)]
 pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     fn get_data(&self) -> &'data T;
     fn get_handlers(
@@ -38,14 +39,14 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
         Box<dyn FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>>,
     >;
 
-    fn get_game_name(&self) -> String;
-    fn get_integrator_version(&self) -> String;
-    fn get_engine_version(&self) -> i32;
+    const GAME_NAME: &'static str;
+    const INTEGRATOR_VERSION: &'static str;
+    const ENGINE_VERSION: i32;
 }
 
-pub fn find_asset(paks: &mut Vec<PakFile>, name: &String) -> Option<usize> {
-    for i in 0..paks.len() {
-        if paks[i].records.contains_key(name) {
+pub fn find_asset(paks: &mut [PakFile], name: &String) -> Option<usize> {
+    for (i, pak) in paks.iter().enumerate() {
+        if pak.records.contains_key(name) {
             return Some(i);
         }
     }
@@ -62,8 +63,7 @@ pub fn read_asset(pak: &mut PakFile, engine_version: i32, name: &String) -> Resu
                 .to_string(),
         )
         .ok()
-        .map(|e| e.data.clone())
-        .flatten();
+        .and_then(|e| e.data.clone());
 
     let uasset = pak.get_record(name)?.data.as_ref().unwrap().clone();
     let mut asset = Asset::new(uasset, uexp);
@@ -131,7 +131,7 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
         .table
         .data
         .get(0)
-        .ok_or::<Error>(IntegrationError::corrupted_starter_pak().into())?;
+        .ok_or_else(IntegrationError::corrupted_starter_pak)?;
     let struct_type = tab.struct_type.clone();
     let columns: Vec<FName> = tab.value.iter().map(|e| e.get_name()).collect();
     let mut duplication_indices = HashMap::new();
@@ -147,9 +147,7 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
             SyncMode::None => "SyncMode::NewEnumerator0",
         };
 
-        let mut rows: Vec<Property> = Vec::new();
-
-        rows.push(
+        let rows: Vec<Property> = vec![
             StrProperty {
                 name: columns[0].clone(),
                 property_guid: None,
@@ -157,29 +155,20 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
                 value: Some(mod_data.name.clone()),
             }
             .into(),
-        );
-
-        rows.push(
             StrProperty {
                 name: columns[1].clone(),
                 property_guid: None,
                 duplication_index: 0,
-                value: Some(mod_data.author.clone().unwrap_or(String::new())),
+                value: Some(mod_data.author.clone().unwrap_or_default()),
             }
             .into(),
-        );
-
-        rows.push(
             StrProperty {
                 name: columns[2].clone(),
                 property_guid: None,
                 duplication_index: 9,
-                value: Some(mod_data.description.clone().unwrap_or(String::new())),
+                value: Some(mod_data.description.clone().unwrap_or_default()),
             }
             .into(),
-        );
-
-        rows.push(
             StrProperty {
                 name: columns[3].clone(),
                 property_guid: None,
@@ -187,19 +176,13 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
                 value: Some(mod_data.mod_version.clone()),
             }
             .into(),
-        );
-
-        rows.push(
             StrProperty {
                 name: columns[4].clone(),
                 property_guid: None,
                 duplication_index: 0,
-                value: Some(mod_data.game_build.clone().unwrap_or(String::new())),
+                value: Some(mod_data.game_build.clone().unwrap_or_default()),
             }
             .into(),
-        );
-
-        rows.push(
             ByteProperty {
                 name: columns[5].clone(),
                 property_guid: None,
@@ -209,19 +192,13 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
                 value: asset.add_name_reference(String::from(coded_sync_mode), false) as i64,
             }
             .into(),
-        );
-
-        rows.push(
             StrProperty {
                 name: columns[6].clone(),
                 property_guid: None,
                 duplication_index: 0,
-                value: Some(mod_data.homepage.clone().unwrap_or(String::new())),
+                value: Some(mod_data.homepage.clone().unwrap_or_default()),
             }
             .into(),
-        );
-
-        rows.push(
             BoolProperty {
                 name: columns[7].clone(),
                 property_guid: None,
@@ -229,7 +206,7 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
                 value: true, // optional modids?
             }
             .into(),
-        );
+        ];
 
         let duplication_index = duplication_indices
             .entry(mod_data.mod_id.clone())
@@ -293,8 +270,7 @@ fn bake_integrator_data(
     let export = asset
         .exports
         .iter_mut()
-        .filter(|e| e.get_base_export().object_name.content == "Default__IntegratorStatics_BP_C")
-        .next();
+        .find(|e| e.get_base_export().object_name.content == "Default__IntegratorStatics_BP_C");
     if export.is_none() {
         return Err(IntegrationError::corrupted_starter_pak().into());
     }
@@ -312,7 +288,7 @@ fn bake_integrator_data(
 pub fn integrate_mods<
     'data,
     T: 'data,
-    E: 'static + std::error::Error,
+    E: 'static + std::error::Error + Send,
     C: IntegratorConfig<'data, T, E>,
 >(
     integrator_config: &C,
@@ -337,7 +313,7 @@ pub fn integrate_mods<
         .filter(|e| e.path().extension().map(|e| e == "pak").unwrap_or(false))
         .filter_map(|e| File::open(&e.path()).ok())
         .collect();
-    if game_files.len() == 0 {
+    if game_files.is_empty() {
         return Err(IntegrationError::game_not_found().into());
     }
 
@@ -353,14 +329,14 @@ pub fn integrate_mods<
             .data
             .as_ref()
             .unwrap();
-        let metadata: Metadata = serde_json::from_slice(&record)?;
+        let metadata: Metadata = serde_json::from_slice(record)?;
         mods.push(metadata.clone());
 
-        let optional_metadata: Value = serde_json::from_slice(&record)?;
+        let optional_metadata: Value = serde_json::from_slice(record)?;
         optional_mods_data.push(optional_metadata);
     }
 
-    if mods.len() > 0 {
+    if !mods.is_empty() {
         let path = Path::new(paks_path).join("999-Mods_P.pak");
         OpenOptions::new()
             .create(true)
@@ -380,13 +356,13 @@ pub fn integrate_mods<
         let mut list_of_mods = read_in_memory(
             LIST_OF_MODS_ASSET.to_vec(),
             list_of_mods_bulk,
-            integrator_config.get_engine_version(),
+            C::ENGINE_VERSION,
         )?;
         bake_mod_data(&mut list_of_mods, &mods)?;
         write_asset(
             &mut generated_pak,
             &list_of_mods,
-            &(integrator_config.get_game_name() + "/Content/Integrator/ListOfMods.uasset"),
+            &(C::GAME_NAME.to_owned() + "/Content/Integrator/ListOfMods.uasset"),
         )?;
 
         #[cfg(not(feature = "bulk_data"))]
@@ -397,19 +373,18 @@ pub fn integrate_mods<
         let mut integrator_statics = read_in_memory(
             INTEGRATOR_STATICS_ASSET.to_vec(),
             integrator_statics_bulk,
-            integrator_config.get_engine_version(),
+            C::ENGINE_VERSION,
         )?;
 
         bake_integrator_data(
             &mut integrator_statics,
-            integrator_config.get_integrator_version(),
+            C::INTEGRATOR_VERSION.to_owned(),
             refuse_mismatched_connections,
         )?;
         write_asset(
             &mut generated_pak,
             &integrator_statics,
-            &(integrator_config.get_game_name()
-                + "/Content/Integrator/IntegratorStatics_BP.uasset"),
+            &(C::GAME_NAME.to_owned() + "/Content/Integrator/IntegratorStatics_BP.uasset"),
         )?;
 
         let metadata_record = PakRecord::new(
@@ -421,7 +396,7 @@ pub fn integrate_mods<
 
         for entry in &COPY_OVER {
             let record = PakRecord::new(
-                integrator_config.get_game_name() + "/Content/Integrator/" + entry.1,
+                C::GAME_NAME.to_owned() + "/Content/Integrator/" + entry.1,
                 entry.0.to_vec(),
                 unreal_pak::CompressionMethod::Zlib,
             )?;
@@ -430,7 +405,7 @@ pub fn integrate_mods<
 
         let mut game_paks = Vec::new();
         for game_file in &game_files {
-            let mut pak = PakFile::reader(&game_file);
+            let mut pak = PakFile::reader(game_file);
             pak.load_records()?;
             game_paks.push(pak);
         }

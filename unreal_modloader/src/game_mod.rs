@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 
 use unreal_modintegrator::metadata::{DownloadInfo, Metadata, SyncMode};
@@ -31,7 +31,7 @@ impl fmt::Display for SelectedVersion {
             SelectedVersion::Latest(version) => write!(f, "Latest ({})", version),
             SelectedVersion::LatestIndirect(version) => {
                 if let Some(version) = version {
-                    write!(f, "{}", version)
+                    write!(f, "{}*", version)
                 } else {
                     write!(f, "None")
                 }
@@ -43,8 +43,9 @@ impl fmt::Display for SelectedVersion {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameMod {
-    pub versions: HashMap<Version, GameModVersion>,
+    pub versions: BTreeMap<Version, GameModVersion>,
     pub selected_version: SelectedVersion,
+    pub latest_version: Option<Version>,
 
     pub active: bool,
 

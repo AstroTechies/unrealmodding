@@ -106,7 +106,7 @@ impl PakRecord {
     {
         let file_name = reader
             .read_string()?
-            .ok_or(UnrealPakError::invalid_pak_file())?;
+            .ok_or_else(UnrealPakError::invalid_pak_file)?;
         let offset = reader.read_u64::<LittleEndian>()?;
         let compressed_size = reader.read_u64::<LittleEndian>()?;
         let decompressed_size = reader.read_u64::<LittleEndian>()?;
@@ -182,7 +182,7 @@ impl PakRecord {
                 let compression_blocks = self
                     .compression_blocks
                     .as_ref()
-                    .ok_or(UnrealPakError::invalid_record())?;
+                    .ok_or_else(UnrealPakError::invalid_record)?;
                 for block in compression_blocks {
                     let offset = block.start;
 
@@ -281,7 +281,7 @@ impl PakRecord {
                     let begin = compressed_data.len() as u64;
 
                     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-                    encoder.write_all(&block_uncompressed_data)?;
+                    encoder.write_all(block_uncompressed_data)?;
                     let block_compressed_data = encoder.finish()?;
                     compressed_data.extend_from_slice(&block_compressed_data);
 
@@ -304,7 +304,7 @@ impl PakRecord {
         self.hash = hasher.finalize().to_vec();
 
         self.write_header(writer, false)?;
-        writer.write_all(&data)?;
+        writer.write_all(data)?;
         Ok(())
     }
 }
@@ -368,8 +368,8 @@ impl<'data> PakFile<'data> {
         reader.seek(SeekFrom::Start(index_offset))?;
 
         let mount_point = reader.read_string()?;
-        if mount_point.is_some() {
-            self.mount_point = mount_point.unwrap().as_bytes().to_vec();
+        if let Some(mount_point) = mount_point {
+            self.mount_point = mount_point.as_bytes().to_vec();
         }
 
         let record_count = reader.read_u32::<LittleEndian>()?;
@@ -390,7 +390,7 @@ impl<'data> PakFile<'data> {
         let record = self
             .records
             .get_mut(name)
-            .ok_or(UnrealPakError::record_not_found(name.clone()))?;
+            .ok_or_else(|| UnrealPakError::record_not_found(name.clone()))?;
         if record.data.is_none() {
             record.read_data(self.reader.as_mut().unwrap(), self.file_version)?;
         }
@@ -404,7 +404,7 @@ impl<'data> PakFile<'data> {
 
         let mut writer = self.writer.as_mut().unwrap();
 
-        for (_, record) in &mut self.records {
+        for record in &mut self.records.values_mut() {
             record.write(&mut writer, self.block_size)?;
         }
 
@@ -415,7 +415,7 @@ impl<'data> PakFile<'data> {
         header_writer.write_string(Some(&String::from_utf8_lossy(&self.mount_point)))?;
         header_writer.write_i32::<LittleEndian>(self.records.len() as i32)?;
 
-        for (_, record) in &self.records {
+        for record in self.records.values_mut() {
             record.write_header(&mut header_writer, true)?;
         }
         header_writer.flush()?;

@@ -28,6 +28,7 @@ pub struct MapProperty {
 }
 impl_property_data_trait!(MapProperty);
 
+#[allow(clippy::derive_hash_xor_eq)]
 impl Hash for MapProperty {
     //todo: probably do something with map
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -59,11 +60,8 @@ impl MapProperty {
                         .get(&name.content)
                         .map(|s| s.to_owned()),
                 }
-                .unwrap_or(String::from("Generic"));
-                Ok(
-                    StructProperty::new(asset, name.clone(), false, 1, 0, asset.engine_version)?
-                        .into(),
-                )
+                .unwrap_or_else(|| String::from("Generic"));
+                Ok(StructProperty::new(asset, name, false, 1, 0, asset.engine_version)?.into())
             }
             _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
         }
@@ -88,8 +86,8 @@ impl MapProperty {
         let num_keys_to_remove = asset.cursor.read_i32::<LittleEndian>()?;
         let mut keys_to_remove = None;
 
-        let type_1 = type_1.ok_or(Error::invalid_file("No type1".to_string()))?;
-        let type_2 = type_2.ok_or(Error::invalid_file("No type2".to_string()))?;
+        let type_1 = type_1.ok_or_else(|| Error::invalid_file("No type1".to_string()))?;
+        let type_2 = type_2.ok_or_else(|| Error::invalid_file("No type2".to_string()))?;
 
         for _ in 0..num_keys_to_remove as usize {
             let mut vec = Vec::with_capacity(num_keys_to_remove as usize);
@@ -129,7 +127,7 @@ impl MapProperty {
 
         Ok(MapProperty {
             name,
-            property_guid: property_guid,
+            property_guid,
             duplication_index,
             key_type: type_1,
             value_type: type_2,

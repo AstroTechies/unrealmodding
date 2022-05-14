@@ -80,15 +80,15 @@ impl PropertyTrait for SmartNameProperty {
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
             cursor.write_u16::<LittleEndian>(
                 self.smart_name_id
-                    .ok_or(PropertyError::property_field_none("smart_name_id", "u16"))?,
+                    .ok_or_else(|| PropertyError::property_field_none("smart_name_id", "u16"))?,
             )?;
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
-            cursor.write(
+            cursor.write_all(
                 &self
                     .temp_guid
-                    .ok_or(PropertyError::property_field_none("temp_guid", "String"))?,
+                    .ok_or_else(|| PropertyError::property_field_none("temp_guid", "String"))?,
             )?;
         }
         Ok((cursor.position() - begin) as usize)

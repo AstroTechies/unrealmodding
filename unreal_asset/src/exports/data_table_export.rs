@@ -82,14 +82,11 @@ impl ExportTrait for DataTableExport {
         let mut decided_struct_type = FName::from_slice("Generic");
         for data in &self.normal_export.properties {
             if data.get_name().content.as_str() == "RowStruct" {
-                match data {
-                    Property::ObjectProperty(prop) => {
-                        if let Some(import) = asset.get_import(prop.value) {
-                            decided_struct_type = import.object_name.clone();
-                            break;
-                        }
+                if let Property::ObjectProperty(prop) = data {
+                    if let Some(import) = asset.get_import(prop.value) {
+                        decided_struct_type = import.object_name.clone();
+                        break;
                     }
-                    _ => {}
                 }
             }
         }

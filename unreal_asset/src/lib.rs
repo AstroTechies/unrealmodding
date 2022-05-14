@@ -164,7 +164,7 @@ impl<'a> Asset {
     pub fn new(asset_data: Vec<u8>, bulk_data: Option<Vec<u8>>) -> Self {
         let raw_data = match &bulk_data {
             Some(e) => {
-                let mut data = asset_data.clone();
+                let mut data = asset_data;
                 data.extend(e);
                 data
             }
@@ -284,7 +284,7 @@ impl<'a> Asset {
         self.folder_name = self
             .cursor
             .read_string()?
-            .ok_or(Error::no_data("folder_name is None".to_string()))?;
+            .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
         self.package_flags = self.cursor.read_u32::<LittleEndian>()?;
@@ -416,7 +416,7 @@ impl<'a> Asset {
         let s = self
             .cursor
             .read_string()?
-            .ok_or(Error::no_data("name_map_string is None".to_string()))?;
+            .ok_or_else(|| Error::no_data("name_map_string is None".to_string()))?;
         let mut hashes = 0;
         if self.engine_version >= ue4version::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
             hashes = self.cursor.read_u32::<LittleEndian>()?;
@@ -444,7 +444,7 @@ impl<'a> Asset {
         if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             cursor.write_bool(guid.is_some())?;
             if let Some(ref data) = guid {
-                cursor.write(data)?;
+                cursor.write_all(data)?;
             }
         }
         Ok(())
@@ -454,14 +454,14 @@ impl<'a> Asset {
         let mut s = DefaultHasher::new();
         name.hash(&mut s);
 
-        self.name_map_lookup.get(&s.finish()).map(|e| *e)
+        self.name_map_lookup.get(&s.finish()).copied()
     }
 
     pub fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
         if !force_add_duplicates {
             let existing = self.search_name_reference(&name);
-            if existing.is_some() {
-                return existing.unwrap();
+            if let Some(existing) = existing {
+                return existing;
             }
         }
 
@@ -502,19 +502,21 @@ impl<'a> Asset {
     }
 
     fn write_fname(&self, cursor: &mut Cursor<Vec<u8>>, fname: &FName) -> Result<(), Error> {
-        cursor.write_i32::<LittleEndian>(self.search_name_reference(&fname.content).ok_or(
-            Error::no_data(format!(
-                "name reference for {} not found",
-                fname.content.to_owned()
-            )),
-        )?)?;
+        cursor.write_i32::<LittleEndian>(
+            self.search_name_reference(&fname.content).ok_or_else(|| {
+                Error::no_data(format!(
+                    "name reference for {} not found",
+                    fname.content.to_owned()
+                ))
+            })?,
+        )?;
         cursor.write_i32::<LittleEndian>(fname.index)?;
         Ok(())
     }
 
     pub fn add_import(&mut self, import: Import) -> PackageIndex {
         let index = -(self.imports.len() as i32) - 1;
-        let import = import.clone();
+        let import = import;
         self.imports.push(import);
         PackageIndex::new(index)
     }
@@ -637,9 +639,11 @@ impl<'a> Asset {
             self.cursor
                 .seek(SeekFrom::Start(self.export_offset as u64))?;
             for _i in 0..self.export_count {
-                let mut export = BaseExport::default();
-                export.class_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
-                export.super_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
+                let mut export = BaseExport {
+                    class_index: PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?),
+                    super_index: PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?),
+                    ..Default::default()
+                };
 
                 if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
                     export.template_index =
@@ -782,7 +786,7 @@ impl<'a> Asset {
                 .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
         }
 
-        if self.header_offset > 0 && self.exports.len() > 0 {
+        if self.header_offset > 0 && !self.exports.is_empty() {
             for i in 0..self.exports.len() {
                 let base_export = match &self.exports[i] {
                     Export::BaseExport(export) => Some(export.clone()),
@@ -820,9 +824,9 @@ impl<'a> Asset {
             .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
 
         //todo: manual skips
-        let export_class_type = self.get_export_class_type(base_export.class_index).ok_or(
-            Error::invalid_package_index("Unknown class type".to_string()),
-        )?;
+        let export_class_type = self
+            .get_export_class_type(base_export.class_index)
+            .ok_or_else(|| Error::invalid_package_index("Unknown class type".to_string()))?;
         let mut export: Export = match export_class_type.content.as_str() {
             "Level" => LevelExport::from_base(base_export, self, next_starting)?.into(),
             "StringTable" => StringTableExport::from_base(base_export, self)?.into(),
@@ -889,12 +893,10 @@ impl<'a> Asset {
             self.cursor
                 .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
             return Ok(RawExport::from_base(base_export.clone(), self)?.into());
-        } else {
-            if let Some(normal_export) = export.get_normal_export_mut() {
-                let mut extras = vec![0u8; extras_len as usize];
-                self.cursor.read_exact(&mut extras)?;
-                normal_export.extras = extras;
-            }
+        } else if let Some(normal_export) = export.get_normal_export_mut() {
+            let mut extras = vec![0u8; extras_len as usize];
+            self.cursor.read_exact(&mut extras)?;
+            normal_export.extras = extras;
         }
 
         Ok(export)
@@ -937,7 +939,7 @@ impl<'a> Asset {
                 false => {
                     cursor.write_i32::<LittleEndian>(self.custom_version.len() as i32)?;
                     for custom_version in &self.custom_version {
-                        cursor.write(&custom_version.guid)?;
+                        cursor.write_all(&custom_version.guid)?;
                         cursor.write_i32::<LittleEndian>(custom_version.version)?;
                     }
                 }
@@ -971,7 +973,7 @@ impl<'a> Asset {
         }
 
         cursor.write_i32::<LittleEndian>(self.thumbnail_table_offset)?;
-        cursor.write(&self.package_guid)?;
+        cursor.write_all(&self.package_guid)?;
         cursor.write_i32::<LittleEndian>(self.generations.len() as i32)?;
 
         for _ in 0..self.generations.len() {
@@ -1061,7 +1063,7 @@ impl<'a> Asset {
             true => 1,
             false => 0,
         })?;
-        cursor.write(&unk.package_guid)?;
+        cursor.write_all(&unk.package_guid)?;
         cursor.write_u32::<LittleEndian>(unk.package_flags)?;
 
         if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
@@ -1124,7 +1126,7 @@ impl<'a> Asset {
             self.bulk_data_start_offset,
         )?;
 
-        let name_offset = match self.name_map_index_list.len() != 0 {
+        let name_offset = match !self.name_map_index_list.is_empty() {
             true => cursor.position() as i32,
             false => 0,
         };
@@ -1140,7 +1142,7 @@ impl<'a> Asset {
             }
         }
 
-        let import_offset = match self.imports.len() != 0 {
+        let import_offset = match !self.imports.is_empty() {
             true => cursor.position() as i32,
             false => 0,
         };
@@ -1152,7 +1154,7 @@ impl<'a> Asset {
             self.write_fname(cursor, &import.object_name)?;
         }
 
-        let export_offset = match self.exports.len() != 0 {
+        let export_offset = match !self.exports.is_empty() {
             true => cursor.position() as i32,
             false => 0,
         };
@@ -1251,7 +1253,7 @@ impl<'a> Asset {
             }
         }
 
-        let header_offset = match self.exports.len() != 0 {
+        let header_offset = match !self.exports.is_empty() {
             true => cursor.position() as i32,
             false => 0,
         };
@@ -1271,17 +1273,17 @@ impl<'a> Asset {
             });
             export.write(self, bulk_cursor)?;
             if let Some(normal_export) = export.get_normal_export() {
-                bulk_cursor.write(&normal_export.extras)?;
+                bulk_cursor.write_all(&normal_export.extras)?;
             }
         }
-        bulk_cursor.write(&[0xc1, 0x83, 0x2a, 0x9e])?;
+        bulk_cursor.write_all(&[0xc1, 0x83, 0x2a, 0x9e])?;
 
         let bulk_data_start_offset = match self.use_separate_bulk_data_files {
             true => final_cursor_pos as i64 + bulk_cursor.position() as i64,
             false => cursor.position() as i64,
         } - 4;
 
-        if self.exports.len() > 0 {
+        if !self.exports.is_empty() {
             cursor.seek(SeekFrom::Start(export_offset as u64))?;
             let mut first_export_dependency_offset = 0;
             for i in 0..self.exports.len() {

@@ -139,25 +139,23 @@ impl ArrayProperty {
                 )?;
                 entries.push(data.into());
             }
-        } else {
-            if num_entries > 0 {
-                let size_est_1 = length / num_entries as i64;
-                let size_est_2 = (length - 4) / num_entries as i64;
-                let array_type = array_type
-                    .as_ref()
-                    .ok_or(Error::invalid_file("Unknown array type".to_string()))?;
-                for i in 0..num_entries {
-                    let entry = Property::from_type(
-                        asset,
-                        array_type,
-                        FName::new(i.to_string(), i32::MIN),
-                        false,
-                        size_est_1,
-                        size_est_2,
-                        0,
-                    )?;
-                    entries.push(entry);
-                }
+        } else if num_entries > 0 {
+            let size_est_1 = length / num_entries as i64;
+            let size_est_2 = (length - 4) / num_entries as i64;
+            let array_type = array_type
+                .as_ref()
+                .ok_or_else(|| Error::invalid_file("Unknown array type".to_string()))?;
+            for i in 0..num_entries {
+                let entry = Property::from_type(
+                    asset,
+                    array_type,
+                    FName::new(i.to_string(), i32::MIN),
+                    false,
+                    size_est_1,
+                    size_est_2,
+                    0,
+                )?;
+                entries.push(entry);
             }
         }
 
@@ -178,7 +176,7 @@ impl ArrayProperty {
         include_header: bool,
         serialize_structs_differently: bool,
     ) -> Result<usize, Error> {
-        let array_type = match self.value.len() > 0 {
+        let array_type = match !self.value.is_empty() {
             true => Some(self.value[0].to_fname()),
             false => self.array_type.clone(),
         };
@@ -186,7 +184,7 @@ impl ArrayProperty {
         if include_header {
             asset.write_fname(
                 cursor,
-                array_type.as_ref().ok_or(PropertyError::headerless())?,
+                array_type.as_ref().ok_or_else(PropertyError::headerless)?,
             )?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
@@ -198,7 +196,7 @@ impl ArrayProperty {
             && array_type.as_ref().unwrap().content.as_str() == "StructProperty")
             && serialize_structs_differently
         {
-            let property: &StructProperty = match self.value.len() > 0 {
+            let property: &StructProperty = match !self.value.is_empty() {
                 true => match &self.value[0] {
                     Property::StructProperty(ref e) => Ok(e),
                     _ => Err(PropertyError::invalid_array(format!(
@@ -222,13 +220,12 @@ impl ArrayProperty {
                 cursor.write_i64::<LittleEndian>(0)?;
                 asset.write_fname(
                     cursor,
-                    property
-                        .struct_type
-                        .as_ref()
-                        .ok_or(PropertyError::property_field_none("struct_type", "FName"))?,
+                    property.struct_type.as_ref().ok_or_else(|| {
+                        PropertyError::property_field_none("struct_type", "FName")
+                    })?,
                 )?;
                 if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                    cursor.write(&property.property_guid.unwrap_or(default_guid()))?;
+                    cursor.write_all(&property.property_guid.unwrap_or_else(default_guid))?;
                 }
                 if asset.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
                     cursor.write_u8(0)?;

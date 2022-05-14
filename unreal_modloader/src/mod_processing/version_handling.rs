@@ -5,20 +5,9 @@ use unreal_modintegrator::metadata::SyncMode;
 
 use crate::game_mod::SelectedVersion;
 use crate::version::{GameBuild, Version};
-use crate::AppData;
+use crate::ModLoaderAppData;
 
-pub(crate) fn auto_pick_versions(data: &mut AppData) {
-    // check that there is even a version to pick
-    let mut to_remove = Vec::new();
-    for (mod_id, game_mod) in data.game_mods.iter() {
-        if game_mod.versions.is_empty() {
-            to_remove.push(mod_id.to_owned());
-        }
-    }
-    for mod_id in to_remove {
-        data.game_mods.remove(&mod_id);
-    }
-
+pub(crate) fn auto_pick_versions(data: &mut ModLoaderAppData) {
     for (_, game_mod) in data.game_mods.iter_mut() {
         // if using latest indirect, find version
         if let SelectedVersion::LatestIndirect(None) = game_mod.selected_version {
@@ -26,15 +15,17 @@ pub(crate) fn auto_pick_versions(data: &mut AppData) {
             versions.sort();
             game_mod.selected_version =
                 SelectedVersion::LatestIndirect(Some(**versions.last().unwrap()));
+
+            game_mod.latest_version = Some(**versions.last().unwrap());
         }
     }
 }
 
 /// Sets top-level fields from the metadata of the selected version.
 /// Will panic if any versions are LatestIndirect with no version set.
-pub(crate) fn set_mod_data_from_version(data: &mut AppData, filter: &Vec<String>) {
+pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &[String]) {
     for (mod_id, game_mod) in data.game_mods.iter_mut() {
-        if !filter.contains(&mod_id) {
+        if !filter.contains(mod_id) {
             continue;
         }
 

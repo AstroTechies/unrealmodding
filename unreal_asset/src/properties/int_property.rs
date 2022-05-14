@@ -219,10 +219,9 @@ impl ByteProperty {
             _ => None,
         };
 
-        value.ok_or(Error::invalid_file(format!(
-            "Invalid length of {} for ByteProperty",
-            length
-        )))
+        value.ok_or_else(|| {
+            Error::invalid_file(format!("Invalid length of {} for ByteProperty", length))
+        })
     }
 
     pub fn new(
@@ -263,7 +262,8 @@ impl PropertyTrait for ByteProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         if include_header {
-            cursor.write_i64::<LittleEndian>(self.enum_type.ok_or(PropertyError::headerless())?)?;
+            cursor
+                .write_i64::<LittleEndian>(self.enum_type.ok_or_else(PropertyError::headerless)?)?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }
 

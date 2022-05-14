@@ -62,9 +62,9 @@ impl ClassExport {
         }
 
         let mut class_flags = EClassFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?)
-            .ok_or(Error::invalid_file("Invalid class flags".to_string()))?;
+            .ok_or_else(|| Error::invalid_file("Invalid class flags".to_string()))?;
         if asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
-            class_flags = class_flags ^ EClassFlags::CLASS_NOT_PLACEABLE
+            class_flags ^= EClassFlags::CLASS_NOT_PLACEABLE
         }
 
         let class_within = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
@@ -148,23 +148,21 @@ impl ClassExport {
 }
 
 impl ExportNormalTrait for ClassExport {
-    fn get_normal_export<'a>(&'a self) -> Option<&'a super::normal_export::NormalExport> {
+    fn get_normal_export(&'_ self) -> Option<&'_ super::normal_export::NormalExport> {
         Some(&self.struct_export.normal_export)
     }
 
-    fn get_normal_export_mut<'a>(
-        &'a mut self,
-    ) -> Option<&'a mut super::normal_export::NormalExport> {
+    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut super::normal_export::NormalExport> {
         Some(&mut self.struct_export.normal_export)
     }
 }
 
 impl ExportBaseTrait for ClassExport {
-    fn get_base_export<'a>(&'a self) -> &'a BaseExport {
+    fn get_base_export(&'_ self) -> &'_ BaseExport {
         &self.struct_export.normal_export.base_export
     }
 
-    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport {
         &mut self.struct_export.normal_export.base_export
     }
 }
@@ -206,9 +204,11 @@ impl ExportTrait for ClassExport {
 
         if asset.engine_version >= VER_UE4_ADD_COOKED_TO_UCLASS {
             cursor.write_i32::<LittleEndian>(
-                match self.cooked.ok_or(Error::no_data(
-                    "engine_version >= UE4_ADD_COOKED_TO_UCLASS but cooked is None".to_string(),
-                ))? {
+                match self.cooked.ok_or_else(|| {
+                    Error::no_data(
+                        "engine_version >= UE4_ADD_COOKED_TO_UCLASS but cooked is None".to_string(),
+                    )
+                })? {
                     true => 1,
                     false => 0,
                 },

@@ -29,7 +29,7 @@ lazy_static! {
         ( new_guid(0x7B5AE74C, 0xD2704C10, 0xA9585798, 0x0B212A5A), String::from("FSequencerObjectVersion") ),
         ( new_guid(0xD7296918, 0x1DD64BDD, 0x9DE264A8, 0x3CC13884), String::from("FVRObjectVersion") ),
         ( new_guid(0xC2A15278, 0xBFE74AFE, 0x6C1790FF, 0x531DF755), String::from("FLoadTimesObjectVersion") ),
-        ( new_guid(0x6EACA3D4, 0x40EC4CC1, 0xb7868BED, 0x9428FC5), String::from("FGeometryObjectVersion") ),
+        ( new_guid(0x6EACA3D4, 0x40EC4CC1, 0xB7868BED, 0x9428FC5), String::from("FGeometryObjectVersion") ),
         ( new_guid(0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA), String::from("FAnimPhysObjectVersion") ), //
         ( new_guid(0xAF43A65D, 0x7FD34947, 0x98733E8E, 0xD9C1BB05), String::from("FAnimObjectVersion") ),
         ( new_guid(0x6B266CEC, 0x1EC74B8F, 0xA30BE4D9, 0x0942FC07), String::from("FReflectionCaptureObjectVersion") ),

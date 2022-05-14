@@ -9,8 +9,6 @@ use clap::{Parser, Subcommand};
 use unreal_pak::PakRecord;
 use walkdir::WalkDir;
 
-use unreal_pak;
-
 /// Command line tool for working with Unreal Engine .pak files
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -67,17 +65,12 @@ fn main() {
 
             // TODO: get rid of this clone
             for (i, (record_name, _)) in pak.records.clone().iter().enumerate() {
-                println!("Record {}: {}", i.to_string(), record_name);
+                println!("Record {}: {}", i, record_name);
 
-                match pak.get_record(&record_name) {
+                match pak.get_record(record_name) {
                     Ok(_) => (),
                     Err(e) => {
-                        eprintln!(
-                            "Error reading record {}: {}, Error: {}",
-                            i.to_string(),
-                            record_name,
-                            e
-                        );
+                        eprintln!("Error reading record {}: {}, Error: {}", i, record_name, e);
                         exit(1);
                     }
                 }
@@ -85,7 +78,7 @@ fn main() {
         }
         Commands::Extract { pakfile, outdir } => {
             let path = Path::new(&pakfile);
-            let file = open_file(&path);
+            let file = open_file(path);
             let mut pak = unreal_pak::PakFile::reader(&file);
             check_header(&mut pak);
 
@@ -107,17 +100,13 @@ fn main() {
 
             // TODO: get rid of this clone
             for (i, (record_name, _)) in pak.records.clone().iter().enumerate() {
-                match pak.get_record(&record_name) {
+                match pak.get_record(record_name) {
                     Ok(record_data) => {
                         let path = Path::new(output_folder).join(&record_name[..]);
                         let dir_path = match path.parent() {
                             Some(dir) => dir,
                             None => {
-                                eprintln!(
-                                    "No parent directories found! {}: {}",
-                                    i.to_string(),
-                                    record_name
-                                );
+                                eprintln!("No parent directories found! {}: {}", i, record_name);
                                 exit(1);
                             }
                         };
@@ -129,25 +118,17 @@ fn main() {
                                 let mut file = match File::create(&path) {
                                     Ok(file) => file,
                                     Err(_) => {
-                                        eprintln!(
-                                            "Error creating file! {}: {:?}",
-                                            i.to_string(),
-                                            path
-                                        );
+                                        eprintln!("Error creating file! {}: {:?}", i, path);
                                         exit(1);
                                     }
                                 };
                                 // Write the file
                                 match file.write_all(record_data.data.as_ref().unwrap()) {
                                     Ok(_) => {
-                                        println!("Record {}: {}", i.to_string(), record_name);
+                                        println!("Record {}: {}", i, record_name);
                                     }
                                     Err(_) => {
-                                        eprintln!(
-                                            "Error writing to file! {}: {:?}",
-                                            i.to_string(),
-                                            path
-                                        );
+                                        eprintln!("Error writing to file! {}: {:?}", i, path);
                                         exit(1);
                                     }
                                 }
@@ -159,7 +140,7 @@ fn main() {
                         };
                     }
                     Err(_) => {
-                        eprintln!("Error reading record {}: {}", i.to_string(), record_name);
+                        eprintln!("Error reading record {}: {}", i, record_name);
                         exit(1);
                     }
                 }
@@ -200,7 +181,7 @@ fn main() {
                     let file_path = entry.path().to_str().unwrap().to_owned();
 
                     let mut record_name = file_path[indir.len()..].to_owned();
-                    if record_name.starts_with("/") {
+                    if record_name.starts_with('/') {
                         record_name = record_name[1..].to_owned();
                     }
 
@@ -215,9 +196,11 @@ fn main() {
                     };
 
                     let record = PakRecord::new(record_name.clone(), file_data, compression_method)
-                        .expect(&format!("Error creating record {}", record_name.clone()));
+                        .unwrap_or_else(|_| {
+                            panic!("Error creating record {}", record_name.clone())
+                        });
                     pak.add_record(record)
-                        .expect(&format!("Error adding record {}", record_name));
+                        .unwrap_or_else(|_| panic!("Error adding record {}", record_name));
                 }
             }
 

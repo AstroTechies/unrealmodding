@@ -25,6 +25,7 @@ use crate::assets::{ACTOR_TEMPLATE_ASSET, ACTOR_TEMPLATE_EXPORT};
 
 use super::{game_to_absolute, get_asset};
 
+#[allow(clippy::ptr_arg)]
 pub(crate) fn handle_linked_actor_components(
     _data: &(),
     integrated_pak: &mut PakFile,
@@ -50,19 +51,16 @@ pub(crate) fn handle_linked_actor_components(
     let mut new_components = HashMap::new();
 
     for linked_actor_map in &linked_actors_maps {
-        let linked_actors_map = linked_actor_map.as_object().ok_or(io::Error::new(
-            ErrorKind::Other,
-            "Invalid linked_actor_components",
-        ))?;
+        let linked_actors_map = linked_actor_map
+            .as_object()
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid linked_actor_components"))?;
         for (name, components) in linked_actors_map.iter() {
             let components = components.as_array().ok_or(io::Error::new(
                 ErrorKind::Other,
                 "Invalid linked_actor_components2",
             ))?;
 
-            let entry = new_components
-                .entry(name.clone())
-                .or_insert_with(|| Vec::new());
+            let entry = new_components.entry(name.clone()).or_insert_with(Vec::new);
             for component in components {
                 let component_name = component.as_str().ok_or(io::Error::new(
                     ErrorKind::Other,
@@ -74,8 +72,8 @@ pub(crate) fn handle_linked_actor_components(
     }
 
     for (name, components) in &new_components {
-        let name = game_to_absolute(&name)
-            .ok_or(io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
+        let name = game_to_absolute(name)
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
         let mut asset = get_asset(integrated_pak, game_paks, &name, VER_UE4_23)?;
 
         for component_path_raw in components {

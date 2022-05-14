@@ -68,7 +68,7 @@ impl PropertyTrait for UnknownProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write(&self.value)?;
+        cursor.write_all(&self.value)?;
         Ok(self.value.len())
     }
 }

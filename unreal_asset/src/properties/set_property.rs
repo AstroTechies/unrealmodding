@@ -80,7 +80,7 @@ impl PropertyTrait for SetProperty {
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
-        let array_type = match self.value.value.len() > 0 {
+        let array_type = match !self.value.value.is_empty() {
             true => Some(self.value.value[0].to_fname()),
             false => self.array_type.clone(),
         };
@@ -88,7 +88,7 @@ impl PropertyTrait for SetProperty {
         if include_header {
             asset.write_fname(
                 cursor,
-                array_type.as_ref().ok_or(PropertyError::headerless())?,
+                array_type.as_ref().ok_or_else(PropertyError::headerless)?,
             )?;
             asset.write_property_guid(cursor, &self.property_guid)?;
         }

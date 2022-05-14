@@ -20,6 +20,7 @@ use unreal_pak::PakFile;
 
 use super::{game_to_absolute, get_asset};
 
+#[allow(clippy::ptr_arg)]
 pub(crate) fn handle_item_list_entries(
     _data: &(),
     integrated_pak: &mut PakFile,
@@ -29,34 +30,28 @@ pub(crate) fn handle_item_list_entries(
     let mut new_items = HashMap::new();
 
     for item_list_entries_map in &item_list_entires_maps {
-        let item_list_entries_map = item_list_entries_map.as_object().ok_or(io::Error::new(
-            ErrorKind::Other,
-            "Invalid item_list_entries",
-        ))?;
+        let item_list_entries_map = item_list_entries_map
+            .as_object()
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid item_list_entries"))?;
 
         for (name, item_list_entries) in item_list_entries_map {
-            let item_list_entries = item_list_entries.as_object().ok_or(io::Error::new(
-                ErrorKind::Other,
-                "Invalid item_list_entries",
-            ))?;
-            let new_items_entry = new_items
-                .entry(name.clone())
-                .or_insert_with(|| HashMap::new());
+            let item_list_entries = item_list_entries
+                .as_object()
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid item_list_entries"))?;
+            let new_items_entry = new_items.entry(name.clone()).or_insert_with(HashMap::new);
 
             for (item_name, entries) in item_list_entries {
-                let entries = entries.as_array().ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Invalid item_list_entries",
-                ))?;
+                let entries = entries
+                    .as_array()
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid item_list_entries"))?;
 
                 let new_items_entry_map = new_items_entry
                     .entry(item_name.clone())
-                    .or_insert_with(|| Vec::new());
+                    .or_insert_with(Vec::new);
                 for entry in entries {
-                    let entry = entry.as_str().ok_or(io::Error::new(
-                        ErrorKind::Other,
-                        "Invalid item_list_entries",
-                    ))?;
+                    let entry = entry.as_str().ok_or_else(|| {
+                        io::Error::new(ErrorKind::Other, "Invalid item_list_entries")
+                    })?;
                     new_items_entry_map.push(String::from(entry));
                 }
             }
@@ -64,8 +59,8 @@ pub(crate) fn handle_item_list_entries(
     }
 
     for (asset_name, entries) in &new_items {
-        let asset_name = game_to_absolute(&asset_name)
-            .ok_or(io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
+        let asset_name = game_to_absolute(asset_name)
+            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
         let mut asset = get_asset(integrated_pak, game_paks, &asset_name, VER_UE4_23)?;
 
         let mut item_types_property: HashMap<String, Vec<(usize, usize, String)>> = HashMap::new();
@@ -73,10 +68,10 @@ pub(crate) fn handle_item_list_entries(
             if let Some(normal_export) = asset.exports[i].get_normal_export() {
                 for j in 0..normal_export.properties.len() {
                     let property = &normal_export.properties[j];
-                    for (arr_name, _) in entries {
+                    for arr_name in entries.keys() {
                         let mut arr_name = arr_name.clone();
-                        if arr_name.contains(".") {
-                            let split: Vec<&str> = arr_name.split(".").collect();
+                        if arr_name.contains('.') {
+                            let split: Vec<&str> = arr_name.split('.').collect();
                             let export_name = split[0].to_lowercase();
                             arr_name = split[1].to_owned();
 
@@ -97,17 +92,19 @@ pub(crate) fn handle_item_list_entries(
                             if array_property.name.content == arr_name {
                                 item_types_property
                                     .entry(arr_name.clone())
-                                    .or_insert_with(|| Vec::new())
+                                    .or_insert_with(Vec::new)
                                     .push((
                                         i,
                                         j,
                                         array_property
                                             .array_type
                                             .as_ref()
-                                            .ok_or(io::Error::new(
-                                                ErrorKind::Other,
-                                                "Invalid array_property",
-                                            ))?
+                                            .ok_or_else(|| {
+                                                io::Error::new(
+                                                    ErrorKind::Other,
+                                                    "Invalid array_property",
+                                                )
+                                            })?
                                             .content
                                             .clone(),
                                     ));
@@ -122,9 +119,9 @@ pub(crate) fn handle_item_list_entries(
                 continue;
             }
             for item_path in item_paths {
-                let (real_name, class_name, soft_class_name) = match item_path.contains(".") {
+                let (real_name, class_name, soft_class_name) = match item_path.contains('.') {
                     true => {
-                        let split: Vec<&str> = item_path.split(".").collect();
+                        let split: Vec<&str> = item_path.split('.').collect();
                         (
                             split[0].to_string(),
                             split[1].to_string(),
@@ -135,16 +132,14 @@ pub(crate) fn handle_item_list_entries(
                         item_path.clone(),
                         Path::new(item_path)
                             .file_stem()
-                            .map(|e| e.to_str())
-                            .flatten()
+                            .and_then(|e| e.to_str())
                             .map(|e| String::from(e) + "_C")
-                            .ok_or(io::Error::new(ErrorKind::Other, "Invalid item_path"))?,
+                            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid item_path"))?,
                         Path::new(item_path)
                             .file_stem()
-                            .map(|e| e.to_str())
-                            .flatten()
+                            .and_then(|e| e.to_str())
                             .map(|e| e.to_string())
-                            .ok_or(io::Error::new(ErrorKind::Other, "Invalid item_path"))?,
+                            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid item_path"))?,
                     ),
                 };
 

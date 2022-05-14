@@ -5,8 +5,10 @@ use std::path::PathBuf;
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
+use crate::determine_paths::verify_install_path;
 use crate::game_mod::SelectedVersion;
-use crate::AppData;
+use crate::version::Version;
+use crate::ModLoaderAppData;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfig {
@@ -30,7 +32,7 @@ struct ModConfigData {
     version: String,
 }
 
-pub(crate) fn load_config(data: &mut AppData) {
+pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
     let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
     if config_path.is_file() {
         let config_str = fs::read_to_string(config_path).unwrap();
@@ -40,8 +42,11 @@ pub(crate) fn load_config(data: &mut AppData) {
         });
 
         data.refuse_mismatched_connections = config.refuse_mismatched_connections;
-        // TODO: properly check this
-        data.install_path = Some(PathBuf::from(config.install_path));
+
+        let install_path = PathBuf::from(config.install_path);
+        if verify_install_path(&install_path, game_name) {
+            data.install_path = Some(install_path);
+        }
 
         for (mod_id, mod_config) in config.current.mods.iter() {
             let game_mod = data.game_mods.get_mut(mod_id);
@@ -53,24 +58,26 @@ pub(crate) fn load_config(data: &mut AppData) {
                 continue;
             }
             let game_mod = game_mod.unwrap();
-            let force_latest = mod_config.force_latest.unwrap_or(true);
-
-            if !force_latest {
-                game_mod.selected_version = match game_mod.selected_version {
-                    SelectedVersion::Latest(version) => SelectedVersion::Specific(version),
-                    SelectedVersion::LatestIndirect(version) => {
-                        SelectedVersion::Specific(version.unwrap())
-                    }
-                    SelectedVersion::Specific(version) => SelectedVersion::Specific(version),
-                };
-            }
 
             game_mod.active = mod_config.enabled;
+
+            if !mod_config.force_latest.unwrap_or(true) {
+                let config_version = Version::try_from(&mod_config.version);
+                if config_version.is_err() {
+                    warn!(
+                        "Failed to parse version {} for mod {}",
+                        mod_config.version, mod_id
+                    );
+                    continue;
+                }
+
+                game_mod.selected_version = SelectedVersion::Specific(config_version.unwrap());
+            }
         }
     }
 }
 
-pub(crate) fn write_config(data: &mut AppData) {
+pub(crate) fn write_config(data: &mut ModLoaderAppData) {
     let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
     let mut config = ModConfig {
         install_path: data

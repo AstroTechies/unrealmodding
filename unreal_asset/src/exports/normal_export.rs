@@ -17,21 +17,21 @@ pub struct NormalExport {
 }
 
 impl ExportNormalTrait for NormalExport {
-    fn get_normal_export<'a>(&'a self) -> Option<&'a NormalExport> {
-        Some(&self)
+    fn get_normal_export(&'_ self) -> Option<&'_ NormalExport> {
+        Some(self)
     }
 
-    fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut NormalExport> {
+    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport> {
         Some(self)
     }
 }
 
 impl ExportBaseTrait for NormalExport {
-    fn get_base_export<'a>(&'a self) -> &'a BaseExport {
+    fn get_base_export(&'_ self) -> &'_ BaseExport {
         &self.base_export
     }
 
-    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport {
         &mut self.base_export
     }
 }

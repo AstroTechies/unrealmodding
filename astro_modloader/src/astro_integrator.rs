@@ -30,17 +30,14 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
             ) -> Result<(), io::Error>,
         >,
     > {
-        let mut handlers: std::collections::HashMap<
-            String,
-            Box<
-                dyn FnMut(
-                    &(),
-                    &mut unreal_pak::PakFile,
-                    &mut Vec<unreal_pak::PakFile>,
-                    Vec<&serde_json::Value>,
-                ) -> Result<(), io::Error>,
-            >,
-        > = HashMap::new();
+        type HandlerFn = dyn FnMut(
+            &(),
+            &mut unreal_pak::PakFile,
+            &mut Vec<unreal_pak::PakFile>,
+            Vec<&serde_json::Value>,
+        ) -> Result<(), io::Error>;
+
+        let mut handlers: std::collections::HashMap<String, Box<HandlerFn>> = HashMap::new();
 
         handlers.insert(
             String::from("persistent_actors"),
@@ -65,15 +62,7 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
         handlers
     }
 
-    fn get_game_name(&self) -> String {
-        "Astro".to_string()
-    }
-
-    fn get_integrator_version(&self) -> String {
-        String::from("0.1.0")
-    }
-
-    fn get_engine_version(&self) -> i32 {
-        VER_UE4_23
-    }
+    const GAME_NAME: &'static str = "Astro";
+    const INTEGRATOR_VERSION: &'static str = "0.1.0";
+    const ENGINE_VERSION: i32 = VER_UE4_23;
 }

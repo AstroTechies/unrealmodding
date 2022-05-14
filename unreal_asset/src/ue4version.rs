@@ -344,7 +344,7 @@ pub const VER_UE4_25: i32 = 518;
 pub const VER_UE4_26: i32 = 519;
 pub const VER_UE4_27: i32 = 522;
 
-const LOOKUP_TABLE: &'static [(&'static str, i32)] = &[
+const LOOKUP_TABLE: &[(&str, i32)] = &[
     ("UNKNOWN", UNKNOWN),
     ("OLDEST_LOADABLE_PACKAGE", VER_UE4_OLDEST_LOADABLE_PACKAGE),
     ("4.0", VER_UE4_0),

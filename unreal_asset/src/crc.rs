@@ -169,13 +169,13 @@ lazy_static! {
     ];
 }
 
-pub fn generate_hash(string: &String) -> u32 {
+pub fn generate_hash(string: &str) -> u32 {
     let algo1 = generate_hash_deprecated(string);
     let algo2 = generate_crc32(string, 0);
     (algo1 & 0xffff) | ((algo2 & 0xffff) << 16)
 }
 
-fn generate_hash_deprecated(string: &String) -> u32 {
+fn generate_hash_deprecated(string: &str) -> u32 {
     let mut hash = 0u32;
 
     for c in string.chars() {
@@ -193,7 +193,7 @@ fn generate_hash_deprecated(string: &String) -> u32 {
     hash
 }
 
-fn generate_crc32(string: &String, crc: u32) -> u32 {
+fn generate_crc32(string: &str, crc: u32) -> u32 {
     let mut crc = !crc;
 
     for c in string.chars() {

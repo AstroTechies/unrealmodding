@@ -25,14 +25,14 @@ use super::Asset;
 
 #[enum_dispatch]
 pub trait ExportNormalTrait {
-    fn get_normal_export<'a>(&'a self) -> Option<&'a NormalExport>;
-    fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut NormalExport>;
+    fn get_normal_export(&'_ self) -> Option<&'_ NormalExport>;
+    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport>;
 }
 
 #[enum_dispatch]
 pub trait ExportBaseTrait {
-    fn get_base_export<'a>(&'a self) -> &'a BaseExport;
-    fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport;
+    fn get_base_export(&'_ self) -> &'_ BaseExport;
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport;
 }
 
 #[macro_export]
