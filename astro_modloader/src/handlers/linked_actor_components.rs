@@ -6,21 +6,22 @@ use std::{
 
 use unreal_asset::{
     cast,
-    exports::Export,
+    exports::{Export, ExportBaseTrait, ExportNormalTrait},
     flags::EObjectFlags,
     properties::{
         guid_property::GuidProperty, int_property::BoolProperty, object_property::ObjectProperty,
-        str_property::NameProperty, struct_property::StructProperty, Property,
+        str_property::NameProperty, struct_property::StructProperty, Property, PropertyDataTrait,
     },
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
+    uproperty::UProperty,
     Asset, Import,
 };
 use unreal_modintegrator::write_asset;
 use unreal_pak::PakFile;
 use uuid::Uuid;
 
-use crate::assets::ACTOR_TEMPLATE_ASSET;
+use crate::assets::{ACTOR_TEMPLATE_ASSET, ACTOR_TEMPLATE_EXPORT};
 
 use super::{game_to_absolute, get_asset};
 
@@ -30,32 +31,21 @@ pub(crate) fn handle_linked_actor_components(
     game_paks: &mut Vec<PakFile>,
     linked_actors_maps: Vec<&serde_json::Value>,
 ) -> Result<(), io::Error> {
-    let mut actor_asset = Asset::new(ACTOR_TEMPLATE_ASSET.to_vec(), None);
+    let mut actor_asset = Asset::new(
+        ACTOR_TEMPLATE_ASSET.to_vec(),
+        Some(ACTOR_TEMPLATE_EXPORT.to_vec()),
+    );
     actor_asset.engine_version = VER_UE4_23;
     actor_asset
         .parse_data()
         .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
 
-    let object_property_template = actor_asset
-        .exports
-        .get(6)
-        .map(|e| cast!(Export, RawExport, e))
-        .flatten()
-        .ok_or(io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
-
-    let template_export = actor_asset
-        .exports
-        .get(5)
-        .map(|e| cast!(Export, NormalExport, e))
-        .flatten()
-        .ok_or(io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
-
-    let scs_node_template = actor_asset
-        .exports
-        .get(10)
-        .map(|e| cast!(Export, NormalExport, e))
-        .flatten()
-        .ok_or(io::Error::new(ErrorKind::Other, "Corrupted LevelTemplate"))?;
+    let gen_variable =
+        cast!(Export, NormalExport, &actor_asset.exports[0]).expect("Corrupted ActorTemplate");
+    let component_export =
+        cast!(Export, PropertyExport, &actor_asset.exports[1]).expect("Corrupted ActorTemplate");
+    let scs_export =
+        cast!(Export, NormalExport, &actor_asset.exports[2]).expect("Corrupted ActorTemplate");
 
     let mut new_components = HashMap::new();
 
@@ -67,7 +57,7 @@ pub(crate) fn handle_linked_actor_components(
         for (name, components) in linked_actors_map.iter() {
             let components = components.as_array().ok_or(io::Error::new(
                 ErrorKind::Other,
-                "Invalid linked_actor_components",
+                "Invalid linked_actor_components2",
             ))?;
 
             let entry = new_components
@@ -76,7 +66,7 @@ pub(crate) fn handle_linked_actor_components(
             for component in components {
                 let component_name = component.as_str().ok_or(io::Error::new(
                     ErrorKind::Other,
-                    "Invalid linked_actor_components",
+                    "Invalid linked_actor_components3",
                 ))?;
                 entry.push(String::from(component_name));
             }
@@ -88,346 +78,306 @@ pub(crate) fn handle_linked_actor_components(
             .ok_or(io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
         let mut asset = get_asset(integrated_pak, game_paks, &name, VER_UE4_23)?;
 
-        let mut scs_location = None;
-        let mut bgc_location = None;
-        let mut cdo_location = None;
-        let mut node_offset = 0;
-
-        for i in 0..asset.exports.len() {
-            let export = &asset.exports[i];
-            if let Some(normal_export) = cast!(Export, NormalExport, export) {
-                let name = match normal_export.base_export.class_index.is_import() {
-                    true => {
+        for component_path_raw in components {
+            let mut actor_index = None;
+            let mut simple_construction_script = None;
+            let mut cdo_location = None;
+            for i in 0..asset.exports.len() {
+                let export = &asset.exports[i];
+                if let Some(normal_export) = export.get_normal_export() {
+                    if normal_export.base_export.class_index.is_import() {
                         let import = asset
                             .get_import(normal_export.base_export.class_index)
-                            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
-                        import.class_name.content.clone()
+                            .ok_or_else(|| io::Error::new(ErrorKind::Other, "Import not found"))?;
+                        match import.object_name.content.as_str() {
+                            "BlueprintGeneratedClass" => actor_index = Some(i),
+                            "SimpleConstructionScript" => simple_construction_script = Some(i),
+                            _ => {}
+                        }
                     }
-                    false => String::new(),
-                };
-
-                match name.as_str() {
-                    "SimpleConstructionScript" => scs_location = Some(i),
-                    "BlueprintGeneratedClass" => bgc_location = Some(i),
-                    "SCS_Node" => node_offset += 0,
-                    _ => {}
-                };
-                if (EObjectFlags::RF_CLASS_DEFAULT_OBJECT
-                    & EObjectFlags::from_bits(normal_export.base_export.object_flags)
-                        .ok_or(io::Error::new(ErrorKind::Other, "Invalid export"))?)
-                    == EObjectFlags::RF_CLASS_DEFAULT_OBJECT
-                {
-                    cdo_location = Some(i);
+                    println!(
+                        "{} {:b} {:b}",
+                        normal_export.base_export.object_name.content,
+                        EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits(),
+                        normal_export.base_export.object_flags
+                    );
+                    if (EObjectFlags::RF_CLASS_DEFAULT_OBJECT
+                        & EObjectFlags::from_bits(normal_export.base_export.object_flags)
+                            .ok_or_else(|| {
+                                io::Error::new(ErrorKind::Other, "Invalid object flags")
+                            })?)
+                        == EObjectFlags::RF_CLASS_DEFAULT_OBJECT
+                    {
+                        cdo_location = Some(i);
+                    }
                 }
             }
-        }
 
-        let (scs_location, bgc_location, cdo_location) = {
-            (
-                scs_location.ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Unable to find SimpleConstructionScript",
-                ))? as i32,
-                bgc_location.ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "Unable to find BlueprintGeneratedClass",
-                ))? as i32,
-                cdo_location.ok_or(io::Error::new(ErrorKind::Other, "Unable to find CDO"))? as i32,
-            )
-        };
+            let actor_index =
+                actor_index.ok_or_else(|| io::Error::new(ErrorKind::Other, "Actor not found"))?;
+            let actor = actor_index as i32 + 1;
+            let simple_construction_script_index = simple_construction_script
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "SCS not found"))?;
+            let simple_construction_script = simple_construction_script_index as i32 + 1;
+            let cdo_location =
+                cdo_location.ok_or_else(|| io::Error::new(ErrorKind::Other, "CDO not found"))?;
 
-        let object_property_import = asset
-            .find_import_no_index(
-                &FName::from_slice("/Script/CoreUObject"),
-                &FName::from_slice("Clawss"),
-                &FName::from_slice("ObjectProperty"),
-            )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
-        let _default_object_property_import = asset
-            .find_import_no_index(
-                &FName::from_slice("/Script/CoreUObject"),
-                &FName::from_slice("ObjectProperty"),
-                &FName::from_slice("Default__ObjectProperty"),
-            )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
+            let class_object_property_import = asset
+                .find_import_no_index(
+                    &FName::from_slice("/Script/CoreUObject"),
+                    &FName::from_slice("Class"),
+                    &FName::from_slice("ObjectProperty"),
+                )
+                .expect("No class object property import");
 
-        let scs_node_import = asset
-            .find_import_no_index(
-                &FName::from_slice("/Script/CoreUObject"),
-                &FName::from_slice("Class"),
-                &FName::from_slice("SCS_Node"),
-            )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
-        let default_scs_node_import = asset
-            .find_import_no_index(
-                &FName::from_slice("/Script/CoreUObject"),
-                &FName::from_slice("SCS_Node"),
-                &FName::from_slice("Default__SCS_Node"),
-            )
-            .ok_or(io::Error::new(ErrorKind::Other, "No such import"))?;
-        let none_ref = asset
-            .search_name_reference(&String::from("None"))
-            .ok_or(io::Error::new(
-                ErrorKind::Other,
-                "Name reference to \"None\" not found",
-            ))?
-            .to_le_bytes();
-        asset.add_fname("bAutoActivate");
+            let default_object_property_import = asset
+                .find_import_no_index(
+                    &FName::from_slice("/Script/CoreUObject"),
+                    &FName::from_slice("ObjectProperty"),
+                    &FName::from_slice("Default__ObjectProperty"),
+                )
+                .expect("No default objectproperty");
 
-        for component_path_raw in components {
-            let mut object_property_template = object_property_template.clone();
-            let mut template_export = template_export.clone();
-            let mut scs_node_template = scs_node_template.clone();
+            let scs_node_import = asset
+                .find_import_no_index(
+                    &FName::from_slice("/Script/CoreUObject"),
+                    &FName::from_slice("Class"),
+                    &FName::from_slice("SCS_Node"),
+                )
+                .expect("No SCS_Node");
 
-            let component_path = component_path_raw.as_str();
+            let default_scs_node_import = asset
+                .find_import_no_index(
+                    &FName::from_slice("/Script/Engine"),
+                    &FName::from_slice("SCS_Node"),
+                    &FName::from_slice("Default__SCS_Node"),
+                )
+                .expect("No default scs");
+
             let component = Path::new(component_path_raw)
                 .file_stem()
                 .map(|e| e.to_str())
                 .flatten()
                 .ok_or(io::Error::new(
                     ErrorKind::Other,
-                    "Invalid linked actor component",
+                    "Invalid persistent actors",
                 ))?;
 
-            let (component_path, component) = match component.contains(".") {
+            let (component_path_raw, component) = match component.contains(".") {
                 true => {
                     let split: Vec<&str> = component.split(".").collect();
-                    (split[0], &split[1][..split[1].len() - 2])
+                    (split[0].to_string(), &split[1][..split[1].len() - 2])
                 }
-                false => (component_path, component_path),
+                false => (component_path_raw.to_string(), component),
             };
-
-            asset.add_fname(component_path);
-            asset.add_name_reference(String::from("Default__") + component + "_C", false);
-            asset.add_name_reference(String::from(component) + "_C", false);
-            asset.add_name_reference(String::from(component) + "_GEN_VARIABLE", false);
-            asset.add_fname(component);
-            asset.add_fname("SCS_Node");
+            let component_c = String::from(component) + "_C";
+            let default_component = String::from("Default__") + component + "_C";
 
             let package_import = Import {
-                class_package: FName::from_slice("/Script/CoreUObject"),
-                class_name: FName::from_slice("Package"),
+                class_package: asset.add_fname("/Script/CoreUObject"),
+                class_name: asset.add_fname("Package"),
                 outer_index: PackageIndex::new(0),
-                object_name: FName::from_slice(component_path),
+                object_name: asset.add_fname(&component_path_raw),
             };
             let package_import = asset.add_import(package_import);
 
             let blueprint_generated_class_import = Import {
-                class_package: FName::from_slice("/Script/Engine"),
-                class_name: FName::from_slice("BlueprintGeneratedClass"),
+                class_package: asset.add_fname("/Script/Engine"),
+                class_name: asset.add_fname("BlueprintGeneratedClass"),
                 outer_index: package_import,
-                object_name: FName::new(String::from(component) + "_C", 0),
+                object_name: asset.add_fname(&component_c),
             };
             let blueprint_generated_class_import =
                 asset.add_import(blueprint_generated_class_import);
 
             let default_import = Import {
-                class_package: FName::from_slice(component_path),
-                class_name: FName::new(String::from(component) + "_C", 0),
+                class_package: asset.add_fname("/Game/AddMe"),
+                class_name: asset.add_fname(&component_c),
                 outer_index: package_import,
-                object_name: FName::new(String::from("Default__") + component + "_C", 0),
+                object_name: asset.add_fname(&default_component),
             };
             let default_import = asset.add_import(default_import);
 
-            template_export.base_export.class_index = blueprint_generated_class_import;
-            template_export.base_export.object_name =
-                FName::new(String::from(component) + "_GEN_VARIABLE", 0);
-            template_export.base_export.template_index = default_import;
+            let mut component_export = component_export.clone();
+            let component_object_property =
+                cast!(UProperty, UObjectProperty, &mut component_export.property)
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted starter pak"))?;
+            component_object_property.property_class = blueprint_generated_class_import;
 
-            object_property_template.base_export.class_index =
-                PackageIndex::new(object_property_import);
-            object_property_template.base_export.object_name = FName::from_slice("SCS_Node");
-            object_property_template.base_export.template_index =
-                PackageIndex::new(default_scs_node_import);
+            let component_base_export = component_export.get_base_export_mut();
+            component_base_export.object_name = asset.add_fname(component);
+            component_base_export.create_before_serialization_dependencies =
+                Vec::from([blueprint_generated_class_import]);
+            component_base_export.create_before_create_dependencies =
+                Vec::from([PackageIndex::new(actor)]);
+            component_base_export.outer_index = PackageIndex::new(actor);
+            component_base_export.class_index = PackageIndex::new(class_object_property_import);
+            component_base_export.template_index =
+                PackageIndex::new(default_object_property_import);
 
-            let mut raw_data = Vec::new();
+            asset.exports.push(component_export.into());
 
-            // Here we specify the raw data for our ObjectProperty category, including necessary flags and such
-            // magic numbers?
-            raw_data.extend(none_ref);
-            raw_data.extend(vec![
-                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00,
-                0x00, 0x00,
-            ]);
-            raw_data.extend(none_ref);
-            raw_data.push(0);
-            raw_data.extend(blueprint_generated_class_import.index.to_le_bytes());
-
-            object_property_template.base_export.outer_index = PackageIndex::new(bgc_location + 1);
-            template_export.base_export.outer_index = PackageIndex::new(bgc_location + 1);
-            scs_node_template.base_export.outer_index = PackageIndex::new(scs_location + 1);
-
-            template_export
+            let component_export_index = asset.exports.len() as i32;
+            let actor_export = cast!(Export, ClassExport, &mut asset.exports[actor_index])
+                .expect("Corrupted memory");
+            actor_export
+                .struct_export
+                .children
+                .push(PackageIndex::new(component_export_index));
+            actor_export
+                .struct_export
+                .normal_export
                 .base_export
                 .serialization_before_serialization_dependencies
-                .push(PackageIndex::new(bgc_location + 1));
-            template_export
-                .base_export
-                .serialization_before_create_dependencies
-                .push(blueprint_generated_class_import);
-            template_export
-                .base_export
-                .serialization_before_create_dependencies
-                .push(default_import);
-            template_export
-                .base_export
-                .create_before_create_dependencies
-                .push(PackageIndex::new(bgc_location + 1));
-            template_export.extras = [0u8; 4].to_vec();
-            template_export.properties = Vec::from([BoolProperty {
-                name: FName::from_slice("bAutoActivate"),
-                property_guid: None,
+                .push(PackageIndex::new(component_export_index));
+
+            let mut component_gen_variable = gen_variable.clone();
+            let mut component_gen_variable_base_export =
+                component_gen_variable.get_base_export_mut();
+            component_gen_variable_base_export.outer_index = PackageIndex::new(actor);
+            component_gen_variable_base_export.class_index = blueprint_generated_class_import;
+            component_gen_variable_base_export.template_index = default_import;
+            component_gen_variable_base_export.serialization_before_serialization_dependencies =
+                Vec::from([PackageIndex::new(actor)]);
+            component_gen_variable_base_export.serialization_before_create_dependencies =
+                Vec::from([blueprint_generated_class_import, default_import]);
+            component_gen_variable_base_export.create_before_create_dependencies =
+                Vec::from([PackageIndex::new(actor)]);
+            component_gen_variable_base_export.object_name =
+                asset.add_fname(&(String::from(component) + "_GEN_VARIABLE"));
+
+            let mut component_gen_variable_normal_export =
+                component_gen_variable.get_normal_export_mut().unwrap();
+            asset.add_fname("BoolProperty");
+            component_gen_variable_normal_export.properties = Vec::from([BoolProperty {
+                name: asset.add_fname("bAutoActivate"),
+                property_guid: Some([0u8; 16]),
                 duplication_index: 0,
                 value: true,
             }
             .into()]);
-            asset.exports.push(template_export.into());
 
-            let exports_len = asset.exports.len() as i32;
-            let cdo_export = cast!(
-                Export,
-                NormalExport,
-                &mut asset.exports[cdo_location as usize]
-            )
-            .expect("Corrupted memory");
-            cdo_export
-                .base_export
-                .serialization_before_serialization_dependencies
-                .push(PackageIndex::new(exports_len));
+            asset.exports.push(component_gen_variable.into());
+            let component_gen_variable_index = asset.exports.len() as i32;
 
-            object_property_template
-                .base_export
-                .create_before_serialization_dependencies
-                .push(blueprint_generated_class_import);
-            object_property_template
-                .base_export
-                .create_before_create_dependencies
-                .push(PackageIndex::new(bgc_location + 1));
-            object_property_template.data = raw_data;
-            asset.exports.push(object_property_template.into());
-
-            node_offset += 1;
-            scs_node_template.base_export.object_name =
-                FName::new(String::from("SCS_Node"), node_offset);
-            scs_node_template.extras = [0u8; 4].to_vec();
-            scs_node_template
-                .base_export
-                .create_before_serialization_dependencies
-                .push(blueprint_generated_class_import);
-            scs_node_template
-                .base_export
-                .create_before_serialization_dependencies
-                .push(PackageIndex::new(asset.exports.len() as i32 - 1));
-            scs_node_template
-                .base_export
-                .serialization_before_create_dependencies
-                .push(PackageIndex::new(scs_node_import));
-            scs_node_template
-                .base_export
-                .serialization_before_create_dependencies
-                .push(PackageIndex::new(default_scs_node_import));
-            scs_node_template
-                .base_export
-                .create_before_create_dependencies
-                .push(PackageIndex::new(scs_location + 1));
-            scs_node_template.properties = Vec::from([
+            let mut scs_node = scs_export.clone();
+            let scs_node_normal_export = scs_node
+                .get_normal_export_mut()
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted starter pak"))?;
+            scs_node_normal_export.properties = Vec::from([
                 ObjectProperty {
-                    name: FName::from_slice("ComponentClass"),
-                    property_guid: None,
+                    name: asset.add_fname("ComponentClass"),
+                    property_guid: Some([0u8; 16]),
                     duplication_index: 0,
                     value: blueprint_generated_class_import,
                 }
                 .into(),
                 ObjectProperty {
-                    name: FName::from_slice("ComponentTemplate"),
-                    property_guid: None,
+                    name: asset.add_fname("ComponentTemplate"),
+                    property_guid: Some([0u8; 16]),
                     duplication_index: 0,
-                    value: PackageIndex::new(asset.exports.len() as i32 - 1),
+                    value: PackageIndex::new(component_gen_variable_index),
                 }
                 .into(),
                 StructProperty {
-                    name: FName::from_slice("VariableGuid"),
-                    struct_type: Some(FName::from_slice("Guid")),
-                    struct_guid: None,
+                    name: asset.add_fname("VariableGuid"),
+                    struct_type: Some(asset.add_fname("Guid")),
+                    struct_guid: Some([0u8; 16]),
                     property_guid: None,
                     duplication_index: 0,
-                    serialize_none: false,
+                    serialize_none: true,
                     value: Vec::from([GuidProperty {
-                        name: FName::from_slice("VariableGuid"),
+                        name: asset.add_fname("VariableGuid"),
                         property_guid: None,
                         duplication_index: 0,
-                        value: Uuid::new_v4().as_bytes().to_owned(),
+                        value: Uuid::new_v4().into_bytes(),
                     }
                     .into()]),
                 }
                 .into(),
                 NameProperty {
-                    name: FName::from_slice("InternalVariableName"),
+                    name: asset.add_fname("InternalVariableName"),
                     property_guid: None,
                     duplication_index: 0,
-                    value: FName::from_slice(component),
+                    value: asset.add_fname(component),
                 }
                 .into(),
             ]);
-            asset.exports.push(scs_node_template.into());
-            let scs_node_template_index = asset.exports.len() - 1;
+            scs_node_normal_export.base_export.outer_index =
+                PackageIndex::new(simple_construction_script);
+            scs_node_normal_export.base_export.class_index = PackageIndex::new(scs_node_import);
+            scs_node_normal_export.base_export.template_index =
+                PackageIndex::new(default_scs_node_import);
+            scs_node_normal_export
+                .base_export
+                .create_before_serialization_dependencies = Vec::from([
+                blueprint_generated_class_import,
+                PackageIndex::new(component_gen_variable_index),
+            ]);
+            scs_node_normal_export
+                .base_export
+                .serialization_before_create_dependencies = Vec::from([
+                PackageIndex::new(scs_node_import),
+                PackageIndex::new(default_scs_node_import),
+            ]);
+            scs_node_normal_export
+                .base_export
+                .create_before_create_dependencies =
+                Vec::from([PackageIndex::new(simple_construction_script)]);
 
-            let exports_len = asset.exports.len() as i32;
-            let bgc = cast!(
-                Export,
-                StructExport,
-                &mut asset.exports[bgc_location as usize]
-            )
-            .expect("Corrupted memory");
-            bgc.children.push(PackageIndex::new(exports_len - 1));
+            let mut last_scs_node_index = 0;
+            for export in &asset.exports {
+                let object_name = &export.get_base_export().object_name;
+                if object_name.content == "SCS_Node" && last_scs_node_index < object_name.index {
+                    last_scs_node_index = object_name.index;
+                }
+            }
+            scs_node_normal_export.base_export.object_name =
+                FName::new("SCS_Node".to_string(), last_scs_node_index + 1);
 
-            let scs_export = cast!(
-                Export,
-                NormalExport,
-                &mut asset.exports[scs_location as usize]
-            )
-            .expect("Corrupted memory");
+            asset.exports.push(scs_node.into());
+            let scs_node_index = asset.exports.len() as i32;
 
-            scs_export
+            let cdo_base_export = asset.exports[cdo_location].get_base_export_mut();
+            cdo_base_export
+                .serialization_before_serialization_dependencies
+                .push(PackageIndex::new(scs_node_index));
+            cdo_base_export
+                .serialization_before_serialization_dependencies
+                .push(PackageIndex::new(component_gen_variable_index));
+
+            let simple_construction_script_export = asset.exports[simple_construction_script_index]
+                .get_normal_export_mut()
+                .expect("Corrupted memory");
+            simple_construction_script_export
                 .base_export
                 .create_before_serialization_dependencies
-                .push(PackageIndex::new(exports_len));
-            scs_export
-                .base_export
-                .serialization_before_serialization_dependencies
-                .push(PackageIndex::new(exports_len));
+                .push(PackageIndex::new(scs_node_index));
 
-            let mut new_scs_node_name_index = None;
-            for property in &mut scs_export.properties {
+            for property in &mut simple_construction_script_export.properties {
                 if let Some(array_property) = cast!(Property, ArrayProperty, property) {
-                    match array_property.name.content.as_str() {
-                        "AllNodes" | "RootNodes" => {
-                            new_scs_node_name_index = Some(array_property.value.len() as i32 + 1);
-                            array_property.value.push(
-                                ObjectProperty {
-                                    name: array_property.name.clone(),
-                                    property_guid: None,
-                                    duplication_index: 0,
-                                    value: PackageIndex::new(exports_len), // SCS_Node
-                                }
-                                .into(),
-                            )
+                    let name = array_property.name.content.as_str();
+                    if name == "AllNodes" || name == "RootNodes" {
+                        let mut last_index = 0;
+                        for property in &array_property.value {
+                            let index = property.get_name().index;
+                            if last_index < index {
+                                last_index = index;
+                            }
                         }
-                        _ => {}
+
+                        array_property.value.push(
+                            ObjectProperty {
+                                name: FName::new((last_index + 1).to_string(), -2147483648),
+                                property_guid: None,
+                                duplication_index: 0,
+                                value: PackageIndex::new(scs_node_index),
+                            }
+                            .into(),
+                        );
                     }
                 }
             }
-            let new_scs_node_name_index = new_scs_node_name_index
-                .ok_or(io::Error::new(ErrorKind::Other, "Corrupted ActorTemplate"))?;
-            cast!(
-                Export,
-                NormalExport,
-                &mut asset.exports[scs_node_template_index]
-            )
-            .expect("Corrupted memory")
-            .base_export
-            .object_name
-            .index = new_scs_node_name_index;
         }
 
         write_asset(integrated_pak, &asset, &name)

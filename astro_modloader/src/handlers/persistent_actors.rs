@@ -6,7 +6,7 @@ use std::{
 
 use unreal_asset::{
     cast,
-    exports::Export,
+    exports::{Export, ExportNormalTrait},
     properties::{
         array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
         object_property::ObjectProperty, Property, PropertyDataTrait,
@@ -227,8 +227,7 @@ pub(crate) fn handle_persistent_actors(
                         for known_node_category in known_node_categories {
                             let known_category =
                                 &game_asset.exports[known_node_category.index as usize - 1];
-                            if let Some(known_normal_category) =
-                                cast!(Export, NormalExport, known_category)
+                            if let Some(known_normal_category) = known_category.get_normal_export()
                             {
                                 let is_scs_node = match known_normal_category
                                     .base_export
@@ -442,7 +441,7 @@ pub(crate) fn handle_persistent_actors(
                 }
 
                 for export in &mut scene_exports {
-                    if let Some(normal_export) = cast!(Export, NormalExport, export) {
+                    if let Some(normal_export) = export.get_normal_export_mut() {
                         for property in &mut normal_export.properties {
                             if let Some(object_property) = cast!(Property, ObjectProperty, property)
                             {
