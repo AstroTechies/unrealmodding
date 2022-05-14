@@ -128,12 +128,17 @@ where
                 data_guard.paks_path = Some(base_path.join("Paks"));
 
                 let data_path = data_guard.data_path.as_ref().unwrap().to_owned();
+                let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
                 drop(data_guard);
 
                 let startup_work = || -> Result<(), ModLoaderError> {
                     // ensure the base_path/Mods directory exists
                     fs::create_dir_all(&data_path).map_err(|err| {
                         ModLoaderError::io_error_with_message("Mods directory".to_owned(), err)
+                    })?;
+                    // ensure /Paks exists
+                    fs::create_dir_all(&paks_path).map_err(|err| {
+                        ModLoaderError::io_error_with_message("Paks directory".to_owned(), err)
                     })?;
 
                     // gather mods
