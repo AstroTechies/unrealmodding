@@ -59,7 +59,7 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
             }
             let game_mod = game_mod.unwrap();
 
-            game_mod.active = mod_config.enabled;
+            game_mod.enabled = mod_config.enabled;
 
             if !mod_config.force_latest.unwrap_or(true) {
                 let config_version = Version::try_from(&mod_config.version);
@@ -102,7 +102,7 @@ pub(crate) fn write_config(data: &mut ModLoaderAppData) {
                 SelectedVersion::Specific(_) => false,
             }),
             priority: 0,
-            enabled: game_mod.active,
+            enabled: game_mod.enabled,
             version: game_mod.selected_version.unwrap().to_string(),
         };
 

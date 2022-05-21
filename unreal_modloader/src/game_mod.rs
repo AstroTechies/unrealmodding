@@ -47,7 +47,7 @@ pub struct GameMod {
     pub selected_version: SelectedVersion,
     pub latest_version: Option<Version>,
 
-    pub active: bool,
+    pub enabled: bool,
 
     // fields set depending on the selected version
     pub name: String,

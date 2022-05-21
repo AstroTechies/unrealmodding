@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -42,8 +42,8 @@ pub(crate) struct ModLoaderAppData {
 
     pub game_build: Option<GameBuild>,
     pub refuse_mismatched_connections: bool,
-
     pub game_mods: BTreeMap<String, GameMod>,
+    pub files_to_process: Vec<PathBuf>,
 
     pub error: Option<ModLoaderError>,
     pub warnings: Vec<ModLoaderWarning>,
@@ -59,10 +59,11 @@ where
         data_path: None,
         paks_path: None,
         install_path: None,
+
         game_build: None,
         refuse_mismatched_connections: true,
-
         game_mods: BTreeMap::new(),
+        files_to_process: Vec::new(),
 
         error: None,
         warnings: Vec::new(),
@@ -77,7 +78,7 @@ where
     let app = app::ModLoaderApp {
         data: Arc::clone(&data),
         window_title: C::WINDOW_TITLE.to_owned(),
-        dropped_files: Vec::new(),
+        processed_files: HashSet::new(),
 
         should_exit: Arc::clone(&should_exit),
         ready_exit: Arc::clone(&ready_exit),
@@ -155,7 +156,7 @@ where
                         .map(|e| e.path())
                         .collect();
 
-                    let warnings = process_modfiles(&mod_files, &data);
+                    let warnings = process_modfiles(&mod_files, &data, false);
                     debug!("warnings: {:?}", warnings);
 
                     let mut data_guard = data.lock().unwrap();
@@ -190,6 +191,43 @@ where
                     break;
                 }
 
+                // process dropped files
+                let mut data_guard = data.lock().unwrap();
+                if data_guard.base_path.is_some() && !data_guard.files_to_process.is_empty() {
+                    let files_to_process = data_guard
+                        .files_to_process
+                        .clone()
+                        .iter()
+                        .filter_map(|file_path| {
+                            let file_name = file_path.file_name().unwrap();
+
+                            // copy the file to the mods directory
+                            let new_file_path =
+                                data_guard.data_path.as_ref().unwrap().join(file_name);
+                            match fs::copy(file_path, &new_file_path) {
+                                Ok(_) => Some(new_file_path),
+                                Err(err) => {
+                                    data_guard.warnings.push(
+                                        ModLoaderWarning::io_error_with_message(
+                                            "Copying file to mods directory".to_owned(),
+                                            err,
+                                        ),
+                                    );
+                                    None
+                                }
+                            }
+                        })
+                        .collect::<Vec<PathBuf>>();
+                    data_guard.files_to_process.clear();
+                    drop(data_guard);
+
+                    let warnings = process_modfiles(&files_to_process, &data, true);
+                    debug!("warnings: {:?}", warnings);
+                    data.lock().unwrap().warnings.extend(warnings);
+                } else {
+                    drop(data_guard);
+                }
+
                 let mut data_guard = data.lock().unwrap();
                 if should_integrate.load(Ordering::Relaxed)
                     && data_guard.base_path.is_some()
@@ -210,7 +248,7 @@ where
                         let mods_to_install = data_guard
                             .game_mods
                             .iter()
-                            .filter(|(_, m)| m.active)
+                            .filter(|(_, m)| m.enabled)
                             .map(|(_, m)| {
                                 m.versions
                                     .get(&m.selected_version.unwrap())
@@ -282,6 +320,7 @@ where
                                     .map(|f| mods_path.clone().join(f.0.clone()))
                                     .collect::<Vec<_>>(),
                                 &data,
+                                false,
                             );
                             debug!("warnings: {:?}", warnings);
                             data.lock().unwrap().warnings.extend(warnings);
