@@ -30,6 +30,7 @@ pub(crate) fn handle_linked_actor_components(
     _data: &(),
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
+    _mod_paks: &mut Vec<PakFile>,
     linked_actors_maps: Vec<&serde_json::Value>,
 ) -> Result<(), io::Error> {
     let mut actor_asset = Asset::new(
@@ -55,17 +56,15 @@ pub(crate) fn handle_linked_actor_components(
             .as_object()
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid linked_actor_components"))?;
         for (name, components) in linked_actors_map.iter() {
-            let components = components.as_array().ok_or_else(|| io::Error::new(
-                ErrorKind::Other,
-                "Invalid linked_actor_components2",
-            ))?;
+            let components = components.as_array().ok_or_else(|| {
+                io::Error::new(ErrorKind::Other, "Invalid linked_actor_components2")
+            })?;
 
             let entry = new_components.entry(name.clone()).or_insert_with(Vec::new);
             for component in components {
-                let component_name = component.as_str().ok_or_else(|| io::Error::new(
-                    ErrorKind::Other,
-                    "Invalid linked_actor_components3",
-                ))?;
+                let component_name = component.as_str().ok_or_else(|| {
+                    io::Error::new(ErrorKind::Other, "Invalid linked_actor_components3")
+                })?;
                 entry.push(String::from(component_name));
             }
         }
@@ -93,12 +92,6 @@ pub(crate) fn handle_linked_actor_components(
                             _ => {}
                         }
                     }
-                    println!(
-                        "{} {:b} {:b}",
-                        normal_export.base_export.object_name.content,
-                        EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits(),
-                        normal_export.base_export.object_flags
-                    );
                     if (EObjectFlags::RF_CLASS_DEFAULT_OBJECT
                         & EObjectFlags::from_bits(normal_export.base_export.object_flags)
                             .ok_or_else(|| {
@@ -155,10 +148,7 @@ pub(crate) fn handle_linked_actor_components(
             let component = Path::new(component_path_raw)
                 .file_stem()
                 .and_then(|e| e.to_str())
-                .ok_or_else(|| io::Error::new(
-                    ErrorKind::Other,
-                    "Invalid persistent actors",
-                ))?;
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid persistent actors"))?;
 
             let (component_path_raw, component) = match component.contains('.') {
                 true => {

@@ -26,6 +26,7 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
                 &(),
                 &mut unreal_pak::PakFile,
                 &mut Vec<unreal_pak::PakFile>,
+                &mut Vec<unreal_pak::PakFile>,
                 Vec<&serde_json::Value>,
             ) -> Result<(), io::Error>,
         >,
@@ -33,6 +34,7 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
         type HandlerFn = dyn FnMut(
             &(),
             &mut unreal_pak::PakFile,
+            &mut Vec<unreal_pak::PakFile>,
             &mut Vec<unreal_pak::PakFile>,
             Vec<&serde_json::Value>,
         ) -> Result<(), io::Error>;
