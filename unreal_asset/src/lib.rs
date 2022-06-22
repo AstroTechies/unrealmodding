@@ -94,6 +94,20 @@ impl Import {
 
 const UE4_ASSET_MAGIC: u32 = u32::from_be_bytes([0xc1, 0x83, 0x2a, 0x9e]);
 
+struct AssetHeader {
+    name_offset: i32,
+    import_offset: i32,
+    export_offset: i32,
+    depends_offset: i32,
+    soft_package_reference_offset: i32,
+    asset_registry_data_offset: i32,
+    world_tile_info_offset: i32,
+    preload_dependency_count: i32,
+    preload_dependency_offset: i32,
+    header_offset: i32,
+    bulk_data_start_offset: i64,
+}
+
 //#[derive(Debug)]
 pub struct Asset {
     // raw data
@@ -154,7 +168,6 @@ pub struct Asset {
     depends_map: Option<Vec<Vec<i32>>>,
     soft_package_reference_list: Option<Vec<String>>,
     pub world_tile_info: Option<FWorldTileInfo>,
-    preload_dependencies: Option<Vec<i32>>,
 
     //todo: fill out with defaults
     pub map_key_override: HashMap<String, String>,
@@ -219,7 +232,6 @@ impl<'a> Asset {
             depends_map: None,
             soft_package_reference_list: None,
             world_tile_info: None,
-            preload_dependencies: None,
             map_key_override: HashMap::new(), // todo: preinit
             map_value_override: HashMap::new(),
         }
@@ -550,7 +562,7 @@ impl<'a> Asset {
                 && import.outer_index == outer_index
                 && import.object_name == *object_name
             {
-                return Some(-(i as i32));
+                return Some(-(i as i32) - 1);
             }
         }
         None
@@ -568,7 +580,7 @@ impl<'a> Asset {
                 && import.class_name == *class_name
                 && import.object_name == *object_name
             {
-                return Some(-(i as i32));
+                return Some(-(i as i32) - 1);
             }
         }
         None
@@ -786,12 +798,6 @@ impl<'a> Asset {
             }
             self.cursor
                 .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
-            let mut preload_dependencies = Vec::new();
-
-            for _i in 0..self.preload_dependency_count as usize {
-                preload_dependencies.push(self.cursor.read_i32::<LittleEndian>()?);
-            }
-            self.preload_dependencies = Some(preload_dependencies);
         }
 
         if self.header_offset > 0 && !self.exports.is_empty() {
@@ -913,16 +919,7 @@ impl<'a> Asset {
     fn write_header(
         &self,
         cursor: &mut Cursor<Vec<u8>>,
-        name_offset: i32,
-        import_offset: i32,
-        export_offset: i32,
-        depends_offset: i32,
-        soft_package_reference_offset: i32,
-        asset_registry_data_offset: i32,
-        world_tile_info_offset: i32,
-        preload_dependency_offset: i32,
-        header_offset: i32,
-        bulk_data_start_offset: i64,
+        asset_header: &AssetHeader,
     ) -> Result<(), Error> {
         cursor.write_u32::<BigEndian>(UE4_ASSET_MAGIC)?;
         cursor.write_i32::<LittleEndian>(self.legacy_file_version)?;
@@ -953,11 +950,11 @@ impl<'a> Asset {
             };
         }
 
-        cursor.write_i32::<LittleEndian>(header_offset)?;
+        cursor.write_i32::<LittleEndian>(asset_header.header_offset)?;
         cursor.write_string(&Some(self.folder_name.clone()))?;
         cursor.write_u32::<LittleEndian>(self.package_flags)?;
         cursor.write_i32::<LittleEndian>(self.name_map_index_list.len() as i32)?;
-        cursor.write_i32::<LittleEndian>(name_offset)?;
+        cursor.write_i32::<LittleEndian>(asset_header.name_offset)?;
 
         if self.engine_version >= VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
             cursor.write_i32::<LittleEndian>(self.gatherable_text_data_count)?;
@@ -965,14 +962,14 @@ impl<'a> Asset {
         }
 
         cursor.write_i32::<LittleEndian>(self.exports.len() as i32)?;
-        cursor.write_i32::<LittleEndian>(export_offset)?;
+        cursor.write_i32::<LittleEndian>(asset_header.export_offset)?;
         cursor.write_i32::<LittleEndian>(self.imports.len() as i32)?;
-        cursor.write_i32::<LittleEndian>(import_offset)?;
-        cursor.write_i32::<LittleEndian>(depends_offset)?;
+        cursor.write_i32::<LittleEndian>(asset_header.import_offset)?;
+        cursor.write_i32::<LittleEndian>(asset_header.depends_offset)?;
 
         if self.engine_version >= VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP {
             cursor.write_i32::<LittleEndian>(self.soft_package_reference_count)?;
-            cursor.write_i32::<LittleEndian>(soft_package_reference_offset)?;
+            cursor.write_i32::<LittleEndian>(asset_header.soft_package_reference_offset)?;
         }
 
         if self.engine_version >= VER_UE4_ADDED_SEARCHABLE_NAMES {
@@ -1007,11 +1004,11 @@ impl<'a> Asset {
             cursor.write_i32::<LittleEndian>(0)?; // numTextureallocations
         }
 
-        cursor.write_i32::<LittleEndian>(asset_registry_data_offset)?;
-        cursor.write_i64::<LittleEndian>(bulk_data_start_offset)?;
+        cursor.write_i32::<LittleEndian>(asset_header.asset_registry_data_offset)?;
+        cursor.write_i64::<LittleEndian>(asset_header.bulk_data_start_offset)?;
 
         if self.engine_version >= VER_UE4_WORLD_LEVEL_INFO {
-            cursor.write_i32::<LittleEndian>(world_tile_info_offset)?;
+            cursor.write_i32::<LittleEndian>(asset_header.world_tile_info_offset)?;
         }
 
         if self.engine_version >= VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS {
@@ -1024,13 +1021,8 @@ impl<'a> Asset {
         }
 
         if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
-            cursor.write_i32::<LittleEndian>(
-                self.preload_dependencies
-                    .as_ref()
-                    .map(|e| e.len())
-                    .unwrap_or(0) as i32,
-            )?;
-            cursor.write_i32::<LittleEndian>(preload_dependency_offset)?;
+            cursor.write_i32::<LittleEndian>(asset_header.preload_dependency_count)?;
+            cursor.write_i32::<LittleEndian>(asset_header.preload_dependency_offset)?;
         }
 
         Ok(())
@@ -1123,19 +1115,21 @@ impl<'a> Asset {
                 }
             )));
         }
-        self.write_header(
-            cursor,
-            self.name_offset,
-            self.import_offset,
-            self.export_offset,
-            self.depends_offset,
-            self.soft_package_reference_offset,
-            self.asset_registry_data_offset,
-            self.world_tile_info_offset,
-            self.preload_dependency_offset,
-            self.header_offset,
-            self.bulk_data_start_offset,
-        )?;
+
+        let header = AssetHeader {
+            name_offset: self.name_offset,
+            import_offset: self.import_offset,
+            export_offset: self.export_offset,
+            depends_offset: self.depends_offset,
+            soft_package_reference_offset: self.soft_package_reference_offset,
+            asset_registry_data_offset: self.asset_registry_data_offset,
+            world_tile_info_offset: self.world_tile_info_offset,
+            preload_dependency_count: 0,
+            preload_dependency_offset: self.preload_dependency_offset,
+            header_offset: self.header_offset,
+            bulk_data_start_offset: self.bulk_data_start_offset,
+        };
+        self.write_header(cursor, &header)?;
 
         let name_offset = match !self.name_map_index_list.is_empty() {
             true => cursor.position() as i32,
@@ -1229,6 +1223,7 @@ impl<'a> Asset {
             world_tile_info.write(self, cursor)?;
         }
 
+        let mut preload_dependency_count = 0;
         let preload_dependency_offset = match self.use_separate_bulk_data_files {
             true => cursor.position() as i32,
             false => 0,
@@ -1253,6 +1248,13 @@ impl<'a> Asset {
                 for element in &unk_export.create_before_create_dependencies {
                     cursor.write_i32::<LittleEndian>(element.index)?;
                 }
+
+                preload_dependency_count += unk_export
+                    .serialization_before_serialization_dependencies
+                    .len() as i32
+                    + unk_export.create_before_serialization_dependencies.len() as i32
+                    + unk_export.serialization_before_create_dependencies.len() as i32
+                    + unk_export.create_before_create_dependencies.len() as i32;
             }
         }
 
@@ -1311,8 +1313,8 @@ impl<'a> Asset {
         }
 
         cursor.seek(SeekFrom::Start(0))?;
-        self.write_header(
-            cursor,
+
+        let header = AssetHeader {
             name_offset,
             import_offset,
             export_offset,
@@ -1320,10 +1322,12 @@ impl<'a> Asset {
             soft_package_reference_offset,
             asset_registry_data_offset,
             world_tile_info_offset,
+            preload_dependency_count,
             preload_dependency_offset,
             header_offset,
             bulk_data_start_offset,
-        )?;
+        };
+        self.write_header(cursor, &header)?;
 
         cursor.seek(SeekFrom::Start(0))?;
         Ok(())

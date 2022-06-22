@@ -6,7 +6,7 @@ use error::IntegrationError;
 use metadata::{Metadata, SyncMode};
 use std::collections::HashMap;
 use std::fs;
-use std::fs::{DirEntry, File, OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::io::Cursor;
 use std::path::Path;
 use unreal_asset::exports::data_table_export::DataTable;
@@ -36,7 +36,15 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
         &self,
     ) -> HashMap<
         String,
-        Box<dyn FnMut(&T, &mut PakFile, &mut Vec<PakFile>, Vec<&Value>) -> Result<(), E>>,
+        Box<
+            dyn FnMut(
+                &T,
+                &mut PakFile,
+                &mut Vec<PakFile>,
+                &mut Vec<PakFile>,
+                Vec<&Value>,
+            ) -> Result<(), E>,
+        >,
     >;
 
     const GAME_NAME: &'static str;
@@ -297,7 +305,7 @@ pub fn integrate_mods<
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
     let mods_dir = fs::read_dir(paks_path)?;
-    let mod_files: Vec<DirEntry> = mods_dir
+    let mod_files: Vec<File> = mods_dir
         .filter_map(|e| e.ok())
         .filter(|e| {
             e.file_name()
@@ -305,6 +313,8 @@ pub fn integrate_mods<
                 .map(|e| e.ends_with("_P.pak") && e != "999-Mods_P.pak")
                 .unwrap_or(false)
         })
+        .map(|e| File::open(&e.path()))
+        .filter_map(|e| e.ok())
         .collect();
 
     let game_dir = fs::read_dir(install_path)?;
@@ -318,10 +328,10 @@ pub fn integrate_mods<
     }
 
     let mut mods = Vec::new();
+    let mut mod_paks = Vec::new();
     let mut optional_mods_data = Vec::new();
     for mod_file in &mod_files {
-        let stream = File::open(&mod_file.path())?;
-        let mut pak = PakFile::reader(&stream);
+        let mut pak = PakFile::reader(mod_file);
         pak.load_records()?;
 
         let record = pak
@@ -334,6 +344,8 @@ pub fn integrate_mods<
 
         let optional_metadata: Value = serde_json::from_slice(record)?;
         optional_mods_data.push(optional_metadata);
+
+        mod_paks.push(pak);
     }
 
     if !mods.is_empty() {
@@ -422,6 +434,7 @@ pub fn integrate_mods<
                 integrator_config.get_data(),
                 &mut generated_pak,
                 &mut game_paks,
+                &mut mod_paks,
                 all_mods,
             )
             .map_err(|e| Error::other(Box::new(e)))?;

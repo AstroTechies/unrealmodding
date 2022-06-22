@@ -16,7 +16,7 @@ pub(crate) mod mission_trailheads;
 pub mod persistent_actors;
 
 lazy_static! {
-    static ref GAME_REGEX: Regex = Regex::new("^/Game/").unwrap();
+    static ref GAME_REGEX: Regex = Regex::new(r"^/Game/").unwrap();
 }
 
 static MAP_PATHS: [&str; 3] = [

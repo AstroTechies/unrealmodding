@@ -25,6 +25,7 @@ pub(crate) fn handle_item_list_entries(
     _data: &(),
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
+    _mod_paks: &mut Vec<PakFile>,
     item_list_entires_maps: Vec<&serde_json::Value>,
 ) -> Result<(), io::Error> {
     let mut new_items = HashMap::new();
