@@ -57,13 +57,13 @@ pub(crate) fn handle_linked_actor_components(
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid linked_actor_components"))?;
         for (name, components) in linked_actors_map.iter() {
             let components = components.as_array().ok_or_else(|| {
-                io::Error::new(ErrorKind::Other, "Invalid linked_actor_components2")
+                io::Error::new(ErrorKind::Other, "Invalid linked_actor_components")
             })?;
 
             let entry = new_components.entry(name.clone()).or_insert_with(Vec::new);
             for component in components {
                 let component_name = component.as_str().ok_or_else(|| {
-                    io::Error::new(ErrorKind::Other, "Invalid linked_actor_components3")
+                    io::Error::new(ErrorKind::Other, "Invalid linked_actor_components")
                 })?;
                 entry.push(String::from(component_name));
             }
@@ -103,7 +103,7 @@ pub(crate) fn handle_linked_actor_components(
                     }
                 }
             }
-
+          
             let actor_index =
                 actor_index.ok_or_else(|| io::Error::new(ErrorKind::Other, "Actor not found"))?;
             let actor = actor_index as i32 + 1;
@@ -144,7 +144,7 @@ pub(crate) fn handle_linked_actor_components(
                     &FName::from_slice("Default__SCS_Node"),
                 )
                 .expect("No default scs");
-
+          
             let component = Path::new(component_path_raw)
                 .file_stem()
                 .and_then(|e| e.to_str())

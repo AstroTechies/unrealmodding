@@ -17,6 +17,7 @@ mod verify;
 pub(crate) fn process_modfiles(
     mod_files: &Vec<PathBuf>,
     data: &Arc<Mutex<ModLoaderAppData>>,
+    set_enabled: bool,
 ) -> Vec<ModLoaderWarning> {
     debug!("Processing mod files: {:?}", mod_files);
 
@@ -30,7 +31,7 @@ pub(crate) fn process_modfiles(
     let filter: Vec<String> = mods_read.keys().cloned().collect();
 
     // turn metadata into proper data structures
-    insert_mods_from_readdata(&mods_read, &mut *data_guard);
+    insert_mods_from_readdata(&mods_read, &mut *data_guard, set_enabled);
 
     // pick version
     auto_pick_versions(&mut *data_guard);

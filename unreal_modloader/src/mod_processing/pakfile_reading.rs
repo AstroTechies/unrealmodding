@@ -114,6 +114,7 @@ pub(crate) fn read_pak_files(
 pub(crate) fn insert_mods_from_readdata(
     mods_read: &HashMap<String, Vec<ReadData>>,
     data: &mut ModLoaderAppData,
+    set_enabled: bool,
 ) {
     for (mod_id, mod_files) in mods_read.iter() {
         // check if mod is in global list, if not insert empty
@@ -123,7 +124,7 @@ pub(crate) fn insert_mods_from_readdata(
                 selected_version: SelectedVersion::LatestIndirect(None),
                 latest_version: None,
 
-                active: false,
+                enabled: set_enabled,
 
                 name: "".to_owned(),
                 author: None,

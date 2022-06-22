@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -5,7 +7,7 @@ use std::sync::{
 
 use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
-use log::info;
+use log::{debug, info};
 
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
@@ -15,7 +17,7 @@ pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,
 
     pub window_title: String,
-    pub dropped_files: Vec<egui::DroppedFile>,
+    pub processed_files: HashSet<PathBuf>,
 
     pub should_exit: Arc<AtomicBool>,
     pub ready_exit: Arc<AtomicBool>,
@@ -169,7 +171,7 @@ impl ModLoaderApp {
                 for (_, game_mod) in data.game_mods.iter_mut() {
                     body.row(18.0, |mut row| {
                         row.col(|ui| {
-                            if ui.checkbox(&mut game_mod.active, "").changed() {
+                            if ui.checkbox(&mut game_mod.enabled, "").changed() {
                                 self.should_integrate.store(true, Ordering::Relaxed);
                             };
                         });
@@ -334,9 +336,23 @@ impl ModLoaderApp {
             );
         }
 
-        // Collect dropped files:
-        if !ctx.input().raw.dropped_files.is_empty() {
-            self.dropped_files = ctx.input().raw.dropped_files.clone();
+        // Collect dropped files
+        for dropped_file in ctx.input().raw.dropped_files.iter() {
+            if self
+                .processed_files
+                .contains(dropped_file.path.as_ref().unwrap())
+            {
+                continue;
+            }
+            debug!("Dropped file: {:?}", dropped_file.path);
+
+            self.processed_files
+                .insert(dropped_file.path.as_ref().unwrap().to_owned());
+            self.data
+                .lock()
+                .unwrap()
+                .files_to_process
+                .push(dropped_file.path.as_ref().unwrap().to_owned());
         }
     }
 }

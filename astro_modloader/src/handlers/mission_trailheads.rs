@@ -86,7 +86,6 @@ pub(crate) fn handle_mission_trailheads(
                     .file_stem()
                     .and_then(|e| e.to_str())
                     .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid trailhead"))?;
-
                 asset.add_fname(trailhead);
                 asset.add_fname(soft_class_name);
 
