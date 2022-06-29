@@ -224,6 +224,8 @@ where
                     let warnings = process_modfiles(&files_to_process, &data, true);
                     debug!("warnings: {:?}", warnings);
                     data.lock().unwrap().warnings.extend(warnings);
+
+                    should_integrate.store(true, Ordering::Relaxed);
                 } else {
                     drop(data_guard);
                 }
