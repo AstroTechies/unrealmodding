@@ -301,7 +301,7 @@ pub fn integrate_mods<
 >(
     integrator_config: &C,
     paks_path: &Path,
-    install_path: &Path,
+    game_path: &Path,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
     let mods_dir = fs::read_dir(paks_path)?;
@@ -317,7 +317,7 @@ pub fn integrate_mods<
         .filter_map(|e| e.ok())
         .collect();
 
-    let game_dir = fs::read_dir(install_path)?;
+    let game_dir = fs::read_dir(game_path)?;
     let game_files: Vec<File> = game_dir
         .filter_map(|e| e.ok())
         .filter(|e| e.path().extension().map(|e| e == "pak").unwrap_or(false))
