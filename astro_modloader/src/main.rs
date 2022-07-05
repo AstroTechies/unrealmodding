@@ -39,6 +39,7 @@ where
     }
 
     const APP_ID: u32 = 361420;
+    const WINSTORE_VENDOR_ID: Option<&'static str> = Some("SystemEraSoftworks");
     const WINDOW_TITLE: &'static str = "Astroneer Modloader";
 }
 
