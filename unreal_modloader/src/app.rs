@@ -5,13 +5,15 @@ use std::sync::{
     Arc, Mutex,
 };
 
+use eframe::egui::{Button, Sense};
+use eframe::emath::Align;
 use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::{debug, info};
 
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
-use crate::ModLoaderAppData;
+use crate::{GamePlatform, ModLoaderAppData};
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,
@@ -24,6 +26,9 @@ pub(crate) struct ModLoaderApp {
 
     pub should_integrate: Arc<AtomicBool>,
     pub working: Arc<AtomicBool>,
+    pub reloading: Arc<AtomicBool>,
+
+    pub platform_selector_open: Arc<AtomicBool>,
 }
 
 impl App for ModLoaderApp {
@@ -37,7 +42,17 @@ impl App for ModLoaderApp {
                 .size(Size::remainder())
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
-                        self.show_title(ui, &mut data);
+                        StripBuilder::new(ui)
+                            .size(Size::relative(0.5))
+                            .size(Size::remainder())
+                            .horizontal(|mut strip| {
+                                strip.cell(|ui| {
+                                    self.show_title(ui, &mut data);
+                                });
+                                strip.cell(|ui| {
+                                    self.show_change_platform(ui, &mut data);
+                                });
+                            });
                     });
                     strip.cell(|ui| {
                         self.show_table(ui, &mut data);
@@ -92,6 +107,60 @@ impl App for ModLoaderApp {
             should_darken = true;
         }
 
+        if self.platform_selector_open.load(Ordering::Acquire) {
+            egui::Window::new("Platform Selector")
+                .resizable(true)
+                .collapsible(false)
+                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+                .fixed_size((600.0, 400.0))
+                .show(ctx, |ui| {
+                    if data.install_managers.contains_key(&GamePlatform::Steam) {
+                        let exists = data
+                            .install_managers
+                            .get(&GamePlatform::Steam)
+                            .unwrap()
+                            .get_game_path()
+                            .is_some();
+
+                        let button = match exists {
+                            true => Button::new("Steam"),
+                            false => Button::new("Steam (not found)").sense(Sense::hover()),
+                        };
+
+                        if ui.add(button).clicked() {
+                            data.set_game_platform(GamePlatform::Steam);
+                            self.platform_selector_open.store(false, Ordering::Release);
+                            self.reloading.store(true, Ordering::Release);
+                            ctx.request_repaint();
+                        }
+                    }
+
+                    if data.install_managers.contains_key(&&GamePlatform::MsStore) {
+                        let exists = data
+                            .install_managers
+                            .get(&GamePlatform::MsStore)
+                            .unwrap()
+                            .get_game_path()
+                            .is_some();
+
+                        let button = match exists {
+                            true => Button::new("Microsoft Store"),
+                            false => {
+                                Button::new("Microsoft Store (not found)").sense(Sense::hover())
+                            }
+                        };
+
+                        if ui.add(button).clicked() {
+                            data.set_game_platform(GamePlatform::MsStore);
+                            self.platform_selector_open.store(false, Ordering::Release);
+                            self.reloading.store(true, Ordering::Release);
+                            ctx.request_repaint();
+                        }
+                    }
+                });
+            should_darken = true;
+        }
+
         drop(data);
 
         if should_darken {
@@ -138,6 +207,25 @@ impl ModLoaderApp {
         } else {
             ui.heading(format!("{} - Working...", title));
         }
+    }
+
+    fn show_change_platform(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
+        let title = format!(
+            "Platform: {}",
+            match data.selected_game_platform {
+                Some(ref platform) => platform.to_string(),
+                None => "None".to_owned(),
+            },
+        );
+
+        ui.with_layout(ui.layout().with_cross_align(Align::Max), |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("Change platform").clicked() {
+                    self.platform_selector_open.store(true, Ordering::Release);
+                }
+                ui.label(title);
+            });
+        });
     }
 
     fn show_table(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {

@@ -2,13 +2,19 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
+use directories::BaseDirs;
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::determine_paths::verify_install_path;
 use crate::game_mod::SelectedVersion;
+use crate::game_path_helpers::verify_install_path;
 use crate::version::Version;
-use crate::ModLoaderAppData;
+use crate::{GamePlatform, ModLoaderAppData};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ModLoaderConfig {
+    selected_game_platform: Option<GamePlatform>,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfig {
@@ -30,6 +36,29 @@ struct ModConfigData {
     priority: u16,
     enabled: bool,
     version: String,
+}
+
+pub(crate) fn load_modloader_config(data: &mut ModLoaderAppData) {
+    let data_dir = BaseDirs::new().map(|e| PathBuf::from(e.data_dir()));
+    if let Some(data_dir) = data_dir {
+        let config_path = data_dir.join(data.config_dir).join("conf.json");
+        if config_path.is_file() {
+            let config_str = fs::read_to_string(config_path).unwrap();
+            let config: ModLoaderConfig = serde_json::from_str(&config_str).unwrap_or_else(|_| {
+                error!("Failed to parse conf.json");
+                panic!();
+            });
+
+            if config.selected_game_platform.is_none() {
+                if !data.set_game_platform(GamePlatform::Steam) {
+                    let first_platform = data.install_managers.keys().next().unwrap().clone();
+                    data.set_game_platform(first_platform);
+                }
+            } else {
+                data.set_game_platform(config.selected_game_platform.unwrap());
+            }
+        }
+    }
 }
 
 pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
@@ -74,6 +103,24 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
                 game_mod.selected_version = SelectedVersion::Specific(config_version.unwrap());
             }
         }
+    }
+}
+
+pub(crate) fn write_modloader_config(data: &mut ModLoaderAppData) {
+    let data_dir = BaseDirs::new().map(|e| PathBuf::from(e.data_dir()));
+    if let Some(data_dir) = data_dir {
+        let config_path = data_dir.join(data.config_dir);
+        fs::create_dir_all(config_path.clone()).unwrap();
+
+        let config = ModLoaderConfig {
+            selected_game_platform: data.selected_game_platform,
+        };
+        println!("Saving: {:?}", config);
+        fs::write(
+            config_path.join("conf.json"),
+            serde_json::to_string(&config).unwrap(),
+        )
+        .unwrap();
     }
 }
 
