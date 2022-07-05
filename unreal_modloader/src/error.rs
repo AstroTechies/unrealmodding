@@ -88,6 +88,7 @@ pub enum ModLoaderWarningKind {
     UnrealPakError(UnrealPakError),
     IntegratorError(unreal_modintegrator::error::Error),
     SteamError,
+    WinStoreError,
 
     MissingMetadata,
     InvalidMetadata,
@@ -118,6 +119,12 @@ impl ModLoaderWarning {
     pub fn steam_error() -> Self {
         ModLoaderWarning {
             kind: ModLoaderWarningKind::SteamError,
+            mod_id: None,
+        }
+    }
+    pub fn winstore_error() -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::WinStoreError,
             mod_id: None,
         }
     }
@@ -205,6 +212,9 @@ impl fmt::Display for ModLoaderWarning {
             }
 
             ModLoaderWarningKind::SteamError => "Failed to locate Steam installation".to_string(),
+            ModLoaderWarningKind::WinStoreError => {
+                "Failed to locate WinStore installation".to_string()
+            }
 
             ModLoaderWarningKind::MissingMetadata => format!("{}Missing metadata", mod_name),
             ModLoaderWarningKind::InvalidMetadata => format!("{}Invalid metadata", mod_name),

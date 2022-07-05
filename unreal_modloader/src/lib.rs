@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
-use std::fs;
-use std::io;
+use std::fs::{self, File};
+use std::io::{self, Read};
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -10,8 +10,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use eframe::egui;
+use lazy_static::lazy_static;
 use log::warn;
 use log::{debug, error};
+use regex::Regex;
 use unreal_modintegrator::{integrate_mods, IntegratorConfig};
 
 mod app;
@@ -29,6 +31,12 @@ use mod_config::{load_config, write_config};
 use mod_processing::process_modfiles;
 use version::GameBuild;
 
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum GameFlavor {
+    Steam,
+    WinStore,
+}
+
 #[derive(Debug)]
 pub(crate) struct ModLoaderAppData {
     /// %LocalAppData%\[GameName]\Saved
@@ -39,6 +47,8 @@ pub(crate) struct ModLoaderAppData {
     pub paks_path: Option<PathBuf>,
     /// install path
     pub install_path: Option<PathBuf>,
+    /// game flavor
+    pub game_flavor: Option<GameFlavor>,
 
     pub game_build: Option<GameBuild>,
     pub refuse_mismatched_connections: bool,
@@ -47,6 +57,11 @@ pub(crate) struct ModLoaderAppData {
 
     pub error: Option<ModLoaderError>,
     pub warnings: Vec<ModLoaderWarning>,
+}
+
+lazy_static! {
+    static ref APPX_MANIFEST_VERSION_REGEX: Regex =
+        Regex::new("(?x)<Identity(.*?)Publisher(.*?)Version=\"([^\"]*)\"").unwrap();
 }
 
 pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(config: C)
@@ -59,6 +74,7 @@ where
         data_path: None,
         paks_path: None,
         install_path: None,
+        game_flavor: None,
 
         game_build: None,
         refuse_mismatched_connections: true,
@@ -96,16 +112,9 @@ where
             let start = Instant::now();
 
             // get paths
-            let base_path = determine_paths::dertermine_base_path(D::GAME_NAME);
-            if base_path.is_none() {
-                error!("Could not determine base path");
-                data.lock().unwrap().error = Some(ModLoaderError::no_base_path());
-            } else {
-                data.lock().unwrap().base_path = base_path;
-            }
+            let mut base_path: Option<PathBuf> = None;
 
-            // we can later add support for non-steam installs
-            let install_path = determine_paths::dertermine_install_path_steam(C::APP_ID);
+            let install_path = determine_paths::determine_install_path_steam(C::APP_ID);
             if install_path.is_ok()
                 && determine_paths::verify_install_path(
                     install_path.as_ref().unwrap(),
@@ -113,11 +122,40 @@ where
                 )
             {
                 data.lock().unwrap().install_path = install_path.ok();
+                data.lock().unwrap().game_flavor = Some(GameFlavor::Steam);
+                base_path = determine_paths::determine_base_path_steam(D::GAME_NAME);
             } else {
-                data.lock()
-                    .unwrap()
-                    .warnings
-                    .push(install_path.unwrap_err());
+                // checking winstore
+                if let Some(winstore_vendor_id) = C::WINSTORE_VENDOR_ID {
+                    let install_path =
+                        determine_paths::determine_install_path_winstore(winstore_vendor_id);
+                    if let Ok(install_path) = install_path {
+                        //todo: take ownership
+                        data.lock().unwrap().install_path = Some(install_path.path.clone());
+                        data.lock().unwrap().game_flavor = Some(GameFlavor::WinStore);
+                        base_path = determine_paths::determine_base_path_winstore(
+                            &install_path,
+                            D::GAME_NAME,
+                        );
+                    } else {
+                        data.lock()
+                            .unwrap()
+                            .warnings
+                            .push(install_path.unwrap_err());
+                    }
+                } else {
+                    data.lock()
+                        .unwrap()
+                        .warnings
+                        .push(install_path.unwrap_err());
+                }
+            }
+
+            if base_path.is_none() {
+                error!("Could not determine base path");
+                data.lock().unwrap().error = Some(ModLoaderError::no_base_path());
+            } else {
+                data.lock().unwrap().base_path = base_path;
             }
 
             if data.lock().unwrap().base_path.is_some() {
@@ -242,8 +280,54 @@ where
 
                         // set game build
                         if data_guard.install_path.is_some() {
-                            data_guard.game_build =
-                                config.get_game_build(data_guard.install_path.as_ref().unwrap());
+                            if data_guard.game_flavor.is_some() {
+                                let flavor = data_guard.game_flavor.as_ref().unwrap();
+                                match flavor {
+                                    GameFlavor::Steam => {
+                                        data_guard.game_build = config.get_game_build(
+                                            data_guard.install_path.as_ref().unwrap(),
+                                        );
+                                    }
+                                    GameFlavor::WinStore => {
+                                        // can parse it for any winstore app
+                                        if let Ok(mut appx_file) = File::open(
+                                            data_guard
+                                                .install_path
+                                                .as_ref()
+                                                .unwrap()
+                                                .join("AppxManifest.xml"),
+                                        ) {
+                                            let mut appx_contents = String::new();
+                                            appx_file.read_to_string(&mut appx_contents)?;
+
+                                            let app_version = APPX_MANIFEST_VERSION_REGEX
+                                                .captures(&appx_contents);
+
+                                            let version_capture =
+                                                app_version.map(|e| e.get(e.len() - 1)).flatten();
+                                            if version_capture.is_some() {
+                                                let version = version_capture.unwrap().as_str();
+                                                let version_numbers: Vec<usize> = version
+                                                    .split(".")
+                                                    .filter_map(|e| e.parse::<usize>().ok())
+                                                    .collect();
+                                                if version_numbers.len() == 4 {
+                                                    data_guard.game_build = Some(GameBuild::new(
+                                                        version_numbers[0],
+                                                        version_numbers[1],
+                                                        version_numbers[2],
+                                                        version_numbers[3],
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                // maybe error out? this should never be reached
+                                data_guard.game_build = config
+                                    .get_game_build(data_guard.install_path.as_ref().unwrap());
+                            }
                         }
 
                         // gather mods to be installed

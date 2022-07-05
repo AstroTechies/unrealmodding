@@ -12,5 +12,6 @@ where
     fn get_game_build(&self, install_path: &Path) -> Option<GameBuild>;
 
     const APP_ID: u32;
+    const WINSTORE_VENDOR_ID: Option<&'static str>;
     const WINDOW_TITLE: &'static str;
 }
