@@ -29,6 +29,8 @@ use crate::error::Error;
 
 pub trait IntegratorInfo {}
 
+const INTEGRATOR_PAK_FILE_NAME: &str = "900-ModIntegrator_P.pak";
+
 #[allow(clippy::type_complexity)]
 pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     fn get_data(&self) -> &'data T;
@@ -310,7 +312,7 @@ pub fn integrate_mods<
         .filter(|e| {
             e.file_name()
                 .into_string()
-                .map(|e| e.ends_with("_P.pak") && e != "999-Mods_P.pak")
+                .map(|e| e.ends_with("_P.pak") && e != INTEGRATOR_PAK_FILE_NAME)
                 .unwrap_or(false)
         })
         .map(|e| File::open(&e.path()))
@@ -349,7 +351,7 @@ pub fn integrate_mods<
     }
 
     if !mods.is_empty() {
-        let path = Path::new(paks_path).join("999-Mods_P.pak");
+        let path = Path::new(paks_path).join(INTEGRATOR_PAK_FILE_NAME);
         OpenOptions::new()
             .create(true)
             .write(true)
