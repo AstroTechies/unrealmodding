@@ -9,7 +9,8 @@ use clap::{Parser, Subcommand};
 use unreal_pak::PakRecord;
 use walkdir::WalkDir;
 
-/// Command line tool for working with Unreal Engine .pak files
+/// Command line tool for working with Unreal Engine .pak files.
+/// Use `unreal_pak_cli <SUBCOMMAND> -h` for more information on a subcommand.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
@@ -21,21 +22,27 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Adds files to myapp
+    /// Check an entire .pak file if it is valid.
     Check {
         /// The .pak file to check
         pakfile: String,
     },
+
+    /// Only check the header of a .pak file if it is valid.
     CheckHeader {
         /// The .pak file to check
         pakfile: String,
     },
+
+    /// Extract a .pak file to a directory.
     Extract {
         /// The .pak file to extract
         pakfile: String,
-        /// The directory to extract to
+        /// The directory to extract to, if not specified the .pak file name will be used
         outdir: Option<String>,
     },
+
+    /// create a new .pak file from the files from a directory, optionally disabling compression.
     Create {
         /// The .pak file to create
         pakfile: String,
