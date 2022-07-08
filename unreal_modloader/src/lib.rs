@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use eframe::egui;
 use log::warn;
 use log::{debug, error};
-use unreal_modintegrator::{integrate_mods, IntegratorConfig};
+use unreal_modintegrator::{integrate_mods, IntegratorConfig, INTEGRATOR_PAK_FILE_NAME};
 
 mod app;
 pub mod config;
@@ -150,7 +150,7 @@ where
                     let mod_files: Vec<PathBuf> = mods_dir
                         .filter_map(|e| e.ok())
                         .filter(|e| match e.file_name().into_string() {
-                            Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
+                            Ok(s) => s.ends_with("_P.pak") && s != INTEGRATOR_PAK_FILE_NAME,
                             Err(_) => false,
                         })
                         .map(|e| e.path())

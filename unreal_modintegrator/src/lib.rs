@@ -29,7 +29,7 @@ use crate::error::Error;
 
 pub trait IntegratorInfo {}
 
-const INTEGRATOR_PAK_FILE_NAME: &str = "900-ModIntegrator_P.pak";
+pub const INTEGRATOR_PAK_FILE_NAME: &str = "900-ModIntegrator_P.pak";
 
 #[allow(clippy::type_complexity)]
 pub trait IntegratorConfig<'data, T, E: std::error::Error> {
