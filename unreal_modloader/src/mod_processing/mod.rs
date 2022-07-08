@@ -52,6 +52,8 @@ pub(crate) fn process_modfiles(
     warnings.extend(index_file_warnings);
 
     let mut data_guard = data.lock().unwrap();
+
+    // insert index file data into the mod data
     let insert_warnings = insert_index_file_data(&index_files, &mut *data_guard);
     warnings.extend(insert_warnings);
 
