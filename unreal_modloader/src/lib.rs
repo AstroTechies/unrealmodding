@@ -168,7 +168,7 @@ where
                             let mod_files: Vec<PathBuf> = mods_dir
                                 .filter_map(|e| e.ok())
                                 .filter(|e| match e.file_name().into_string() {
-                                    Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
+                                    Ok(s) => s.ends_with("_P.pak") && s != INTEGRATOR_PAK_FILE_NAME,
                                     Err(_) => false,
                                 })
                                 .map(|e| e.path())
