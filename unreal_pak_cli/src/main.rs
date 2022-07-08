@@ -197,7 +197,7 @@ fn main() {
                 if entry.file_type().is_file() {
                     let file_path = entry.path().to_str().unwrap().to_owned();
 
-                    let mut record_name = file_path[indir.len()..].to_owned();
+                    let mut record_name = file_path[indir.len()..].to_owned().replace("\\", "/");
                     if record_name.starts_with('/') {
                         record_name = record_name[1..].to_owned();
                     }
