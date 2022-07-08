@@ -6,7 +6,7 @@ use std::{
 
 use unreal_modintegrator::IntegratorConfig;
 
-use crate::{version::GameBuild, GamePlatform};
+use crate::version::GameBuild;
 
 pub trait InstallManager: Debug + std::marker::Send {
     fn get_game_path(&self) -> Option<PathBuf>;
@@ -20,10 +20,8 @@ where
 {
     fn get_integrator_config(&self) -> &C;
     fn get_game_build(&self, install_path: &Path) -> Option<GameBuild>;
-    fn get_install_managers(&self) -> BTreeMap<GamePlatform, Box<dyn InstallManager>>;
+    fn get_install_managers(&self) -> BTreeMap<&'static str, Box<dyn InstallManager>>;
 
-    const APP_ID: u32;
-    const WINSTORE_VENDOR_ID: Option<&'static str>;
     const WINDOW_TITLE: &'static str;
     const CONFIG_DIR: &'static str;
 }

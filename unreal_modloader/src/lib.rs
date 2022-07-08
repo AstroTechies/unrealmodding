@@ -10,10 +10,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use config::InstallManager;
+use directories::BaseDirs;
 use eframe::egui;
 use log::warn;
 use log::{debug, error};
-use serde::{Deserialize, Serialize};
 use unreal_modintegrator::{integrate_mods, IntegratorConfig};
 
 mod app;
@@ -21,37 +21,22 @@ pub mod config;
 pub mod error;
 pub(crate) mod game_mod;
 pub mod game_path_helpers;
+pub mod game_platform_managers;
 mod mod_config;
 mod mod_processing;
 pub mod version;
 
 use error::{ModLoaderError, ModLoaderWarning};
 use game_mod::GameMod;
-use mod_config::{load_config, load_modloader_config, write_config, write_modloader_config};
+use mod_config::{load_config, write_config};
 use mod_processing::process_modfiles;
 use version::GameBuild;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum GamePlatform {
-    Steam,
-    MsStore,
-}
-
-impl ToString for GamePlatform {
-    fn to_string(&self) -> String {
-        match *self {
-            GamePlatform::Steam => "Steam",
-            GamePlatform::MsStore => "Microsoft Store",
-        }
-        .to_string()
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct ModLoaderAppData {
     /// %LocalAppData%\[GameName]\Saved
     pub base_path: Option<PathBuf>,
-    /// %LocalAppData%\[GameName]\Saved\Mods
+    /// %LocalAppData%\[ModLoaderName]\Mods
     pub data_path: Option<PathBuf>,
     /// %LocalAppData%\[GameName]\Saved\Paks
     pub paks_path: Option<PathBuf>,
@@ -67,15 +52,15 @@ pub(crate) struct ModLoaderAppData {
     pub warnings: Vec<ModLoaderWarning>,
 
     /// install managers
-    pub(crate) install_managers: BTreeMap<GamePlatform, Box<dyn InstallManager>>,
-    pub(crate) selected_game_platform: Option<GamePlatform>,
+    pub(crate) install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
+    pub(crate) selected_game_platform: Option<String>,
 
     pub(crate) config_dir: &'static str,
 }
 
 impl ModLoaderAppData {
-    pub fn set_game_platform(&mut self, platform: GamePlatform) -> bool {
-        let manager = self.install_managers.get(&platform);
+    pub fn set_game_platform(&mut self, platform: &str) -> bool {
+        let manager = self.install_managers.get(platform);
         if let Some(manager) = manager {
             self.files_to_process.clear();
             self.game_mods.clear();
@@ -85,15 +70,13 @@ impl ModLoaderAppData {
             self.game_build = manager.get_game_build();
 
             if let Some(base_path) = &self.base_path {
-                self.data_path = Some(base_path.join("Mods"));
                 self.paks_path = Some(base_path.join("Paks"));
             }
 
-            self.selected_game_platform = Some(platform);
+            self.selected_game_platform = Some(platform.to_string());
 
             return true;
         }
-        write_modloader_config(self);
         false
     }
 }
@@ -121,8 +104,6 @@ where
         selected_game_platform: None,
     }));
 
-    load_modloader_config(&mut data.lock().unwrap());
-
     let should_exit = Arc::new(AtomicBool::new(false));
     let ready_exit = Arc::new(AtomicBool::new(false));
     let should_integrate = Arc::new(AtomicBool::new(true));
@@ -149,6 +130,10 @@ where
         .name("background".to_string())
         .spawn(move || {
             debug!("Starting background thread");
+
+            let config_dir = data.lock().unwrap().config_dir.clone();
+            let modloader_dir = BaseDirs::new().unwrap().data_dir().join(config_dir);
+            data.lock().unwrap().data_path = Some(modloader_dir.join("Mods"));
 
             // background loop
             loop {
@@ -210,7 +195,7 @@ where
 
                             // load config
                             //load_modloader_config(&mut *data_guard);
-                            load_config(&mut *data_guard, D::GAME_NAME);
+                            load_config(&mut *data_guard);
 
                             // debug!("{:#?}", data_guard.game_mods);
                             Ok(())
@@ -396,7 +381,6 @@ where
                         let mut data_guard = data.lock().unwrap();
 
                         // update config file
-                        write_modloader_config(&mut data_guard);
                         write_config(&mut data_guard);
 
                         Ok(())

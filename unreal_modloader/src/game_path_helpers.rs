@@ -2,7 +2,7 @@ use directories::BaseDirs;
 use lazy_static::lazy_static;
 use log::{trace, warn};
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use steamlocate::SteamDir;
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
@@ -111,16 +111,4 @@ pub fn determine_install_path_winstore(vendor: &str) -> Result<MsStoreInfo, ModL
         path: PathBuf::from(root_folder),
         runtime_id: runtime_id,
     })
-}
-
-pub(crate) fn verify_install_path(install_path: &Path, game_name: &str) -> bool {
-    let mut exe_name = game_name.to_owned();
-    exe_name.push_str(".exe");
-    let exe_path = install_path.join(exe_name);
-    if !exe_path.is_file() {
-        warn!("{}.exe not found in install path", game_name);
-        false
-    } else {
-        true
-    }
 }

@@ -13,7 +13,7 @@ use log::{debug, info};
 
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
-use crate::{GamePlatform, ModLoaderAppData};
+use crate::ModLoaderAppData;
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,
@@ -114,46 +114,23 @@ impl App for ModLoaderApp {
                 .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
                 .fixed_size((600.0, 400.0))
                 .show(ctx, |ui| {
-                    if data.install_managers.contains_key(&GamePlatform::Steam) {
-                        let exists = data
-                            .install_managers
-                            .get(&GamePlatform::Steam)
-                            .unwrap()
-                            .get_game_path()
-                            .is_some();
+                    let key_count = data.install_managers.len();
+                    for i in 0..key_count {
+                        let platform = (*data.install_managers.keys().nth(i).unwrap()).to_string();
+                        let manager = data.install_managers.get(platform.as_str()).unwrap();
+                        let exists = manager.get_game_path().is_some();
 
                         let button = match exists {
-                            true => Button::new("Steam"),
-                            false => Button::new("Steam (not found)").sense(Sense::hover()),
+                            true => Button::new(format!("{}", platform)),
+                            false => Button::new(format!("{} (not found)", platform))
+                                .sense(Sense::hover()),
                         };
 
                         if ui.add(button).clicked() {
-                            data.set_game_platform(GamePlatform::Steam);
+                            data.set_game_platform(&platform);
                             self.platform_selector_open.store(false, Ordering::Release);
                             self.reloading.store(true, Ordering::Release);
-                            ctx.request_repaint();
-                        }
-                    }
-
-                    if data.install_managers.contains_key(&&GamePlatform::MsStore) {
-                        let exists = data
-                            .install_managers
-                            .get(&GamePlatform::MsStore)
-                            .unwrap()
-                            .get_game_path()
-                            .is_some();
-
-                        let button = match exists {
-                            true => Button::new("Microsoft Store"),
-                            false => {
-                                Button::new("Microsoft Store (not found)").sense(Sense::hover())
-                            }
-                        };
-
-                        if ui.add(button).clicked() {
-                            data.set_game_platform(GamePlatform::MsStore);
-                            self.platform_selector_open.store(false, Ordering::Release);
-                            self.reloading.store(true, Ordering::Release);
+                            self.should_integrate.store(true, Ordering::Release);
                             ctx.request_repaint();
                         }
                     }
