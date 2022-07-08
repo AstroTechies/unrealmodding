@@ -34,7 +34,7 @@ use version::GameBuild;
 
 #[derive(Debug)]
 pub(crate) struct ModLoaderAppData {
-    /// %LocalAppData%\[GameName]\Mods
+    /// %LocalAppData%\[GameName]\Saved\Mods
     pub mods_path: Option<PathBuf>,
     /// %LocalAppData%\[GameName]\Saved\Paks
     pub paks_path: Option<PathBuf>,
