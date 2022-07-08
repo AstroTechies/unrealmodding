@@ -27,7 +27,7 @@ struct SteamGetGameBuild {
 
 impl GetGameBuildTrait<SteamInstallManager> for SteamGetGameBuild {
     fn get_game_build(&self, manager: &SteamInstallManager) -> Option<GameBuild> {
-        if self.game_build.borrow().is_none() && manager.get_game_path().is_some() {
+        if self.game_build.borrow().is_none() && manager.get_game_install_path().is_some() {
             let version_file_path = manager
                 .game_path
                 .borrow()
