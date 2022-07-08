@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::time::SystemTime;
 
@@ -44,10 +44,10 @@ enum Commands {
 
     /// create a new .pak file from the files from a directory, optionally disabling compression.
     Create {
-        /// The .pak file to create
-        pakfile: String,
         /// The directory to create the file from
         indir: String,
+        /// The .pak file to create, if not supplied the dir name will be used
+        pakfile: Option<String>,
         /// Whether to compress the file
         #[clap(short, long)]
         no_compression: bool,
@@ -154,10 +154,20 @@ fn main() {
             }
         }
         Commands::Create {
-            pakfile,
             indir,
+            pakfile,
             no_compression,
         } => {
+            let pakfile = match pakfile {
+                Some(pakfile) => pakfile,
+                None => {
+                    let mut path = PathBuf::from(&indir);
+                    path.set_extension("pak");
+                    path.to_str().unwrap().to_string()
+                }
+            };
+            println!("Creating {}", pakfile);
+
             // clear file
             OpenOptions::new()
                 .create(true)
@@ -210,6 +220,8 @@ fn main() {
                         .unwrap_or_else(|_| panic!("Error adding record {}", record_name));
                 }
             }
+
+            println!("Writing pak file to disk. For large files this may take a while.");
 
             pak.write().expect("Failed to write");
         }

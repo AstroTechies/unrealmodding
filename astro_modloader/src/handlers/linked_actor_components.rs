@@ -103,7 +103,7 @@ pub(crate) fn handle_linked_actor_components(
                     }
                 }
             }
-          
+
             let actor_index =
                 actor_index.ok_or_else(|| io::Error::new(ErrorKind::Other, "Actor not found"))?;
             let actor = actor_index as i32 + 1;
@@ -144,7 +144,7 @@ pub(crate) fn handle_linked_actor_components(
                     &FName::from_slice("Default__SCS_Node"),
                 )
                 .expect("No default scs");
-          
+
             let component = Path::new(component_path_raw)
                 .file_stem()
                 .and_then(|e| e.to_str())
