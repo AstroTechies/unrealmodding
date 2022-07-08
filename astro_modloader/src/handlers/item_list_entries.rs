@@ -69,17 +69,17 @@ pub(crate) fn handle_item_list_entries(
             if let Some(normal_export) = asset.exports[i].get_normal_export() {
                 for j in 0..normal_export.properties.len() {
                     let property = &normal_export.properties[j];
-                    for arr_name in entries.keys() {
-                        let mut arr_name = arr_name.clone();
+                    for entry_name in entries.keys() {
+                        let mut arr_name = entry_name.clone();
                         if arr_name.contains('.') {
                             let split: Vec<&str> = arr_name.split('.').collect();
-                            let export_name = split[0].to_lowercase();
+                            let export_name = split[0].to_owned();
                             arr_name = split[1].to_owned();
 
                             if normal_export.base_export.class_index.is_import() {
                                 if asset
                                     .get_import(normal_export.base_export.class_index)
-                                    .map(|e| e.class_name.content != export_name)
+                                    .map(|e| e.object_name.content != export_name)
                                     .unwrap_or(true)
                                 {
                                     continue;
@@ -88,11 +88,10 @@ pub(crate) fn handle_item_list_entries(
                                 continue;
                             }
                         }
-
                         if let Some(array_property) = cast!(Property, ArrayProperty, property) {
                             if array_property.name.content == arr_name {
                                 item_types_property
-                                    .entry(arr_name.clone())
+                                    .entry(entry_name.clone())
                                     .or_insert_with(Vec::new)
                                     .push((
                                         i,
