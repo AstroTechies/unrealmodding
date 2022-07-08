@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
 
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::determine_paths::verify_install_path;
 use crate::game_mod::SelectedVersion;
 use crate::version::Version;
 use crate::ModLoaderAppData;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfig {
-    install_path: String,
+    selected_game_platform: Option<String>,
     refuse_mismatched_connections: bool,
     current: ModsConfigData,
     profiles: HashMap<String, ModsConfigData>,
@@ -32,8 +30,9 @@ struct ModConfigData {
     version: String,
 }
 
-pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
-    let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
+pub(crate) fn load_config(data: &mut ModLoaderAppData) {
+    let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
+    let mut selected_game_platform = None;
     if config_path.is_file() {
         let config_str = fs::read_to_string(config_path).unwrap();
         let config: ModConfig = serde_json::from_str(&config_str).unwrap_or_else(|_| {
@@ -42,11 +41,6 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
         });
 
         data.refuse_mismatched_connections = config.refuse_mismatched_connections;
-
-        let install_path = PathBuf::from(config.install_path);
-        if verify_install_path(&install_path, game_name) {
-            data.install_path = Some(install_path);
-        }
 
         for (mod_id, mod_config) in config.current.mods.iter() {
             let game_mod = data.game_mods.get_mut(mod_id);
@@ -74,19 +68,22 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData, game_name: &str) {
                 game_mod.selected_version = SelectedVersion::Specific(config_version.unwrap());
             }
         }
+        selected_game_platform = config.selected_game_platform;
+    }
+    if selected_game_platform.is_none() {
+        if !data.set_game_platform("Steam") {
+            let first_platform = data.install_managers.keys().next().unwrap();
+            data.set_game_platform(first_platform);
+        }
+    } else {
+        data.set_game_platform(&selected_game_platform.unwrap());
     }
 }
 
 pub(crate) fn write_config(data: &mut ModLoaderAppData) {
-    let config_path = data.data_path.as_ref().unwrap().join("modconfig.json");
+    let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
     let mut config = ModConfig {
-        install_path: data
-            .install_path
-            .as_ref()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_owned(),
+        selected_game_platform: data.selected_game_platform.clone(),
         refuse_mismatched_connections: data.refuse_mismatched_connections,
         current: ModsConfigData {
             mods: HashMap::new(),

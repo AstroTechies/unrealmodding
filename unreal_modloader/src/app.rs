@@ -5,6 +5,8 @@ use std::sync::{
     Arc, Mutex,
 };
 
+use eframe::egui::{Button, Sense};
+use eframe::emath::Align;
 use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::{debug, info};
@@ -24,6 +26,9 @@ pub(crate) struct ModLoaderApp {
 
     pub should_integrate: Arc<AtomicBool>,
     pub working: Arc<AtomicBool>,
+    pub reloading: Arc<AtomicBool>,
+
+    pub platform_selector_open: Arc<AtomicBool>,
 }
 
 impl App for ModLoaderApp {
@@ -37,7 +42,17 @@ impl App for ModLoaderApp {
                 .size(Size::remainder())
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
-                        self.show_title(ui, &mut data);
+                        StripBuilder::new(ui)
+                            .size(Size::relative(0.5))
+                            .size(Size::remainder())
+                            .horizontal(|mut strip| {
+                                strip.cell(|ui| {
+                                    self.show_title(ui, &mut data);
+                                });
+                                strip.cell(|ui| {
+                                    self.show_change_platform(ui, &mut data);
+                                });
+                            });
                     });
                     strip.cell(|ui| {
                         self.show_table(ui, &mut data);
@@ -92,6 +107,37 @@ impl App for ModLoaderApp {
             should_darken = true;
         }
 
+        if self.platform_selector_open.load(Ordering::Acquire) {
+            egui::Window::new("Platform Selector")
+                .resizable(true)
+                .collapsible(false)
+                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+                .fixed_size((600.0, 400.0))
+                .show(ctx, |ui| {
+                    let key_count = data.install_managers.len();
+                    for i in 0..key_count {
+                        let platform = (*data.install_managers.keys().nth(i).unwrap()).to_string();
+                        let manager = data.install_managers.get(platform.as_str()).unwrap();
+                        let exists = manager.get_game_install_path().is_some();
+
+                        let button = match exists {
+                            true => Button::new(format!("{}", platform)),
+                            false => Button::new(format!("{} (not found)", platform))
+                                .sense(Sense::hover()),
+                        };
+
+                        if ui.add(button).clicked() {
+                            data.set_game_platform(&platform);
+                            self.platform_selector_open.store(false, Ordering::Release);
+                            self.reloading.store(true, Ordering::Release);
+                            self.should_integrate.store(true, Ordering::Release);
+                            ctx.request_repaint();
+                        }
+                    }
+                });
+            should_darken = true;
+        }
+
         drop(data);
 
         if should_darken {
@@ -138,6 +184,25 @@ impl ModLoaderApp {
         } else {
             ui.heading(format!("{} - Working...", title));
         }
+    }
+
+    fn show_change_platform(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
+        let title = format!(
+            "Platform: {}",
+            match data.selected_game_platform {
+                Some(ref platform) => platform.to_string(),
+                None => "None".to_owned(),
+            },
+        );
+
+        ui.with_layout(ui.layout().with_cross_align(Align::Max), |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("Change platform").clicked() {
+                    self.platform_selector_open.store(true, Ordering::Release);
+                }
+                ui.label(title);
+            });
+        });
     }
 
     fn show_table(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
@@ -272,12 +337,12 @@ impl ModLoaderApp {
             }
         });
 
-        ui.label(match data.base_path {
+        ui.label(match data.paks_path {
             Some(ref path) => path.to_str().unwrap(),
-            None => "No base path",
+            None => "No paks path",
         });
 
-        ui.label(match data.install_path {
+        ui.label(match data.game_install_path {
             Some(ref path) => path.to_str().unwrap(),
             None => "No install path",
         });

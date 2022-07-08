@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
-use std::fs;
-use std::io;
+use std::fs::{self};
+use std::io::{self};
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -9,6 +9,8 @@ use std::sync::{
 use std::thread;
 use std::time::{Duration, Instant};
 
+use config::InstallManager;
+use directories::BaseDirs;
 use eframe::egui;
 use log::warn;
 use log::{debug, error};
@@ -16,9 +18,10 @@ use unreal_modintegrator::{integrate_mods, IntegratorConfig, INTEGRATOR_PAK_FILE
 
 mod app;
 pub mod config;
-mod determine_paths;
 pub mod error;
 pub(crate) mod game_mod;
+pub mod game_path_helpers;
+pub mod game_platform_managers;
 mod mod_config;
 mod mod_processing;
 pub mod version;
@@ -31,14 +34,12 @@ use version::GameBuild;
 
 #[derive(Debug)]
 pub(crate) struct ModLoaderAppData {
-    /// %LocalAppData%\[GameName]\Saved
-    pub base_path: Option<PathBuf>,
     /// %LocalAppData%\[GameName]\Saved\Mods
-    pub data_path: Option<PathBuf>,
+    pub mods_path: Option<PathBuf>,
     /// %LocalAppData%\[GameName]\Saved\Paks
     pub paks_path: Option<PathBuf>,
-    /// install path
-    pub install_path: Option<PathBuf>,
+    /// game install path
+    pub game_install_path: Option<PathBuf>,
 
     pub game_build: Option<GameBuild>,
     pub refuse_mismatched_connections: bool,
@@ -47,6 +48,27 @@ pub(crate) struct ModLoaderAppData {
 
     pub error: Option<ModLoaderError>,
     pub warnings: Vec<ModLoaderWarning>,
+
+    /// install managers
+    pub(crate) install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
+    pub(crate) selected_game_platform: Option<String>,
+}
+
+impl ModLoaderAppData {
+    pub fn set_game_platform(&mut self, platform: &str) -> bool {
+        let manager = self.install_managers.get(platform);
+        if let Some(manager) = manager {
+            self.game_install_path = manager.get_game_install_path();
+            self.game_build = manager.get_game_build();
+            self.paks_path = manager.get_paks_path();
+
+            self.selected_game_platform = Some(platform.to_string());
+
+            write_config(self);
+            return true;
+        }
+        false
+    }
 }
 
 pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(config: C)
@@ -55,10 +77,9 @@ where
     C: 'static + config::GameConfig<'a, D, T, E>,
 {
     let data = Arc::new(Mutex::new(ModLoaderAppData {
-        base_path: None,
-        data_path: None,
+        mods_path: None,
         paks_path: None,
-        install_path: None,
+        game_install_path: None,
 
         game_build: None,
         refuse_mismatched_connections: true,
@@ -67,11 +88,14 @@ where
 
         error: None,
         warnings: Vec::new(),
+        install_managers: config.get_install_managers(),
+        selected_game_platform: None,
     }));
 
     let should_exit = Arc::new(AtomicBool::new(false));
     let ready_exit = Arc::new(AtomicBool::new(false));
     let should_integrate = Arc::new(AtomicBool::new(true));
+    let reloading = Arc::new(AtomicBool::new(true));
     let working = Arc::new(AtomicBool::new(true));
 
     // instantiate the GUI app
@@ -83,7 +107,10 @@ where
         should_exit: Arc::clone(&should_exit),
         ready_exit: Arc::clone(&ready_exit),
         should_integrate: Arc::clone(&should_integrate),
+        reloading: Arc::clone(&reloading),
         working: Arc::clone(&working),
+
+        platform_selector_open: Arc::new(AtomicBool::new(false)),
     };
 
     // spawn a background thread to handle long running tasks
@@ -92,96 +119,16 @@ where
         .spawn(move || {
             debug!("Starting background thread");
 
-            // startup work
-            let start = Instant::now();
+            let mods_path = BaseDirs::new()
+                .unwrap()
+                .data_local_dir()
+                .join(D::GAME_NAME)
+                .join("Saved")
+                .join("Mods");
+            println!("{:?}", mods_path);
+            fs::create_dir_all(&mods_path).unwrap();
 
-            // get paths
-            let base_path = determine_paths::dertermine_base_path(D::GAME_NAME);
-            if base_path.is_none() {
-                error!("Could not determine base path");
-                data.lock().unwrap().error = Some(ModLoaderError::no_base_path());
-            } else {
-                data.lock().unwrap().base_path = base_path;
-            }
-
-            // we can later add support for non-steam installs
-            let install_path = determine_paths::dertermine_install_path_steam(C::APP_ID);
-            if install_path.is_ok()
-                && determine_paths::verify_install_path(
-                    install_path.as_ref().unwrap(),
-                    D::GAME_NAME,
-                )
-            {
-                data.lock().unwrap().install_path = install_path.ok();
-            } else {
-                data.lock()
-                    .unwrap()
-                    .warnings
-                    .push(install_path.unwrap_err());
-            }
-
-            if data.lock().unwrap().base_path.is_some() {
-                let mut data_guard = data.lock().unwrap();
-
-                // set sub dirs
-                let base_path = data_guard.base_path.as_ref().unwrap().to_owned();
-                data_guard.data_path = Some(base_path.join("Mods"));
-                data_guard.paks_path = Some(base_path.join("Paks"));
-
-                let data_path = data_guard.data_path.as_ref().unwrap().to_owned();
-                let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
-                drop(data_guard);
-
-                let startup_work = || -> Result<(), ModLoaderError> {
-                    // ensure the base_path/Mods directory exists
-                    fs::create_dir_all(&data_path).map_err(|err| {
-                        ModLoaderError::io_error_with_message("Mods directory".to_owned(), err)
-                    })?;
-                    // ensure /Paks exists
-                    fs::create_dir_all(&paks_path).map_err(|err| {
-                        ModLoaderError::io_error_with_message("Paks directory".to_owned(), err)
-                    })?;
-
-                    // gather mods
-                    let mods_dir = fs::read_dir(&data_path).map_err(|err| {
-                        ModLoaderError::io_error_with_message("Mods directory".to_owned(), err)
-                    })?;
-
-                    let mod_files: Vec<PathBuf> = mods_dir
-                        .filter_map(|e| e.ok())
-                        .filter(|e| match e.file_name().into_string() {
-                            Ok(s) => s.ends_with("_P.pak") && s != INTEGRATOR_PAK_FILE_NAME,
-                            Err(_) => false,
-                        })
-                        .map(|e| e.path())
-                        .collect();
-
-                    let warnings = process_modfiles(&mod_files, &data, false);
-                    debug!("warnings: {:?}", warnings);
-
-                    let mut data_guard = data.lock().unwrap();
-                    data_guard.warnings.extend(warnings);
-
-                    // load config
-                    load_config(&mut *data_guard, D::GAME_NAME);
-
-                    // debug!("{:#?}", data_guard.game_mods);
-                    Ok(())
-                };
-                match startup_work() {
-                    Ok(_) => {}
-                    Err(err) => {
-                        data.lock().unwrap().error = Some(err);
-                    }
-                }
-            }
-
-            debug!(
-                "Background thread startup took {} milliseconds",
-                start.elapsed().as_millis()
-            );
-
-            working.store(false, Ordering::Relaxed);
+            data.lock().unwrap().mods_path = Some(mods_path);
 
             // background loop
             loop {
@@ -190,10 +137,86 @@ where
                     ready_exit.store(true, Ordering::Relaxed);
                     break;
                 }
+                // reloading
+                if reloading.load(Ordering::Acquire) {
+                    let start = Instant::now();
+                    working.store(true, Ordering::Release);
+
+                    let data_guard = data.lock().unwrap();
+                    let mods_path = data_guard.mods_path.to_owned();
+                    if mods_path.is_some() {
+                        let mods_path = mods_path.unwrap();
+                        drop(data_guard);
+
+                        let startup_work = || -> Result<(), ModLoaderError> {
+                            // ensure the base_path/Mods directory exists
+                            fs::create_dir_all(&mods_path).map_err(|err| {
+                                ModLoaderError::io_error_with_message(
+                                    "Mods directory".to_owned(),
+                                    err,
+                                )
+                            })?;
+
+                            // gather mods
+                            let mods_dir = fs::read_dir(&mods_path).map_err(|err| {
+                                ModLoaderError::io_error_with_message(
+                                    "Mods directory".to_owned(),
+                                    err,
+                                )
+                            })?;
+
+                            let mod_files: Vec<PathBuf> = mods_dir
+                                .filter_map(|e| e.ok())
+                                .filter(|e| match e.file_name().into_string() {
+                                    Ok(s) => s.ends_with("_P.pak") && s != "999-Mods_P.pak",
+                                    Err(_) => false,
+                                })
+                                .map(|e| e.path())
+                                .collect();
+
+                            let warnings = process_modfiles(&mod_files, &data, false);
+                            debug!("warnings: {:?}", warnings);
+
+                            let mut data_guard = data.lock().unwrap();
+                            data_guard.warnings.extend(warnings);
+                            // load config
+                            //load_modloader_config(&mut *data_guard);
+                            load_config(&mut *data_guard);
+
+                            if data_guard.paks_path.is_some() {
+                                // ensure /Paks exists
+                                fs::create_dir_all(&data_guard.paks_path.as_ref().unwrap())
+                                    .map_err(|err| {
+                                        ModLoaderError::io_error_with_message(
+                                            "Paks directory".to_owned(),
+                                            err,
+                                        )
+                                    })?;
+                            }
+
+                            // debug!("{:#?}", data_guard.game_mods);
+                            Ok(())
+                        };
+                        match startup_work() {
+                            Ok(_) => {}
+                            Err(err) => {
+                                data.lock().unwrap().error = Some(err);
+                            }
+                        }
+
+                        debug!(
+                            "Background thread reload took {} milliseconds",
+                            start.elapsed().as_millis()
+                        );
+                    }
+                }
+
+                working.store(false, Ordering::Relaxed);
+                reloading.store(false, Ordering::Release);
 
                 // process dropped files
                 let mut data_guard = data.lock().unwrap();
-                if data_guard.base_path.is_some() && !data_guard.files_to_process.is_empty() {
+                if !data_guard.files_to_process.is_empty() {
                     let files_to_process = data_guard
                         .files_to_process
                         .clone()
@@ -203,7 +226,7 @@ where
 
                             // copy the file to the mods directory
                             let new_file_path =
-                                data_guard.data_path.as_ref().unwrap().join(file_name);
+                                data_guard.mods_path.as_ref().unwrap().join(file_name);
                             match fs::copy(file_path, &new_file_path) {
                                 Ok(_) => Some(new_file_path),
                                 Err(err) => {
@@ -230,21 +253,14 @@ where
                     drop(data_guard);
                 }
 
-                let mut data_guard = data.lock().unwrap();
+                let data_guard = data.lock().unwrap();
                 if should_integrate.load(Ordering::Relaxed)
-                    && data_guard.base_path.is_some()
-                    && data_guard.install_path.is_some()
+                    && data_guard.game_install_path.is_some()
                     && data_guard.warnings.is_empty()
                 {
                     let integration_work = (|| -> Result<(), ModLoaderWarning> {
                         working.store(true, Ordering::Relaxed);
                         should_integrate.store(false, Ordering::Relaxed);
-
-                        // set game build
-                        if data_guard.install_path.is_some() {
-                            data_guard.game_build =
-                                config.get_game_build(data_guard.install_path.as_ref().unwrap());
-                        }
 
                         // gather mods to be installed
                         let mods_to_install = data_guard
@@ -259,9 +275,10 @@ where
                             })
                             .collect::<Vec<_>>();
 
-                        let mods_path = data_guard.data_path.as_ref().unwrap().to_owned();
+                        let mods_path = data_guard.mods_path.as_ref().unwrap().to_owned();
                         let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
-                        let install_path = data_guard.install_path.as_ref().unwrap().to_owned();
+                        let install_path =
+                            data_guard.game_install_path.as_ref().unwrap().to_owned();
                         let refuse_mismatched_connections =
                             data_guard.refuse_mismatched_connections;
                         drop(data_guard);

@@ -18,6 +18,24 @@ pub(crate) fn auto_pick_versions(data: &mut ModLoaderAppData) {
 
             game_mod.latest_version = Some(**versions.last().unwrap());
         }
+
+        // if latest is set directly it means this was processed before and an index file was downlaoded
+        // but the actual mod .pak for that version might not be downloaded and therefore trying to use
+        // it's metadata in the next step will fail. That's why we need to revert to the latest indirect
+        // if the version is not downloaded.
+        if let SelectedVersion::Latest(_) = game_mod.selected_version {
+            let mut versions = game_mod
+                .versions
+                .iter()
+                .filter(|v| v.1.downloaded)
+                .map(|v| v.0)
+                .collect::<Vec<&Version>>();
+            versions.sort();
+            game_mod.selected_version =
+                SelectedVersion::LatestIndirect(Some(**versions.last().unwrap()));
+
+            game_mod.latest_version = Some(**versions.last().unwrap());
+        }
     }
 }
 
@@ -52,7 +70,7 @@ pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &[S
         game_mod.homepage = metadata.homepage.clone();
         game_mod.download = metadata.download.clone();
         let path = data
-            .data_path
+            .mods_path
             .as_ref()
             .unwrap()
             .join(version_data.file_name.clone());
