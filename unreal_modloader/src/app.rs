@@ -337,6 +337,11 @@ impl ModLoaderApp {
             }
         });
 
+        ui.label(match data.paks_path {
+            Some(ref path) => path.to_str().unwrap(),
+            None => "No paks path",
+        });
+
         ui.label(match data.game_install_path {
             Some(ref path) => path.to_str().unwrap(),
             None => "No install path",
