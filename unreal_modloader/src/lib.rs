@@ -123,6 +123,7 @@ where
                 .unwrap()
                 .data_local_dir()
                 .join(D::GAME_NAME)
+                .join("Saved")
                 .join("Mods");
             println!("{:?}", mods_path);
             fs::create_dir_all(&mods_path).unwrap();
