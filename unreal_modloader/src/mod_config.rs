@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
 
-use directories::BaseDirs;
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +10,7 @@ use crate::ModLoaderAppData;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfig {
+    selected_game_platform: Option<String>,
     refuse_mismatched_connections: bool,
     current: ModsConfigData,
     profiles: HashMap<String, ModsConfigData>,
@@ -32,16 +31,8 @@ struct ModConfigData {
 }
 
 pub(crate) fn load_config(data: &mut ModLoaderAppData) {
-    let data_dir = BaseDirs::new().map(|e| PathBuf::from(e.data_dir()));
-    if data_dir.is_none() {
-        error!("Failed to find LocalAppData");
-        panic!();
-    }
-
-    let config_path = data_dir
-        .unwrap()
-        .join(data.config_dir)
-        .join("modconfig.json");
+    let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
+    let mut selected_game_platform = None;
     if config_path.is_file() {
         let config_str = fs::read_to_string(config_path).unwrap();
         let config: ModConfig = serde_json::from_str(&config_str).unwrap_or_else(|_| {
@@ -77,20 +68,22 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
                 game_mod.selected_version = SelectedVersion::Specific(config_version.unwrap());
             }
         }
+        selected_game_platform = config.selected_game_platform;
+    }
+    if selected_game_platform.is_none() {
+        if !data.set_game_platform("Steam") {
+            let first_platform = data.install_managers.keys().next().unwrap();
+            data.set_game_platform(first_platform);
+        }
+    } else {
+        data.set_game_platform(&selected_game_platform.unwrap());
     }
 }
 
 pub(crate) fn write_config(data: &mut ModLoaderAppData) {
-    let data_dir = BaseDirs::new().map(|e| PathBuf::from(e.data_dir()));
-    if data_dir.is_none() {
-        error!("Failed to find LocalAppData");
-        panic!();
-    }
-    let modloader_dir = data_dir.unwrap().join(data.config_dir);
-    fs::create_dir_all(&modloader_dir).unwrap();
-
-    let config_path = modloader_dir.join("modconfig.json");
+    let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
     let mut config = ModConfig {
+        selected_game_platform: data.selected_game_platform.clone(),
         refuse_mismatched_connections: data.refuse_mismatched_connections,
         current: ModsConfigData {
             mods: HashMap::new(),

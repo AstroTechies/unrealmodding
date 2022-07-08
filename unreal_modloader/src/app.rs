@@ -118,7 +118,7 @@ impl App for ModLoaderApp {
                     for i in 0..key_count {
                         let platform = (*data.install_managers.keys().nth(i).unwrap()).to_string();
                         let manager = data.install_managers.get(platform.as_str()).unwrap();
-                        let exists = manager.get_game_path().is_some();
+                        let exists = manager.get_game_install_path().is_some();
 
                         let button = match exists {
                             true => Button::new(format!("{}", platform)),
@@ -337,12 +337,7 @@ impl ModLoaderApp {
             }
         });
 
-        ui.label(match data.base_path {
-            Some(ref path) => path.to_str().unwrap(),
-            None => "No base path",
-        });
-
-        ui.label(match data.install_path {
+        ui.label(match data.game_install_path {
             Some(ref path) => path.to_str().unwrap(),
             None => "No install path",
         });

@@ -19,7 +19,7 @@ lazy_static! {
         Regex::new("(?x)<Identity(.*?)Publisher(.*?)Version=\"([^\"]*)\"").unwrap();
 }
 
-pub fn determine_base_path_steam(game_name: &str) -> Option<PathBuf> {
+pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
     let base_dirs = BaseDirs::new();
     if base_dirs.is_none() {
         warn!("Could not determine base directory");
@@ -28,13 +28,16 @@ pub fn determine_base_path_steam(game_name: &str) -> Option<PathBuf> {
     let base_dirs = base_dirs.unwrap();
 
     let data_dir = base_dirs.data_local_dir();
-    let base_path = Some(data_dir.join(game_name).join("Saved"));
+    let base_path = Some(data_dir.join(game_name).join("Saved").join("Paks"));
     trace!("base_path: {:?}", base_path);
 
     base_path
 }
 
-pub fn determine_base_path_winstore(store_info: &MsStoreInfo, game_name: &str) -> Option<PathBuf> {
+pub fn determine_installed_mods_path_winstore(
+    store_info: &MsStoreInfo,
+    game_name: &str,
+) -> Option<PathBuf> {
     let base_dirs = BaseDirs::new();
     if base_dirs.is_none() {
         warn!("Could not determine base directory");

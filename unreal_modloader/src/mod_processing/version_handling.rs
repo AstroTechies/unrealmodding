@@ -52,7 +52,7 @@ pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &[S
         game_mod.homepage = metadata.homepage.clone();
         game_mod.download = metadata.download.clone();
         let path = data
-            .data_path
+            .mods_path
             .as_ref()
             .unwrap()
             .join(version_data.file_name.clone());

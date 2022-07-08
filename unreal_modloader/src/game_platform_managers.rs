@@ -38,7 +38,7 @@ impl SteamInstallManager {
 }
 
 impl InstallManager for SteamInstallManager {
-    fn get_game_path(&self) -> Option<PathBuf> {
+    fn get_game_install_path(&self) -> Option<PathBuf> {
         if self.game_path.borrow().is_none() {
             *self.game_path.borrow_mut() =
                 game_path_helpers::determine_install_path_steam(self.app_id).ok();
@@ -46,10 +46,10 @@ impl InstallManager for SteamInstallManager {
         self.game_path.borrow().clone()
     }
 
-    fn get_mods_path(&self) -> Option<PathBuf> {
+    fn get_paks_path(&self) -> Option<PathBuf> {
         if self.mods_path.borrow().is_none() {
             *self.mods_path.borrow_mut() =
-                game_path_helpers::determine_base_path_steam(self.game_name);
+                game_path_helpers::determine_installed_mods_path_steam(self.game_name);
         }
         self.mods_path.borrow().clone()
     }
@@ -90,23 +90,24 @@ impl MsStoreInstallManager {
 }
 
 impl InstallManager for MsStoreInstallManager {
-    fn get_game_path(&self) -> Option<PathBuf> {
+    fn get_game_install_path(&self) -> Option<PathBuf> {
         self.get_store_info().map(|e| e.path).clone()
     }
 
-    fn get_mods_path(&self) -> Option<PathBuf> {
+    fn get_paks_path(&self) -> Option<PathBuf> {
         let store_info = self.get_store_info();
         if self.mods_path.borrow().is_none() && store_info.is_some() {
-            *self.mods_path.borrow_mut() = game_path_helpers::determine_base_path_winstore(
-                &store_info.unwrap(),
-                self.game_name,
-            );
+            *self.mods_path.borrow_mut() =
+                game_path_helpers::determine_installed_mods_path_winstore(
+                    &store_info.unwrap(),
+                    self.game_name,
+                );
         }
         self.mods_path.borrow().clone()
     }
 
     fn get_game_build(&self) -> Option<GameBuild> {
-        let game_path = self.get_game_path();
+        let game_path = self.get_game_install_path();
         if self.game_build.borrow().is_none() && game_path.is_some() {
             let mut appx_manifest = File::open(game_path.unwrap().join("AppxManifest.xml")).ok()?;
             let mut manifest_data = String::new();

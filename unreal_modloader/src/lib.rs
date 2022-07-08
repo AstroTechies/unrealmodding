@@ -34,14 +34,12 @@ use version::GameBuild;
 
 #[derive(Debug)]
 pub(crate) struct ModLoaderAppData {
-    /// %LocalAppData%\[GameName]\Saved
-    pub base_path: Option<PathBuf>,
-    /// %LocalAppData%\[ModLoaderName]\Mods
-    pub data_path: Option<PathBuf>,
+    /// %LocalAppData%\[GameName]\Mods
+    pub mods_path: Option<PathBuf>,
     /// %LocalAppData%\[GameName]\Saved\Paks
     pub paks_path: Option<PathBuf>,
-    /// install path
-    pub install_path: Option<PathBuf>,
+    /// game install path
+    pub game_install_path: Option<PathBuf>,
 
     pub game_build: Option<GameBuild>,
     pub refuse_mismatched_connections: bool,
@@ -54,27 +52,19 @@ pub(crate) struct ModLoaderAppData {
     /// install managers
     pub(crate) install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
     pub(crate) selected_game_platform: Option<String>,
-
-    pub(crate) config_dir: &'static str,
 }
 
 impl ModLoaderAppData {
     pub fn set_game_platform(&mut self, platform: &str) -> bool {
         let manager = self.install_managers.get(platform);
         if let Some(manager) = manager {
-            self.files_to_process.clear();
-            self.game_mods.clear();
-
-            self.install_path = manager.get_game_path();
-            self.base_path = manager.get_mods_path();
+            self.game_install_path = manager.get_game_install_path();
             self.game_build = manager.get_game_build();
-
-            if let Some(base_path) = &self.base_path {
-                self.paks_path = Some(base_path.join("Paks"));
-            }
+            self.paks_path = manager.get_paks_path();
 
             self.selected_game_platform = Some(platform.to_string());
 
+            write_config(self);
             return true;
         }
         false
@@ -87,10 +77,9 @@ where
     C: 'static + config::GameConfig<'a, D, T, E>,
 {
     let data = Arc::new(Mutex::new(ModLoaderAppData {
-        base_path: None,
-        data_path: None,
+        mods_path: None,
         paks_path: None,
-        install_path: None,
+        game_install_path: None,
 
         game_build: None,
         refuse_mismatched_connections: true,
@@ -100,7 +89,6 @@ where
         error: None,
         warnings: Vec::new(),
         install_managers: config.get_install_managers(),
-        config_dir: C::CONFIG_DIR,
         selected_game_platform: None,
     }));
 
@@ -131,9 +119,15 @@ where
         .spawn(move || {
             debug!("Starting background thread");
 
-            let config_dir = data.lock().unwrap().config_dir.clone();
-            let modloader_dir = BaseDirs::new().unwrap().data_dir().join(config_dir);
-            data.lock().unwrap().data_path = Some(modloader_dir.join("Mods"));
+            let mods_path = BaseDirs::new()
+                .unwrap()
+                .data_local_dir()
+                .join(D::GAME_NAME)
+                .join("Mods");
+            println!("{:?}", mods_path);
+            fs::create_dir_all(&mods_path).unwrap();
+
+            data.lock().unwrap().mods_path = Some(mods_path);
 
             // background loop
             loop {
@@ -142,36 +136,28 @@ where
                     ready_exit.store(true, Ordering::Relaxed);
                     break;
                 }
-
                 // reloading
                 if reloading.load(Ordering::Acquire) {
                     let start = Instant::now();
                     working.store(true, Ordering::Release);
-                    if data.lock().unwrap().base_path.is_some() {
-                        let data_guard = data.lock().unwrap();
 
-                        let data_path = data_guard.data_path.as_ref().unwrap().to_owned();
-                        let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
+                    let data_guard = data.lock().unwrap();
+                    let mods_path = data_guard.mods_path.to_owned();
+                    if mods_path.is_some() {
+                        let mods_path = mods_path.unwrap();
                         drop(data_guard);
 
                         let startup_work = || -> Result<(), ModLoaderError> {
                             // ensure the base_path/Mods directory exists
-                            fs::create_dir_all(&data_path).map_err(|err| {
+                            fs::create_dir_all(&mods_path).map_err(|err| {
                                 ModLoaderError::io_error_with_message(
                                     "Mods directory".to_owned(),
                                     err,
                                 )
                             })?;
-                            // ensure /Paks exists
-                            fs::create_dir_all(&paks_path).map_err(|err| {
-                                ModLoaderError::io_error_with_message(
-                                    "Paks directory".to_owned(),
-                                    err,
-                                )
-                            })?;
 
                             // gather mods
-                            let mods_dir = fs::read_dir(&data_path).map_err(|err| {
+                            let mods_dir = fs::read_dir(&mods_path).map_err(|err| {
                                 ModLoaderError::io_error_with_message(
                                     "Mods directory".to_owned(),
                                     err,
@@ -197,6 +183,17 @@ where
                             //load_modloader_config(&mut *data_guard);
                             load_config(&mut *data_guard);
 
+                            if data_guard.paks_path.is_some() {
+                                // ensure /Paks exists
+                                fs::create_dir_all(&data_guard.paks_path.as_ref().unwrap())
+                                    .map_err(|err| {
+                                        ModLoaderError::io_error_with_message(
+                                            "Paks directory".to_owned(),
+                                            err,
+                                        )
+                                    })?;
+                            }
+
                             // debug!("{:#?}", data_guard.game_mods);
                             Ok(())
                         };
@@ -206,20 +203,20 @@ where
                                 data.lock().unwrap().error = Some(err);
                             }
                         }
+
+                        debug!(
+                            "Background thread reload took {} milliseconds",
+                            start.elapsed().as_millis()
+                        );
                     }
-
-                    debug!(
-                        "Background thread reload took {} milliseconds",
-                        start.elapsed().as_millis()
-                    );
-
-                    working.store(false, Ordering::Relaxed);
-                    reloading.store(false, Ordering::Release);
                 }
+
+                working.store(false, Ordering::Relaxed);
+                reloading.store(false, Ordering::Release);
 
                 // process dropped files
                 let mut data_guard = data.lock().unwrap();
-                if data_guard.base_path.is_some() && !data_guard.files_to_process.is_empty() {
+                if !data_guard.files_to_process.is_empty() {
                     let files_to_process = data_guard
                         .files_to_process
                         .clone()
@@ -229,7 +226,7 @@ where
 
                             // copy the file to the mods directory
                             let new_file_path =
-                                data_guard.data_path.as_ref().unwrap().join(file_name);
+                                data_guard.mods_path.as_ref().unwrap().join(file_name);
                             match fs::copy(file_path, &new_file_path) {
                                 Ok(_) => Some(new_file_path),
                                 Err(err) => {
@@ -258,8 +255,7 @@ where
 
                 let data_guard = data.lock().unwrap();
                 if should_integrate.load(Ordering::Relaxed)
-                    && data_guard.base_path.is_some()
-                    && data_guard.install_path.is_some()
+                    && data_guard.game_install_path.is_some()
                     && data_guard.warnings.is_empty()
                 {
                     let integration_work = (|| -> Result<(), ModLoaderWarning> {
@@ -279,9 +275,10 @@ where
                             })
                             .collect::<Vec<_>>();
 
-                        let mods_path = data_guard.data_path.as_ref().unwrap().to_owned();
+                        let mods_path = data_guard.mods_path.as_ref().unwrap().to_owned();
                         let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
-                        let install_path = data_guard.install_path.as_ref().unwrap().to_owned();
+                        let install_path =
+                            data_guard.game_install_path.as_ref().unwrap().to_owned();
                         let refuse_mismatched_connections =
                             data_guard.refuse_mismatched_connections;
                         drop(data_guard);

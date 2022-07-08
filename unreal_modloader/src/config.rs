@@ -9,8 +9,8 @@ use unreal_modintegrator::IntegratorConfig;
 use crate::version::GameBuild;
 
 pub trait InstallManager: Debug + std::marker::Send {
-    fn get_game_path(&self) -> Option<PathBuf>;
-    fn get_mods_path(&self) -> Option<PathBuf>;
+    fn get_game_install_path(&self) -> Option<PathBuf>;
+    fn get_paks_path(&self) -> Option<PathBuf>;
     fn get_game_build(&self) -> Option<GameBuild>;
 }
 
