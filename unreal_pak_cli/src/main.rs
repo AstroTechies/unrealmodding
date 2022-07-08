@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::time::SystemTime;
 
@@ -9,7 +9,8 @@ use clap::{Parser, Subcommand};
 use unreal_pak::PakRecord;
 use walkdir::WalkDir;
 
-/// Command line tool for working with Unreal Engine .pak files
+/// Command line tool for working with Unreal Engine .pak files.
+/// Use `unreal_pak_cli <SUBCOMMAND> -h` for more information on a subcommand.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
@@ -21,26 +22,32 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Adds files to myapp
+    /// Check an entire .pak file if it is valid.
     Check {
         /// The .pak file to check
         pakfile: String,
     },
+
+    /// Only check the header of a .pak file if it is valid.
     CheckHeader {
         /// The .pak file to check
         pakfile: String,
     },
+
+    /// Extract a .pak file to a directory.
     Extract {
         /// The .pak file to extract
         pakfile: String,
-        /// The directory to extract to
+        /// The directory to extract to, if not specified the .pak file name will be used
         outdir: Option<String>,
     },
+
+    /// create a new .pak file from the files from a directory, optionally disabling compression.
     Create {
-        /// The .pak file to create
-        pakfile: String,
         /// The directory to create the file from
         indir: String,
+        /// The .pak file to create, if not supplied the dir name will be used
+        pakfile: Option<String>,
         /// Whether to compress the file
         #[clap(short, long)]
         no_compression: bool,
@@ -147,10 +154,20 @@ fn main() {
             }
         }
         Commands::Create {
-            pakfile,
             indir,
+            pakfile,
             no_compression,
         } => {
+            let pakfile = match pakfile {
+                Some(pakfile) => pakfile,
+                None => {
+                    let mut path = PathBuf::from(&indir);
+                    path.set_extension("pak");
+                    path.to_str().unwrap().to_string()
+                }
+            };
+            println!("Creating {}", pakfile);
+
             // clear file
             OpenOptions::new()
                 .create(true)
@@ -203,6 +220,8 @@ fn main() {
                         .unwrap_or_else(|_| panic!("Error adding record {}", record_name));
                 }
             }
+
+            println!("Writing pak file to disk. For large files this may take a while.");
 
             pak.write().expect("Failed to write");
         }

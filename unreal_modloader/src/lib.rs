@@ -14,7 +14,7 @@ use directories::BaseDirs;
 use eframe::egui;
 use log::warn;
 use log::{debug, error};
-use unreal_modintegrator::{integrate_mods, IntegratorConfig};
+use unreal_modintegrator::{integrate_mods, IntegratorConfig, INTEGRATOR_PAK_FILE_NAME};
 
 mod app;
 pub mod config;
@@ -179,7 +179,6 @@ where
 
                             let mut data_guard = data.lock().unwrap();
                             data_guard.warnings.extend(warnings);
-
                             // load config
                             //load_modloader_config(&mut *data_guard);
                             load_config(&mut *data_guard);
