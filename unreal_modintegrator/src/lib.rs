@@ -20,6 +20,7 @@ use unreal_pak::pakversion::PakVersion;
 
 mod assets;
 pub mod error;
+pub mod helpers;
 pub mod metadata;
 use serde_json::Value;
 use unreal_asset::Asset;

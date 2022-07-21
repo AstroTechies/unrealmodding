@@ -11,10 +11,10 @@ use unreal_asset::{
     unreal_types::{FName, PackageIndex},
     Import,
 };
-use unreal_modintegrator::write_asset;
+use unreal_modintegrator::{helpers::get_asset, write_asset};
 use unreal_pak::PakFile;
 
-use super::{get_asset, MAP_PATHS};
+use super::MAP_PATHS;
 
 #[allow(clippy::ptr_arg)]
 pub(crate) fn handle_mission_trailheads(
