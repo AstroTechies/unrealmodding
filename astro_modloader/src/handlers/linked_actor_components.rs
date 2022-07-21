@@ -17,13 +17,17 @@ use unreal_asset::{
     uproperty::UProperty,
     Asset, Import,
 };
-use unreal_modintegrator::write_asset;
+use unreal_modintegrator::{
+    helpers::{game_to_absolute, get_asset},
+    write_asset, IntegratorConfig,
+};
 use unreal_pak::PakFile;
 use uuid::Uuid;
 
-use crate::assets::{ACTOR_TEMPLATE_ASSET, ACTOR_TEMPLATE_EXPORT};
-
-use super::{game_to_absolute, get_asset};
+use crate::{
+    assets::{ACTOR_TEMPLATE_ASSET, ACTOR_TEMPLATE_EXPORT},
+    astro_integrator::AstroIntegratorConfig,
+};
 
 #[allow(clippy::ptr_arg)]
 pub(crate) fn handle_linked_actor_components(
@@ -71,7 +75,7 @@ pub(crate) fn handle_linked_actor_components(
     }
 
     for (name, components) in &new_components {
-        let name = game_to_absolute(name)
+        let name = game_to_absolute(AstroIntegratorConfig::GAME_NAME, name)
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
         let mut asset = get_asset(integrated_pak, game_paks, &name, VER_UE4_23)?;
 

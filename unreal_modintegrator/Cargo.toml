@@ -12,3 +12,4 @@ unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 lazy_static = "1.4.0"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
+regex = "1.6.0"

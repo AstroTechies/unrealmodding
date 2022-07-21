@@ -15,10 +15,16 @@ use unreal_asset::{
     unreal_types::{FName, PackageIndex},
     Asset, Import,
 };
-use unreal_modintegrator::{find_asset, read_asset, write_asset};
+use unreal_modintegrator::{
+    find_asset,
+    helpers::{game_to_absolute, get_asset},
+    read_asset, write_asset, IntegratorConfig,
+};
 use unreal_pak::PakFile;
 
-use super::{game_to_absolute, get_asset, MAP_PATHS};
+use crate::astro_integrator::AstroIntegratorConfig;
+
+use super::MAP_PATHS;
 
 #[derive(Default)]
 struct ScsNode {
@@ -135,8 +141,9 @@ pub(crate) fn handle_persistent_actors(
             actor_template.base_export.outer_index =
                 PackageIndex::new(level_export_index as i32 + 1); // package index starts from 1
 
-            let actor_asset_path = game_to_absolute(&component_path_raw)
-                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
+            let actor_asset_path =
+                game_to_absolute(AstroIntegratorConfig::GAME_NAME, &component_path_raw)
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
             let pak_index = find_asset(mod_paks, &actor_asset_path)
                 .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such asset"))?;
             let actor_asset = read_asset(&mut mod_paks[pak_index], VER_UE4_23, &actor_asset_path)

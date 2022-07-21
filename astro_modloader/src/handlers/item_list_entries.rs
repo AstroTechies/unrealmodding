@@ -15,10 +15,13 @@ use unreal_asset::{
     unreal_types::{FName, PackageIndex},
     Import,
 };
-use unreal_modintegrator::write_asset;
+use unreal_modintegrator::{
+    helpers::{game_to_absolute, get_asset},
+    write_asset, IntegratorConfig,
+};
 use unreal_pak::PakFile;
 
-use super::{game_to_absolute, get_asset};
+use crate::astro_integrator::AstroIntegratorConfig;
 
 #[allow(clippy::ptr_arg)]
 pub(crate) fn handle_item_list_entries(
@@ -60,7 +63,7 @@ pub(crate) fn handle_item_list_entries(
     }
 
     for (asset_name, entries) in &new_items {
-        let asset_name = game_to_absolute(asset_name)
+        let asset_name = game_to_absolute(AstroIntegratorConfig::GAME_NAME, asset_name)
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset name"))?;
         let mut asset = get_asset(integrated_pak, game_paks, &asset_name, VER_UE4_23)?;
 
