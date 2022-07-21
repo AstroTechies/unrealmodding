@@ -7,7 +7,8 @@ use unreal_asset::ue4version::VER_UE4_23;
 use unreal_modintegrator::IntegratorConfig;
 
 use crate::handlers::{
-    item_list_entries, linked_actor_components, mission_trailheads, persistent_actors,
+    biome_placement_modifiers, item_list_entries, linked_actor_components, mission_trailheads,
+    persistent_actors,
 };
 
 pub struct AstroIntegratorConfig;
@@ -59,6 +60,11 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for AstroIntegratorConfig {
         handlers.insert(
             String::from("item_list_entries"),
             Box::new(item_list_entries::handle_item_list_entries),
+        );
+
+        handlers.insert(
+            String::from("biome_placement_modifiers"),
+            Box::new(biome_placement_modifiers::handle_biome_placement_modifiers),
         );
 
         handlers
