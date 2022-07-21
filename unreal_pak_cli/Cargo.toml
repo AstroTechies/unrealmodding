@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
-clap = { version = "3.2.7", features = ["derive"] }
+clap = { version = "3.2.14", features = ["derive"] }
 walkdir = "2.3.2"

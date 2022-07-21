@@ -9,11 +9,11 @@ unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 directories = "4.0.1"
 eframe = "0.18.0"
 egui_extras = "0.18.0"
-serde = { version = "1.0.137", features = ["derive"] }
-serde_json = "1.0.81"
+serde = { version = "1.0.140", features = ["derive"] }
+serde_json = "1.0.82"
 log = "0.4.17"
 steamlocate = "1.0.1"
 reqwest = { version = "0.11.11", features = ["blocking"] }
-regex = "1.5.6"
+regex = "1.6.0"
 lazy_static = "1.4.0"
 winreg = "0.10.1"
