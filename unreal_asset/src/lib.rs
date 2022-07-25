@@ -210,11 +210,11 @@ impl AssetTrait for Asset {
         self.cursor.seek(style)
     }
 
-    fn get_map_key_override<'a>(&'a self) -> &'a HashMap<String, String> {
+    fn get_map_key_override(&self) -> &HashMap<String, String> {
         &self.map_key_override
     }
 
-    fn get_map_value_override<'a>(&'a self) -> &'a HashMap<String, String> {
+    fn get_map_value_override(&self) -> &HashMap<String, String> {
         &self.map_value_override
     }
 
@@ -223,7 +223,7 @@ impl AssetTrait for Asset {
         self.engine_version
     }
 
-    fn get_import<'a>(&'a self, index: PackageIndex) -> Option<&'a Import> {
+    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
         if !index.is_import() {
             return None;
         }
@@ -236,7 +236,7 @@ impl AssetTrait for Asset {
         Some(&self.imports[index as usize])
     }
 
-    fn get_export_class_type<'a>(&'a self, index: PackageIndex) -> Option<FName> {
+    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         match index.is_import() {
             true => self.get_import(index).map(|e| e.object_name.clone()),
             false => Some(FName::new(index.index.to_string(), 0)),

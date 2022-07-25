@@ -185,6 +185,7 @@ pub trait PropertyTrait {
     ) -> Result<usize, Error>;
 }
 
+#[allow(clippy::large_enum_variant)]
 #[enum_dispatch(PropertyTrait, PropertyDataTrait)]
 pub enum Property {
     BoolProperty,
