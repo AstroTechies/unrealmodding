@@ -1,16 +1,17 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     types::Color,
     unreal_types::{FName, Guid},
-    Asset,
 };
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -32,14 +33,14 @@ pub struct LinearColorProperty {
 impl_property_data_trait!(LinearColorProperty);
 
 impl ColorProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let color = Color::from_argb(asset.cursor.read_i32::<LittleEndian>()?);
+        let color = Color::from_argb(asset.read_i32::<LittleEndian>()?);
         Ok(ColorProperty {
             name,
             property_guid,
@@ -50,9 +51,9 @@ impl ColorProperty {
 }
 
 impl PropertyTrait for ColorProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -63,18 +64,18 @@ impl PropertyTrait for ColorProperty {
 }
 
 impl LinearColorProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let color = Color::new(
-            OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
         );
         Ok(LinearColorProperty {
             name,
@@ -86,9 +87,9 @@ impl LinearColorProperty {
 }
 
 impl PropertyTrait for LinearColorProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

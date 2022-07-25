@@ -1,8 +1,10 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
@@ -13,7 +15,6 @@ use crate::{
         enums::TextHistoryType,
         ue4version::{VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT, VER_UE4_FTEXT_HISTORY},
         unreal_types::{FName, Guid},
-        Asset,
     },
 };
 
@@ -50,8 +51,8 @@ pub struct NameProperty {
 impl_property_data_trait!(NameProperty);
 
 impl StrProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
@@ -62,15 +63,15 @@ impl StrProperty {
             name,
             property_guid,
             duplication_index,
-            value: asset.cursor.read_string()?,
+            value: asset.read_string()?,
         })
     }
 }
 
 impl PropertyTrait for StrProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -82,8 +83,8 @@ impl PropertyTrait for StrProperty {
 }
 
 impl TextProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
@@ -94,22 +95,22 @@ impl TextProperty {
         let mut namespace = None;
         let mut value = None;
 
-        if asset.engine_version < VER_UE4_FTEXT_HISTORY {
-            culture_invariant_string = asset.cursor.read_string()?;
-            if asset.engine_version >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
-                namespace = asset.cursor.read_string()?;
-                value = asset.cursor.read_string()?;
+        if asset.get_engine_version() < VER_UE4_FTEXT_HISTORY {
+            culture_invariant_string = asset.read_string()?;
+            if asset.get_engine_version() >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
+                namespace = asset.read_string()?;
+                value = asset.read_string()?;
             } else {
                 namespace = None;
-                value = asset.cursor.read_string()?;
+                value = asset.read_string()?;
             }
         }
 
-        let flags = asset.cursor.read_u32::<LittleEndian>()?;
+        let flags = asset.read_u32::<LittleEndian>()?;
         let mut history_type = None;
         let mut table_id = None;
-        if asset.engine_version >= VER_UE4_FTEXT_HISTORY {
-            history_type = Some(asset.cursor.read_i8()?);
+        if asset.get_engine_version() >= VER_UE4_FTEXT_HISTORY {
+            history_type = Some(asset.read_i8()?);
             let history_type: TextHistoryType = history_type.unwrap().try_into()?;
 
             match history_type {
@@ -120,21 +121,20 @@ impl TextProperty {
                         >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability
                             as i32
                     {
-                        let has_culture_invariant_string =
-                            asset.cursor.read_i32::<LittleEndian>()? == 1;
+                        let has_culture_invariant_string = asset.read_i32::<LittleEndian>()? == 1;
                         if has_culture_invariant_string {
-                            culture_invariant_string = asset.cursor.read_string()?;
+                            culture_invariant_string = asset.read_string()?;
                         }
                     }
                 }
                 TextHistoryType::Base => {
-                    namespace = asset.cursor.read_string()?;
-                    value = asset.cursor.read_string()?;
-                    culture_invariant_string = asset.cursor.read_string()?;
+                    namespace = asset.read_string()?;
+                    value = asset.read_string()?;
+                    culture_invariant_string = asset.read_string()?;
                 }
                 TextHistoryType::StringTableEntry => {
                     table_id = Some(asset.read_fname()?);
-                    value = asset.cursor.read_string()?;
+                    value = asset.read_string()?;
                 }
                 _ => {
                     return Err(Error::unimplemented(format!(
@@ -160,18 +160,18 @@ impl TextProperty {
 }
 
 impl PropertyTrait for TextProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, cursor, include_header);
         let begin = cursor.position();
 
-        if asset.engine_version < VER_UE4_FTEXT_HISTORY {
+        if asset.get_engine_version() < VER_UE4_FTEXT_HISTORY {
             cursor.write_string(&self.culture_invariant_string)?;
-            if asset.engine_version >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
+            if asset.get_engine_version() >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
                 cursor.write_string(&self.namespace)?;
                 cursor.write_string(&self.value)?;
             } else {
@@ -180,7 +180,7 @@ impl PropertyTrait for TextProperty {
         }
         cursor.write_u32::<LittleEndian>(self.flags)?;
 
-        if asset.engine_version >= VER_UE4_FTEXT_HISTORY {
+        if asset.get_engine_version() >= VER_UE4_FTEXT_HISTORY {
             let history_type = self
                 .history_type
                 .ok_or_else(|| PropertyError::property_field_none("history_type", "i8"))?;
@@ -233,8 +233,8 @@ impl PropertyTrait for TextProperty {
 }
 
 impl NameProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
@@ -251,9 +251,9 @@ impl NameProperty {
 }
 
 impl PropertyTrait for NameProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

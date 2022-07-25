@@ -1,16 +1,15 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
-    {
-        unreal_types::{FName, Guid},
-        Asset,
-    },
+    unreal_types::{FName, Guid},
 };
 
 #[derive(Hash, Clone, PartialEq, Eq)]
@@ -23,8 +22,8 @@ pub struct GameplayTagContainerProperty {
 impl_property_data_trait!(GameplayTagContainerProperty);
 
 impl GameplayTagContainerProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -32,7 +31,7 @@ impl GameplayTagContainerProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let length = asset.cursor.read_i32::<LittleEndian>()?;
+        let length = asset.read_i32::<LittleEndian>()?;
         let mut value = Vec::with_capacity(length as usize);
         for _i in 0..length as usize {
             value.push(asset.read_fname()?);
@@ -48,9 +47,9 @@ impl GameplayTagContainerProperty {
 }
 
 impl PropertyTrait for GameplayTagContainerProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

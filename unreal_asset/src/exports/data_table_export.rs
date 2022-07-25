@@ -1,13 +1,14 @@
 use std::io::Cursor;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::{
     implement_get,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait},
     unreal_types::FName,
-    Asset,
 };
 
 use super::{
@@ -35,7 +36,10 @@ pub struct DataTableExport {
 implement_get!(DataTableExport);
 
 impl DataTableExport {
-    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn from_base<Reader: AssetReader>(
+        base: &BaseExport,
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
 
         let mut decided_struct_type = FName::new(String::from("Generic"), 0);
@@ -49,8 +53,8 @@ impl DataTableExport {
             }
         }
 
-        asset.cursor.read_i32::<LittleEndian>()?;
-        let num_entires = asset.cursor.read_i32::<LittleEndian>()? as usize;
+        asset.read_i32::<LittleEndian>()?;
+        let num_entires = asset.read_i32::<LittleEndian>()? as usize;
         let mut data = Vec::with_capacity(num_entires);
         for _i in 0..num_entires {
             let row_name = asset.read_fname()?;
@@ -76,7 +80,11 @@ impl DataTableExport {
 }
 
 impl ExportTrait for DataTableExport {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.normal_export.write(asset, cursor)?;
 
         let mut decided_struct_type = FName::from_slice("Generic");

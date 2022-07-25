@@ -1,7 +1,9 @@
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{Cursor, Seek, SeekFrom, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::ue4version::{
@@ -12,7 +14,6 @@ use crate::{
     impl_property_data_trait,
     ue4version::VER_UE4_INNER_ARRAY_TAG_INFO,
     unreal_types::{FName, Guid},
-    Asset,
 };
 
 use super::{struct_property::StructProperty, Property};
@@ -30,8 +31,8 @@ pub struct ArrayProperty {
 impl_property_data_trait!(ArrayProperty);
 
 impl ArrayProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         length: i64,
@@ -68,8 +69,8 @@ impl ArrayProperty {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn new_no_header(
-        asset: &mut Asset,
+    pub fn new_no_header<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         _include_header: bool,
         length: i64,
@@ -79,8 +80,7 @@ impl ArrayProperty {
         array_type: Option<FName>,
         property_guid: Option<Guid>,
     ) -> Result<Self, Error> {
-        let _cursor = &mut asset.cursor;
-        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LittleEndian>()?;
         let mut entries = Vec::new();
         let mut name = name;
 
@@ -112,11 +112,11 @@ impl ArrayProperty {
                     )));
                 }
 
-                struct_length = asset.cursor.read_i64::<LittleEndian>()?;
+                struct_length = asset.read_i64::<LittleEndian>()?;
                 full_type = asset.read_fname()?;
 
                 let mut guid = [0u8; 16];
-                asset.cursor.read_exact(&mut guid)?;
+                asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
                 asset.read_property_guid()?;
             }
@@ -170,9 +170,9 @@ impl ArrayProperty {
         })
     }
 
-    pub fn write_full(
+    pub fn write_full<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
         serialize_structs_differently: bool,
@@ -214,7 +214,7 @@ impl ArrayProperty {
             }?;
 
             let mut length_loc = -1;
-            if asset.engine_version >= VER_UE4_INNER_ARRAY_TAG_INFO {
+            if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
                 asset.write_fname(cursor, &property.name)?;
                 asset.write_fname(cursor, &FName::from_slice("StructProperty"))?;
                 length_loc = cursor.position() as i32;
@@ -225,10 +225,10 @@ impl ArrayProperty {
                         PropertyError::property_field_none("struct_type", "FName")
                     })?,
                 )?;
-                if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+                if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                     cursor.write_all(&property.property_guid.unwrap_or_else(default_guid))?;
                 }
-                if asset.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+                if asset.get_engine_version() >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
                     cursor.write_u8(0)?;
                 }
             }
@@ -244,7 +244,7 @@ impl ArrayProperty {
                 struct_property.write(asset, cursor, false)?;
             }
 
-            if asset.engine_version >= VER_UE4_INNER_ARRAY_TAG_INFO {
+            if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
                 let full_len = cursor.position() as i32 - length_loc;
                 let new_loc = cursor.position() as i32;
                 cursor.seek(SeekFrom::Start(length_loc as u64))?;
@@ -268,9 +268,9 @@ impl ArrayProperty {
 }
 
 impl PropertyTrait for ArrayProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

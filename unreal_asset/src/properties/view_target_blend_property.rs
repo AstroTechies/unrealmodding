@@ -1,18 +1,17 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
-    {
-        unreal_types::{FName, Guid},
-        Asset,
-    },
+    unreal_types::{FName, Guid},
 };
 
 #[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
@@ -45,8 +44,8 @@ pub struct ViewTargetBlendParamsProperty {
 impl_property_data_trait!(ViewTargetBlendParamsProperty);
 
 impl ViewTargetBlendParamsProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -54,10 +53,10 @@ impl ViewTargetBlendParamsProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let blend_time = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
-        let blend_function = ViewTargetBlendFunction::try_from(asset.cursor.read_u8()?)?;
-        let blend_exp = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
-        let lock_outgoing = asset.cursor.read_i32::<LittleEndian>()? != 0;
+        let blend_time = OrderedFloat(asset.read_f32::<LittleEndian>()?);
+        let blend_function = ViewTargetBlendFunction::try_from(asset.read_u8()?)?;
+        let blend_exp = OrderedFloat(asset.read_f32::<LittleEndian>()?);
+        let lock_outgoing = asset.read_i32::<LittleEndian>()? != 0;
 
         Ok(ViewTargetBlendParamsProperty {
             name,
@@ -72,9 +71,9 @@ impl ViewTargetBlendParamsProperty {
 }
 
 impl PropertyTrait for ViewTargetBlendParamsProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

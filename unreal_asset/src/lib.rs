@@ -4,9 +4,12 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
 use std::hash::{Hash, Hasher};
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
+use asset_reader::AssetReader;
+use asset_trait::AssetTrait;
+use asset_writer::AssetWriter;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use exports::function_export::FunctionExport;
 
@@ -41,6 +44,9 @@ use self::exports::{Export, ExportNormalTrait};
 use self::properties::world_tile_property::FWorldTileInfo;
 use self::unreal_types::Guid;
 
+pub mod asset_reader;
+pub mod asset_trait;
+pub mod asset_writer;
 mod crc;
 pub mod cursor_ext;
 pub mod custom_version;
@@ -111,7 +117,7 @@ struct AssetHeader {
 //#[derive(Debug)]
 pub struct Asset {
     // raw data
-    pub(crate) cursor: Cursor<Vec<u8>>,
+    cursor: Cursor<Vec<u8>>,
     data_length: u64,
 
     // parsed data
@@ -172,6 +178,283 @@ pub struct Asset {
     //todo: fill out with defaults
     pub map_key_override: HashMap<String, String>,
     pub map_value_override: HashMap<String, String>,
+}
+
+impl AssetTrait for Asset {
+    fn get_custom_version<T>(&self) -> CustomVersion
+    where
+        T: CustomVersionTrait + Into<i32>,
+    {
+        let version_friendly_name = T::friendly_name();
+        for i in 0..self.custom_version.len() {
+            if let Some(friendly_name) = &self.custom_version[i].friendly_name {
+                if friendly_name.as_str() == version_friendly_name {
+                    return self.custom_version[i].clone();
+                }
+            }
+        }
+
+        let guess = T::from_engine_version(self.engine_version);
+        CustomVersion::from_version(guess)
+    }
+
+    fn position(&self) -> u64 {
+        self.cursor.position()
+    }
+
+    fn set_position(&mut self, pos: u64) {
+        self.cursor.set_position(pos)
+    }
+
+    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
+        self.cursor.seek(style)
+    }
+
+    fn get_map_key_override(&self) -> &HashMap<String, String> {
+        &self.map_key_override
+    }
+
+    fn get_map_value_override(&self) -> &HashMap<String, String> {
+        &self.map_value_override
+    }
+
+    #[inline(always)]
+    fn get_engine_version(&self) -> i32 {
+        self.engine_version
+    }
+
+    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
+        if !index.is_import() {
+            return None;
+        }
+
+        let index = -index.index - 1;
+        if index < 0 || index > self.imports.len() as i32 {
+            return None;
+        }
+
+        Some(&self.imports[index as usize])
+    }
+
+    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
+        match index.is_import() {
+            true => self.get_import(index).map(|e| e.object_name.clone()),
+            false => Some(FName::new(index.index.to_string(), 0)),
+        }
+    }
+}
+
+impl AssetReader for Asset {
+    fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
+        if self.engine_version >= ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+            let has_property_guid = self.cursor.read_bool()?;
+            if has_property_guid {
+                let mut guid = [0u8; 16];
+                self.cursor.read_exact(&mut guid)?;
+                return Ok(Some(guid));
+            }
+        }
+        Ok(None)
+    }
+
+    fn read_fname(&mut self) -> Result<FName, Error> {
+        let name_map_pointer = self.cursor.read_i32::<LittleEndian>()?;
+        let number = self.cursor.read_i32::<LittleEndian>()?;
+
+        Ok(FName::new(
+            self.get_name_reference(name_map_pointer),
+            number,
+        ))
+    }
+
+    fn read_array_with_length<T>(
+        &mut self,
+        length: i32,
+        getter: impl Fn(&mut Self) -> Result<T, Error>,
+    ) -> Result<Vec<T>, Error> {
+        let mut array = Vec::with_capacity(length as usize);
+        for _ in 0..length {
+            array.push(getter(self)?);
+        }
+        Ok(array)
+    }
+
+    fn read_array<T>(
+        &mut self,
+        getter: impl Fn(&mut Self) -> Result<T, Error>,
+    ) -> Result<Vec<T>, Error> {
+        let length = self.cursor.read_i32::<LittleEndian>()?;
+        self.read_array_with_length(length, getter)
+    }
+
+    fn read_u8(&mut self) -> Result<u8, std::io::Error> {
+        self.cursor.read_u8()
+    }
+
+    fn read_i8(&mut self) -> Result<i8, std::io::Error> {
+        self.cursor.read_i8()
+    }
+
+    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> Result<u16, std::io::Error> {
+        self.cursor.read_u16::<T>()
+    }
+
+    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> Result<i16, std::io::Error> {
+        self.cursor.read_i16::<T>()
+    }
+
+    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> Result<u32, std::io::Error> {
+        self.cursor.read_u32::<T>()
+    }
+
+    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> Result<i32, std::io::Error> {
+        self.cursor.read_i32::<T>()
+    }
+
+    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> Result<u64, std::io::Error> {
+        self.cursor.read_u64::<T>()
+    }
+
+    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> Result<i64, std::io::Error> {
+        self.cursor.read_i64::<T>()
+    }
+
+    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> Result<f32, std::io::Error> {
+        self.cursor.read_f32::<T>()
+    }
+
+    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> Result<f64, std::io::Error> {
+        self.cursor.read_f64::<T>()
+    }
+
+    fn read_string(&mut self) -> Result<Option<String>, Error> {
+        self.cursor.read_string()
+    }
+
+    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), std::io::Error> {
+        self.cursor.read_exact(buf)
+    }
+
+    fn read_bool(&mut self) -> Result<bool, Error> {
+        self.cursor.read_bool()
+    }
+}
+
+impl AssetWriter for Asset {
+    fn write_property_guid(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        guid: &Option<Guid>,
+    ) -> Result<(), Error> {
+        if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+            cursor.write_bool(guid.is_some())?;
+            if let Some(ref data) = guid {
+                cursor.write_all(data)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn write_fname(&self, cursor: &mut Cursor<Vec<u8>>, fname: &FName) -> Result<(), Error> {
+        cursor.write_i32::<LittleEndian>(
+            self.search_name_reference(&fname.content).ok_or_else(|| {
+                Error::no_data(format!(
+                    "name reference for {} not found",
+                    fname.content.to_owned()
+                ))
+            })?,
+        )?;
+        cursor.write_i32::<LittleEndian>(fname.index)?;
+        Ok(())
+    }
+
+    fn write_u8(&self, cursor: &mut Cursor<Vec<u8>>, value: u8) -> Result<(), io::Error> {
+        cursor.write_u8(value)
+    }
+
+    fn write_i8(&self, cursor: &mut Cursor<Vec<u8>>, value: i8) -> Result<(), io::Error> {
+        cursor.write_i8(value)
+    }
+
+    fn write_u16<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: u16,
+    ) -> Result<(), io::Error> {
+        cursor.write_u16::<T>(value)
+    }
+
+    fn write_i16<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: i16,
+    ) -> Result<(), io::Error> {
+        cursor.write_i16::<T>(value)
+    }
+
+    fn write_u32<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: u32,
+    ) -> Result<(), io::Error> {
+        cursor.write_u32::<T>(value)
+    }
+
+    fn write_i32<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: i32,
+    ) -> Result<(), io::Error> {
+        cursor.write_i32::<T>(value)
+    }
+
+    fn write_u64<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: u64,
+    ) -> Result<(), io::Error> {
+        cursor.write_u64::<T>(value)
+    }
+
+    fn write_i64<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: i64,
+    ) -> Result<(), io::Error> {
+        cursor.write_i64::<T>(value)
+    }
+
+    fn write_f32<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: f32,
+    ) -> Result<(), io::Error> {
+        cursor.write_f32::<T>(value)
+    }
+
+    fn write_f64<T: byteorder::ByteOrder>(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: f64,
+    ) -> Result<(), io::Error> {
+        cursor.write_f64::<T>(value)
+    }
+
+    fn write_string(
+        &self,
+        cursor: &mut Cursor<Vec<u8>>,
+        value: &Option<String>,
+    ) -> Result<usize, Error> {
+        cursor.write_string(value)
+    }
+
+    fn write_all(&self, cursor: &mut Cursor<Vec<u8>>, buf: &[u8]) -> Result<(), io::Error> {
+        cursor.write_all(buf)
+    }
+
+    fn write_bool(&self, cursor: &mut Cursor<Vec<u8>>, value: bool) -> Result<(), Error> {
+        cursor.write_bool(value)
+    }
 }
 
 impl<'a> Asset {
@@ -409,23 +692,6 @@ impl<'a> Asset {
         Ok(())
     }
 
-    fn get_custom_version<T>(&self) -> CustomVersion
-    where
-        T: CustomVersionTrait + Into<i32>,
-    {
-        let version_friendly_name = T::friendly_name();
-        for i in 0..self.custom_version.len() {
-            if let Some(friendly_name) = &self.custom_version[i].friendly_name {
-                if friendly_name.as_str() == version_friendly_name {
-                    return self.custom_version[i].clone();
-                }
-            }
-        }
-
-        let guess = T::from_engine_version(self.engine_version);
-        CustomVersion::from_version(guess)
-    }
-
     fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
         let s = self
             .cursor
@@ -436,32 +702,6 @@ impl<'a> Asset {
             hashes = self.cursor.read_u32::<LittleEndian>()?;
         }
         Ok((hashes, s))
-    }
-
-    pub(crate) fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
-        if self.engine_version >= ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
-            let has_property_guid = self.cursor.read_bool()?;
-            if has_property_guid {
-                let mut guid = [0u8; 16];
-                self.cursor.read_exact(&mut guid)?;
-                return Ok(Some(guid));
-            }
-        }
-        Ok(None)
-    }
-
-    pub(crate) fn write_property_guid(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        guid: &Option<Guid>,
-    ) -> Result<(), Error> {
-        if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
-            cursor.write_bool(guid.is_some())?;
-            if let Some(ref data) = guid {
-                cursor.write_all(data)?;
-            }
-        }
-        Ok(())
     }
 
     pub fn search_name_reference(&self, name: &String) -> Option<i32> {
@@ -505,47 +745,11 @@ impl<'a> Asset {
         name
     }
 
-    fn read_fname(&mut self) -> Result<FName, Error> {
-        let name_map_pointer = self.cursor.read_i32::<LittleEndian>()?;
-        let number = self.cursor.read_i32::<LittleEndian>()?;
-
-        Ok(FName::new(
-            self.get_name_reference(name_map_pointer),
-            number,
-        ))
-    }
-
-    fn write_fname(&self, cursor: &mut Cursor<Vec<u8>>, fname: &FName) -> Result<(), Error> {
-        cursor.write_i32::<LittleEndian>(
-            self.search_name_reference(&fname.content).ok_or_else(|| {
-                Error::no_data(format!(
-                    "name reference for {} not found",
-                    fname.content.to_owned()
-                ))
-            })?,
-        )?;
-        cursor.write_i32::<LittleEndian>(fname.index)?;
-        Ok(())
-    }
-
     pub fn add_import(&mut self, import: Import) -> PackageIndex {
         let index = -(self.imports.len() as i32) - 1;
         let import = import;
         self.imports.push(import);
         PackageIndex::new(index)
-    }
-
-    pub fn get_import(&'a self, index: PackageIndex) -> Option<&'a Import> {
-        if !index.is_import() {
-            return None;
-        }
-
-        let index = -index.index - 1;
-        if index < 0 || index > self.imports.len() as i32 {
-            return None;
-        }
-
-        Some(&self.imports[index as usize])
     }
 
     pub fn find_import(
@@ -612,13 +816,6 @@ impl<'a> Asset {
         }
 
         Some(&mut self.exports[index as usize])
-    }
-
-    fn get_export_class_type(&'a self, index: PackageIndex) -> Option<FName> {
-        match index.is_import() {
-            true => self.get_import(index).map(|e| e.object_name.clone()),
-            false => Some(FName::new(index.index.to_string(), 0)),
-        }
     }
 
     pub fn parse_data(&mut self) -> Result<(), Error> {

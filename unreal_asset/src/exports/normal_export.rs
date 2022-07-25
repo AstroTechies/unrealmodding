@@ -1,9 +1,10 @@
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::exports::base_export::BaseExport;
 use crate::exports::{ExportBaseTrait, ExportTrait};
 use crate::properties::Property;
 use crate::unreal_types::FName;
-use crate::Asset;
 use std::io::Cursor;
 
 use super::ExportNormalTrait;
@@ -37,8 +38,10 @@ impl ExportBaseTrait for NormalExport {
 }
 
 impl NormalExport {
-    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
-        let _cursor = &mut asset.cursor;
+    pub fn from_base<Reader: AssetReader>(
+        base: &BaseExport,
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let mut properties = Vec::new();
         while let Some(e) = Property::new(asset, true)? {
             properties.push(e);
@@ -54,7 +57,11 @@ impl NormalExport {
 }
 
 impl ExportTrait for NormalExport {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         for entry in &self.properties {
             Property::write(entry, asset, cursor, true)?;
         }

@@ -14,6 +14,8 @@ use std::io::Cursor;
 
 use enum_dispatch::enum_dispatch;
 
+use crate::asset_writer::AssetWriter;
+
 use self::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
     enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
@@ -21,7 +23,6 @@ use self::{
     string_table_export::StringTableExport, struct_export::StructExport,
 };
 use super::error::Error;
-use super::Asset;
 
 #[enum_dispatch]
 pub trait ExportNormalTrait {
@@ -62,7 +63,11 @@ macro_rules! implement_get {
 
 #[enum_dispatch]
 pub trait ExportTrait {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error>;
 }
 
 #[enum_dispatch(ExportTrait, ExportNormalTrait, ExportBaseTrait)]
