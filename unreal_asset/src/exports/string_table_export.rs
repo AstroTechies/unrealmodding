@@ -1,3 +1,5 @@
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::cursor_ext::CursorExt;
 use crate::error::Error;
 use crate::exports::base_export::BaseExport;
@@ -5,8 +7,7 @@ use crate::exports::normal_export::NormalExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
 use crate::unreal_types::StringTable;
-use crate::Asset;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use std::io::Cursor;
 
 use super::ExportBaseTrait;
@@ -22,21 +23,22 @@ pub struct StringTableExport {
 implement_get!(StringTableExport);
 
 impl StringTableExport {
-    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn from_base<Reader: AssetReader>(
+        base: &BaseExport,
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
-        asset.cursor.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LittleEndian>()?;
 
-        let mut table = StringTable::new(asset.cursor.read_string()?);
+        let mut table = StringTable::new(asset.read_string()?);
 
-        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LittleEndian>()?;
         for _i in 0..num_entries {
             table.value.insert(
                 asset
-                    .cursor
                     .read_string()?
                     .ok_or_else(|| Error::no_data("StringTable key is None".to_string()))?,
                 asset
-                    .cursor
                     .read_string()?
                     .ok_or_else(|| Error::no_data("StringTable value is None".to_string()))?,
             );
@@ -50,7 +52,11 @@ impl StringTableExport {
 }
 
 impl ExportTrait for StringTableExport {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.normal_export.write(asset, cursor)?;
         cursor.write_i32::<LittleEndian>(0)?;
 

@@ -1,10 +1,11 @@
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::custom_version::FCoreObjectVersion;
 use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
 use crate::implement_get;
-use crate::Asset;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use byteorder::{LittleEndian, WriteBytesExt};
+use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use super::ExportBaseTrait;
 use super::ExportNormalTrait;
@@ -32,23 +33,26 @@ pub struct StructExport {
 implement_get!(StructExport);
 
 impl StructExport {
-    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn from_base<Reader: AssetReader>(
+        base: &BaseExport,
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
-        asset.cursor.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LittleEndian>()?;
         let field = UField::new(asset)?;
-        let super_struct = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let super_struct = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
 
-        let num_index_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_index_entries = asset.read_i32::<LittleEndian>()?;
         let mut children = Vec::with_capacity(num_index_entries as usize);
         for _i in 0..num_index_entries as usize {
-            children.push(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?));
+            children.push(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
         }
 
         let loaded_properties = match asset.get_custom_version::<FCoreObjectVersion>().version
             >= FCoreObjectVersion::FProperties as i32
         {
             true => {
-                let num_props = asset.cursor.read_i32::<LittleEndian>()?;
+                let num_props = asset.read_i32::<LittleEndian>()?;
                 let mut props = Vec::with_capacity(num_props as usize);
                 for _i in 0..num_props as usize {
                     props.push(FProperty::new(asset)?);
@@ -58,12 +62,12 @@ impl StructExport {
             false => Vec::new(),
         };
 
-        let script_bytecode_size = asset.cursor.read_i32::<LittleEndian>()?; // number of bytes in deserialized memory
-        let script_storage_size = asset.cursor.read_i32::<LittleEndian>()?; // number of bytes in total
-        let start_offset = asset.cursor.position();
+        let script_bytecode_size = asset.read_i32::<LittleEndian>()?; // number of bytes in deserialized memory
+        let script_storage_size = asset.read_i32::<LittleEndian>()?; // number of bytes in total
+        let start_offset = asset.position();
 
         let mut script_bytecode = None;
-        if asset.engine_version >= VER_UE4_16 {
+        if asset.get_engine_version() >= VER_UE4_16 {
             script_bytecode =
                 StructExport::read_bytecode(asset, start_offset, script_storage_size).ok();
         }
@@ -71,9 +75,9 @@ impl StructExport {
         let script_bytecode_raw = match &script_bytecode {
             Some(_) => None,
             None => {
-                asset.cursor.seek(SeekFrom::Start(start_offset))?;
+                asset.seek(SeekFrom::Start(start_offset))?;
                 let mut data = vec![0u8; script_storage_size as usize];
-                asset.cursor.read_exact(&mut data)?;
+                asset.read_exact(&mut data)?;
                 Some(data)
             }
         };
@@ -91,13 +95,13 @@ impl StructExport {
         })
     }
 
-    fn read_bytecode(
-        asset: &mut Asset,
+    fn read_bytecode<Reader: AssetReader>(
+        asset: &mut Reader,
         start_offset: u64,
         storage_size: i32,
     ) -> Result<Vec<KismetExpression>, Error> {
         let mut code = Vec::new();
-        while (asset.cursor.position() - start_offset) < storage_size as u64 {
+        while (asset.position() - start_offset) < storage_size as u64 {
             code.push(KismetExpression::new(asset)?);
         }
         Ok(code)
@@ -105,7 +109,11 @@ impl StructExport {
 }
 
 impl ExportTrait for StructExport {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.normal_export.write(asset, cursor)?;
         cursor.write_i32::<LittleEndian>(0)?;
         self.field.write(asset, cursor)?;

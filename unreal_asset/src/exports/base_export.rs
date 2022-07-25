@@ -1,7 +1,7 @@
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::exports::ExportTrait;
 use crate::unreal_types::{FName, Guid, PackageIndex};
-use crate::Asset;
 use std::io::Cursor;
 
 use super::ExportBaseTrait;
@@ -59,7 +59,11 @@ impl ExportBaseTrait for BaseExport {
 }
 
 impl ExportTrait for BaseExport {
-    fn write(&self, _asset: &Asset, _cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        _asset: &Writer,
+        _cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         Ok(())
     }
 }

@@ -1,11 +1,12 @@
 use std::io::Cursor;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
 use super::vector_property::{BoxProperty, IntPointProperty};
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::{
-    cursor_ext::CursorExt,
     custom_version::FFortniteMainBranchObjectVersion,
     types::Vector,
     ue4version::{
@@ -13,7 +14,6 @@ use crate::{
         VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LEVEL_INFO_ZORDER,
     },
     unreal_types::FName,
-    Asset,
 };
 
 //todo: what is this file even doing in properties?
@@ -27,19 +27,22 @@ pub struct FWorldTileLayer {
 }
 
 impl FWorldTileLayer {
-    pub fn new(asset: &mut Asset, engine_version: i32) -> Result<Self, Error> {
-        let name = asset.cursor.read_string()?;
-        let reserved_0 = asset.cursor.read_i32::<LittleEndian>()?;
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
+        engine_version: i32,
+    ) -> Result<Self, Error> {
+        let name = asset.read_string()?;
+        let reserved_0 = asset.read_i32::<LittleEndian>()?;
         let reserved_1 = IntPointProperty::new(asset, FName::default(), false, 0)?;
 
         let streaming_distance = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
-            true => Some(asset.cursor.read_i32::<LittleEndian>()?),
+            true => Some(asset.read_i32::<LittleEndian>()?),
             false => None,
         };
 
         let distance_streaming_enabled =
             match engine_version >= VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING {
-                true => Some(asset.cursor.read_i32::<LittleEndian>()? == 1),
+                true => Some(asset.read_i32::<LittleEndian>()? == 1),
                 false => None,
             };
 
@@ -63,13 +66,13 @@ pub struct FWorldTileLODInfo {
 }
 
 impl FWorldTileLODInfo {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(FWorldTileLODInfo {
-            relative_streaming_distance: asset.cursor.read_i32::<LittleEndian>()?,
-            reserved_0: asset.cursor.read_f32::<LittleEndian>()?,
-            reserved_1: asset.cursor.read_f32::<LittleEndian>()?,
-            reserved_2: asset.cursor.read_i32::<LittleEndian>()?,
-            reserved_3: asset.cursor.read_i32::<LittleEndian>()?,
+            relative_streaming_distance: asset.read_i32::<LittleEndian>()?,
+            reserved_0: asset.read_f32::<LittleEndian>()?,
+            reserved_1: asset.read_f32::<LittleEndian>()?,
+            reserved_2: asset.read_i32::<LittleEndian>()?,
+            reserved_3: asset.read_i32::<LittleEndian>()?,
         })
     }
 }
@@ -87,18 +90,25 @@ pub struct FWorldTileInfo {
 }
 
 impl FWorldTileInfo {
-    pub fn new(asset: &mut Asset, engine_version: i32) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
+        engine_version: i32,
+    ) -> Result<Self, Error> {
         let version = asset.get_custom_version::<FFortniteMainBranchObjectVersion>();
 
         let position = match version.version
             < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32
         {
             true => Vector::new(
-                asset.cursor.read_i32::<LittleEndian>()?,
-                asset.cursor.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LittleEndian>()?,
                 0,
             ),
-            false => asset.cursor.read_int_vector()?,
+            false => Vector::new(
+                asset.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LittleEndian>()?,
+            ),
         };
 
         let bounds = BoxProperty::new(asset, FName::default(), false, 0)?;
@@ -107,13 +117,13 @@ impl FWorldTileInfo {
         let mut hide_in_tile_view = None;
         let mut parent_tile_package_name = None;
         if engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
-            hide_in_tile_view = Some(asset.cursor.read_i32::<LittleEndian>()? == 1);
-            parent_tile_package_name = asset.cursor.read_string()?;
+            hide_in_tile_view = Some(asset.read_i32::<LittleEndian>()? == 1);
+            parent_tile_package_name = asset.read_string()?;
         }
 
         let mut lod_list = None;
         if engine_version >= VER_UE4_WORLD_LEVEL_INFO_LOD_LIST {
-            let num_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
+            let num_entries = asset.read_i32::<LittleEndian>()? as usize;
             let mut list = Vec::with_capacity(num_entries);
             for _i in 0..num_entries {
                 list.push(FWorldTileLODInfo::new(asset)?);
@@ -122,7 +132,7 @@ impl FWorldTileInfo {
         }
 
         let z_order = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_ZORDER {
-            true => Some(asset.cursor.read_i32::<LittleEndian>()?),
+            true => Some(asset.read_i32::<LittleEndian>()?),
             false => None,
         };
 
@@ -137,7 +147,11 @@ impl FWorldTileInfo {
         })
     }
 
-    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    pub fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         if asset
             .get_custom_version::<FFortniteMainBranchObjectVersion>()
             .version

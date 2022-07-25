@@ -1,16 +1,15 @@
 use std::{collections::HashMap, hash::Hash, io::Cursor};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::unreal_types::ToFName;
 use crate::{
     impl_property_data_trait,
-    {
-        unreal_types::{FName, Guid},
-        Asset,
-    },
+    unreal_types::{FName, Guid},
 };
 
 use super::struct_property::StructProperty;
@@ -40,8 +39,8 @@ impl Hash for MapProperty {
 }
 
 impl MapProperty {
-    fn map_type_to_class(
-        asset: &mut Asset,
+    fn map_type_to_class<Reader: AssetReader>(
+        asset: &mut Reader,
         type_name: FName,
         name: FName,
         length: i64,
@@ -52,23 +51,26 @@ impl MapProperty {
             "StructProperty" => {
                 let _struct_type = match is_key {
                     true => asset
-                        .map_key_override
+                        .get_map_key_override()
                         .get(&name.content)
                         .map(|s| s.to_owned()),
                     false => asset
-                        .map_value_override
+                        .get_map_value_override()
                         .get(&name.content)
                         .map(|s| s.to_owned()),
                 }
                 .unwrap_or_else(|| String::from("Generic"));
-                Ok(StructProperty::new(asset, name, false, 1, 0, asset.engine_version)?.into())
+                Ok(
+                    StructProperty::new(asset, name, false, 1, 0, asset.get_engine_version())?
+                        .into(),
+                )
             }
             _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
         }
     }
 
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
@@ -83,7 +85,7 @@ impl MapProperty {
             property_guid = asset.read_property_guid()?;
         }
 
-        let num_keys_to_remove = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_keys_to_remove = asset.read_i32::<LittleEndian>()?;
         let mut keys_to_remove = None;
 
         let type_1 = type_1.ok_or_else(|| Error::invalid_file("No type1".to_string()))?;
@@ -102,7 +104,7 @@ impl MapProperty {
             keys_to_remove = Some(vec);
         }
 
-        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LittleEndian>()?;
         let mut values: HashMap<Property, Property> = HashMap::new();
 
         for _ in 0..num_entries {
@@ -138,9 +140,9 @@ impl MapProperty {
 }
 
 impl PropertyTrait for MapProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

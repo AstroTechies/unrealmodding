@@ -1,14 +1,13 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
     impl_property_data_trait,
-    {
-        unreal_types::{FName, Guid},
-        Asset,
-    },
+    unreal_types::{FName, Guid},
 };
 
 #[derive(Hash, Clone, PartialEq, Eq)]
@@ -22,8 +21,8 @@ pub struct EnumProperty {
 impl_property_data_trait!(EnumProperty);
 
 impl EnumProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -46,9 +45,9 @@ impl EnumProperty {
 }
 
 impl PropertyTrait for EnumProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

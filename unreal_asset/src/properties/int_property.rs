@@ -1,9 +1,11 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
@@ -11,15 +13,14 @@ use crate::{
     {
         cursor_ext::CursorExt,
         unreal_types::{FName, Guid},
-        Asset,
     },
 };
 
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {
         impl $property_type {
-            pub fn new(
-                asset: &mut Asset,
+            pub fn new<Reader: AssetReader>(
+                asset: &mut Reader,
                 name: FName,
                 include_header: bool,
                 _length: i64,
@@ -31,7 +32,7 @@ macro_rules! impl_int_property {
                     name,
                     property_guid,
                     duplication_index,
-                    value: asset.cursor.$read_func::<LittleEndian>()?,
+                    value: asset.$read_func::<LittleEndian>()?,
                 })
             }
         }
@@ -148,14 +149,14 @@ pub struct DoubleProperty {
 impl_property_data_trait!(DoubleProperty);
 
 impl BoolProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
-        let value = asset.cursor.read_bool()?;
+        let value = asset.read_bool()?;
         let property_guid = optional_guid!(asset, include_header);
 
         Ok(BoolProperty {
@@ -168,9 +169,9 @@ impl BoolProperty {
 }
 
 impl PropertyTrait for BoolProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -181,8 +182,8 @@ impl PropertyTrait for BoolProperty {
 }
 
 impl Int8Property {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -193,15 +194,15 @@ impl Int8Property {
             name,
             property_guid,
             duplication_index,
-            value: asset.cursor.read_i8()?,
+            value: asset.read_i8()?,
         })
     }
 }
 
 impl PropertyTrait for Int8Property {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -212,10 +213,13 @@ impl PropertyTrait for Int8Property {
 }
 
 impl ByteProperty {
-    fn read_byte(asset: &mut Asset, length: i64) -> Result<(ByteType, i64), Error> {
+    fn read_byte<Reader: AssetReader>(
+        asset: &mut Reader,
+        length: i64,
+    ) -> Result<(ByteType, i64), Error> {
         let value = match length {
-            1 => Some((ByteType::Byte, asset.cursor.read_i8()? as i64)),
-            0 | 8 => Some((ByteType::Long, asset.cursor.read_i64::<LittleEndian>()?)),
+            1 => Some((ByteType::Byte, asset.read_i8()? as i64)),
+            0 | 8 => Some((ByteType::Long, asset.read_i64::<LittleEndian>()?)),
             _ => None,
         };
 
@@ -224,8 +228,8 @@ impl ByteProperty {
         })
     }
 
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         length: i64,
@@ -234,7 +238,7 @@ impl ByteProperty {
     ) -> Result<Self, Error> {
         let (enum_type, property_guid) = match include_header {
             true => (
-                Some(asset.cursor.read_i64::<LittleEndian>()?),
+                Some(asset.read_i64::<LittleEndian>()?),
                 asset.read_property_guid()?,
             ),
             false => (None, None),
@@ -255,9 +259,9 @@ impl ByteProperty {
 }
 
 impl PropertyTrait for ByteProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -281,8 +285,8 @@ impl PropertyTrait for ByteProperty {
 }
 
 impl FloatProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -294,15 +298,15 @@ impl FloatProperty {
             name,
             property_guid,
             duplication_index,
-            value: OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
         })
     }
 }
 
 impl PropertyTrait for FloatProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -313,8 +317,8 @@ impl PropertyTrait for FloatProperty {
 }
 
 impl DoubleProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -326,15 +330,15 @@ impl DoubleProperty {
             name,
             property_guid,
             duplication_index,
-            value: OrderedFloat(asset.cursor.read_f64::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f64::<LittleEndian>()?),
         })
     }
 }
 
 impl PropertyTrait for DoubleProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

@@ -1,17 +1,16 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
-    {
-        unreal_types::{FName, Guid},
-        Asset,
-    },
+    unreal_types::{FName, Guid},
 };
 
 #[derive(Hash, Clone, PartialEq, Eq)]
@@ -46,8 +45,8 @@ pub struct SkeletalMeshSamplingLODBuiltDataProperty {
 impl_property_data_trait!(SkeletalMeshSamplingLODBuiltDataProperty);
 
 impl WeightedRandomSamplerProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -55,19 +54,19 @@ impl WeightedRandomSamplerProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LittleEndian>()?;
         let mut prob = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            prob.push(OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?));
+            prob.push(OrderedFloat(asset.read_f32::<LittleEndian>()?));
         }
 
-        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LittleEndian>()?;
         let mut alias = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            alias.push(asset.cursor.read_i32::<LittleEndian>()?);
+            alias.push(asset.read_i32::<LittleEndian>()?);
         }
 
-        let total_weight = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
+        let total_weight = OrderedFloat(asset.read_f32::<LittleEndian>()?);
 
         Ok(WeightedRandomSamplerProperty {
             name,
@@ -81,9 +80,9 @@ impl WeightedRandomSamplerProperty {
 }
 
 impl PropertyTrait for WeightedRandomSamplerProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -108,8 +107,8 @@ impl PropertyTrait for WeightedRandomSamplerProperty {
 }
 
 impl SkeletalMeshAreaWeightedTriangleSampler {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -117,19 +116,19 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LittleEndian>()?;
         let mut prob = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            prob.push(OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?));
+            prob.push(OrderedFloat(asset.read_f32::<LittleEndian>()?));
         }
 
-        let size = asset.cursor.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LittleEndian>()?;
         let mut alias = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            alias.push(asset.cursor.read_i32::<LittleEndian>()?);
+            alias.push(asset.read_i32::<LittleEndian>()?);
         }
 
-        let total_weight = OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?);
+        let total_weight = OrderedFloat(asset.read_f32::<LittleEndian>()?);
 
         Ok(SkeletalMeshAreaWeightedTriangleSampler {
             name,
@@ -143,9 +142,9 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
 }
 
 impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -170,8 +169,8 @@ impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
 }
 
 impl SkeletalMeshSamplingLODBuiltDataProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -191,9 +190,9 @@ impl SkeletalMeshSamplingLODBuiltDataProperty {
 }
 
 impl PropertyTrait for SkeletalMeshSamplingLODBuiltDataProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

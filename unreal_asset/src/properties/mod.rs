@@ -22,13 +22,15 @@ pub mod vector_property;
 pub mod view_target_blend_property;
 pub mod world_tile_property;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::properties::date_property::TimeSpanProperty;
 use crate::properties::sampler_property::SkeletalMeshAreaWeightedTriangleSampler;
 use crate::properties::soft_path_property::{
     SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty,
 };
 use crate::unreal_types::{Guid, ToFName};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 use std::hash::Hash;
@@ -71,7 +73,7 @@ use self::{
     view_target_blend_property::ViewTargetBlendParamsProperty,
 };
 use super::error::Error;
-use super::{unreal_types::FName, Asset};
+use super::unreal_types::FName;
 
 #[macro_export]
 macro_rules! optional_guid {
@@ -96,9 +98,9 @@ macro_rules! optional_guid_write {
 macro_rules! simple_property_write {
     ($property_name:ident, $write_func:ident, $value_name:ident, $value_type:ty) => {
         impl PropertyTrait for $property_name {
-            fn write(
+            fn write<Writer: AssetWriter>(
                 &self,
-                asset: &Asset,
+                asset: &Writer,
                 cursor: &mut Cursor<Vec<u8>>,
                 include_header: bool,
             ) -> Result<usize, Error> {
@@ -175,9 +177,9 @@ pub trait PropertyDataTrait {
 
 #[enum_dispatch]
 pub trait PropertyTrait {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error>;
@@ -484,16 +486,18 @@ impl Clone for Property {
 }
 
 impl Property {
-    pub fn new(asset: &mut Asset, include_header: bool) -> Result<Option<Self>, Error> {
-        let _offset = asset.cursor.position();
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
+        include_header: bool,
+    ) -> Result<Option<Self>, Error> {
         let name = asset.read_fname()?;
         if &name.content == "None" {
             return Ok(None);
         }
 
         let property_type = asset.read_fname()?;
-        let length = asset.cursor.read_i32::<LittleEndian>()?;
-        let duplication_index = asset.cursor.read_i32::<LittleEndian>()?;
+        let length = asset.read_i32::<LittleEndian>()?;
+        let duplication_index = asset.read_i32::<LittleEndian>()?;
 
         Property::from_type(
             asset,
@@ -506,8 +510,8 @@ impl Property {
         )
         .map(Some)
     }
-    pub fn from_type(
-        asset: &mut Asset,
+    pub fn from_type<Reader: AssetReader>(
+        asset: &mut Reader,
         type_name: &FName,
         name: FName,
         include_header: bool,
@@ -609,7 +613,7 @@ impl Property {
                 include_header,
                 length,
                 duplication_index,
-                asset.engine_version,
+                asset.get_engine_version(),
             )?
             .into(),
             "ArrayProperty" => ArrayProperty::new(
@@ -618,7 +622,7 @@ impl Property {
                 include_header,
                 length,
                 duplication_index,
-                asset.engine_version,
+                asset.get_engine_version(),
                 true,
             )?
             .into(),
@@ -760,7 +764,7 @@ impl Property {
                 include_header,
                 length,
                 duplication_index,
-                asset.engine_version,
+                asset.get_engine_version(),
             )?
             .into(),
             "EnumProperty" => {
@@ -780,9 +784,9 @@ impl Property {
         Ok(res)
     }
 
-    pub fn write(
+    pub fn write<Writer: AssetWriter>(
         property: &Property,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

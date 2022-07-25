@@ -1,11 +1,12 @@
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::flags::EPropertyFlags;
 use crate::unreal_types::{FName, PackageIndex};
-use crate::Asset;
 use crate::Error;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use std::io::Cursor;
 
@@ -17,7 +18,7 @@ macro_rules! parse_simple_property {
         }
 
         impl $prop_name {
-            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: UGenericProperty::new(asset)?
                 })
@@ -25,7 +26,7 @@ macro_rules! parse_simple_property {
         }
 
         impl UPropertyTrait for $prop_name {
-            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            fn write<Writer: AssetWriter>(&self, asset: &Writer, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
                 self.generic_property.write(asset, cursor)?;
                 Ok(())
             }
@@ -42,18 +43,18 @@ macro_rules! parse_simple_property {
         }
 
         impl $prop_name {
-            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: UGenericProperty::new(asset)?,
                     $(
-                        $field_name: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+                        $field_name: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
                     )*
                 })
             }
         }
 
         impl UPropertyTrait for $prop_name {
-            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            fn write<Writer: AssetWriter>(&self, asset: &Writer, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
                 self.generic_property.write(asset, cursor)?;
                 $(
                     cursor.write_i32::<LittleEndian>(self.$field_name.index)?;
@@ -66,7 +67,11 @@ macro_rules! parse_simple_property {
 
 #[enum_dispatch]
 pub trait UPropertyTrait {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error>;
 }
 
 #[enum_dispatch(UPropertyTrait)]
@@ -141,7 +146,10 @@ impl Clone for UProperty {
 }
 
 impl UProperty {
-    pub fn new(asset: &mut Asset, serialized_type: FName) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
+        serialized_type: FName,
+    ) -> Result<Self, Error> {
         let prop: UProperty = match serialized_type.content.as_str() {
             "EnumProperty" => UEnumProperty::new(asset)?.into(),
             "ArrayProperty" => UArrayProperty::new(asset)?.into(),
@@ -200,19 +208,23 @@ pub struct UBoolProperty {
 }
 
 impl UField {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let next = match asset
             .get_custom_version::<FFrameworkObjectVersion>()
             .version
             < FFrameworkObjectVersion::RemoveUfieldNext as i32
         {
-            true => Some(PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?)),
+            true => Some(PackageIndex::new(asset.read_i32::<LittleEndian>()?)),
             false => None,
         };
         Ok(UField { next })
     }
 
-    pub fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    pub fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         if asset
             .get_custom_version::<FFrameworkObjectVersion>()
             .version
@@ -234,12 +246,12 @@ impl UField {
 }
 
 impl UGenericProperty {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let u_field = UField::new(asset)?;
 
-        let array_dim: EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into()?;
+        let array_dim: EArrayDim = asset.read_i32::<LittleEndian>()?.try_into()?;
         let property_flags: EPropertyFlags =
-            EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?)
+            EPropertyFlags::from_bits(asset.read_u64::<LittleEndian>()?)
                 .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
         let rep_notify_func = asset.read_fname()?;
 
@@ -247,7 +259,7 @@ impl UGenericProperty {
             match asset.get_custom_version::<FReleaseObjectVersion>().version
                 >= FReleaseObjectVersion::PropertiesSerializeRepCondition as i32
             {
-                true => asset.cursor.read_u8()?.try_into().ok(),
+                true => asset.read_u8()?.try_into().ok(),
                 false => None,
             };
 
@@ -262,7 +274,11 @@ impl UGenericProperty {
 }
 
 impl UPropertyTrait for UGenericProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.u_field.write(asset, cursor)?;
         cursor.write_i32::<LittleEndian>(self.array_dim.into())?;
         cursor.write_u64::<LittleEndian>(self.property_flags.bits())?;
@@ -282,11 +298,11 @@ impl UPropertyTrait for UGenericProperty {
 }
 
 impl UBoolProperty {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = UGenericProperty::new(asset)?;
 
-        let element_size = asset.cursor.read_u8()?;
-        let native_bool = asset.cursor.read_bool()?;
+        let element_size = asset.read_u8()?;
+        let native_bool = asset.read_bool()?;
 
         Ok(UBoolProperty {
             generic_property,
@@ -297,7 +313,11 @@ impl UBoolProperty {
 }
 
 impl UPropertyTrait for UBoolProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.generic_property.write(asset, cursor)?;
         cursor.write_u8(self.element_size)?;
         cursor.write_bool(self.native_bool)?;

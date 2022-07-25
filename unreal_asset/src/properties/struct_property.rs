@@ -1,5 +1,7 @@
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Write};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
@@ -7,7 +9,6 @@ use crate::{
     {
         ue4version::{VER_UE4_SERIALIZE_RICH_CURVE_KEY, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG},
         unreal_types::{FName, Guid},
-        Asset,
     },
 };
 
@@ -38,8 +39,8 @@ impl StructProperty {
         }
     }
 
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         length: i64,
@@ -54,7 +55,7 @@ impl StructProperty {
             struct_type = Some(asset.read_fname()?);
             if engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 let mut guid = [0u8; 16];
-                asset.cursor.read_exact(&mut guid)?;
+                asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
             }
             property_guid = asset.read_property_guid()?;
@@ -71,8 +72,8 @@ impl StructProperty {
         )
     }
 
-    pub fn custom_header(
-        asset: &mut Asset,
+    pub fn custom_header<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         length: i64,
         duplication_index: i32,
@@ -87,7 +88,7 @@ impl StructProperty {
 
         if let Some(ref e) = struct_type {
             if e.content.as_str() == "RichCurveKey"
-                && asset.engine_version < VER_UE4_SERIALIZE_RICH_CURVE_KEY
+                && asset.get_engine_version() < VER_UE4_SERIALIZE_RICH_CURVE_KEY
             {
                 custom_serialization = false;
             }
@@ -146,9 +147,9 @@ impl StructProperty {
         }
     }
 
-    pub fn write_with_type(
+    pub fn write_with_type<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
         struct_type: Option<FName>,
@@ -158,7 +159,7 @@ impl StructProperty {
                 cursor,
                 struct_type.as_ref().ok_or_else(PropertyError::headerless)?,
             )?;
-            if asset.engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+            if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 cursor.write_all(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
             }
             asset.write_property_guid(cursor, &self.property_guid)?;
@@ -171,7 +172,7 @@ impl StructProperty {
 
         if (struct_type.is_some()
             && struct_type.as_ref().unwrap().content.as_str() == "RichCurveKey")
-            && asset.engine_version < VER_UE4_SERIALIZE_RICH_CURVE_KEY
+            && asset.get_engine_version() < VER_UE4_SERIALIZE_RICH_CURVE_KEY
         {
             has_custom_serialization = false;
         }
@@ -202,9 +203,9 @@ impl StructProperty {
 }
 
 impl PropertyTrait for StructProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

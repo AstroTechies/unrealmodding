@@ -1,3 +1,5 @@
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::exports::base_export::BaseExport;
 use crate::exports::struct_export::StructExport;
@@ -8,10 +10,9 @@ use crate::ue4version::{
     VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING,
 };
 use crate::unreal_types::{FName, PackageIndex};
-use crate::Asset;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use std::collections::HashMap;
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::{Cursor, SeekFrom};
 use std::mem::size_of;
 
 use super::ExportNormalTrait;
@@ -49,70 +50,70 @@ pub struct ClassExport {
 }
 
 impl ClassExport {
-    pub fn from_base(base: &BaseExport, asset: &mut Asset) -> Result<Self, Error> {
+    pub fn from_base<Reader: AssetReader>(
+        base: &BaseExport,
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let struct_export = StructExport::from_base(base, asset)?;
 
-        let num_func_index_entries = asset.cursor.read_i32::<LittleEndian>()? as usize;
+        let num_func_index_entries = asset.read_i32::<LittleEndian>()? as usize;
         let mut func_map = HashMap::with_capacity(num_func_index_entries);
         for _i in 0..num_func_index_entries {
             let name = asset.read_fname()?;
-            let function_export = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+            let function_export = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
 
             func_map.insert(name, function_export);
         }
 
-        let mut class_flags = EClassFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?)
+        let mut class_flags = EClassFlags::from_bits(asset.read_u32::<LittleEndian>()?)
             .ok_or_else(|| Error::invalid_file("Invalid class flags".to_string()))?;
-        if asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
+        if asset.get_engine_version() < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
             class_flags ^= EClassFlags::CLASS_NOT_PLACEABLE
         }
 
-        let class_within = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let class_within = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
         let class_config_name = asset.read_fname()?;
-        asset.add_name_reference(class_config_name.content.to_owned(), false);
 
         let mut interfaces_start = None;
-        if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            interfaces_start = Some(asset.cursor.position());
-            let num_interfaces = asset.cursor.read_i32::<LittleEndian>()?;
-            asset.cursor.seek(SeekFrom::Start(
+        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+            interfaces_start = Some(asset.position());
+            let num_interfaces = asset.read_i32::<LittleEndian>()?;
+            asset.seek(SeekFrom::Start(
                 interfaces_start.unwrap()
                     + size_of::<i32>() as u64
                     + num_interfaces as u64 * (size_of::<i32>() as u64 * 3),
             ))?;
         }
 
-        let class_generated_by = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
-        let current_offset = asset.cursor.position();
+        let class_generated_by = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let current_offset = asset.position();
 
-        if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            asset
-                .cursor
-                .seek(SeekFrom::Start(interfaces_start.unwrap()))?;
+        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+            asset.seek(SeekFrom::Start(interfaces_start.unwrap()))?;
         }
-        let num_interfaces = asset.cursor.read_i32::<LittleEndian>()? as usize;
+        let num_interfaces = asset.read_i32::<LittleEndian>()? as usize;
         let mut interfaces = Vec::with_capacity(num_interfaces);
         for _i in 0..num_interfaces {
             interfaces.push(SerializedInterfaceReference::new(
-                asset.cursor.read_i32::<LittleEndian>()?,
-                asset.cursor.read_i32::<LittleEndian>()?,
-                asset.cursor.read_i32::<LittleEndian>()? == 1,
+                asset.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LittleEndian>()? == 1,
             ));
         }
 
-        if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
-            asset.cursor.seek(SeekFrom::Start(current_offset))?;
+        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+            asset.seek(SeekFrom::Start(current_offset))?;
         }
 
-        let deprecated_force_script_order = asset.cursor.read_i32::<LittleEndian>()? == 1;
-        asset.cursor.read_i64::<LittleEndian>()?; // none
+        let deprecated_force_script_order = asset.read_i32::<LittleEndian>()? == 1;
+        asset.read_i64::<LittleEndian>()?; // none
 
-        let cooked = match asset.engine_version >= VER_UE4_ADD_COOKED_TO_UCLASS {
-            true => Some(asset.cursor.read_i32::<LittleEndian>()? == 1),
+        let cooked = match asset.get_engine_version() >= VER_UE4_ADD_COOKED_TO_UCLASS {
+            true => Some(asset.read_i32::<LittleEndian>()? == 1),
             false => None,
         };
 
-        let class_default_object = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let class_default_object = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
 
         Ok(ClassExport {
             struct_export,
@@ -129,9 +130,9 @@ impl ClassExport {
         })
     }
 
-    fn serialize_interfaces(
+    fn serialize_interfaces<Writer: AssetWriter>(
         &self,
-        _asset: &Asset,
+        _asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
     ) -> Result<(), Error> {
         cursor.write_i32::<LittleEndian>(self.interfaces.len() as i32)?;
@@ -168,7 +169,11 @@ impl ExportBaseTrait for ClassExport {
 }
 
 impl ExportTrait for ClassExport {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.struct_export.write(asset, cursor)?;
 
         cursor.write_i32::<LittleEndian>(self.func_map.len() as i32)?;
@@ -177,22 +182,22 @@ impl ExportTrait for ClassExport {
             cursor.write_i32::<LittleEndian>(index.index)?;
         }
 
-        let serializing_class_flags = match asset.engine_version < VER_UE4_CLASS_NOTPLACEABLE_ADDED
-        {
-            true => self.class_flags ^ EClassFlags::CLASS_NOT_PLACEABLE,
-            false => self.class_flags,
-        };
+        let serializing_class_flags =
+            match asset.get_engine_version() < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
+                true => self.class_flags ^ EClassFlags::CLASS_NOT_PLACEABLE,
+                false => self.class_flags,
+            };
         cursor.write_u32::<LittleEndian>(serializing_class_flags.bits())?;
 
         cursor.write_i32::<LittleEndian>(self.class_within.index)?;
         asset.write_fname(cursor, &self.class_config_name)?;
 
-        if asset.engine_version < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING as i32 {
+        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING as i32 {
             self.serialize_interfaces(asset, cursor)?;
         }
         cursor.write_i32::<LittleEndian>(self.class_generated_by.index)?;
 
-        if asset.engine_version >= VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+        if asset.get_engine_version() >= VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
             self.serialize_interfaces(asset, cursor)?;
         }
 
@@ -202,7 +207,7 @@ impl ExportTrait for ClassExport {
         })?;
         asset.write_fname(cursor, &FName::from_slice("None"))?;
 
-        if asset.engine_version >= VER_UE4_ADD_COOKED_TO_UCLASS {
+        if asset.get_engine_version() >= VER_UE4_ADD_COOKED_TO_UCLASS {
             cursor.write_i32::<LittleEndian>(
                 match self.cooked.ok_or_else(|| {
                     Error::no_data(

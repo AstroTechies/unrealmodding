@@ -1,8 +1,10 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::unreal_types::PackageIndex;
@@ -11,7 +13,6 @@ use crate::{
     {
         cursor_ext::CursorExt,
         unreal_types::{FName, Guid},
-        Asset,
     },
 };
 
@@ -44,14 +45,14 @@ pub struct SoftObjectProperty {
 impl_property_data_trait!(SoftObjectProperty);
 
 impl ObjectProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let value = asset.cursor.read_i32::<LittleEndian>()?;
+        let value = asset.read_i32::<LittleEndian>()?;
         Ok(ObjectProperty {
             name,
             property_guid,
@@ -62,9 +63,9 @@ impl ObjectProperty {
 }
 
 impl PropertyTrait for ObjectProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -75,14 +76,14 @@ impl PropertyTrait for ObjectProperty {
 }
 
 impl AssetObjectProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let value = asset.cursor.read_string()?;
+        let value = asset.read_string()?;
         Ok(AssetObjectProperty {
             name,
             property_guid,
@@ -93,9 +94,9 @@ impl AssetObjectProperty {
 }
 
 impl PropertyTrait for AssetObjectProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -105,15 +106,15 @@ impl PropertyTrait for AssetObjectProperty {
 }
 
 impl SoftObjectProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let value = asset.read_fname()?;
-        let id = asset.cursor.read_u32::<LittleEndian>()?;
+        let id = asset.read_u32::<LittleEndian>()?;
         Ok(SoftObjectProperty {
             name,
             property_guid,
@@ -125,9 +126,9 @@ impl SoftObjectProperty {
 }
 
 impl PropertyTrait for SoftObjectProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

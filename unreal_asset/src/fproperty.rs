@@ -1,10 +1,11 @@
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::cursor_ext::CursorExt;
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
 use crate::unreal_types::{FName, PackageIndex, ToFName};
-use crate::Asset;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use enum_dispatch::enum_dispatch;
 use std::io::Cursor;
 
@@ -16,7 +17,7 @@ macro_rules! parse_simple_property {
         }
 
         impl $prop_name {
-            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                 })
@@ -24,7 +25,11 @@ macro_rules! parse_simple_property {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            fn write<Writer: AssetWriter>(
+                &self,
+                asset: &Writer,
+                cursor: &mut Cursor<Vec<u8>>,
+            ) -> Result<(), Error> {
                 self.generic_property.write(asset, cursor)?;
                 Ok(())
             }
@@ -43,18 +48,18 @@ macro_rules! parse_simple_property_index {
         }
 
         impl $prop_name {
-            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                     $(
-                        $index_name: PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?),
+                        $index_name: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
                     )*
                 })
             }
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            fn write<Writer: AssetWriter>(&self, asset: &Writer, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
                 self.generic_property.write(asset, cursor)?;
                 $(
                     cursor.write_i32::<LittleEndian>(self.$index_name.index)?;
@@ -76,7 +81,7 @@ macro_rules! parse_simple_property_prop {
         }
 
         impl $prop_name {
-            pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                     $(
@@ -87,7 +92,7 @@ macro_rules! parse_simple_property_prop {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+            fn write<Writer: AssetWriter>(&self, asset: &Writer, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
                 self.generic_property.write(asset, cursor)?;
                 $(
                     FProperty::write(self.$prop.as_ref(), asset, cursor)?;
@@ -100,7 +105,11 @@ macro_rules! parse_simple_property_prop {
 
 #[enum_dispatch]
 pub trait FPropertyTrait {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error>;
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error>;
 }
 
 #[enum_dispatch(FPropertyTrait)]
@@ -153,7 +162,7 @@ impl Clone for FProperty {
 }
 
 impl FProperty {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let serialized_type = asset.read_fname()?;
         let res: FProperty = match serialized_type.content.as_str() {
             "EnumProperty" => FEnumProperty::new(asset)?.into(),
@@ -182,9 +191,9 @@ impl FProperty {
         Ok(res)
     }
 
-    pub fn write(
+    pub fn write<Writer: AssetWriter>(
         property: &FProperty,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
     ) -> Result<(), Error> {
         asset.write_fname(cursor, &property.to_fname())?;
@@ -257,22 +266,21 @@ pub struct FBoolProperty {
 }
 
 impl FGenericProperty {
-    pub fn with_serialized_type(
-        asset: &mut Asset,
+    pub fn with_serialized_type<Reader: AssetReader>(
+        asset: &mut Reader,
         serialized_type: Option<FName>,
     ) -> Result<Self, Error> {
         let name = asset.read_fname()?;
-        let flags: EObjectFlags = EObjectFlags::from_bits(asset.cursor.read_u32::<LittleEndian>()?)
+        let flags: EObjectFlags = EObjectFlags::from_bits(asset.read_u32::<LittleEndian>()?)
             .ok_or_else(|| Error::invalid_file("Invalid object flags".to_string()))?; // todo: maybe other error type than invalid_file?
-        let array_dim: EArrayDim = asset.cursor.read_i32::<LittleEndian>()?.try_into()?;
-        let element_size = asset.cursor.read_i32::<LittleEndian>()?;
+        let array_dim: EArrayDim = asset.read_i32::<LittleEndian>()?.try_into()?;
+        let element_size = asset.read_i32::<LittleEndian>()?;
         let property_flags: EPropertyFlags =
-            EPropertyFlags::from_bits(asset.cursor.read_u64::<LittleEndian>()?)
+            EPropertyFlags::from_bits(asset.read_u64::<LittleEndian>()?)
                 .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
-        let rep_index = asset.cursor.read_u16::<LittleEndian>()?;
+        let rep_index = asset.read_u16::<LittleEndian>()?;
         let rep_notify_func = asset.read_fname()?;
-        let blueprint_replication_condition: ELifetimeCondition =
-            asset.cursor.read_u8()?.try_into()?;
+        let blueprint_replication_condition: ELifetimeCondition = asset.read_u8()?.try_into()?;
 
         Ok(FGenericProperty {
             name,
@@ -287,13 +295,17 @@ impl FGenericProperty {
         })
     }
 
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         FGenericProperty::with_serialized_type(asset, None)
     }
 }
 
 impl FPropertyTrait for FGenericProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         asset.write_fname(cursor, &self.name)?;
         cursor.write_u32::<LittleEndian>(self.flags.bits())?;
         cursor.write_i32::<LittleEndian>(self.array_dim.into())?;
@@ -307,9 +319,9 @@ impl FPropertyTrait for FGenericProperty {
 }
 
 impl FEnumProperty {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
-        let enum_value = PackageIndex::new(asset.cursor.read_i32::<LittleEndian>()?);
+        let enum_value = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
         let underlying_prop = FProperty::new(asset)?;
 
         Ok(FEnumProperty {
@@ -321,7 +333,11 @@ impl FEnumProperty {
 }
 
 impl FPropertyTrait for FEnumProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.generic_property.write(asset, cursor)?;
         cursor.write_i32::<LittleEndian>(self.enum_value.index)?;
         FProperty::write(self.underlying_prop.as_ref(), asset, cursor)?;
@@ -330,14 +346,14 @@ impl FPropertyTrait for FEnumProperty {
 }
 
 impl FBoolProperty {
-    pub fn new(asset: &mut Asset) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
-        let field_size = asset.cursor.read_u8()?;
-        let byte_offset = asset.cursor.read_u8()?;
-        let byte_mask = asset.cursor.read_u8()?;
-        let field_mask = asset.cursor.read_u8()?;
-        let native_bool = asset.cursor.read_bool()?;
-        let value = asset.cursor.read_bool()?;
+        let field_size = asset.read_u8()?;
+        let byte_offset = asset.read_u8()?;
+        let byte_mask = asset.read_u8()?;
+        let field_mask = asset.read_u8()?;
+        let native_bool = asset.read_bool()?;
+        let value = asset.read_bool()?;
 
         Ok(FBoolProperty {
             generic_property,
@@ -352,7 +368,11 @@ impl FBoolProperty {
 }
 
 impl FPropertyTrait for FBoolProperty {
-    fn write(&self, asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         self.generic_property.write(asset, cursor)?;
         cursor.write_u8(self.field_size)?;
         cursor.write_u8(self.byte_offset)?;

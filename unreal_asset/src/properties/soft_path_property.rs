@@ -1,5 +1,7 @@
 use std::io::Cursor;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
@@ -8,7 +10,6 @@ use crate::{
         cursor_ext::CursorExt,
         ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH,
         unreal_types::{FName, Guid},
-        Asset,
     },
 };
 
@@ -48,8 +49,8 @@ impl_property_data_trait!(SoftClassPathProperty);
 macro_rules! impl_soft_path_property {
     ($property_name:ident) => {
         impl $property_name {
-            pub fn new(
-                asset: &mut Asset,
+            pub fn new<Reader: AssetReader>(
+                asset: &mut Reader,
                 name: FName,
                 include_header: bool,
                 _length: i64,
@@ -61,11 +62,11 @@ macro_rules! impl_soft_path_property {
                 let mut asset_path_name = None;
                 let mut sub_path = None;
 
-                if asset.engine_version < VER_UE4_ADDED_SOFT_OBJECT_PATH {
-                    path = asset.cursor.read_string()?;
+                if asset.get_engine_version() < VER_UE4_ADDED_SOFT_OBJECT_PATH {
+                    path = asset.read_string()?;
                 } else {
                     asset_path_name = Some(asset.read_fname()?);
-                    sub_path = asset.cursor.read_string()?;
+                    sub_path = asset.read_string()?;
                 }
 
                 Ok($property_name {
@@ -80,15 +81,15 @@ macro_rules! impl_soft_path_property {
         }
 
         impl PropertyTrait for $property_name {
-            fn write(
+            fn write<Writer: AssetWriter>(
                 &self,
-                asset: &Asset,
+                asset: &Writer,
                 cursor: &mut Cursor<Vec<u8>>,
                 include_header: bool,
             ) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, cursor, include_header);
                 let begin = cursor.position();
-                if asset.engine_version < VER_UE4_ADDED_SOFT_OBJECT_PATH {
+                if asset.get_engine_version() < VER_UE4_ADDED_SOFT_OBJECT_PATH {
                     cursor.write_string(&self.path)?;
                 } else {
                     asset.write_fname(

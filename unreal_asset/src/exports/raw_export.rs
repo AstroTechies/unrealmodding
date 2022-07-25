@@ -1,8 +1,9 @@
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::exports::base_export::BaseExport;
 use crate::exports::{ExportBaseTrait, ExportTrait};
-use crate::Asset;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Write};
 
 use super::ExportNormalTrait;
 
@@ -34,10 +35,12 @@ impl ExportBaseTrait for RawExport {
 }
 
 impl RawExport {
-    pub fn from_base(base: BaseExport, asset: &mut Asset) -> Result<Self, Error> {
-        let cursor = &mut asset.cursor;
+    pub fn from_base<Reader: AssetReader>(
+        base: BaseExport,
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let mut data = vec![0u8; base.serial_size as usize];
-        cursor.read_exact(&mut data)?;
+        asset.read_exact(&mut data)?;
 
         Ok(RawExport {
             base_export: base,
@@ -47,7 +50,11 @@ impl RawExport {
 }
 
 impl ExportTrait for RawExport {
-    fn write(&self, _asset: &Asset, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(
+        &self,
+        _asset: &Writer,
+        cursor: &mut Cursor<Vec<u8>>,
+    ) -> Result<(), Error> {
         cursor.write_all(&self.data)?;
         Ok(())
     }

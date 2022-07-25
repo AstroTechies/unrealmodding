@@ -1,7 +1,9 @@
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::PropertyError;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::Error;
@@ -10,7 +12,6 @@ use crate::{
     {
         custom_version::FAnimPhysObjectVersion,
         unreal_types::{FName, Guid},
-        Asset,
     },
 };
 
@@ -27,8 +28,8 @@ pub struct SmartNameProperty {
 impl_property_data_trait!(SmartNameProperty);
 
 impl SmartNameProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -44,12 +45,12 @@ impl SmartNameProperty {
         let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
 
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
-            smart_name_id = Some(asset.cursor.read_u16::<LittleEndian>()?);
+            smart_name_id = Some(asset.read_u16::<LittleEndian>()?);
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
             let mut guid = [0u8; 16];
-            asset.cursor.read_exact(&mut guid)?;
+            asset.read_exact(&mut guid)?;
             temp_guid = Some(guid);
         }
 
@@ -65,9 +66,9 @@ impl SmartNameProperty {
 }
 
 impl PropertyTrait for SmartNameProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

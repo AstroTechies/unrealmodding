@@ -1,14 +1,13 @@
 use std::io::Cursor;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::unreal_types::ToFName;
 use crate::{
     impl_property_data_trait,
-    {
-        unreal_types::{FName, Guid},
-        Asset,
-    },
+    unreal_types::{FName, Guid},
 };
 
 use super::array_property::ArrayProperty;
@@ -25,8 +24,8 @@ pub struct SetProperty {
 impl_property_data_trait!(SetProperty);
 
 impl SetProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         length: i64,
@@ -74,9 +73,9 @@ impl SetProperty {
 }
 
 impl PropertyTrait for SetProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {

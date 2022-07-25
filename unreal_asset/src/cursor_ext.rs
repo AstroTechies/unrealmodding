@@ -3,13 +3,10 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
 use super::error::Error;
-use super::types::Vector;
 
 pub trait CursorExt {
     fn read_string(&mut self) -> Result<Option<String>, Error>;
     fn read_bool(&mut self) -> Result<bool, Error>;
-    fn read_vector(&mut self) -> Result<Vector<f32>, Error>;
-    fn read_int_vector(&mut self) -> Result<Vector<i32>, Error>;
 
     fn write_string(&mut self, string: &Option<String>) -> Result<usize, Error>;
     fn write_bool(&mut self, value: bool) -> Result<(), Error>;
@@ -36,22 +33,6 @@ impl CursorExt for Cursor<Vec<u8>> {
     fn read_bool(&mut self) -> Result<bool, Error> {
         let res = self.read_u8()?;
         Ok(res > 0)
-    }
-
-    fn read_vector(&mut self) -> Result<Vector<f32>, Error> {
-        Ok(Vector::new(
-            self.read_f32::<LittleEndian>()?,
-            self.read_f32::<LittleEndian>()?,
-            self.read_f32::<LittleEndian>()?,
-        ))
-    }
-
-    fn read_int_vector(&mut self) -> Result<Vector<i32>, Error> {
-        Ok(Vector::new(
-            self.read_i32::<LittleEndian>()?,
-            self.read_i32::<LittleEndian>()?,
-            self.read_i32::<LittleEndian>()?,
-        ))
     }
 
     fn write_string(&mut self, string: &Option<String>) -> Result<usize, Error> {

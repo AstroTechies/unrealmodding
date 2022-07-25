@@ -1,9 +1,11 @@
 use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, WriteBytesExt};
 use ordered_float::OrderedFloat;
 
+use crate::asset_reader::AssetReader;
+use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::{
@@ -11,7 +13,6 @@ use crate::{
     {
         cursor_ext::CursorExt,
         unreal_types::{FName, Guid},
-        Asset,
     },
 };
 
@@ -43,8 +44,8 @@ pub struct PerPlatformFloatProperty {
 impl_property_data_trait!(PerPlatformFloatProperty);
 
 impl PerPlatformBoolProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -52,11 +53,11 @@ impl PerPlatformBoolProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LittleEndian>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
-            value.push(asset.cursor.read_bool()?);
+            value.push(asset.read_bool()?);
         }
 
         Ok(PerPlatformBoolProperty {
@@ -69,9 +70,9 @@ impl PerPlatformBoolProperty {
 }
 
 impl PropertyTrait for PerPlatformBoolProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -85,8 +86,8 @@ impl PropertyTrait for PerPlatformBoolProperty {
 }
 
 impl PerPlatformIntProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -94,11 +95,11 @@ impl PerPlatformIntProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LittleEndian>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
-            value.push(asset.cursor.read_i32::<LittleEndian>()?);
+            value.push(asset.read_i32::<LittleEndian>()?);
         }
 
         Ok(PerPlatformIntProperty {
@@ -111,9 +112,9 @@ impl PerPlatformIntProperty {
 }
 
 impl PropertyTrait for PerPlatformIntProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
@@ -127,8 +128,8 @@ impl PropertyTrait for PerPlatformIntProperty {
 }
 
 impl PerPlatformFloatProperty {
-    pub fn new(
-        asset: &mut Asset,
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
         name: FName,
         include_header: bool,
         _length: i64,
@@ -136,11 +137,11 @@ impl PerPlatformFloatProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.cursor.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LittleEndian>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
-            value.push(OrderedFloat(asset.cursor.read_f32::<LittleEndian>()?));
+            value.push(OrderedFloat(asset.read_f32::<LittleEndian>()?));
         }
 
         Ok(PerPlatformFloatProperty {
@@ -153,9 +154,9 @@ impl PerPlatformFloatProperty {
 }
 
 impl PropertyTrait for PerPlatformFloatProperty {
-    fn write(
+    fn write<Writer: AssetWriter>(
         &self,
-        asset: &Asset,
+        asset: &Writer,
         cursor: &mut Cursor<Vec<u8>>,
         include_header: bool,
     ) -> Result<usize, Error> {
