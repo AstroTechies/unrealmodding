@@ -1,13 +1,11 @@
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
-use crate::cursor_ext::CursorExt;
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::{FName, PackageIndex, ToFName};
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
-use std::io::Cursor;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
@@ -25,12 +23,8 @@ macro_rules! parse_simple_property {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: AssetWriter>(
-                &self,
-                asset: &Writer,
-                cursor: &mut Cursor<Vec<u8>>,
-            ) -> Result<(), Error> {
-                self.generic_property.write(asset, cursor)?;
+            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+                self.generic_property.write(asset)?;
                 Ok(())
             }
         }
@@ -59,10 +53,10 @@ macro_rules! parse_simple_property_index {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: AssetWriter>(&self, asset: &Writer, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-                self.generic_property.write(asset, cursor)?;
+            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+                self.generic_property.write(asset)?;
                 $(
-                    cursor.write_i32::<LittleEndian>(self.$index_name.index)?;
+                    asset.write_i32::<LittleEndian>(self.$index_name.index)?;
                 )*
                 Ok(())
             }
@@ -92,10 +86,10 @@ macro_rules! parse_simple_property_prop {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: AssetWriter>(&self, asset: &Writer, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-                self.generic_property.write(asset, cursor)?;
+            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+                self.generic_property.write(asset)?;
                 $(
-                    FProperty::write(self.$prop.as_ref(), asset, cursor)?;
+                    FProperty::write(self.$prop.as_ref(), asset)?;
                 )*
                 Ok(())
             }
@@ -105,11 +99,7 @@ macro_rules! parse_simple_property_prop {
 
 #[enum_dispatch]
 pub trait FPropertyTrait {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error>;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
 #[enum_dispatch(FPropertyTrait)]
@@ -193,11 +183,10 @@ impl FProperty {
 
     pub fn write<Writer: AssetWriter>(
         property: &FProperty,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
     ) -> Result<(), Error> {
-        asset.write_fname(cursor, &property.to_fname())?;
-        property.write(asset, cursor)
+        asset.write_fname(&property.to_fname())?;
+        property.write(asset)
     }
 }
 
@@ -301,19 +290,15 @@ impl FGenericProperty {
 }
 
 impl FPropertyTrait for FGenericProperty {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        asset.write_fname(cursor, &self.name)?;
-        cursor.write_u32::<LittleEndian>(self.flags.bits())?;
-        cursor.write_i32::<LittleEndian>(self.array_dim.into())?;
-        cursor.write_i32::<LittleEndian>(self.element_size)?;
-        cursor.write_u64::<LittleEndian>(self.property_flags.bits())?;
-        cursor.write_u16::<LittleEndian>(self.rep_index)?;
-        asset.write_fname(cursor, &self.rep_notify_func)?;
-        cursor.write_u8(self.blueprint_replication_condition.into())?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        asset.write_fname(&self.name)?;
+        asset.write_u32::<LittleEndian>(self.flags.bits())?;
+        asset.write_i32::<LittleEndian>(self.array_dim.into())?;
+        asset.write_i32::<LittleEndian>(self.element_size)?;
+        asset.write_u64::<LittleEndian>(self.property_flags.bits())?;
+        asset.write_u16::<LittleEndian>(self.rep_index)?;
+        asset.write_fname(&self.rep_notify_func)?;
+        asset.write_u8(self.blueprint_replication_condition.into())?;
         Ok(())
     }
 }
@@ -333,14 +318,10 @@ impl FEnumProperty {
 }
 
 impl FPropertyTrait for FEnumProperty {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.generic_property.write(asset, cursor)?;
-        cursor.write_i32::<LittleEndian>(self.enum_value.index)?;
-        FProperty::write(self.underlying_prop.as_ref(), asset, cursor)?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.generic_property.write(asset)?;
+        asset.write_i32::<LittleEndian>(self.enum_value.index)?;
+        FProperty::write(self.underlying_prop.as_ref(), asset)?;
         Ok(())
     }
 }
@@ -368,18 +349,14 @@ impl FBoolProperty {
 }
 
 impl FPropertyTrait for FBoolProperty {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.generic_property.write(asset, cursor)?;
-        cursor.write_u8(self.field_size)?;
-        cursor.write_u8(self.byte_offset)?;
-        cursor.write_u8(self.byte_mask)?;
-        cursor.write_u8(self.field_mask)?;
-        cursor.write_bool(self.native_bool)?;
-        cursor.write_bool(self.value)?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.generic_property.write(asset)?;
+        asset.write_u8(self.field_size)?;
+        asset.write_u8(self.byte_offset)?;
+        asset.write_u8(self.byte_mask)?;
+        asset.write_u8(self.field_mask)?;
+        asset.write_bool(self.native_bool)?;
+        asset.write_bool(self.value)?;
         Ok(())
     }
 }

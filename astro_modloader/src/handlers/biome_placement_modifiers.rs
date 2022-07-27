@@ -9,6 +9,7 @@ use unreal_asset::{
     cast,
     exports::ExportNormalTrait,
     properties::{object_property::ObjectProperty, Property, PropertyDataTrait},
+    reader::asset_trait::AssetTrait,
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     Import,
@@ -20,10 +21,8 @@ use super::MAP_PATHS;
 
 #[derive(Deserialize, Serialize, Debug)]
 enum BiomeType {
-    #[serde(rename = "Surface")]
-    SURFACE,
-    #[serde(rename = "Crust")]
-    CRUST,
+    Surface,
+    Crust,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -96,14 +95,14 @@ pub(crate) fn handle_biome_placement_modifiers(
                 asset.add_fname("Package");
                 asset.add_fname("/Script/Terrain2");
                 asset.add_fname("ProceduralModifier");
-                asset.add_fname(&placement_path);
+                asset.add_fname(placement_path);
                 asset.add_fname(placement_name);
 
                 let package_import = Import {
                     class_package: FName::from_slice("/Script/CoreUObject"),
                     class_name: FName::from_slice("Package"),
                     outer_index: PackageIndex::new(0),
-                    object_name: FName::from_slice(&placement_path),
+                    object_name: FName::from_slice(placement_path),
                 };
                 let package_import = asset.add_import(package_import);
 
@@ -133,8 +132,8 @@ pub(crate) fn handle_biome_placement_modifiers(
                 .unwrap();
 
             let biome_property_name = match modifier.biome_type {
-                BiomeType::SURFACE => "SurfaceBiomes",
-                BiomeType::CRUST => "CrustBiome",
+                BiomeType::Surface => "SurfaceBiomes",
+                BiomeType::Crust => "CrustBiome",
             };
 
             let mut biome_property_index = None;
@@ -167,8 +166,7 @@ pub(crate) fn handle_biome_placement_modifiers(
                     e.value
                         .iter()
                         .filter_map(|e| cast!(Property, NameProperty, e))
-                        .find(|e| e.value.content == modifier.biome_name)
-                        .is_some()
+                        .any(|e| e.value.content == modifier.biome_name)
                 })
                 .ok_or_else(|| {
                     io::Error::new(
@@ -181,8 +179,7 @@ pub(crate) fn handle_biome_placement_modifiers(
                 .value
                 .iter_mut()
                 .find(|e| e.get_name().content == "Layers")
-                .map(|e| cast!(Property, ArrayProperty, e))
-                .flatten()
+                .and_then(|e| cast!(Property, ArrayProperty, e))
                 .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted game installation"))?;
 
             let layer = layers
@@ -193,8 +190,7 @@ pub(crate) fn handle_biome_placement_modifiers(
                     e.value
                         .iter()
                         .filter_map(|e| cast!(Property, NameProperty, e))
-                        .find(|e| e.value.content == modifier.layer_name)
-                        .is_some()
+                        .any(|e| e.value.content == modifier.layer_name)
                 })
                 .ok_or_else(|| {
                     io::Error::new(
@@ -210,10 +206,9 @@ pub(crate) fn handle_biome_placement_modifiers(
                 .value
                 .iter_mut()
                 .find(|e| e.get_name().content == "ObjectPlacementModifiers")
-                .map(|e| cast!(Property, ArrayProperty, e))
-                .flatten()
+                .and_then(|e| cast!(Property, ArrayProperty, e))
                 .ok_or_else(|| {
-                    io::Error::new(ErrorKind::Other, format!("Corrupted game installation"))
+                    io::Error::new(ErrorKind::Other, "Corrupted game installation".to_string())
                 })?;
 
             for import_index in &modifier_imports {

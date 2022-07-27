@@ -1,11 +1,11 @@
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::custom_version::FCoreObjectVersion;
 use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
 use crate::implement_get;
-use byteorder::{LittleEndian, WriteBytesExt};
-use std::io::{Cursor, Seek, SeekFrom, Write};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
+use byteorder::LittleEndian;
+use std::io::SeekFrom;
 
 use super::ExportBaseTrait;
 use super::ExportNormalTrait;
@@ -109,56 +109,52 @@ impl StructExport {
 }
 
 impl ExportTrait for StructExport {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.normal_export.write(asset, cursor)?;
-        cursor.write_i32::<LittleEndian>(0)?;
-        self.field.write(asset, cursor)?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.normal_export.write(asset)?;
+        asset.write_i32::<LittleEndian>(0)?;
+        self.field.write(asset)?;
 
-        cursor.write_i32::<LittleEndian>(self.super_struct.index)?;
-        cursor.write_i32::<LittleEndian>(self.children.len() as i32)?;
+        asset.write_i32::<LittleEndian>(self.super_struct.index)?;
+        asset.write_i32::<LittleEndian>(self.children.len() as i32)?;
         for child in &self.children {
-            cursor.write_i32::<LittleEndian>(child.index)?;
+            asset.write_i32::<LittleEndian>(child.index)?;
         }
 
         if asset.get_custom_version::<FCoreObjectVersion>().version
             >= FCoreObjectVersion::FProperties as i32
         {
-            cursor.write_i32::<LittleEndian>(self.loaded_properties.len() as i32)?;
+            asset.write_i32::<LittleEndian>(self.loaded_properties.len() as i32)?;
             for loaded_property in &self.loaded_properties {
-                FProperty::write(loaded_property, asset, cursor)?;
+                FProperty::write(loaded_property, asset)?;
             }
         }
 
         if let Some(bytecode) = &self.script_bytecode {
-            let len_offset_1 = cursor.position();
-            cursor.write_i32::<LittleEndian>(0)?; // total iCode offset; will be filled after serialization
-            let len_offset_2 = cursor.position();
-            cursor.write_i32::<LittleEndian>(0)?; // size on disk; will be filled after serialization
+            let len_offset_1 = asset.position();
+            asset.write_i32::<LittleEndian>(0)?; // total iCode offset; will be filled after serialization
+            let len_offset_2 = asset.position();
+            asset.write_i32::<LittleEndian>(0)?; // size on disk; will be filled after serialization
 
             let mut total_offset = 0;
-            let begin = cursor.position();
+            let begin = asset.position();
             for expression in bytecode {
-                total_offset += KismetExpression::write(expression, asset, cursor)?;
+                total_offset += KismetExpression::write(expression, asset)?;
             }
-            let end = cursor.position();
+            let end = asset.position();
 
             let total_len = end - begin;
-            cursor.seek(SeekFrom::Start(len_offset_1))?;
-            cursor.write_i32::<LittleEndian>(total_offset as i32)?;
-            cursor.seek(SeekFrom::Start(len_offset_2))?;
-            cursor.write_i32::<LittleEndian>(total_len as i32)?;
-            cursor.seek(SeekFrom::Start(end))?;
+            asset.seek(SeekFrom::Start(len_offset_1))?;
+            asset.write_i32::<LittleEndian>(total_offset as i32)?;
+            asset.seek(SeekFrom::Start(len_offset_2))?;
+            asset.write_i32::<LittleEndian>(total_len as i32)?;
+            asset.seek(SeekFrom::Start(end))?;
         } else {
-            cursor.write_i32::<LittleEndian>(self.script_bytecode_size)?;
+            asset.write_i32::<LittleEndian>(self.script_bytecode_size)?;
             let raw_bytecode = self.script_bytecode_raw.as_ref().ok_or_else(|| {
                 Error::no_data("script_bytecode and raw_bytecode are None".to_string())
             })?;
-            cursor.write_i32::<LittleEndian>(raw_bytecode.len() as i32)?;
-            cursor.write_all(raw_bytecode)?;
+            asset.write_i32::<LittleEndian>(raw_bytecode.len() as i32)?;
+            asset.write_all(raw_bytecode)?;
         }
 
         Ok(())

@@ -1,13 +1,12 @@
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::uproperty::{UProperty, UPropertyTrait};
 use crate::Error;
-use byteorder::{LittleEndian, WriteBytesExt};
-use std::io::Cursor;
+use byteorder::LittleEndian;
 
 use super::ExportBaseTrait;
 use super::ExportNormalTrait;
@@ -43,14 +42,10 @@ impl PropertyExport {
 }
 
 impl ExportTrait for PropertyExport {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.normal_export.write(asset, cursor)?;
-        cursor.write_i32::<LittleEndian>(0)?;
-        self.property.write(asset, cursor)?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.normal_export.write(asset)?;
+        asset.write_i32::<LittleEndian>(0)?;
+        self.property.write(asset)?;
         Ok(())
     }
 }

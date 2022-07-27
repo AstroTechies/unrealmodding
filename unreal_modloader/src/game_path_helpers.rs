@@ -75,7 +75,7 @@ pub fn determine_install_path_steam(app_id: u32) -> Result<PathBuf, ModLoaderWar
 }
 
 fn convert_runtime_id(package_id: &str) -> Option<String> {
-    let id_bits: Vec<&str> = package_id.split("_").collect();
+    let id_bits: Vec<&str> = package_id.split('_').collect();
 
     if id_bits.len() >= 2 {
         return Some(format!("{}_{}", id_bits[0], id_bits[id_bits.len() - 1]));
@@ -86,32 +86,31 @@ fn convert_runtime_id(package_id: &str) -> Option<String> {
 pub fn determine_install_path_winstore(vendor: &str) -> Result<MsStoreInfo, ModLoaderWarning> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let packages = hkcu.open_subkey("Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages")
-        .or_else(|_| Err(ModLoaderWarning::winstore_error()))?;
+        .map_err(|_| ModLoaderWarning::winstore_error())?;
 
     let key_name = packages
         .enum_keys()
         .filter_map(|e| e.ok())
-        .filter(|e| e.starts_with(vendor))
-        .next()
-        .ok_or_else(|| ModLoaderWarning::winstore_error())?;
+        .find(|e| e.starts_with(vendor))
+        .ok_or_else(ModLoaderWarning::winstore_error)?;
 
     let key = packages
         .open_subkey(key_name)
-        .or_else(|_| Err(ModLoaderWarning::winstore_error()))?;
+        .map_err(|_| ModLoaderWarning::winstore_error())?;
 
     let package_id: String = key
         .get_value("PackageID")
-        .or_else(|_| Err(ModLoaderWarning::winstore_error()))?;
+        .map_err(|_| ModLoaderWarning::winstore_error())?;
 
     let root_folder: String = key
         .get_value("PackageRootFolder")
-        .or_else(|_| Err(ModLoaderWarning::winstore_error()))?;
+        .map_err(|_| ModLoaderWarning::winstore_error())?;
 
     let runtime_id: String =
-        convert_runtime_id(&package_id).ok_or_else(|| ModLoaderWarning::winstore_error())?;
+        convert_runtime_id(&package_id).ok_or_else(ModLoaderWarning::winstore_error)?;
 
     Ok(MsStoreInfo {
         path: PathBuf::from(root_folder),
-        runtime_id: runtime_id,
+        runtime_id,
     })
 }

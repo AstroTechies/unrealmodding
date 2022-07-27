@@ -3,10 +3,11 @@ use std::io::{self};
 use byteorder::ByteOrder;
 
 use crate::{
-    asset_trait::AssetTrait,
     error::Error,
     unreal_types::{FName, Guid},
 };
+
+use super::asset_trait::AssetTrait;
 
 pub trait AssetReader: AssetTrait {
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error>;

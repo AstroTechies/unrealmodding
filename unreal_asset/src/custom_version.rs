@@ -1,6 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
-use crate::{asset_reader::AssetReader, error::Error};
+use crate::{
+    error::Error,
+    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+};
 
 use super::{
     ue4version,
@@ -85,6 +88,12 @@ impl CustomVersion {
             friendly_name: None,
             version,
         })
+    }
+
+    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+        writer.write_all(&self.guid)?;
+        writer.write_i32::<LittleEndian>(self.version)?;
+        Ok(())
     }
 
     pub fn from_version<T>(version: T) -> Self
@@ -1073,7 +1082,7 @@ impl_custom_version_trait!(
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
-#[derive(IntoPrimitive, TryFromPrimitive, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
+#[derive(IntoPrimitive, TryFromPrimitive, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
 #[repr(i32)]
 pub enum FAssetRegistryVersionType {
     PreVersioning = 0,     // From before file versioning was implemented
@@ -1123,5 +1132,41 @@ impl FAssetRegistryVersionType {
         }
 
         Ok(FAssetRegistryVersionType::LatestVersion)
+    }
+
+    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+        writer.write_all(&(*ASSET_REGISTRY_VERSION_GUID))?;
+        writer.write_i32::<LittleEndian>((*self).into())?;
+        Ok(())
+    }
+}
+
+impl Display for FAssetRegistryVersionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            FAssetRegistryVersionType::PreVersioning => write!(f, "PreVersioning"),
+            FAssetRegistryVersionType::HardSoftDependencies => write!(f, "HardSoftDependencies"),
+            FAssetRegistryVersionType::AddAssetRegistryState => write!(f, "AddAssetRegistryState"),
+            FAssetRegistryVersionType::ChangedAssetData => write!(f, "ChangedAssetData"),
+            FAssetRegistryVersionType::RemovedMD5Hash => write!(f, "RemovedMD5Hash"),
+            FAssetRegistryVersionType::AddedHardManage => write!(f, "AddedHardManage"),
+            FAssetRegistryVersionType::AddedCookedMD5Hash => write!(f, "AddedCookedMD5Hash"),
+            FAssetRegistryVersionType::AddedDependencyFlags => write!(f, "AddedDependencyFlags"),
+            FAssetRegistryVersionType::FixedTags => write!(f, "FixedTags"),
+            FAssetRegistryVersionType::WorkspaceDomain => write!(f, "WorkspaceDomain"),
+            FAssetRegistryVersionType::PackageImportedClasses => {
+                write!(f, "PackageImportedClasses")
+            }
+            FAssetRegistryVersionType::PackageFileSummaryVersionChange => {
+                write!(f, "PackageFileSummaryVersionChange")
+            }
+            FAssetRegistryVersionType::ObjectResourceOptionalVersionChange => {
+                write!(f, "ObjectResourceOptionalVersionChange")
+            }
+            FAssetRegistryVersionType::AddedChunkHashes => write!(f, "AddedChunkHashes"),
+            FAssetRegistryVersionType::ClassPaths => write!(f, "ClassPaths"),
+            FAssetRegistryVersionType::LatestVersion => write!(f, "LatestVersion"),
+            FAssetRegistryVersionType::VersionPlusOne => write!(f, "VersionPlusOne"),
+        }
     }
 }

@@ -4,6 +4,8 @@ use std::{error, fmt::Display, io};
 
 use num_enum::{TryFromPrimitive, TryFromPrimitiveError};
 
+use crate::custom_version::FAssetRegistryVersionType;
+
 #[derive(Debug)]
 pub enum KismetError {
     InvalidToken(Box<str>),
@@ -25,6 +27,41 @@ impl Display for KismetError {
         match *self {
             KismetError::InvalidToken(ref err) => f.write_str(err),
             KismetError::UnknownExpression(ref err) => f.write_str(err),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum RegistryError {
+    InvalidIndex(i32),
+    Version(Box<str>, FAssetRegistryVersionType),
+    Other(Box<str>),
+}
+
+impl RegistryError {
+    pub fn index(index: i32) -> Self {
+        RegistryError::InvalidIndex(index)
+    }
+
+    pub fn version(msg: String, version: FAssetRegistryVersionType) -> Self {
+        RegistryError::Version(msg.into_boxed_str(), version)
+    }
+
+    pub fn other(msg: String) -> Self {
+        RegistryError::Other(msg.into_boxed_str())
+    }
+}
+
+impl Display for RegistryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            RegistryError::InvalidIndex(index) => write!(f, "Invalid index: {}", index),
+            RegistryError::Version(ref msg, version) => write!(
+                f,
+                "Invalid value {} for asset registry with version {}",
+                msg, version
+            ),
+            RegistryError::Other(ref err) => f.write_str(err),
         }
     }
 }
@@ -91,6 +128,7 @@ pub enum ErrorCode {
     Unimplemented(Box<str>),
     Kismet(KismetError),
     Property(PropertyError),
+    Registry(RegistryError),
 }
 
 #[derive(Debug)]
@@ -172,6 +210,14 @@ impl From<PropertyError> for Error {
     }
 }
 
+impl From<RegistryError> for Error {
+    fn from(e: RegistryError) -> Self {
+        Error {
+            code: ErrorCode::Registry(e),
+        }
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.code, f)
@@ -193,6 +239,7 @@ impl Display for ErrorCode {
             ErrorCode::Unimplemented(ref err) => f.write_str(err),
             ErrorCode::Kismet(ref err) => Display::fmt(err, f),
             ErrorCode::Property(ref err) => Display::fmt(err, f),
+            ErrorCode::Registry(ref err) => Display::fmt(err, f),
         }
     }
 }

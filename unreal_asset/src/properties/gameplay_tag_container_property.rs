@@ -1,12 +1,11 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     unreal_types::{FName, Guid},
@@ -49,16 +48,15 @@ impl GameplayTagContainerProperty {
 impl PropertyTrait for GameplayTagContainerProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
 
         let mut total_size = size_of::<i32>();
         for entry in &self.value {
-            asset.write_fname(cursor, entry)?;
+            asset.write_fname(entry)?;
             total_size += size_of::<i32>() * 2;
         }
 

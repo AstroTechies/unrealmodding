@@ -11,6 +11,7 @@ use unreal_asset::{
         array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
         object_property::ObjectProperty, Property, PropertyDataTrait,
     },
+    reader::asset_trait::AssetTrait,
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     Asset, Import,
@@ -168,7 +169,7 @@ pub(crate) fn handle_persistent_actors(
             let mut created_components = Vec::new();
             if let Some(scs_location) = scs_location {
                 let mut known_node_categories = Vec::new();
-                let scs_export: &NormalExport = &actor_asset.exports[scs_location]
+                let scs_export: &NormalExport = actor_asset.exports[scs_location]
                     .get_normal_export()
                     .expect("Corrupted memory");
                 for i in 0..scs_export.properties.len() {
@@ -283,10 +284,8 @@ pub(crate) fn handle_persistent_actors(
                         }
                     }
 
-                    if first_import.is_some() && second_import.is_some() {
-                        let first_import = first_import.unwrap();
-                        let second_import = second_import.unwrap();
-
+                    if let (Some(first_import), Some(second_import)) = (first_import, second_import)
+                    {
                         if asset
                             .find_import(
                                 &second_import.class_package,

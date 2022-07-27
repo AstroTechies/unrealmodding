@@ -45,7 +45,7 @@ impl GetGameBuildTrait<SteamInstallManager> for SteamGetGameBuild {
 
             *self.game_build.borrow_mut() = GameBuild::try_from(&game_build_string).ok();
         }
-        self.game_build.borrow().clone()
+        *self.game_build.borrow()
     }
 }
 

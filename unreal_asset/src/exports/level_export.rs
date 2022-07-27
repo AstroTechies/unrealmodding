@@ -1,16 +1,14 @@
 use super::ExportBaseTrait;
 use super::ExportNormalTrait;
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
-use crate::cursor_ext::CursorExt;
 use crate::error::Error;
 use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::NamespacedString;
-use byteorder::{LittleEndian, WriteBytesExt};
-use std::io::Cursor;
+use byteorder::LittleEndian;
 
 #[derive(Clone)]
 pub struct LevelExport {
@@ -64,30 +62,26 @@ impl LevelExport {
 }
 
 impl ExportTrait for LevelExport {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.normal_export.write(asset, cursor)?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.normal_export.write(asset)?;
 
-        cursor.write_i32::<LittleEndian>(0)?;
-        cursor.write_i32::<LittleEndian>(self.index_data.len() as i32)?;
+        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LittleEndian>(self.index_data.len() as i32)?;
         for index in &self.index_data {
-            cursor.write_i32::<LittleEndian>(*index)?;
+            asset.write_i32::<LittleEndian>(*index)?;
         }
 
-        cursor.write_string(&self.level_type.namespace)?;
-        cursor.write_i32::<LittleEndian>(0)?;
-        cursor.write_string(&self.level_type.value)?;
+        asset.write_string(&self.level_type.namespace)?;
+        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_string(&self.level_type.value)?;
 
-        cursor.write_u64::<LittleEndian>(0)?;
-        cursor.write_u64::<LittleEndian>(self.flags_probably)?;
+        asset.write_u64::<LittleEndian>(0)?;
+        asset.write_u64::<LittleEndian>(self.flags_probably)?;
 
         for data in &self.misc_category_data {
-            cursor.write_i32::<LittleEndian>(*data)?;
+            asset.write_i32::<LittleEndian>(*data)?;
         }
-        cursor.write_u8(0)?;
+        asset.write_u8(0)?;
         Ok(())
     }
 }

@@ -91,17 +91,18 @@ impl MsStoreInstallManager {
 
 impl InstallManager for MsStoreInstallManager {
     fn get_game_install_path(&self) -> Option<PathBuf> {
-        self.get_store_info().map(|e| e.path).clone()
+        self.get_store_info().map(|e| e.path)
     }
 
     fn get_paks_path(&self) -> Option<PathBuf> {
-        let store_info = self.get_store_info();
-        if self.mods_path.borrow().is_none() && store_info.is_some() {
-            *self.mods_path.borrow_mut() =
-                game_path_helpers::determine_installed_mods_path_winstore(
-                    &store_info.unwrap(),
-                    self.game_name,
-                );
+        if let Some(store_info) = self.get_store_info() {
+            if self.mods_path.borrow().is_none() {
+                *self.mods_path.borrow_mut() =
+                    game_path_helpers::determine_installed_mods_path_winstore(
+                        &store_info,
+                        self.game_name,
+                    );
+            }
         }
         self.mods_path.borrow().clone()
     }
@@ -114,11 +115,11 @@ impl InstallManager for MsStoreInstallManager {
             appx_manifest.read_to_string(&mut manifest_data).ok()?;
 
             let matches = game_path_helpers::APPX_MANIFEST_VERSION_REGEX.captures(&manifest_data);
-            let version_match = matches.map(|e| e.get(e.len() - 1)).flatten()?;
+            let version_match = matches.and_then(|e| e.get(e.len() - 1))?;
             let game_build = GameBuild::try_from(&version_match.as_str().to_string()).ok();
             *self.game_build.borrow_mut() = game_build;
         }
 
-        self.game_build.borrow().clone()
+        *self.game_build.borrow()
     }
 }

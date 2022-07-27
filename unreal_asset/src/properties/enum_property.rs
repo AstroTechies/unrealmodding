@@ -1,10 +1,9 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait,
     unreal_types::{FName, Guid},
@@ -47,20 +46,18 @@ impl EnumProperty {
 impl PropertyTrait for EnumProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         if include_header {
             asset.write_fname(
-                cursor,
                 self.enum_type
                     .as_ref()
                     .ok_or_else(PropertyError::headerless)?,
             )?;
-            asset.write_property_guid(cursor, &self.property_guid)?;
+            asset.write_property_guid(&self.property_guid)?;
         }
-        asset.write_fname(cursor, &self.value)?;
+        asset.write_fname(&self.value)?;
 
         Ok(size_of::<i32>() * 2)
     }

@@ -1,7 +1,8 @@
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
 use crate::{
-    asset_reader::AssetReader, asset_writer::AssetWriter, error::Error, flags::EFunctionFlags,
+    error::Error, flags::EFunctionFlags, reader::asset_reader::AssetReader,
+    reader::asset_writer::AssetWriter,
 };
 
 use super::{
@@ -31,13 +32,9 @@ impl FunctionExport {
 }
 
 impl ExportTrait for FunctionExport {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut std::io::Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.struct_export.write(asset, cursor)?;
-        cursor.write_u32::<LittleEndian>(self.function_flags.bits())?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.struct_export.write(asset)?;
+        asset.write_u32::<LittleEndian>(self.function_flags.bits())?;
         Ok(())
     }
 }

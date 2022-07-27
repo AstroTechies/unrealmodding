@@ -95,6 +95,7 @@ where
     let should_exit = Arc::new(AtomicBool::new(false));
     let ready_exit = Arc::new(AtomicBool::new(false));
     let should_integrate = Arc::new(AtomicBool::new(true));
+    let last_integration_time = Arc::new(Mutex::new(Instant::now()));
     let reloading = Arc::new(AtomicBool::new(true));
     let working = Arc::new(AtomicBool::new(true));
 
@@ -106,7 +107,10 @@ where
 
         should_exit: Arc::clone(&should_exit),
         ready_exit: Arc::clone(&ready_exit),
+
         should_integrate: Arc::clone(&should_integrate),
+        last_integration_time: Arc::clone(&last_integration_time),
+
         reloading: Arc::clone(&reloading),
         working: Arc::clone(&working),
 
@@ -144,8 +148,7 @@ where
 
                     let data_guard = data.lock().unwrap();
                     let mods_path = data_guard.mods_path.to_owned();
-                    if mods_path.is_some() {
-                        let mods_path = mods_path.unwrap();
+                    if let Some(mods_path) = mods_path {
                         drop(data_guard);
 
                         let startup_work = || -> Result<(), ModLoaderError> {
@@ -292,7 +295,7 @@ where
                         );
 
                         // download mod versions not yet downloaded
-                        let files_to_downlaod: Vec<(String, String)> = mods_to_install
+                        let files_to_download: Vec<(String, String)> = mods_to_install
                             .iter()
                             .filter_map(|m| {
                                 if !m.downloaded && m.download_url.is_some() {
@@ -306,9 +309,9 @@ where
                             })
                             .collect::<Vec<_>>();
 
-                        if !files_to_downlaod.is_empty() {
+                        if !files_to_download.is_empty() {
                             // ? Maybe parallelize this?
-                            for (file_name, url) in &files_to_downlaod {
+                            for (file_name, url) in &files_to_download {
                                 let downlaod = (|| -> Result<(), ModLoaderWarning> {
                                     debug!("Downloading {:?}", file_name);
 
@@ -334,7 +337,7 @@ where
                             }
                             // process newly downlaoded files
                             let warnings = process_modfiles(
-                                &files_to_downlaod
+                                &files_to_download
                                     .iter()
                                     .map(|f| mods_path.clone().join(f.0.clone()))
                                     .collect::<Vec<_>>(),
@@ -374,6 +377,8 @@ where
                             "Integration took {} milliseconds",
                             start.elapsed().as_millis()
                         );
+
+                        *last_integration_time.lock().unwrap() = Instant::now();
 
                         let mut data_guard = data.lock().unwrap();
 

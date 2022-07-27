@@ -1,13 +1,12 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     types::Color,
@@ -53,12 +52,11 @@ impl ColorProperty {
 impl PropertyTrait for ColorProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i32::<LittleEndian>(self.color.to_argb())?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i32::<LittleEndian>(self.color.to_argb())?;
         Ok(size_of::<i32>())
     }
 }
@@ -89,15 +87,14 @@ impl LinearColorProperty {
 impl PropertyTrait for LinearColorProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f32::<LittleEndian>(self.color.r.0)?;
-        cursor.write_f32::<LittleEndian>(self.color.g.0)?;
-        cursor.write_f32::<LittleEndian>(self.color.b.0)?;
-        cursor.write_f32::<LittleEndian>(self.color.a.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f32::<LittleEndian>(self.color.r.0)?;
+        asset.write_f32::<LittleEndian>(self.color.g.0)?;
+        asset.write_f32::<LittleEndian>(self.color.b.0)?;
+        asset.write_f32::<LittleEndian>(self.color.a.0)?;
         Ok(size_of::<f32>() * 4)
     }
 }

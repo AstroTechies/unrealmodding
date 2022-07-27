@@ -1,15 +1,14 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     unreal_types::{FName, Guid},
 };
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
@@ -99,20 +98,19 @@ impl RichCurveKeyProperty {
 impl PropertyTrait for RichCurveKeyProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i8(self.interp_mode.into())?;
-        cursor.write_i8(self.tangent_mode.into())?;
-        cursor.write_i8(self.tangent_weight_mode.into())?;
-        cursor.write_f32::<LittleEndian>(self.time.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.0)?;
-        cursor.write_f32::<LittleEndian>(self.arrive_tangent.0)?;
-        cursor.write_f32::<LittleEndian>(self.arrive_tangent_weight.0)?;
-        cursor.write_f32::<LittleEndian>(self.leave_tangent.0)?;
-        cursor.write_f32::<LittleEndian>(self.leave_tangent_weight.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i8(self.interp_mode.into())?;
+        asset.write_i8(self.tangent_mode.into())?;
+        asset.write_i8(self.tangent_weight_mode.into())?;
+        asset.write_f32::<LittleEndian>(self.time.0)?;
+        asset.write_f32::<LittleEndian>(self.value.0)?;
+        asset.write_f32::<LittleEndian>(self.arrive_tangent.0)?;
+        asset.write_f32::<LittleEndian>(self.arrive_tangent_weight.0)?;
+        asset.write_f32::<LittleEndian>(self.leave_tangent.0)?;
+        asset.write_f32::<LittleEndian>(self.leave_tangent_weight.0)?;
         Ok(size_of::<f32>() * 6 + size_of::<i8>() * 3)
     }
 }

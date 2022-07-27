@@ -1,19 +1,15 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::PackageIndex;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
-    {
-        cursor_ext::CursorExt,
-        unreal_types::{FName, Guid},
-    },
+    unreal_types::{FName, Guid},
 };
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -65,12 +61,11 @@ impl ObjectProperty {
 impl PropertyTrait for ObjectProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i32::<LittleEndian>(self.value.index)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i32::<LittleEndian>(self.value.index)?;
         Ok(size_of::<i32>())
     }
 }
@@ -96,12 +91,11 @@ impl AssetObjectProperty {
 impl PropertyTrait for AssetObjectProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_string(&self.value)
+        optional_guid_write!(self, asset, include_header);
+        asset.write_string(&self.value)
     }
 }
 
@@ -128,13 +122,12 @@ impl SoftObjectProperty {
 impl PropertyTrait for SoftObjectProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        asset.write_fname(cursor, &self.value)?;
-        cursor.write_u32::<LittleEndian>(self.id)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_fname(&self.value)?;
+        asset.write_u32::<LittleEndian>(self.id)?;
         Ok(size_of::<i32>() * 3)
     }
 }

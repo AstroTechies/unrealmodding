@@ -1,13 +1,10 @@
-use std::io::Cursor;
-
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     {
-        cursor_ext::CursorExt,
         ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH,
         unreal_types::{FName, Guid},
     },
@@ -24,7 +21,7 @@ pub struct SoftAssetPathProperty {
 }
 impl_property_data_trait!(SoftAssetPathProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftObjectPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -83,25 +80,21 @@ macro_rules! impl_soft_path_property {
         impl PropertyTrait for $property_name {
             fn write<Writer: AssetWriter>(
                 &self,
-                asset: &Writer,
-                cursor: &mut Cursor<Vec<u8>>,
+                asset: &mut Writer,
                 include_header: bool,
             ) -> Result<usize, Error> {
-                optional_guid_write!(self, asset, cursor, include_header);
-                let begin = cursor.position();
+                optional_guid_write!(self, asset, include_header);
+                let begin = asset.position();
                 if asset.get_engine_version() < VER_UE4_ADDED_SOFT_OBJECT_PATH {
-                    cursor.write_string(&self.path)?;
+                    asset.write_string(&self.path)?;
                 } else {
-                    asset.write_fname(
-                        cursor,
-                        self.asset_path_name.as_ref().ok_or_else(|| {
-                            PropertyError::property_field_none("asset_path_name", "FName")
-                        })?,
-                    )?;
-                    cursor.write_string(&self.sub_path)?;
+                    asset.write_fname(self.asset_path_name.as_ref().ok_or_else(|| {
+                        PropertyError::property_field_none("asset_path_name", "FName")
+                    })?)?;
+                    asset.write_string(&self.sub_path)?;
                 }
 
-                Ok((cursor.position() - begin) as usize)
+                Ok((asset.position() - begin) as usize)
             }
         }
     };

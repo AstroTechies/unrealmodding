@@ -1,13 +1,12 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     unreal_types::{FName, Guid},
@@ -82,22 +81,21 @@ impl WeightedRandomSamplerProperty {
 impl PropertyTrait for WeightedRandomSamplerProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i32::<LittleEndian>(self.prob.len() as i32)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i32::<LittleEndian>(self.prob.len() as i32)?;
         for entry in &self.prob {
-            cursor.write_f32::<LittleEndian>(entry.0)?;
+            asset.write_f32::<LittleEndian>(entry.0)?;
         }
 
-        cursor.write_i32::<LittleEndian>(self.alias.len() as i32)?;
+        asset.write_i32::<LittleEndian>(self.alias.len() as i32)?;
         for entry in &self.alias {
-            cursor.write_i32::<LittleEndian>(*entry)?;
+            asset.write_i32::<LittleEndian>(*entry)?;
         }
 
-        cursor.write_f32::<LittleEndian>(self.total_weight.0)?;
+        asset.write_f32::<LittleEndian>(self.total_weight.0)?;
         Ok(size_of::<i32>()
             + size_of::<f32>() * self.prob.len()
             + size_of::<i32>()
@@ -144,22 +142,21 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
 impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i32::<LittleEndian>(self.prob.len() as i32)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i32::<LittleEndian>(self.prob.len() as i32)?;
         for entry in &self.prob {
-            cursor.write_f32::<LittleEndian>(entry.0)?;
+            asset.write_f32::<LittleEndian>(entry.0)?;
         }
 
-        cursor.write_i32::<LittleEndian>(self.alias.len() as i32)?;
+        asset.write_i32::<LittleEndian>(self.alias.len() as i32)?;
         for entry in &self.alias {
-            cursor.write_i32::<LittleEndian>(*entry)?;
+            asset.write_i32::<LittleEndian>(*entry)?;
         }
 
-        cursor.write_f32::<LittleEndian>(self.total_weight.0)?;
+        asset.write_f32::<LittleEndian>(self.total_weight.0)?;
         Ok(size_of::<i32>()
             + size_of::<f32>() * self.prob.len()
             + size_of::<i32>()
@@ -192,11 +189,10 @@ impl SkeletalMeshSamplingLODBuiltDataProperty {
 impl PropertyTrait for SkeletalMeshSamplingLODBuiltDataProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        self.sampler_property.write(asset, cursor, false)
+        optional_guid_write!(self, asset, include_header);
+        self.sampler_property.write(asset, false)
     }
 }
