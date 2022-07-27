@@ -12,6 +12,7 @@ use unreal_asset::{
         guid_property::GuidProperty, int_property::BoolProperty, object_property::ObjectProperty,
         str_property::NameProperty, struct_property::StructProperty, Property, PropertyDataTrait,
     },
+    reader::asset_trait::AssetTrait,
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     uproperty::UProperty,

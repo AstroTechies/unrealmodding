@@ -11,6 +11,7 @@ use unreal_asset::{
         object_property::{ObjectProperty, SoftObjectProperty},
         Property,
     },
+    reader::asset_trait::AssetTrait,
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     Import,

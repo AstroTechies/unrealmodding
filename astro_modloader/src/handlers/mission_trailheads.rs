@@ -7,6 +7,7 @@ use unreal_asset::{
     cast,
     exports::{Export, ExportNormalTrait},
     properties::{object_property::ObjectProperty, Property},
+    reader::asset_trait::AssetTrait,
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     Import,
@@ -77,10 +78,9 @@ pub(crate) fn handle_mission_trailheads(
             }
         }
 
-        if mission_data_export_index.is_some() && mission_data_property_index.is_some() {
-            let mission_data_export_index = mission_data_export_index.unwrap();
-            let mission_data_property_index = mission_data_property_index.unwrap();
-
+        if let (Some(mission_data_export_index), Some(mission_data_property_index)) =
+            (mission_data_export_index, mission_data_property_index)
+        {
             for trailhead in trailheads {
                 let soft_class_name = Path::new(trailhead)
                     .file_stem()
