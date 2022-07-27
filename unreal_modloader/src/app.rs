@@ -4,6 +4,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
+use std::time::Instant;
 
 use eframe::egui::{Button, Sense};
 use eframe::emath::Align;
@@ -25,6 +26,8 @@ pub(crate) struct ModLoaderApp {
     pub ready_exit: Arc<AtomicBool>,
 
     pub should_integrate: Arc<AtomicBool>,
+    pub last_integration_time: Arc<Mutex<Instant>>,
+
     pub working: Arc<AtomicBool>,
     pub reloading: Arc<AtomicBool>,
 
@@ -121,7 +124,7 @@ impl App for ModLoaderApp {
                         let exists = manager.get_game_install_path().is_some();
 
                         let button = match exists {
-                            true => Button::new(format!("{}", platform)),
+                            true => Button::new(platform.to_string()),
                             false => Button::new(format!("{} (not found)", platform))
                                 .sense(Sense::hover()),
                         };
@@ -327,6 +330,15 @@ impl ModLoaderApp {
         ui.label("Mod config");
         ui.label("TODO");
 
+        ui.label(format!(
+            "Time since last integration {}s",
+            self.last_integration_time
+                .lock()
+                .unwrap()
+                .elapsed()
+                .as_secs()
+        ));
+
         ui.horizontal(|ui| {
             if ui.button("Quit").clicked() {
                 frame.quit();
@@ -373,7 +385,7 @@ impl ModLoaderApp {
     // from https://github.com/emilk/egui/blob/master/examples/file_dialog/src/main.rs
     fn detect_files_being_dropped(&mut self, ctx: &egui::Context) {
         use egui::*;
-
+        #[allow(clippy::format_push_string)]
         // Preview hovering files:
         if !ctx.input().raw.hovered_files.is_empty() {
             let mut text = "Dropping files:\n".to_owned();

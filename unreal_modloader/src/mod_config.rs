@@ -70,13 +70,12 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
         }
         selected_game_platform = config.selected_game_platform;
     }
-    if selected_game_platform.is_none() {
-        if !data.set_game_platform("Steam") {
-            let first_platform = data.install_managers.keys().next().unwrap();
-            data.set_game_platform(first_platform);
-        }
-    } else {
-        data.set_game_platform(&selected_game_platform.unwrap());
+
+    if let Some(selected_game_platform) = selected_game_platform.as_ref() {
+        data.set_game_platform(selected_game_platform);
+    } else if !data.set_game_platform("Steam") {
+        let first_platform = data.install_managers.keys().next().unwrap();
+        data.set_game_platform(first_platform);
     }
 }
 
