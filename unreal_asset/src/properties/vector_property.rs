@@ -1,19 +1,17 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     {
-        cursor_ext::CursorExt,
         types::{Vector, Vector4},
         unreal_types::{FName, Guid},
     },
 };
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -108,14 +106,13 @@ impl VectorProperty {
 impl PropertyTrait for VectorProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f32::<LittleEndian>(self.value.x.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.y.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.z.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f32::<LittleEndian>(self.value.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.z.0)?;
         Ok(size_of::<f32>() * 3)
     }
 }
@@ -144,13 +141,12 @@ impl IntPointProperty {
 impl PropertyTrait for IntPointProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i32::<LittleEndian>(self.x)?;
-        cursor.write_i32::<LittleEndian>(self.y)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i32::<LittleEndian>(self.x)?;
+        asset.write_i32::<LittleEndian>(self.y)?;
         Ok(size_of::<i32>() * 2)
     }
 }
@@ -181,15 +177,14 @@ impl Vector4Property {
 impl PropertyTrait for Vector4Property {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f32::<LittleEndian>(self.value.x.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.y.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.z.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.w.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f32::<LittleEndian>(self.value.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.z.0)?;
+        asset.write_f32::<LittleEndian>(self.value.w.0)?;
         Ok(size_of::<f32>() * 4)
     }
 }
@@ -219,13 +214,12 @@ impl Vector2DProperty {
 impl PropertyTrait for Vector2DProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f32::<LittleEndian>(self.x.0)?;
-        cursor.write_f32::<LittleEndian>(self.y.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f32::<LittleEndian>(self.x.0)?;
+        asset.write_f32::<LittleEndian>(self.y.0)?;
         Ok(size_of::<f32>() * 2)
     }
 }
@@ -257,15 +251,14 @@ impl QuatProperty {
 impl PropertyTrait for QuatProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f32::<LittleEndian>(self.value.x.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.y.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.z.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.w.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f32::<LittleEndian>(self.value.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.z.0)?;
+        asset.write_f32::<LittleEndian>(self.value.w.0)?;
         Ok(size_of::<f32>() * 4)
     }
 }
@@ -296,14 +289,13 @@ impl RotatorProperty {
 impl PropertyTrait for RotatorProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f32::<LittleEndian>(self.value.x.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.y.0)?;
-        cursor.write_f32::<LittleEndian>(self.value.z.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f32::<LittleEndian>(self.value.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.z.0)?;
         Ok(size_of::<f32>() * 3)
     }
 }
@@ -334,14 +326,13 @@ impl BoxProperty {
 impl PropertyTrait for BoxProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        let total_size = self.v1.write(asset, cursor, include_header)?
-            + self.v2.write(asset, cursor, include_header)?;
-        cursor.write_bool(self.is_valid)?;
+        optional_guid_write!(self, asset, include_header);
+        let total_size =
+            self.v1.write(asset, include_header)? + self.v2.write(asset, include_header)?;
+        asset.write_bool(self.is_valid)?;
         Ok(total_size + size_of::<bool>())
     }
 }

@@ -1,17 +1,16 @@
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::custom_version::FCoreObjectVersion;
 use crate::exports::base_export::BaseExport;
 use crate::exports::normal_export::NormalExport;
 use crate::exports::ExportTrait;
 use crate::implement_get;
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::ue4version::{VER_UE4_ENUM_CLASS_SUPPORT, VER_UE4_TIGHTLY_PACKED_ENUMS};
 use crate::unreal_types::FName;
 use crate::Error;
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::collections::HashMap;
-use std::io::Cursor;
 
 use super::ExportBaseTrait;
 use super::ExportNormalTrait;
@@ -73,12 +72,8 @@ impl UEnum {
         Ok(UEnum { names, cpp_form })
     }
 
-    pub fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        cursor.write_i32::<LittleEndian>(self.names.len() as i32)?;
+    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        asset.write_i32::<LittleEndian>(self.names.len() as i32)?;
         if asset.get_engine_version() < VER_UE4_TIGHTLY_PACKED_ENUMS {
             // todo: a better algorithm?
             let mut names_map = HashMap::with_capacity(self.names.len());
@@ -87,30 +82,30 @@ impl UEnum {
             }
             for i in 0..names_map.len() {
                 if let Some(name) = names_map.get(&(i as i64)) {
-                    asset.write_fname(cursor, name)?;
+                    asset.write_fname(name)?;
                 }
             }
         } else if asset.get_custom_version::<FCoreObjectVersion>().version
             < FCoreObjectVersion::EnumProperties as i32
         {
             for (name, index) in &self.names {
-                asset.write_fname(cursor, name)?;
-                cursor.write_u8(*index as u8)?;
+                asset.write_fname(name)?;
+                asset.write_u8(*index as u8)?;
             }
         } else {
             for (name, index) in &self.names {
-                asset.write_fname(cursor, name)?;
-                cursor.write_i64::<LittleEndian>(*index)?;
+                asset.write_fname(name)?;
+                asset.write_i64::<LittleEndian>(*index)?;
             }
         }
 
         if asset.get_engine_version() < VER_UE4_ENUM_CLASS_SUPPORT {
-            cursor.write_i32::<LittleEndian>(match self.cpp_form == ECppForm::Namespaced {
+            asset.write_i32::<LittleEndian>(match self.cpp_form == ECppForm::Namespaced {
                 true => 1,
                 false => 0,
             })?;
         } else {
-            cursor.write_u8(self.cpp_form.into())?;
+            asset.write_u8(self.cpp_form.into())?;
         }
         Ok(())
     }
@@ -142,14 +137,10 @@ impl EnumExport {
 }
 
 impl ExportTrait for EnumExport {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.normal_export.write(asset, cursor)?;
-        cursor.write_i32::<LittleEndian>(0)?;
-        self.value.write(asset, cursor)?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.normal_export.write(asset)?;
+        asset.write_i32::<LittleEndian>(0)?;
+        self.value.write(asset)?;
         Ok(())
     }
 }

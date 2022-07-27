@@ -1,9 +1,7 @@
-use std::io::Cursor;
-
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::ToFName;
 use crate::{
     impl_property_data_trait,
@@ -75,8 +73,7 @@ impl SetProperty {
 impl PropertyTrait for SetProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         let array_type = match !self.value.value.is_empty() {
@@ -85,15 +82,12 @@ impl PropertyTrait for SetProperty {
         };
 
         if include_header {
-            asset.write_fname(
-                cursor,
-                array_type.as_ref().ok_or_else(PropertyError::headerless)?,
-            )?;
-            asset.write_property_guid(cursor, &self.property_guid)?;
+            asset.write_fname(array_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
+            asset.write_property_guid(&self.property_guid)?;
         }
 
-        let removed_items_len = self.removed_items.write_full(asset, cursor, false, false)?;
-        let items_len = self.value.write_full(asset, cursor, false, false)?;
+        let removed_items_len = self.removed_items.write_full(asset, false, false)?;
+        let items_len = self.value.write_full(asset, false, false)?;
         Ok(removed_items_len + items_len)
     }
 }

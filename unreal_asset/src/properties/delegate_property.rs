@@ -1,16 +1,15 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::PackageIndex;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     unreal_types::{FName, Guid},
 };
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub struct MulticastDelegate {
@@ -64,16 +63,15 @@ impl MulticastDelegateProperty {
 impl PropertyTrait for MulticastDelegateProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
+        optional_guid_write!(self, asset, include_header);
 
-        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
         for entry in &self.value {
-            cursor.write_i32::<LittleEndian>(entry.object.index)?;
-            asset.write_fname(cursor, &entry.delegate)?;
+            asset.write_i32::<LittleEndian>(entry.object.index)?;
+            asset.write_fname(&entry.delegate)?;
         }
         Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())
     }

@@ -1,11 +1,10 @@
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::exports::base_export::BaseExport;
 use crate::exports::{ExportBaseTrait, ExportTrait};
 use crate::properties::Property;
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::FName;
-use std::io::Cursor;
 
 use super::ExportNormalTrait;
 
@@ -57,15 +56,11 @@ impl NormalExport {
 }
 
 impl ExportTrait for NormalExport {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         for entry in &self.properties {
-            Property::write(entry, asset, cursor, true)?;
+            Property::write(entry, asset, true)?;
         }
-        asset.write_fname(cursor, &FName::from_slice("None"))?;
+        asset.write_fname(&FName::from_slice("None"))?;
         Ok(())
     }
 }

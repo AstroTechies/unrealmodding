@@ -7,11 +7,11 @@ use std::hash::{Hash, Hasher};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
-use asset_reader::AssetReader;
-use asset_trait::AssetTrait;
-use asset_writer::AssetWriter;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use exports::function_export::FunctionExport;
+use reader::asset_reader::AssetReader;
+use reader::asset_trait::AssetTrait;
+use reader::asset_writer::AssetWriter;
 
 use crate::exports::base_export::BaseExport;
 use crate::exports::class_export::ClassExport;
@@ -44,9 +44,7 @@ use self::exports::{Export, ExportNormalTrait};
 use self::properties::world_tile_property::FWorldTileInfo;
 use self::unreal_types::Guid;
 
-pub mod asset_reader;
-pub mod asset_trait;
-pub mod asset_writer;
+pub mod bitvec_ext;
 mod crc;
 pub mod cursor_ext;
 pub mod custom_version;
@@ -57,6 +55,8 @@ pub mod flags;
 pub mod fproperty;
 pub mod kismet;
 pub mod properties;
+pub mod reader;
+pub mod registry;
 pub mod types;
 pub mod ue4version;
 pub mod unreal_types;
@@ -178,6 +178,138 @@ pub struct Asset {
     //todo: fill out with defaults
     pub map_key_override: HashMap<String, String>,
     pub map_value_override: HashMap<String, String>,
+}
+
+struct AssetSerializer<'asset, 'cursor> {
+    asset: &'asset Asset,
+    cursor: &'cursor mut Cursor<Vec<u8>>,
+}
+
+impl<'asset, 'cursor> AssetSerializer<'asset, 'cursor> {
+    pub fn new(asset: &'asset Asset, cursor: &'cursor mut Cursor<Vec<u8>>) -> Self {
+        AssetSerializer { asset, cursor }
+    }
+}
+
+impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
+    fn get_custom_version<T>(&self) -> CustomVersion
+    where
+        T: CustomVersionTrait + Into<i32>,
+    {
+        self.asset.get_custom_version::<T>()
+    }
+
+    fn position(&self) -> u64 {
+        self.cursor.position()
+    }
+
+    fn set_position(&mut self, pos: u64) {
+        self.cursor.set_position(pos)
+    }
+
+    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
+        self.cursor.seek(style)
+    }
+
+    fn get_map_key_override(&self) -> &HashMap<String, String> {
+        self.asset.get_map_key_override()
+    }
+
+    fn get_map_value_override(&self) -> &HashMap<String, String> {
+        self.asset.get_map_value_override()
+    }
+
+    #[inline(always)]
+    fn get_engine_version(&self) -> i32 {
+        self.asset.get_engine_version()
+    }
+
+    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
+        self.asset.get_import(index)
+    }
+
+    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
+        self.asset.get_export_class_type(index)
+    }
+}
+
+impl<'asset, 'cursor> AssetWriter for AssetSerializer<'asset, 'cursor> {
+    fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
+        if self.asset.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+            self.cursor.write_bool(guid.is_some())?;
+            if let Some(ref data) = guid {
+                self.cursor.write_all(data)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn write_fname(&mut self, fname: &FName) -> Result<(), Error> {
+        self.cursor.write_i32::<LittleEndian>(
+            self.asset
+                .search_name_reference(&fname.content)
+                .ok_or_else(|| {
+                    Error::no_data(format!(
+                        "name reference for {} not found",
+                        fname.content.to_owned()
+                    ))
+                })?,
+        )?;
+        self.cursor.write_i32::<LittleEndian>(fname.index)?;
+        Ok(())
+    }
+
+    fn write_u8(&mut self, value: u8) -> Result<(), io::Error> {
+        self.cursor.write_u8(value)
+    }
+
+    fn write_i8(&mut self, value: i8) -> Result<(), io::Error> {
+        self.cursor.write_i8(value)
+    }
+
+    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> Result<(), io::Error> {
+        self.cursor.write_u16::<T>(value)
+    }
+
+    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> Result<(), io::Error> {
+        self.cursor.write_i16::<T>(value)
+    }
+
+    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> Result<(), io::Error> {
+        self.cursor.write_u32::<T>(value)
+    }
+
+    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> Result<(), io::Error> {
+        self.cursor.write_i32::<T>(value)
+    }
+
+    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> Result<(), io::Error> {
+        self.cursor.write_u64::<T>(value)
+    }
+
+    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> Result<(), io::Error> {
+        self.cursor.write_i64::<T>(value)
+    }
+
+    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> Result<(), io::Error> {
+        self.cursor.write_f32::<T>(value)
+    }
+
+    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> Result<(), io::Error> {
+        self.cursor.write_f64::<T>(value)
+    }
+
+    fn write_string(&mut self, value: &Option<String>) -> Result<usize, Error> {
+        self.cursor.write_string(value)
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), io::Error> {
+        self.cursor.write_all(buf)
+    }
+
+    fn write_bool(&mut self, value: bool) -> Result<(), Error> {
+        self.cursor.write_bool(value)
+    }
 }
 
 impl AssetTrait for Asset {
@@ -337,123 +469,6 @@ impl AssetReader for Asset {
 
     fn read_bool(&mut self) -> Result<bool, Error> {
         self.cursor.read_bool()
-    }
-}
-
-impl AssetWriter for Asset {
-    fn write_property_guid(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        guid: &Option<Guid>,
-    ) -> Result<(), Error> {
-        if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
-            cursor.write_bool(guid.is_some())?;
-            if let Some(ref data) = guid {
-                cursor.write_all(data)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn write_fname(&self, cursor: &mut Cursor<Vec<u8>>, fname: &FName) -> Result<(), Error> {
-        cursor.write_i32::<LittleEndian>(
-            self.search_name_reference(&fname.content).ok_or_else(|| {
-                Error::no_data(format!(
-                    "name reference for {} not found",
-                    fname.content.to_owned()
-                ))
-            })?,
-        )?;
-        cursor.write_i32::<LittleEndian>(fname.index)?;
-        Ok(())
-    }
-
-    fn write_u8(&self, cursor: &mut Cursor<Vec<u8>>, value: u8) -> Result<(), io::Error> {
-        cursor.write_u8(value)
-    }
-
-    fn write_i8(&self, cursor: &mut Cursor<Vec<u8>>, value: i8) -> Result<(), io::Error> {
-        cursor.write_i8(value)
-    }
-
-    fn write_u16<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: u16,
-    ) -> Result<(), io::Error> {
-        cursor.write_u16::<T>(value)
-    }
-
-    fn write_i16<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: i16,
-    ) -> Result<(), io::Error> {
-        cursor.write_i16::<T>(value)
-    }
-
-    fn write_u32<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: u32,
-    ) -> Result<(), io::Error> {
-        cursor.write_u32::<T>(value)
-    }
-
-    fn write_i32<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: i32,
-    ) -> Result<(), io::Error> {
-        cursor.write_i32::<T>(value)
-    }
-
-    fn write_u64<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: u64,
-    ) -> Result<(), io::Error> {
-        cursor.write_u64::<T>(value)
-    }
-
-    fn write_i64<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: i64,
-    ) -> Result<(), io::Error> {
-        cursor.write_i64::<T>(value)
-    }
-
-    fn write_f32<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: f32,
-    ) -> Result<(), io::Error> {
-        cursor.write_f32::<T>(value)
-    }
-
-    fn write_f64<T: byteorder::ByteOrder>(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: f64,
-    ) -> Result<(), io::Error> {
-        cursor.write_f64::<T>(value)
-    }
-
-    fn write_string(
-        &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        value: &Option<String>,
-    ) -> Result<usize, Error> {
-        cursor.write_string(value)
-    }
-
-    fn write_all(&self, cursor: &mut Cursor<Vec<u8>>, buf: &[u8]) -> Result<(), io::Error> {
-        cursor.write_all(buf)
-    }
-
-    fn write_bool(&self, cursor: &mut Cursor<Vec<u8>>, value: bool) -> Result<(), Error> {
-        cursor.write_bool(value)
     }
 }
 
@@ -1113,9 +1128,9 @@ impl<'a> Asset {
         Ok(export)
     }
 
-    fn write_header(
+    fn write_header<Writer: AssetWriter>(
         &self,
-        cursor: &mut Cursor<Vec<u8>>,
+        cursor: &mut Writer,
         asset_header: &AssetHeader,
     ) -> Result<(), Error> {
         cursor.write_u32::<BigEndian>(UE4_ASSET_MAGIC)?;
@@ -1225,10 +1240,10 @@ impl<'a> Asset {
         Ok(())
     }
 
-    fn write_export_header(
+    fn write_export_header<Writer: AssetWriter>(
         &self,
         unk: &BaseExport,
-        cursor: &mut Cursor<Vec<u8>>,
+        cursor: &mut Writer,
         serial_size: i64,
         serial_offset: i64,
         first_export_dependency_offset: i32,
@@ -1241,7 +1256,7 @@ impl<'a> Asset {
         }
 
         cursor.write_i32::<LittleEndian>(unk.outer_index.index)?;
-        self.write_fname(cursor, &unk.object_name)?;
+        cursor.write_fname(&unk.object_name)?;
         cursor.write_u32::<LittleEndian>(unk.object_flags)?;
 
         if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
@@ -1326,38 +1341,41 @@ impl<'a> Asset {
             header_offset: self.header_offset,
             bulk_data_start_offset: self.bulk_data_start_offset,
         };
-        self.write_header(cursor, &header)?;
+
+        let mut serializer = AssetSerializer::new(self, cursor);
+
+        self.write_header(&mut serializer, &header)?;
 
         let name_offset = match !self.name_map_index_list.is_empty() {
-            true => cursor.position() as i32,
+            true => serializer.position() as i32,
             false => 0,
         };
 
         for name in &self.name_map_index_list {
-            cursor.write_string(&Some(name.clone()))?;
+            serializer.write_string(&Some(name.clone()))?;
 
             if self.engine_version >= VER_UE4_NAME_HASHES_SERIALIZED {
                 match self.override_name_map_hashes.get(name) {
-                    Some(e) => cursor.write_u32::<LittleEndian>(*e)?,
-                    None => cursor.write_u32::<LittleEndian>(crc::generate_hash(name))?,
+                    Some(e) => serializer.write_u32::<LittleEndian>(*e)?,
+                    None => serializer.write_u32::<LittleEndian>(crc::generate_hash(name))?,
                 };
             }
         }
 
         let import_offset = match !self.imports.is_empty() {
-            true => cursor.position() as i32,
+            true => serializer.position() as i32,
             false => 0,
         };
 
         for import in &self.imports {
-            self.write_fname(cursor, &import.class_package)?;
-            self.write_fname(cursor, &import.class_name)?;
-            cursor.write_i32::<LittleEndian>(import.outer_index.index)?;
-            self.write_fname(cursor, &import.object_name)?;
+            serializer.write_fname(&import.class_package)?;
+            serializer.write_fname(&import.class_name)?;
+            serializer.write_i32::<LittleEndian>(import.outer_index.index)?;
+            serializer.write_fname(&import.object_name)?;
         }
 
         let export_offset = match !self.exports.is_empty() {
-            true => cursor.position() as i32,
+            true => serializer.position() as i32,
             false => 0,
         };
 
@@ -1365,7 +1383,7 @@ impl<'a> Asset {
             let unk: &BaseExport = export.get_base_export();
             self.write_export_header(
                 unk,
-                cursor,
+                &mut serializer,
                 unk.serial_size,
                 unk.serial_offset,
                 unk.first_export_dependency_offset,
@@ -1373,7 +1391,7 @@ impl<'a> Asset {
         }
 
         let depends_offset = match self.depends_map {
-            Some(_) => cursor.position() as i32,
+            Some(_) => serializer.position() as i32,
             None => 0,
         };
 
@@ -1384,45 +1402,45 @@ impl<'a> Asset {
                     Some(e) => e,
                     None => &dummy,
                 };
-                cursor.write_i32::<LittleEndian>(current_data.len() as i32)?;
+                serializer.write_i32::<LittleEndian>(current_data.len() as i32)?;
                 for i in current_data {
-                    cursor.write_i32::<LittleEndian>(*i)?;
+                    serializer.write_i32::<LittleEndian>(*i)?;
                 }
             }
         }
 
         let soft_package_reference_offset = match self.soft_package_reference_list {
-            Some(_) => cursor.position() as i32,
+            Some(_) => serializer.position() as i32,
             None => 0,
         };
 
         if let Some(ref package_references) = self.soft_package_reference_list {
             for reference in package_references {
-                cursor.write_string(&Some(reference.clone()))?;
+                serializer.write_string(&Some(reference.clone()))?;
             }
         }
 
         // todo: asset registry data support
         let asset_registry_data_offset = match self.asset_registry_data_offset != 0 {
-            true => cursor.position() as i32,
+            true => serializer.position() as i32,
             false => 0,
         };
         if self.asset_registry_data_offset != 0 {
-            cursor.write_i32::<LittleEndian>(0)?; // asset registry data length
+            serializer.write_i32::<LittleEndian>(0)?; // asset registry data length
         }
 
         let world_tile_info_offset = match self.world_tile_info {
-            Some(_) => cursor.position() as i32,
+            Some(_) => serializer.position() as i32,
             None => 0,
         };
 
         if let Some(ref world_tile_info) = self.world_tile_info {
-            world_tile_info.write(self, cursor)?;
+            world_tile_info.write(&mut serializer)?;
         }
 
         let mut preload_dependency_count = 0;
         let preload_dependency_offset = match self.use_separate_bulk_data_files {
-            true => cursor.position() as i32,
+            true => serializer.position() as i32,
             false => 0,
         };
 
@@ -1431,19 +1449,19 @@ impl<'a> Asset {
                 let unk_export = export.get_base_export();
 
                 for element in &unk_export.serialization_before_serialization_dependencies {
-                    cursor.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LittleEndian>(element.index)?;
                 }
 
                 for element in &unk_export.create_before_serialization_dependencies {
-                    cursor.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LittleEndian>(element.index)?;
                 }
 
                 for element in &unk_export.serialization_before_create_dependencies {
-                    cursor.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LittleEndian>(element.index)?;
                 }
 
                 for element in &unk_export.create_before_create_dependencies {
-                    cursor.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LittleEndian>(element.index)?;
                 }
 
                 preload_dependency_count += unk_export
@@ -1456,37 +1474,43 @@ impl<'a> Asset {
         }
 
         let header_offset = match !self.exports.is_empty() {
-            true => cursor.position() as i32,
+            true => serializer.position() as i32,
             false => 0,
         };
 
         let mut category_starts = Vec::with_capacity(self.exports.len());
 
-        let final_cursor_pos = cursor.position();
-        let bulk_cursor = match self.use_separate_bulk_data_files {
-            true => uexp_cursor.unwrap(),
-            false => cursor,
+        let final_cursor_pos = serializer.position();
+
+        let mut bulk_serializer = match self.use_separate_bulk_data_files {
+            true => Some(AssetSerializer::new(self, uexp_cursor.unwrap())),
+            false => None,
+        };
+
+        let bulk_serializer = match self.use_separate_bulk_data_files {
+            true => bulk_serializer.as_mut().unwrap(),
+            false => &mut serializer,
         };
 
         for export in &self.exports {
             category_starts.push(match self.use_separate_bulk_data_files {
-                true => bulk_cursor.position() + final_cursor_pos,
-                false => bulk_cursor.position(),
+                true => bulk_serializer.position() + final_cursor_pos,
+                false => bulk_serializer.position(),
             });
-            export.write(self, bulk_cursor)?;
+            export.write(bulk_serializer)?;
             if let Some(normal_export) = export.get_normal_export() {
-                bulk_cursor.write_all(&normal_export.extras)?;
+                bulk_serializer.write_all(&normal_export.extras)?;
             }
         }
-        bulk_cursor.write_all(&[0xc1, 0x83, 0x2a, 0x9e])?;
+        bulk_serializer.write_all(&[0xc1, 0x83, 0x2a, 0x9e])?;
 
         let bulk_data_start_offset = match self.use_separate_bulk_data_files {
-            true => final_cursor_pos as i64 + bulk_cursor.position() as i64,
-            false => cursor.position() as i64,
+            true => final_cursor_pos as i64 + bulk_serializer.position() as i64,
+            false => serializer.position() as i64,
         } - 4;
 
         if !self.exports.is_empty() {
-            cursor.seek(SeekFrom::Start(export_offset as u64))?;
+            serializer.seek(SeekFrom::Start(export_offset as u64))?;
             let mut first_export_dependency_offset = 0;
             for i in 0..self.exports.len() {
                 let unk = &self.exports[i].get_base_export();
@@ -1496,7 +1520,7 @@ impl<'a> Asset {
                 };
                 self.write_export_header(
                     unk,
-                    cursor,
+                    &mut serializer,
                     next_loc - category_starts[i] as i64,
                     category_starts[i] as i64,
                     first_export_dependency_offset,
@@ -1509,7 +1533,7 @@ impl<'a> Asset {
             }
         }
 
-        cursor.seek(SeekFrom::Start(0))?;
+        serializer.seek(SeekFrom::Start(0))?;
 
         let header = AssetHeader {
             name_offset,
@@ -1524,9 +1548,9 @@ impl<'a> Asset {
             header_offset,
             bulk_data_start_offset,
         };
-        self.write_header(cursor, &header)?;
+        self.write_header(&mut serializer, &header)?;
 
-        cursor.seek(SeekFrom::Start(0))?;
+        serializer.seek(SeekFrom::Start(0))?;
         Ok(())
     }
 }
@@ -1631,7 +1655,7 @@ impl EngineVersion {
         Ok(Self::new(major, minor, patch, build, branch))
     }
 
-    fn write(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+    fn write<Writer: AssetWriter>(&self, cursor: &mut Writer) -> Result<(), Error> {
         cursor.write_u16::<LittleEndian>(self.major)?;
         cursor.write_u16::<LittleEndian>(self.minor)?;
         cursor.write_u16::<LittleEndian>(self.patch)?;

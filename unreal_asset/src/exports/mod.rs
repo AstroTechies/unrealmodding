@@ -10,11 +10,9 @@ pub mod raw_export;
 pub mod string_table_export;
 pub mod struct_export;
 
-use std::io::Cursor;
-
 use enum_dispatch::enum_dispatch;
 
-use crate::asset_writer::AssetWriter;
+use crate::reader::asset_writer::AssetWriter;
 
 use self::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
@@ -63,11 +61,7 @@ macro_rules! implement_get {
 
 #[enum_dispatch]
 pub trait ExportTrait {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error>;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
 #[enum_dispatch(ExportTrait, ExportNormalTrait, ExportBaseTrait)]

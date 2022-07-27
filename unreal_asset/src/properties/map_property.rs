@@ -1,11 +1,11 @@
-use std::{collections::HashMap, hash::Hash, io::Cursor};
+use std::{collections::HashMap, hash::Hash};
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::ToFName;
 use crate::{
     impl_property_data_trait,
@@ -142,41 +142,40 @@ impl MapProperty {
 impl PropertyTrait for MapProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         if include_header {
             if let Some(key) = self.value.keys().next() {
-                asset.write_fname(cursor, &key.to_fname())?;
+                asset.write_fname(&key.to_fname())?;
                 let value = self.value.values().next().unwrap();
-                asset.write_fname(cursor, &value.to_fname())?;
+                asset.write_fname(&value.to_fname())?;
             } else {
-                asset.write_fname(cursor, &self.key_type)?;
-                asset.write_fname(cursor, &self.value_type)?
+                asset.write_fname(&self.key_type)?;
+                asset.write_fname(&self.value_type)?
             }
-            asset.write_property_guid(cursor, &self.property_guid)?;
+            asset.write_property_guid(&self.property_guid)?;
         }
 
-        let begin = cursor.position();
-        cursor.write_i32::<LittleEndian>(match self.keys_to_remove {
+        let begin = asset.position();
+        asset.write_i32::<LittleEndian>(match self.keys_to_remove {
             Some(ref e) => e.len(),
             None => 0,
         } as i32)?;
 
         if let Some(ref keys_to_remove) = self.keys_to_remove {
             for key in keys_to_remove {
-                key.write(asset, cursor, false)?;
+                key.write(asset, false)?;
             }
         }
 
-        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
 
         for (key, value) in &self.value {
-            key.write(asset, cursor, false)?;
-            value.write(asset, cursor, false)?;
+            key.write(asset, false)?;
+            value.write(asset, false)?;
         }
 
-        Ok((cursor.position() - begin) as usize)
+        Ok((asset.position() - begin) as usize)
     }
 }

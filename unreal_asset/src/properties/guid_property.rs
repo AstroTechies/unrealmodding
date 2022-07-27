@@ -1,9 +1,7 @@
-use std::io::{Cursor, Write};
-
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     unreal_types::{FName, Guid},
@@ -40,12 +38,11 @@ impl GuidProperty {
 impl PropertyTrait for GuidProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_all(&self.value)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_all(&self.value)?;
         Ok(16)
     }
 }

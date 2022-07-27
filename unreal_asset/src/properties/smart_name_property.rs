@@ -1,11 +1,9 @@
-use std::io::{Cursor, Write};
+use byteorder::LittleEndian;
 
-use byteorder::{LittleEndian, WriteBytesExt};
-
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::PropertyError;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::Error;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
@@ -68,30 +66,29 @@ impl SmartNameProperty {
 impl PropertyTrait for SmartNameProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        let begin = cursor.position();
+        optional_guid_write!(self, asset, include_header);
+        let begin = asset.position();
 
-        asset.write_fname(cursor, &self.display_name)?;
+        asset.write_fname(&self.display_name)?;
 
         let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
-            cursor.write_u16::<LittleEndian>(
+            asset.write_u16::<LittleEndian>(
                 self.smart_name_id
                     .ok_or_else(|| PropertyError::property_field_none("smart_name_id", "u16"))?,
             )?;
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
-            cursor.write_all(
+            asset.write_all(
                 &self
                     .temp_guid
                     .ok_or_else(|| PropertyError::property_field_none("temp_guid", "String"))?,
             )?;
         }
-        Ok((cursor.position() - begin) as usize)
+        Ok((asset.position() - begin) as usize)
     }
 }

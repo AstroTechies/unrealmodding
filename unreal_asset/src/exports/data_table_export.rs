@@ -1,10 +1,8 @@
-use std::io::Cursor;
+use byteorder::LittleEndian;
 
-use byteorder::{LittleEndian, WriteBytesExt};
-
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     implement_get,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait},
@@ -80,12 +78,8 @@ impl DataTableExport {
 }
 
 impl ExportTrait for DataTableExport {
-    fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
-        self.normal_export.write(asset, cursor)?;
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        self.normal_export.write(asset)?;
 
         let mut decided_struct_type = FName::from_slice("Generic");
         for data in &self.normal_export.properties {
@@ -98,11 +92,11 @@ impl ExportTrait for DataTableExport {
                 }
             }
         }
-        cursor.write_i32::<LittleEndian>(0)?;
-        cursor.write_i32::<LittleEndian>(self.table.data.len() as i32)?;
+        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LittleEndian>(self.table.data.len() as i32)?;
         for entry in &self.table.data {
-            asset.write_fname(cursor, &entry.name)?;
-            entry.write_with_type(asset, cursor, false, Some(decided_struct_type.clone()))?;
+            asset.write_fname(&entry.name)?;
+            entry.write_with_type(asset, false, Some(decided_struct_type.clone()))?;
         }
 
         Ok(())

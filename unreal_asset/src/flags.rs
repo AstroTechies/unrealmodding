@@ -293,4 +293,24 @@ bitflags! {
         const FUNC_NETVALIDATE = 0x80000000;
         const FUNC_ALLFLAGS = 0xFFFFFFFF;
     }
+
+    pub struct EDependencyProperty : u32 {
+        const NONE = 0;
+
+        // Package Dependencies
+        const PACKAGE_MASK = 0x7;
+        const HARD = 0x1;			// The target asset must be loaded before the source asset can finish loading. The lack of this property is known as a Soft dependency, and indicates only that the source asset expects the target asset to be loadable on demand.
+        const GAME = 0x2;			// The target asset is needed in the game as well as the editor. The lack of this property is known as an EditorOnly dependency.
+        const BUILD = 0x4;		// Fields on the target asset are used in the transformation of the source asset during cooking in addition to being required in the game or editor. The lack of this property indicates that the target asset is required in game or editor, but is not required during cooking.
+
+        // SearchableName Dependencies
+        const SEARCHABLE_NAME_MASK = 0x0; // None yet
+
+        // ManageDependencies
+        const MANAGE_MASK = 0x8;
+        const DIRECT = 0x8;		// The target asset was specified explicitly as a managee by the source asset. Lack of this property is known as an indirect dependency; the target asset is reachable by following the transitive closure of Direct Manage Dependencies and Package dependencies from the source asset.
+
+        #[allow(clippy::identity_op)]
+        const ALL_MASK = 0x7 | 0x0 | 0x8; // PACKAGE_MASK | SEARCHABLE_NAME_MASK | MANAGE_MASK
+    }
 }

@@ -1,9 +1,7 @@
-use std::io::{Cursor, Write};
-
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait,
     {
@@ -149,20 +147,16 @@ impl StructProperty {
 
     pub fn write_with_type<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
         struct_type: Option<FName>,
     ) -> Result<usize, Error> {
         if include_header {
-            asset.write_fname(
-                cursor,
-                struct_type.as_ref().ok_or_else(PropertyError::headerless)?,
-            )?;
+            asset.write_fname(struct_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
             if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                cursor.write_all(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
+                asset.write_all(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
             }
-            asset.write_property_guid(cursor, &self.property_guid)?;
+            asset.write_property_guid(&self.property_guid)?;
         }
 
         let mut has_custom_serialization = match struct_type {
@@ -188,16 +182,16 @@ impl StructProperty {
                 ))
                 .into());
             }
-            self.value[0].write(asset, cursor, false)
+            self.value[0].write(asset, false)
         } else if self.value.is_empty() && !self.serialize_none {
             Ok(0)
         } else {
-            let begin = cursor.position();
+            let begin = asset.position();
             for entry in &self.value {
-                Property::write(entry, asset, cursor, true)?;
+                Property::write(entry, asset, true)?;
             }
-            asset.write_fname(cursor, &FName::from_slice("None"))?;
-            Ok((cursor.position() - begin) as usize)
+            asset.write_fname(&FName::from_slice("None"))?;
+            Ok((asset.position() - begin) as usize)
         }
     }
 }
@@ -205,10 +199,9 @@ impl StructProperty {
 impl PropertyTrait for StructProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        self.write_with_type(asset, cursor, include_header, self.struct_type.clone())
+        self.write_with_type(asset, include_header, self.struct_type.clone())
     }
 }

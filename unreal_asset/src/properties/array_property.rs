@@ -1,11 +1,11 @@
-use std::io::{Cursor, Seek, SeekFrom, Write};
+use std::io::SeekFrom;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::ue4version::{
     VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG,
 };
@@ -172,8 +172,7 @@ impl ArrayProperty {
 
     pub fn write_full<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
         serialize_structs_differently: bool,
     ) -> Result<usize, Error> {
@@ -183,15 +182,12 @@ impl ArrayProperty {
         };
 
         if include_header {
-            asset.write_fname(
-                cursor,
-                array_type.as_ref().ok_or_else(PropertyError::headerless)?,
-            )?;
-            asset.write_property_guid(cursor, &self.property_guid)?;
+            asset.write_fname(array_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
+            asset.write_property_guid(&self.property_guid)?;
         }
 
-        let begin = cursor.position();
-        cursor.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        let begin = asset.position();
+        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
 
         if (array_type.is_some()
             && array_type.as_ref().unwrap().content.as_str() == "StructProperty")
@@ -215,21 +211,20 @@ impl ArrayProperty {
 
             let mut length_loc = -1;
             if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
-                asset.write_fname(cursor, &property.name)?;
-                asset.write_fname(cursor, &FName::from_slice("StructProperty"))?;
-                length_loc = cursor.position() as i32;
-                cursor.write_i64::<LittleEndian>(0)?;
+                asset.write_fname(&property.name)?;
+                asset.write_fname(&FName::from_slice("StructProperty"))?;
+                length_loc = asset.position() as i32;
+                asset.write_i64::<LittleEndian>(0)?;
                 asset.write_fname(
-                    cursor,
                     property.struct_type.as_ref().ok_or_else(|| {
                         PropertyError::property_field_none("struct_type", "FName")
                     })?,
                 )?;
                 if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                    cursor.write_all(&property.property_guid.unwrap_or_else(default_guid))?;
+                    asset.write_all(&property.property_guid.unwrap_or_else(default_guid))?;
                 }
                 if asset.get_engine_version() >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
-                    cursor.write_u8(0)?;
+                    asset.write_u8(0)?;
                 }
             }
 
@@ -241,13 +236,13 @@ impl ArrayProperty {
                         property.to_fname().content
                     ))),
                 }?;
-                struct_property.write(asset, cursor, false)?;
+                struct_property.write(asset, false)?;
             }
 
             if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
-                let full_len = cursor.position() as i32 - length_loc;
-                let new_loc = cursor.position() as i32;
-                cursor.seek(SeekFrom::Start(length_loc as u64))?;
+                let full_len = asset.position() as i32 - length_loc;
+                let new_loc = asset.position() as i32;
+                asset.seek(SeekFrom::Start(length_loc as u64))?;
                 let length = full_len
                     - 32
                     - match include_header {
@@ -255,25 +250,24 @@ impl ArrayProperty {
                         false => 0,
                     };
 
-                cursor.write_i32::<LittleEndian>(length)?;
-                cursor.seek(SeekFrom::Start(new_loc as u64))?;
+                asset.write_i32::<LittleEndian>(length)?;
+                asset.seek(SeekFrom::Start(new_loc as u64))?;
             }
         } else {
             for entry in &self.value {
-                entry.write(asset, cursor, false)?;
+                entry.write(asset, false)?;
             }
         }
-        Ok((cursor.position() - begin) as usize)
+        Ok((asset.position() - begin) as usize)
     }
 }
 
 impl PropertyTrait for ArrayProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        self.write_full(asset, cursor, include_header, true)
+        self.write_full(asset, include_header, true)
     }
 }

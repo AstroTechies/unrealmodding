@@ -1,11 +1,9 @@
-use std::io::Cursor;
-
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
 use super::vector_property::{BoxProperty, IntPointProperty};
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     custom_version::FFortniteMainBranchObjectVersion,
     types::Vector,
@@ -147,22 +145,18 @@ impl FWorldTileInfo {
         })
     }
 
-    pub fn write<Writer: AssetWriter>(
-        &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
-    ) -> Result<(), Error> {
+    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         if asset
             .get_custom_version::<FFortniteMainBranchObjectVersion>()
             .version
             < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32
         {
-            cursor.write_i32::<LittleEndian>(self.position.x)?;
-            cursor.write_i32::<LittleEndian>(self.position.y)?;
+            asset.write_i32::<LittleEndian>(self.position.x)?;
+            asset.write_i32::<LittleEndian>(self.position.y)?;
         } else {
-            cursor.write_i32::<LittleEndian>(self.position.x)?;
-            cursor.write_i32::<LittleEndian>(self.position.y)?;
-            cursor.write_i32::<LittleEndian>(self.position.z)?;
+            asset.write_i32::<LittleEndian>(self.position.x)?;
+            asset.write_i32::<LittleEndian>(self.position.y)?;
+            asset.write_i32::<LittleEndian>(self.position.z)?;
         }
 
         Ok(())

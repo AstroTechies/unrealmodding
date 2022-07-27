@@ -1,19 +1,15 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write, simple_property_write,
-    {
-        cursor_ext::CursorExt,
-        unreal_types::{FName, Guid},
-    },
+    unreal_types::{FName, Guid},
 };
 
 macro_rules! impl_int_property {
@@ -171,12 +167,11 @@ impl BoolProperty {
 impl PropertyTrait for BoolProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        cursor.write_bool(self.value)?;
-        optional_guid_write!(self, asset, cursor, include_header);
+        asset.write_bool(self.value)?;
+        optional_guid_write!(self, asset, include_header);
         Ok(0)
     }
 }
@@ -202,12 +197,11 @@ impl Int8Property {
 impl PropertyTrait for Int8Property {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_i8(self.value)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_i8(self.value)?;
         Ok(size_of::<i8>())
     }
 }
@@ -261,23 +255,22 @@ impl ByteProperty {
 impl PropertyTrait for ByteProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         if include_header {
-            cursor
+            asset
                 .write_i64::<LittleEndian>(self.enum_type.ok_or_else(PropertyError::headerless)?)?;
-            asset.write_property_guid(cursor, &self.property_guid)?;
+            asset.write_property_guid(&self.property_guid)?;
         }
 
         match self.byte_type {
             ByteType::Byte => {
-                cursor.write_u8(self.value as u8)?;
+                asset.write_u8(self.value as u8)?;
                 Ok(1)
             }
             ByteType::Long => {
-                cursor.write_i64::<LittleEndian>(self.value)?;
+                asset.write_i64::<LittleEndian>(self.value)?;
                 Ok(8)
             }
         }
@@ -306,12 +299,11 @@ impl FloatProperty {
 impl PropertyTrait for FloatProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f32::<LittleEndian>(self.value.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f32::<LittleEndian>(self.value.0)?;
         Ok(size_of::<f32>())
     }
 }
@@ -338,12 +330,11 @@ impl DoubleProperty {
 impl PropertyTrait for DoubleProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        cursor.write_f64::<LittleEndian>(self.value.0)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_f64::<LittleEndian>(self.value.0)?;
         Ok(size_of::<f64>())
     }
 }

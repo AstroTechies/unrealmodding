@@ -1,14 +1,13 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::Error;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     unreal_types::{FName, Guid},
@@ -73,16 +72,15 @@ impl ViewTargetBlendParamsProperty {
 impl PropertyTrait for ViewTargetBlendParamsProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
+        optional_guid_write!(self, asset, include_header);
 
-        cursor.write_f32::<LittleEndian>(self.blend_time.0)?;
-        cursor.write_u8(self.blend_function.into())?;
-        cursor.write_f32::<LittleEndian>(self.blend_exp.0)?;
-        cursor.write_i32::<LittleEndian>(match self.lock_outgoing {
+        asset.write_f32::<LittleEndian>(self.blend_time.0)?;
+        asset.write_u8(self.blend_function.into())?;
+        asset.write_f32::<LittleEndian>(self.blend_exp.0)?;
+        asset.write_i32::<LittleEndian>(match self.lock_outgoing {
             true => 1,
             false => 0,
         })?;

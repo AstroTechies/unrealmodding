@@ -1,16 +1,14 @@
-use std::io::Cursor;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::error::{Error, PropertyError};
 use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     {
-        cursor_ext::CursorExt,
         custom_version::{CustomVersion, FEditorObjectVersion},
         enums::TextHistoryType,
         ue4version::{VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT, VER_UE4_FTEXT_HISTORY},
@@ -71,14 +69,13 @@ impl StrProperty {
 impl PropertyTrait for StrProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        let begin = cursor.position();
-        cursor.write_string(&self.value)?;
-        Ok((cursor.position() - begin) as usize)
+        optional_guid_write!(self, asset, include_header);
+        let begin = asset.position();
+        asset.write_string(&self.value)?;
+        Ok((asset.position() - begin) as usize)
     }
 }
 
@@ -162,29 +159,28 @@ impl TextProperty {
 impl PropertyTrait for TextProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        let begin = cursor.position();
+        optional_guid_write!(self, asset, include_header);
+        let begin = asset.position();
 
         if asset.get_engine_version() < VER_UE4_FTEXT_HISTORY {
-            cursor.write_string(&self.culture_invariant_string)?;
+            asset.write_string(&self.culture_invariant_string)?;
             if asset.get_engine_version() >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
-                cursor.write_string(&self.namespace)?;
-                cursor.write_string(&self.value)?;
+                asset.write_string(&self.namespace)?;
+                asset.write_string(&self.value)?;
             } else {
-                cursor.write_string(&self.value)?;
+                asset.write_string(&self.value)?;
             }
         }
-        cursor.write_u32::<LittleEndian>(self.flags)?;
+        asset.write_u32::<LittleEndian>(self.flags)?;
 
         if asset.get_engine_version() >= VER_UE4_FTEXT_HISTORY {
             let history_type = self
                 .history_type
                 .ok_or_else(|| PropertyError::property_field_none("history_type", "i8"))?;
-            cursor.write_i8(history_type)?;
+            asset.write_i8(history_type)?;
             let history_type = history_type.try_into()?;
             match history_type {
                 TextHistoryType::None => {
@@ -197,29 +193,26 @@ impl PropertyTrait for TextProperty {
                             None => true,
                         };
                         match is_empty {
-                            true => cursor.write_i32::<LittleEndian>(0)?,
+                            true => asset.write_i32::<LittleEndian>(0)?,
                             false => {
-                                cursor.write_i32::<LittleEndian>(1)?;
-                                cursor.write_string(&self.culture_invariant_string)?;
+                                asset.write_i32::<LittleEndian>(1)?;
+                                asset.write_string(&self.culture_invariant_string)?;
                             }
                         }
                     }
                     Ok(())
                 }
                 TextHistoryType::Base => {
-                    cursor.write_string(&self.namespace)?;
-                    cursor.write_string(&self.value)?;
-                    cursor.write_string(&self.culture_invariant_string)?;
+                    asset.write_string(&self.namespace)?;
+                    asset.write_string(&self.value)?;
+                    asset.write_string(&self.culture_invariant_string)?;
                     Ok(())
                 }
                 TextHistoryType::StringTableEntry => {
-                    asset.write_fname(
-                        cursor,
-                        self.table_id.as_ref().ok_or_else(|| {
-                            PropertyError::property_field_none("table_id", "FName")
-                        })?,
-                    )?;
-                    cursor.write_string(&self.value)?;
+                    asset.write_fname(self.table_id.as_ref().ok_or_else(|| {
+                        PropertyError::property_field_none("table_id", "FName")
+                    })?)?;
+                    asset.write_string(&self.value)?;
                     Ok(())
                 }
                 _ => Err(Error::unimplemented(format!(
@@ -228,7 +221,7 @@ impl PropertyTrait for TextProperty {
                 ))),
             }?;
         }
-        Ok((cursor.position() - begin) as usize)
+        Ok((asset.position() - begin) as usize)
     }
 }
 
@@ -253,12 +246,11 @@ impl NameProperty {
 impl PropertyTrait for NameProperty {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        optional_guid_write!(self, asset, cursor, include_header);
-        asset.write_fname(cursor, &self.value)?;
+        optional_guid_write!(self, asset, include_header);
+        asset.write_fname(&self.value)?;
         Ok(size_of::<i32>() * 2)
     }
 }

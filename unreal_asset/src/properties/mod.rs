@@ -22,20 +22,19 @@ pub mod vector_property;
 pub mod view_target_blend_property;
 pub mod world_tile_property;
 
-use crate::asset_reader::AssetReader;
-use crate::asset_writer::AssetWriter;
 use crate::properties::date_property::TimeSpanProperty;
 use crate::properties::sampler_property::SkeletalMeshAreaWeightedTriangleSampler;
 use crate::properties::soft_path_property::{
     SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty,
 };
+use crate::reader::asset_reader::AssetReader;
+use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::{Guid, ToFName};
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 use std::hash::Hash;
-use std::io::Cursor;
-use std::io::{Seek, SeekFrom};
+use std::io::SeekFrom;
 
 use self::{
     array_property::ArrayProperty,
@@ -87,9 +86,9 @@ macro_rules! optional_guid {
 
 #[macro_export]
 macro_rules! optional_guid_write {
-    ($self:ident, $asset:ident, $cursor:ident, $include_header:ident) => {
+    ($self:ident, $asset:ident, $include_header:ident) => {
         if $include_header {
-            $asset.write_property_guid($cursor, &$self.property_guid)?;
+            $asset.write_property_guid(&$self.property_guid)?;
         }
     };
 }
@@ -100,12 +99,11 @@ macro_rules! simple_property_write {
         impl PropertyTrait for $property_name {
             fn write<Writer: AssetWriter>(
                 &self,
-                asset: &Writer,
-                cursor: &mut Cursor<Vec<u8>>,
+                asset: &mut Writer,
                 include_header: bool,
             ) -> Result<usize, Error> {
-                optional_guid_write!(self, asset, cursor, include_header);
-                cursor.$write_func::<LittleEndian>(self.$value_name)?;
+                optional_guid_write!(self, asset, include_header);
+                asset.$write_func::<LittleEndian>(self.$value_name)?;
                 Ok(size_of::<$value_type>())
             }
         }
@@ -179,8 +177,7 @@ pub trait PropertyDataTrait {
 pub trait PropertyTrait {
     fn write<Writer: AssetWriter>(
         &self,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error>;
 }
@@ -787,22 +784,21 @@ impl Property {
 
     pub fn write<Writer: AssetWriter>(
         property: &Property,
-        asset: &Writer,
-        cursor: &mut Cursor<Vec<u8>>,
+        asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        asset.write_fname(cursor, &property.get_name())?;
-        asset.write_fname(cursor, &property.to_fname())?;
+        asset.write_fname(&property.get_name())?;
+        asset.write_fname(&property.to_fname())?;
 
-        let begin = cursor.position();
-        cursor.write_i32::<LittleEndian>(0)?; // initial length
-        cursor.write_i32::<LittleEndian>(property.get_duplication_index())?;
-        let len = property.write(asset, cursor, include_header)?;
-        let end = cursor.position();
+        let begin = asset.position();
+        asset.write_i32::<LittleEndian>(0)?; // initial length
+        asset.write_i32::<LittleEndian>(property.get_duplication_index())?;
+        let len = property.write(asset, include_header)?;
+        let end = asset.position();
 
-        cursor.seek(SeekFrom::Start(begin))?;
-        cursor.write_i32::<LittleEndian>(len as i32)?;
-        cursor.seek(SeekFrom::Start(end))?;
+        asset.seek(SeekFrom::Start(begin))?;
+        asset.write_i32::<LittleEndian>(len as i32)?;
+        asset.seek(SeekFrom::Start(end))?;
         Ok(begin as usize)
     }
 
