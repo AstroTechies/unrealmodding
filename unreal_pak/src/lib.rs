@@ -44,7 +44,7 @@ use error::UnrealPakError;
 
 const UE4_PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
 
-#[derive(PartialEq, Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum CompressionMethod {
     None = 0,
