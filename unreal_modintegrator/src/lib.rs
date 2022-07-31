@@ -15,7 +15,7 @@ use unreal_asset::properties::str_property::StrProperty;
 use unreal_asset::properties::struct_property::StructProperty;
 use unreal_asset::properties::{Property, PropertyDataTrait};
 use unreal_asset::unreal_types::FName;
-use unreal_modmetadata::v2::{self, Metadata};
+use unreal_modmetadata::v2::{self};
 use unreal_modmetadata::SyncMode;
 use unreal_pak::pakversion::PakVersion;
 
