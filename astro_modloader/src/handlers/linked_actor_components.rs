@@ -36,7 +36,7 @@ pub(crate) fn handle_linked_actor_components(
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
     _mod_paks: &mut Vec<PakFile>,
-    linked_actors_maps: Vec<&serde_json::Value>,
+    linked_actors_maps: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     let mut actor_asset = Asset::new(
         ACTOR_TEMPLATE_ASSET.to_vec(),
@@ -56,7 +56,7 @@ pub(crate) fn handle_linked_actor_components(
 
     let mut new_components = HashMap::new();
 
-    for linked_actor_map in &linked_actors_maps {
+    for linked_actor_map in linked_actors_maps {
         let linked_actors_map = linked_actor_map
             .as_object()
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid linked_actor_components"))?;

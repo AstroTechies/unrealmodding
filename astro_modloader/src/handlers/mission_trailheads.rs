@@ -23,7 +23,7 @@ pub(crate) fn handle_mission_trailheads(
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
     _mod_paks: &mut Vec<PakFile>,
-    trailhead_arrays: Vec<&serde_json::Value>,
+    trailhead_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     for map_path in MAP_PATHS {
         let mut asset = get_asset(
@@ -34,7 +34,7 @@ pub(crate) fn handle_mission_trailheads(
         )?;
 
         let mut trailheads = Vec::new();
-        for trailheads_array in &trailhead_arrays {
+        for trailheads_array in trailhead_arrays {
             let trailheads_array = trailheads_array
                 .as_array()
                 .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid trailheads"))?;
