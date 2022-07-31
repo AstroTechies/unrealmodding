@@ -69,6 +69,15 @@ impl ModLoaderAppData {
         }
         false
     }
+
+    #[allow(clippy::borrowed_box)]
+    pub fn get_install_manager(&self) -> Option<&Box<dyn InstallManager>> {
+        if let Some(platform) = &self.selected_game_platform {
+            return self.install_managers.get(&platform.as_str());
+        }
+
+        None
+    }
 }
 
 pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(config: C)
@@ -312,7 +321,7 @@ where
                         if !files_to_download.is_empty() {
                             // ? Maybe parallelize this?
                             for (file_name, url) in &files_to_download {
-                                let downlaod = (|| -> Result<(), ModLoaderWarning> {
+                                let download = (|| -> Result<(), ModLoaderWarning> {
                                     debug!("Downloading {:?}", file_name);
 
                                     // this is safe because the filename has already been validated
@@ -327,7 +336,7 @@ where
 
                                     Ok(())
                                 })();
-                                match downlaod {
+                                match download {
                                     Ok(_) => {}
                                     Err(err) => {
                                         warn!("Download error: {:?}", err);

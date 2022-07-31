@@ -330,6 +330,16 @@ impl ModLoaderApp {
         ui.label("Mod config");
         ui.label("TODO");
 
+        if ui.button("Play").clicked() {
+            let install_manager = data.get_install_manager();
+            if let Some(install_manager) = install_manager {
+                match install_manager.launch_game() {
+                    Ok(_) => {}
+                    Err(warn) => data.warnings.push(warn),
+                };
+            }
+        }
+
         ui.label(format!(
             "Time since last integration {}s",
             self.last_integration_time

@@ -6,12 +6,14 @@ use std::{
 
 use unreal_modintegrator::IntegratorConfig;
 
+use crate::error::ModLoaderWarning;
 use crate::version::GameBuild;
 
 pub trait InstallManager: Debug + std::marker::Send {
     fn get_game_install_path(&self) -> Option<PathBuf>;
     fn get_paks_path(&self) -> Option<PathBuf>;
     fn get_game_build(&self) -> Option<GameBuild>;
+    fn launch_game(&self) -> Result<(), ModLoaderWarning>;
 }
 
 pub trait GameConfig<'a, C, T, E: std::error::Error>: std::marker::Send
