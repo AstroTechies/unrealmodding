@@ -32,7 +32,6 @@ jobs:
         with:
           repository: 'AstroTechies/ModIntegrator'
           latest: true
-          file: 'assets.zip'
           token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Unzip ModIntegrator assets
