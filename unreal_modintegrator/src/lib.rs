@@ -15,8 +15,7 @@ use unreal_asset::properties::str_property::StrProperty;
 use unreal_asset::properties::struct_property::StructProperty;
 use unreal_asset::properties::{Property, PropertyDataTrait};
 use unreal_asset::unreal_types::FName;
-use unreal_modmetadata::v2::{self};
-use unreal_modmetadata::SyncMode;
+use unreal_modmetadata::{Metadata, SyncMode};
 use unreal_pak::pakversion::PakVersion;
 
 mod assets;
@@ -124,7 +123,7 @@ pub fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<()
     Ok(())
 }
 
-fn bake_mod_data(asset: &mut Asset, mods: &Vec<v2::Metadata>) -> Result<(), Error> {
+fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
     let data_table_export = asset
         .exports
         .iter()

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use unreal_modmetadata::{v2, DownloadInfo, SyncMode};
+use unreal_modmetadata::{DownloadInfo, Metadata, SyncMode};
 
 use crate::version::{GameBuild, Version};
 
@@ -65,5 +65,5 @@ pub struct GameModVersion {
     pub file_name: String,
     pub downloaded: bool,
     pub download_url: Option<String>,
-    pub metadata: Option<v2::Metadata>,
+    pub metadata: Option<Metadata>,
 }

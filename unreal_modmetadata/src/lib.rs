@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub mod error;
-pub mod v1;
+pub(crate) mod v1;
 pub mod v2;
+pub use crate::v2::Metadata;
 
 #[macro_export]
 macro_rules! hash_value {
@@ -50,7 +51,7 @@ pub struct DownloadInfo {
     pub url: String,
 }
 
-pub fn from_slice(slice: &[u8]) -> Result<v2::Metadata, Error> {
+pub fn from_slice(slice: &[u8]) -> Result<Metadata, Error> {
     let value: Value = serde_json::from_slice(slice)?;
     let value = value.as_object().ok_or_else(Error::invalid_metadata)?;
     let schema_version = value["schema_version"].as_u64().unwrap_or(1u64);

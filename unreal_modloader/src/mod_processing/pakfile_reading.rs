@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use log::{debug, warn};
-use unreal_modmetadata::{v2, SyncMode};
+use unreal_modmetadata::{Metadata, SyncMode};
 use unreal_pak::PakFile;
 
 use crate::error::ModLoaderWarning;
@@ -14,7 +14,7 @@ use crate::ModLoaderAppData;
 use super::verify;
 
 #[derive(Debug)]
-pub(crate) struct ReadData(String, v2::Metadata);
+pub(crate) struct ReadData(String, Metadata);
 
 pub(crate) fn read_pak_files(
     mod_files: &[PathBuf],
@@ -42,7 +42,7 @@ pub(crate) fn read_pak_files(
                 return Err(ModLoaderWarning::missing_metadata(file_name));
             }
 
-            let metadata: v2::Metadata =
+            let metadata: Metadata =
                 unreal_modmetadata::from_slice(record.unwrap()).map_err(|err| {
                     warn!("json error: {}", err);
                     ModLoaderWarning::invalid_metadata(file_name)
