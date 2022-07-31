@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use unreal_modintegrator::metadata::{DownloadInfo, Metadata, SyncMode};
+use unreal_modmetadata::{DownloadInfo, Metadata, SyncMode};
 
 use crate::version::{GameBuild, Version};
 

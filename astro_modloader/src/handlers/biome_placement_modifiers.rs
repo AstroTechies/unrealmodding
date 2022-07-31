@@ -40,7 +40,7 @@ pub(crate) fn handle_biome_placement_modifiers(
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
     _: &mut Vec<PakFile>,
-    placement_modifiers: Vec<&serde_json::Value>,
+    placement_modifiers: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     let mut biome_placement_modifiers = Vec::new();
 

@@ -9,6 +9,7 @@ bulk_data = []
 [dependencies]
 unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
 unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
+unreal_modmetadata = { version = "0.1.0", path = "../unreal_modmetadata" }
 lazy_static = "1.4.0"
 serde = { version = "1.0.140", features = ["derive"] }
 serde_json = "1.0.82"

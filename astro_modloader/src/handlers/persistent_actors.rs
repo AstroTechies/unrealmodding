@@ -41,7 +41,7 @@ pub(crate) fn handle_persistent_actors(
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
     mod_paks: &mut Vec<PakFile>,
-    persistent_actor_arrays: Vec<&serde_json::Value>,
+    persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     let mut level_asset = Asset::new(crate::assets::LEVEL_TEMPLATE_ASSET.to_vec(), None);
     level_asset.engine_version = VER_UE4_23;
@@ -56,7 +56,7 @@ pub(crate) fn handle_persistent_actors(
         .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted scene_component"))?;
 
     let mut persistent_actors = Vec::new();
-    for persistent_actors_array in &persistent_actor_arrays {
+    for persistent_actors_array in persistent_actor_arrays {
         let persistent_actors_array = persistent_actors_array
             .as_array()
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid persistent actors"))?;

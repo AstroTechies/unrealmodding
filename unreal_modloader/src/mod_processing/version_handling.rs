@@ -1,7 +1,7 @@
 use std::fs;
 
 use log::warn;
-use unreal_modintegrator::metadata::SyncMode;
+use unreal_modmetadata::SyncMode;
 
 use crate::game_mod::SelectedVersion;
 use crate::version::{GameBuild, Version};

@@ -30,11 +30,11 @@ pub(crate) fn handle_item_list_entries(
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
     _mod_paks: &mut Vec<PakFile>,
-    item_list_entires_maps: Vec<&serde_json::Value>,
+    item_list_entires_maps: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     let mut new_items = HashMap::new();
 
-    for item_list_entries_map in &item_list_entires_maps {
+    for item_list_entries_map in item_list_entires_maps {
         let item_list_entries_map = item_list_entries_map
             .as_object()
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid item_list_entries"))?;
