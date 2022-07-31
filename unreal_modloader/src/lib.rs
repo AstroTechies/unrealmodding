@@ -70,6 +70,7 @@ impl ModLoaderAppData {
         false
     }
 
+    #[allow(clippy::borrowed_box)]
     pub fn get_install_manager(&self) -> Option<&Box<dyn InstallManager>> {
         if let Some(platform) = &self.selected_game_platform {
             return self.install_managers.get(&platform.as_str());

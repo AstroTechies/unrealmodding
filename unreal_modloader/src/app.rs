@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{
@@ -13,7 +12,6 @@ use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::{debug, info};
 
-use crate::error::ModLoaderError;
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
 use crate::ModLoaderAppData;
@@ -336,10 +334,8 @@ impl ModLoaderApp {
             let install_manager = data.get_install_manager();
             if let Some(install_manager) = install_manager {
                 match install_manager.launch_game() {
-                    Ok(_) => {},
-                    Err(warn) => {
-                        data.warnings.push(warn)
-                    },
+                    Ok(_) => {}
+                    Err(warn) => data.warnings.push(warn),
                 };
             }
         }
