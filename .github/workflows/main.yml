@@ -27,7 +27,7 @@ jobs:
           components: clippy
           override: true
 
-      - uses: robinraju/release-downloader@master
+      - uses: robinraju/release-downloader@v1.4
         name: Get prebuilt ModIntegrator assets
         with:
           repository: 'AstroTechies/ModIntegrator'
