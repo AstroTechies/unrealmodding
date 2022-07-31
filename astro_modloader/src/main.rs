@@ -93,7 +93,7 @@ where
             "Microsoft Store",
             Box::new(MsStoreInstallManager::new(
                 "SystemEraSoftworks",
-                AstroIntegratorConfig::GAME_NAME,
+                "ASTRONEER",
             )),
         );
 
