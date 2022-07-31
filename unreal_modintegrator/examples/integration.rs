@@ -12,7 +12,7 @@ fn handle_persistent_actors(
     _integrated_pak: &mut PakFile,
     _game_paks: &mut Vec<PakFile>,
     _mod_paks: &mut Vec<PakFile>,
-    actors: Vec<&serde_json::Value>,
+    actors: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     println!("{:?}", actors);
     Ok(())
@@ -33,7 +33,7 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
                 &mut unreal_pak::PakFile,
                 &mut Vec<unreal_pak::PakFile>,
                 &mut Vec<unreal_pak::PakFile>,
-                Vec<&serde_json::Value>,
+                &Vec<serde_json::Value>,
             ) -> Result<(), io::Error>,
         >,
     > {
@@ -45,7 +45,7 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
                     &mut unreal_pak::PakFile,
                     &mut Vec<unreal_pak::PakFile>,
                     &mut Vec<unreal_pak::PakFile>,
-                    Vec<&serde_json::Value>,
+                    &Vec<serde_json::Value>,
                 ) -> Result<(), io::Error>,
             >,
         > = HashMap::new();

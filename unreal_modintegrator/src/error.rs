@@ -4,6 +4,8 @@ use std::{fmt::Display, io};
 pub enum IntegrationError {
     GameNotFound,
     CorruptedStarterPak,
+    UnsupportedSchemaVersion,
+    InvalidMetadata,
 }
 
 impl IntegrationError {
@@ -14,6 +16,14 @@ impl IntegrationError {
     pub fn corrupted_starter_pak() -> Self {
         Self::CorruptedStarterPak
     }
+
+    pub fn unsupported_schema_version() -> Self {
+        Self::UnsupportedSchemaVersion
+    }
+
+    pub fn invalid_metadata() -> Self {
+        Self::InvalidMetadata
+    }
 }
 
 impl Display for IntegrationError {
@@ -21,6 +31,8 @@ impl Display for IntegrationError {
         match *self {
             IntegrationError::GameNotFound => write!(f, "Game not found"),
             IntegrationError::CorruptedStarterPak => write!(f, "Corrupted starter pak"),
+            IntegrationError::UnsupportedSchemaVersion => write!(f, "Unsupported schema version"),
+            IntegrationError::InvalidMetadata => write!(f, "Invalid metadata"),
         }
     }
 }

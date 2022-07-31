@@ -45,7 +45,7 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
                 &mut PakFile,
                 &mut Vec<PakFile>,
                 &mut Vec<PakFile>,
-                Vec<&Value>,
+                &Vec<Value>,
             ) -> Result<(), E>,
         >,
     >;
@@ -332,7 +332,7 @@ pub fn integrate_mods<
 
     let mut mods = Vec::new();
     let mut mod_paks = Vec::new();
-    let mut optional_mods_data = Vec::new();
+    let mut optional_mods_data = HashMap::new();
     for mod_file in &mod_files {
         let mut pak = PakFile::reader(mod_file);
         pak.load_records()?;
@@ -342,11 +342,17 @@ pub fn integrate_mods<
             .data
             .as_ref()
             .unwrap();
-        let metadata: Metadata = serde_json::from_slice(record)?;
+        let metadata = Metadata::from_slice(record)?;
         mods.push(metadata.clone());
 
-        let optional_metadata: Value = serde_json::from_slice(record)?;
-        optional_mods_data.push(optional_metadata);
+        // let optional_metadata: Value = serde_json::from_slice(record)?;
+        // optional_mods_data.push(optional_metadata);
+        for (name, data) in &metadata.integrator {
+            optional_mods_data
+                .entry(name.clone())
+                .or_insert_with(Vec::new)
+                .push(data.clone());
+        }
 
         mod_paks.push(pak);
     }
@@ -425,14 +431,10 @@ pub fn integrate_mods<
             game_paks.push(pak);
         }
 
+        let empty_vec = Vec::new();
         for (name, mut exec) in integrator_config.get_handlers() {
-            let all_mods: Vec<&Value> = optional_mods_data
-                .iter()
-                .filter_map(|e| match e[name.clone()] != Value::Null {
-                    true => Some(&e[name.clone()]),
-                    false => None,
-                })
-                .collect();
+            let all_mods = optional_mods_data.get(&name).unwrap_or(&empty_vec);
+
             exec(
                 integrator_config.get_data(),
                 &mut generated_pak,
