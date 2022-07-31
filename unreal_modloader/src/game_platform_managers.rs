@@ -2,6 +2,7 @@ use std::{cell::RefCell, fmt::Debug, fs::File, io::Read, path::PathBuf};
 
 use crate::{
     config::InstallManager,
+    error::ModLoaderWarning,
     game_path_helpers::{self, MsStoreInfo},
     version::GameBuild,
 };
@@ -56,6 +57,11 @@ impl InstallManager for SteamInstallManager {
 
     fn get_game_build(&self) -> Option<GameBuild> {
         self.game_build_getter.get_game_build(self)
+    }
+
+    fn launch_game(&self) -> Result<(), ModLoaderWarning> {
+        open::that(format!("steam://run/{}", self.app_id))?;
+        Ok(())
     }
 }
 
@@ -121,5 +127,19 @@ impl InstallManager for MsStoreInstallManager {
         }
 
         *self.game_build.borrow()
+    }
+
+    fn launch_game(&self) -> Result<(), ModLoaderWarning> {
+        let store_info = self.get_store_info();
+        if let Some(store_info) = store_info {
+            open::that(format!(
+                "shell:appsFolder\\{}!{}",
+                store_info.runtime_id, self.game_name
+            ))?;
+        } else {
+            return Err(ModLoaderWarning::winstore_error());
+        }
+
+        Ok(())
     }
 }
