@@ -31,7 +31,7 @@ jobs:
         name: Get prebuilt ModIntegrator assets
         with:
           repo: 'AstroTechies/ModIntegrator'
-          version: 'tags/1.0.0'
+          version: 'releases/latest'
           file: 'assets.zip'
           token: ${{ secrets.GITHUB_TOKEN }}
           
