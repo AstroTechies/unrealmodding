@@ -3,7 +3,6 @@ use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_J
 use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 
 use error::IntegrationError;
-use metadata::{Metadata, SyncMode};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -16,12 +15,13 @@ use unreal_asset::properties::str_property::StrProperty;
 use unreal_asset::properties::struct_property::StructProperty;
 use unreal_asset::properties::{Property, PropertyDataTrait};
 use unreal_asset::unreal_types::FName;
+use unreal_modmetadata::v2::{self, Metadata};
+use unreal_modmetadata::SyncMode;
 use unreal_pak::pakversion::PakVersion;
 
 mod assets;
 pub mod error;
 pub mod helpers;
-pub mod metadata;
 use serde_json::Value;
 use unreal_asset::Asset;
 use unreal_pak::{PakFile, PakRecord};
@@ -124,7 +124,7 @@ pub fn write_asset(pak: &mut PakFile, asset: &Asset, name: &String) -> Result<()
     Ok(())
 }
 
-fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
+fn bake_mod_data(asset: &mut Asset, mods: &Vec<v2::Metadata>) -> Result<(), Error> {
     let data_table_export = asset
         .exports
         .iter()
@@ -342,7 +342,7 @@ pub fn integrate_mods<
             .data
             .as_ref()
             .unwrap();
-        let metadata = Metadata::from_slice(record)?;
+        let metadata = unreal_modmetadata::from_slice(record)?;
         mods.push(metadata.clone());
 
         // let optional_metadata: Value = serde_json::from_slice(record)?;
