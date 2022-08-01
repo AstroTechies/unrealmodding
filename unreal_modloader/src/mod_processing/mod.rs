@@ -1,7 +1,8 @@
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use log::debug;
+use parking_lot::Mutex;
 
 use crate::error::ModLoaderWarning;
 use crate::ModLoaderAppData;
@@ -27,7 +28,7 @@ pub(crate) fn process_modfiles(
     let (mods_read, read_warnings) = read_pak_files(mod_files);
     warnings.extend(read_warnings);
 
-    let mut data_guard = data.lock().unwrap();
+    let mut data_guard = data.lock();
     let filter: Vec<String> = mods_read.keys().cloned().collect();
 
     // turn metadata into proper data structures
@@ -51,7 +52,7 @@ pub(crate) fn process_modfiles(
     let (index_files, index_file_warnings) = download_index_files(index_files_info);
     warnings.extend(index_file_warnings);
 
-    let mut data_guard = data.lock().unwrap();
+    let mut data_guard = data.lock();
 
     // insert index file data into the mod data
     let insert_warnings = insert_index_file_data(&index_files, &mut *data_guard);

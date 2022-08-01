@@ -1,8 +1,6 @@
-use std::collections::HashSet;
-use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+    Arc,
 };
 use std::time::Instant;
 
@@ -11,16 +9,15 @@ use eframe::emath::Align;
 use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::{debug, info};
+use parking_lot::Mutex;
 
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
-use crate::ModLoaderAppData;
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,
 
     pub window_title: String,
-    pub processed_files: HashSet<PathBuf>,
 
     pub should_exit: Arc<AtomicBool>,
     pub ready_exit: Arc<AtomicBool>,
@@ -31,13 +28,11 @@ pub(crate) struct ModLoaderApp {
     pub working: Arc<AtomicBool>,
     pub reloading: Arc<AtomicBool>,
 
-    pub platform_selector_open: Arc<AtomicBool>,
+    pub platform_selector_open: bool,
 }
 
 impl App for ModLoaderApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        let mut data = self.data.lock().unwrap();
-
         egui::CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
                 .size(Size::exact(30.0))
@@ -50,21 +45,23 @@ impl App for ModLoaderApp {
                             .size(Size::remainder())
                             .horizontal(|mut strip| {
                                 strip.cell(|ui| {
-                                    self.show_title(ui, &mut data);
+                                    self.show_title(ui);
                                 });
                                 strip.cell(|ui| {
-                                    self.show_change_platform(ui, &mut data);
+                                    self.show_change_platform(ui);
                                 });
                             });
                     });
                     strip.cell(|ui| {
-                        self.show_table(ui, &mut data);
+                        self.show_table(ui);
                     });
                     strip.cell(|ui| {
-                        self.show_bottom(ui, &mut data, frame);
+                        self.show_bottom(ui, frame);
                     });
                 });
         });
+
+        let mut data = self.data.lock();
 
         let mut should_darken = false;
         if data.error.is_some() {
@@ -110,7 +107,7 @@ impl App for ModLoaderApp {
             should_darken = true;
         }
 
-        if self.platform_selector_open.load(Ordering::Acquire) {
+        if self.platform_selector_open {
             egui::Window::new("Platform Selector")
                 .resizable(true)
                 .collapsible(false)
@@ -131,7 +128,7 @@ impl App for ModLoaderApp {
 
                         if ui.add(button).clicked() {
                             data.set_game_platform(&platform);
-                            self.platform_selector_open.store(false, Ordering::Release);
+                            self.platform_selector_open = false;
                             self.reloading.store(true, Ordering::Release);
                             self.should_integrate.store(true, Ordering::Release);
                             ctx.request_repaint();
@@ -174,7 +171,9 @@ impl App for ModLoaderApp {
 }
 
 impl ModLoaderApp {
-    fn show_title(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
+    fn show_title(&self, ui: &mut egui::Ui) {
+        let data = self.data.lock();
+
         let title = format!(
             "Mods ({})",
             match data.game_build {
@@ -189,7 +188,9 @@ impl ModLoaderApp {
         }
     }
 
-    fn show_change_platform(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
+    fn show_change_platform(&mut self, ui: &mut egui::Ui) {
+        let data = self.data.lock();
+
         let title = format!(
             "Platform: {}",
             match data.selected_game_platform {
@@ -201,14 +202,16 @@ impl ModLoaderApp {
         ui.with_layout(ui.layout().with_cross_align(Align::Max), |ui| {
             ui.horizontal(|ui| {
                 if ui.button("Change platform").clicked() {
-                    self.platform_selector_open.store(true, Ordering::Release);
+                    self.platform_selector_open = true;
                 }
                 ui.label(title);
             });
         });
     }
 
-    fn show_table(&self, ui: &mut egui::Ui, data: &mut ModLoaderAppData) {
+    fn show_table(&self, ui: &mut egui::Ui) {
+        let mut data = self.data.lock();
+
         TableBuilder::new(ui)
             .striped(true)
             .cell_layout(egui::Layout::left_to_right().with_cross_align(egui::Align::Center))
@@ -321,12 +324,9 @@ impl ModLoaderApp {
             });
     }
 
-    fn show_bottom(
-        &self,
-        ui: &mut egui::Ui,
-        data: &mut ModLoaderAppData,
-        frame: &mut eframe::Frame,
-    ) {
+    fn show_bottom(&self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        let mut data = self.data.lock();
+
         ui.label("Mod config");
         ui.label("TODO");
 
@@ -342,11 +342,7 @@ impl ModLoaderApp {
 
         ui.label(format!(
             "Time since last integration {}s",
-            self.last_integration_time
-                .lock()
-                .unwrap()
-                .elapsed()
-                .as_secs()
+            self.last_integration_time.lock().elapsed().as_secs()
         ));
 
         ui.horizontal(|ui| {
@@ -394,10 +390,11 @@ impl ModLoaderApp {
 
     // from https://github.com/emilk/egui/blob/master/examples/file_dialog/src/main.rs
     fn detect_files_being_dropped(&mut self, ctx: &egui::Context) {
-        use egui::*;
         #[allow(clippy::format_push_string)]
-        // Preview hovering files:
+        // Preview hovering files
         if !ctx.input().raw.hovered_files.is_empty() {
+            use egui::*;
+
             let mut text = "Dropping files:\n".to_owned();
             for file in &ctx.input().raw.hovered_files {
                 if let Some(path) = &file.path {
@@ -425,19 +422,10 @@ impl ModLoaderApp {
 
         // Collect dropped files
         for dropped_file in ctx.input().raw.dropped_files.iter() {
-            if self
-                .processed_files
-                .contains(dropped_file.path.as_ref().unwrap())
-            {
-                continue;
-            }
             debug!("Dropped file: {:?}", dropped_file.path);
 
-            self.processed_files
-                .insert(dropped_file.path.as_ref().unwrap().to_owned());
             self.data
                 .lock()
-                .unwrap()
                 .files_to_process
                 .push(dropped_file.path.as_ref().unwrap().to_owned());
         }

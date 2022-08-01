@@ -1,10 +1,10 @@
-use std::collections::{BTreeMap, HashSet};
-use std::fs::{self};
-use std::io::{self};
+use std::collections::BTreeMap;
+use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+    Arc,
 };
 use std::thread;
 use std::time::{Duration, Instant};
@@ -14,6 +14,8 @@ use directories::BaseDirs;
 use eframe::egui;
 use log::warn;
 use log::{debug, error};
+use parking_lot::Mutex;
+
 use unreal_modintegrator::{integrate_mods, IntegratorConfig, INTEGRATOR_PAK_FILE_NAME};
 
 mod app;
@@ -112,7 +114,6 @@ where
     let app = app::ModLoaderApp {
         data: Arc::clone(&data),
         window_title: C::WINDOW_TITLE.to_owned(),
-        processed_files: HashSet::new(),
 
         should_exit: Arc::clone(&should_exit),
         ready_exit: Arc::clone(&ready_exit),
@@ -123,7 +124,7 @@ where
         reloading: Arc::clone(&reloading),
         working: Arc::clone(&working),
 
-        platform_selector_open: Arc::new(AtomicBool::new(false)),
+        platform_selector_open: false,
     };
 
     // spawn a background thread to handle long running tasks
@@ -141,7 +142,7 @@ where
             println!("{:?}", mods_path);
             fs::create_dir_all(&mods_path).unwrap();
 
-            data.lock().unwrap().mods_path = Some(mods_path);
+            data.lock().mods_path = Some(mods_path);
 
             // background loop
             loop {
@@ -155,7 +156,7 @@ where
                     let start = Instant::now();
                     working.store(true, Ordering::Release);
 
-                    let data_guard = data.lock().unwrap();
+                    let data_guard = data.lock();
                     let mods_path = data_guard.mods_path.to_owned();
                     if let Some(mods_path) = mods_path {
                         drop(data_guard);
@@ -189,22 +190,11 @@ where
                             let warnings = process_modfiles(&mod_files, &data, false);
                             debug!("warnings: {:?}", warnings);
 
-                            let mut data_guard = data.lock().unwrap();
+                            let mut data_guard = data.lock();
                             data_guard.warnings.extend(warnings);
-                            // load config
-                            //load_modloader_config(&mut *data_guard);
-                            load_config(&mut *data_guard);
 
-                            if data_guard.paks_path.is_some() {
-                                // ensure /Paks exists
-                                fs::create_dir_all(&data_guard.paks_path.as_ref().unwrap())
-                                    .map_err(|err| {
-                                        ModLoaderError::io_error_with_message(
-                                            "Paks directory".to_owned(),
-                                            err,
-                                        )
-                                    })?;
-                            }
+                            // load config
+                            load_config(&mut *data_guard);
 
                             // debug!("{:#?}", data_guard.game_mods);
                             Ok(())
@@ -212,7 +202,7 @@ where
                         match startup_work() {
                             Ok(_) => {}
                             Err(err) => {
-                                data.lock().unwrap().error = Some(err);
+                                data.lock().error = Some(err);
                             }
                         }
 
@@ -227,7 +217,7 @@ where
                 reloading.store(false, Ordering::Release);
 
                 // process dropped files
-                let mut data_guard = data.lock().unwrap();
+                let mut data_guard = data.lock();
                 if !data_guard.files_to_process.is_empty() {
                     let files_to_process = data_guard
                         .files_to_process
@@ -258,14 +248,14 @@ where
 
                     let warnings = process_modfiles(&files_to_process, &data, true);
                     debug!("warnings: {:?}", warnings);
-                    data.lock().unwrap().warnings.extend(warnings);
+                    data.lock().warnings.extend(warnings);
 
                     should_integrate.store(true, Ordering::Relaxed);
                 } else {
                     drop(data_guard);
                 }
 
-                let data_guard = data.lock().unwrap();
+                let data_guard = data.lock();
                 if should_integrate.load(Ordering::Relaxed)
                     && data_guard.game_install_path.is_some()
                     && data_guard.warnings.is_empty()
@@ -340,7 +330,7 @@ where
                                     Ok(_) => {}
                                     Err(err) => {
                                         warn!("Download error: {:?}", err);
-                                        data.lock().unwrap().warnings.push(err);
+                                        data.lock().warnings.push(err);
                                     }
                                 }
                             }
@@ -354,13 +344,24 @@ where
                                 false,
                             );
                             debug!("warnings: {:?}", warnings);
-                            data.lock().unwrap().warnings.extend(warnings);
+                            data.lock().warnings.extend(warnings);
                         }
 
                         // move mods
+
                         // remove all old files
-                        fs::remove_dir_all(&paks_path)?;
-                        fs::create_dir(&paks_path)?;
+                        match fs::remove_dir_all(&paks_path) {
+                            Ok(_) => Ok(()),
+                            Err(err) => match err.kind() {
+                                // this is fine
+                                std::io::ErrorKind::NotFound => Ok(()),
+                                _ => Err(ModLoaderWarning::io_error_with_message(
+                                    "Removing old paks directory failed".to_owned(),
+                                    err,
+                                )),
+                            },
+                        }?;
+                        fs::create_dir_all(&paks_path)?;
 
                         // copy new files
                         for mod_version in mods_to_install {
@@ -387,9 +388,9 @@ where
                             start.elapsed().as_millis()
                         );
 
-                        *last_integration_time.lock().unwrap() = Instant::now();
+                        *last_integration_time.lock() = Instant::now();
 
-                        let mut data_guard = data.lock().unwrap();
+                        let mut data_guard = data.lock();
 
                         // update config file
                         write_config(&mut data_guard);
@@ -400,7 +401,7 @@ where
                         Ok(_) => {}
                         Err(err) => {
                             warn!("Integration work error: {:?}", err);
-                            data.lock().unwrap().warnings.push(err);
+                            data.lock().warnings.push(err);
                         }
                     }
 
