@@ -422,11 +422,14 @@ where
     // run the GUI app
     eframe::run_native(
         app.window_title.clone().as_str(),
-        eframe::NativeOptions::default(),
+        eframe::NativeOptions {
+            initial_window_size: Some(eframe::egui::vec2(623.0, 550.0)),
+            ..eframe::NativeOptions::default()
+        },
         Box::new(|cc| {
             let mut fonts = egui::FontDefinitions::default();
             fonts.font_data.iter_mut().for_each(|font| {
-                font.1.tweak.scale = 1.2;
+                font.1.tweak.scale = 1.15;
             });
             cc.egui_ctx.set_fonts(fonts);
 

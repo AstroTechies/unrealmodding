@@ -38,6 +38,7 @@ impl App for ModLoaderApp {
                 .size(Size::exact(30.0))
                 .size(Size::relative(0.45))
                 .size(Size::remainder())
+                .size(Size::exact(30.0))
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
                         StripBuilder::new(ui)
@@ -56,7 +57,10 @@ impl App for ModLoaderApp {
                         self.show_table(ui);
                     });
                     strip.cell(|ui| {
-                        self.show_bottom(ui, frame);
+                        self.show_bottom(ui);
+                    });
+                    strip.cell(|ui| {
+                        self.show_footer(ui, frame);
                     });
                 });
         });
@@ -149,7 +153,7 @@ impl App for ModLoaderApp {
         // We need to keep the paint loop constantly running when shutting down,
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
-        // Or keep it running while the background is actively working.
+        // Or keep it running while the background thread is actively working.
         if self.should_exit.load(Ordering::Acquire) || self.working.load(Ordering::Acquire) {
             ctx.request_repaint();
         }
@@ -219,6 +223,7 @@ impl ModLoaderApp {
             .column(Size::initial(170.0).at_least(20.0))
             .column(Size::initial(120.0).at_least(120.0))
             .column(Size::initial(70.0).at_least(20.0))
+            .column(Size::initial(80.0).at_least(20.0))
             .column(Size::remainder().at_least(20.0))
             .resizable(true)
             .header(20.0, |mut header| {
@@ -236,6 +241,9 @@ impl ModLoaderApp {
                 });
                 header.col(|ui| {
                     ui.strong("Game build");
+                });
+                header.col(|ui| {
+                    ui.strong("");
                 });
             })
             .body(|mut body| {
@@ -278,6 +286,11 @@ impl ModLoaderApp {
                                 }
                                 None => "Any",
                             });
+                        });
+                        row.col(|ui| {
+                            if ui.button("More Info").clicked() {
+                                println!("More info {}", game_mod.name);
+                            };
                         });
                     });
                 }
@@ -324,36 +337,16 @@ impl ModLoaderApp {
             });
     }
 
-    fn show_bottom(&self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+    fn show_bottom(&self, ui: &mut egui::Ui) {
         let mut data = self.data.lock();
 
         ui.label("Mod config");
         ui.label("TODO");
 
-        if ui.button("Play").clicked() {
-            let install_manager = data.get_install_manager();
-            if let Some(install_manager) = install_manager {
-                match install_manager.launch_game() {
-                    Ok(_) => {}
-                    Err(warn) => data.warnings.push(warn),
-                };
-            }
-        }
-
         ui.label(format!(
             "Time since last integration {}s",
             self.last_integration_time.lock().elapsed().as_secs()
         ));
-
-        ui.horizontal(|ui| {
-            if ui.button("Quit").clicked() {
-                frame.quit();
-            }
-
-            if self.should_exit.load(Ordering::Acquire) {
-                ui.label("Exiting...");
-            }
-        });
 
         ui.label(match data.paks_path {
             Some(ref path) => path.to_str().unwrap(),
@@ -376,6 +369,48 @@ impl ModLoaderApp {
         };
 
         egui::warn_if_debug_build(ui);
+    }
+
+    fn show_footer(&self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        let mut data = self.data.lock();
+
+        ui.style_mut().spacing.button_padding = egui::vec2(9.0, 7.0);
+        ui.style_mut()
+            .text_styles
+            .get_mut(&egui::TextStyle::Button)
+            .unwrap()
+            .size = 16.0;
+
+        StripBuilder::new(ui)
+            .size(Size::relative(0.5))
+            .size(Size::remainder())
+            .horizontal(|mut strip| {
+                strip.cell(|ui| {
+                    if ui.button("Play").clicked() {
+                        let install_manager = data.get_install_manager();
+                        if let Some(install_manager) = install_manager {
+                            match install_manager.launch_game() {
+                                Ok(_) => {}
+                                Err(warn) => data.warnings.push(warn),
+                            };
+                        }
+                    }
+                });
+
+                strip.cell(|ui| {
+                    ui.with_layout(ui.layout().with_cross_align(Align::Max), |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("Quit").clicked() {
+                                frame.quit();
+                            }
+
+                            if self.should_exit.load(Ordering::Acquire) {
+                                ui.label("Exiting...");
+                            }
+                        });
+                    });
+                });
+            });
     }
 
     fn darken_background(&mut self, ctx: &egui::Context) {
