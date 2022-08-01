@@ -3,6 +3,7 @@ use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_J
 use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 
 use error::IntegrationError;
+use log::debug;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -319,6 +320,12 @@ pub fn integrate_mods<
         .filter_map(|e| e.ok())
         .collect();
 
+    debug!(
+        "Integrating {} mods, refuse_mismatched_connections: {}",
+        mod_files.len(),
+        refuse_mismatched_connections
+    );
+
     let game_dir = fs::read_dir(game_path)?;
     let game_files: Vec<File> = game_dir
         .filter_map(|e| e.ok())
@@ -343,6 +350,11 @@ pub fn integrate_mods<
             .unwrap();
         let metadata = unreal_modmetadata::from_slice(record)?;
         mods.push(metadata.clone());
+
+        debug!(
+            "Integrating modid {} version {}",
+            metadata.mod_id, metadata.mod_version
+        );
 
         // let optional_metadata: Value = serde_json::from_slice(record)?;
         // optional_mods_data.push(optional_metadata);
