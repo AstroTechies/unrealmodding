@@ -164,7 +164,11 @@ impl App for ModLoaderApp {
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
         // Or keep it running while the background thread is actively working.
-        if self.should_exit.load(Ordering::Acquire) || self.working.load(Ordering::Acquire) {
+        // Or while the last integration was not long ago.
+        if self.should_exit.load(Ordering::Acquire)
+            || self.working.load(Ordering::Acquire)
+            || self.last_integration_time.lock().elapsed().as_secs() < 5
+        {
             ctx.request_repaint();
         }
 
@@ -386,15 +390,17 @@ impl ModLoaderApp {
                 ui.label("Click on a mod to see more info.");
                 ui.label("");
 
-                ui.label("Mod/game install folders.");
-                ui.label(match data.paks_path {
-                    Some(ref path) => path.to_str().unwrap(),
-                    None => "No paks path",
-                });
-                ui.label(match data.game_install_path {
-                    Some(ref path) => path.to_str().unwrap(),
-                    None => "No install path",
-                });
+                if cfg!(debug_assertions) {
+                    ui.label("Mod/game install folders.");
+                    ui.label(match data.paks_path {
+                        Some(ref path) => path.to_str().unwrap(),
+                        None => "No paks path",
+                    });
+                    ui.label(match data.game_install_path {
+                        Some(ref path) => path.to_str().unwrap(),
+                        None => "No install path",
+                    });
+                }
             }
         }
     }
@@ -522,6 +528,8 @@ impl ModLoaderApp {
                 .lock()
                 .files_to_process
                 .push(dropped_file.path.as_ref().unwrap().to_owned());
+
+            self.working.store(true, Ordering::Release);
         }
     }
 }
