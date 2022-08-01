@@ -269,12 +269,12 @@ impl ModLoaderApp {
                         });
                         row.col(|ui| {
                             // becasue ComboBox .chnaged doesn't seem to work
-                            let prev_selceted = game_mod.selected_version;
+                            let prev_selected = game_mod.selected_version;
 
                             Self::show_version_select(ui, game_mod);
 
                             // this may look dumb but is what is needed
-                            if prev_selceted != game_mod.selected_version {
+                            if prev_selected != game_mod.selected_version {
                                 self.should_integrate.store(true, Ordering::Release);
                             }
                         });
@@ -311,6 +311,7 @@ impl ModLoaderApp {
     fn show_version_select(ui: &mut egui::Ui, game_mod: &mut GameMod) {
         egui::ComboBox::from_id_source(&game_mod.name)
             .selected_text(format!("{}", game_mod.selected_version))
+            .width(112.0)
             .show_ui(ui, |ui| {
                 // for when there is an Index file show force latest version, this to diecrtly indicate that there
                 // is the possibility of an auto update vie an index file.
