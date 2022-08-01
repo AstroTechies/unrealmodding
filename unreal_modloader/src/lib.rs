@@ -146,9 +146,9 @@ where
 
             // background loop
             loop {
-                if should_exit.load(Ordering::Relaxed) {
+                if should_exit.load(Ordering::Acquire) {
                     debug!("Background thread exiting...");
-                    ready_exit.store(true, Ordering::Relaxed);
+                    ready_exit.store(true, Ordering::Release);
                     break;
                 }
                 // reloading
@@ -213,7 +213,7 @@ where
                     }
                 }
 
-                working.store(false, Ordering::Relaxed);
+                working.store(false, Ordering::Release);
                 reloading.store(false, Ordering::Release);
 
                 // process dropped files
@@ -250,19 +250,20 @@ where
                     debug!("warnings: {:?}", warnings);
                     data.lock().warnings.extend(warnings);
 
-                    should_integrate.store(true, Ordering::Relaxed);
+                    should_integrate.store(true, Ordering::Release);
                 } else {
                     drop(data_guard);
                 }
 
                 let data_guard = data.lock();
-                if should_integrate.load(Ordering::Relaxed)
+                if should_integrate.load(Ordering::Acquire)
                     && data_guard.game_install_path.is_some()
                     && data_guard.warnings.is_empty()
                 {
+                    working.store(true, Ordering::Release);
+
                     let integration_work = (|| -> Result<(), ModLoaderWarning> {
-                        working.store(true, Ordering::Relaxed);
-                        should_integrate.store(false, Ordering::Relaxed);
+                        should_integrate.store(false, Ordering::Release);
 
                         // gather mods to be installed
                         let mods_to_install = data_guard
@@ -405,7 +406,7 @@ where
                         }
                     }
 
-                    working.store(false, Ordering::Relaxed);
+                    working.store(false, Ordering::Release);
                 } else {
                     drop(data_guard);
                 }

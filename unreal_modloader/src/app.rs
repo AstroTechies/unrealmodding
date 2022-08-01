@@ -150,23 +150,23 @@ impl App for ModLoaderApp {
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
         // Or keep it running while the background is actively working.
-        if self.should_exit.load(Ordering::Relaxed) || self.working.load(Ordering::Relaxed) {
+        if self.should_exit.load(Ordering::Acquire) || self.working.load(Ordering::Acquire) {
             ctx.request_repaint();
         }
 
-        if self.should_exit.load(Ordering::Relaxed) && self.ready_exit.load(Ordering::Relaxed) {
+        if self.should_exit.load(Ordering::Acquire) && self.ready_exit.load(Ordering::Acquire) {
             frame.quit();
         }
     }
 
     fn on_exit_event(&mut self) -> bool {
-        self.should_exit.store(true, Ordering::Relaxed);
+        self.should_exit.store(true, Ordering::Release);
 
-        if self.ready_exit.load(Ordering::Relaxed) {
+        if self.ready_exit.load(Ordering::Acquire) {
             info!("Exiting...");
         }
 
-        self.ready_exit.load(Ordering::Relaxed)
+        self.ready_exit.load(Ordering::Acquire)
     }
 }
 
@@ -181,7 +181,7 @@ impl ModLoaderApp {
                 None => "<unknown>".to_owned(),
             }
         );
-        if !self.working.load(Ordering::Relaxed) {
+        if !self.working.load(Ordering::Acquire) {
             ui.heading(title);
         } else {
             ui.heading(format!("{} - Working...", title));
@@ -243,7 +243,7 @@ impl ModLoaderApp {
                     body.row(18.0, |mut row| {
                         row.col(|ui| {
                             if ui.checkbox(&mut game_mod.enabled, "").changed() {
-                                self.should_integrate.store(true, Ordering::Relaxed);
+                                self.should_integrate.store(true, Ordering::Release);
                             };
                         });
                         row.col(|ui| {
@@ -257,7 +257,7 @@ impl ModLoaderApp {
 
                             // this may look dumb but is what is needed
                             if prev_selceted != game_mod.selected_version {
-                                self.should_integrate.store(true, Ordering::Relaxed);
+                                self.should_integrate.store(true, Ordering::Release);
                             }
                         });
                         row.col(|ui| {
@@ -350,7 +350,7 @@ impl ModLoaderApp {
                 frame.quit();
             }
 
-            if self.should_exit.load(Ordering::Relaxed) {
+            if self.should_exit.load(Ordering::Acquire) {
                 ui.label("Exiting...");
             }
         });
@@ -372,7 +372,7 @@ impl ModLoaderApp {
             )
             .changed()
         {
-            self.should_integrate.store(true, Ordering::Relaxed);
+            self.should_integrate.store(true, Ordering::Release);
         };
 
         egui::warn_if_debug_build(ui);
