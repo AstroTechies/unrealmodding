@@ -3,6 +3,9 @@ name = "unreal_modloader"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+bulk_data = ["unreal_modintegrator/bulk_data"]
+
 [dependencies]
 unreal_modintegrator = { version = "0.1.0", path = "../unreal_modintegrator" }
 unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
