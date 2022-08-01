@@ -45,8 +45,9 @@ pub(crate) struct ModLoaderAppData {
 
     pub game_build: Option<GameBuild>,
     pub refuse_mismatched_connections: bool,
-    pub game_mods: BTreeMap<String, GameMod>,
     pub files_to_process: Vec<PathBuf>,
+
+    pub game_mods: BTreeMap<String, GameMod>,
 
     pub error: Option<ModLoaderError>,
     pub warnings: Vec<ModLoaderWarning>,
@@ -125,6 +126,7 @@ where
         working: Arc::clone(&working),
 
         platform_selector_open: false,
+        selected_mod_id: None,
     };
 
     // spawn a background thread to handle long running tasks
@@ -423,7 +425,7 @@ where
     eframe::run_native(
         app.window_title.clone().as_str(),
         eframe::NativeOptions {
-            initial_window_size: Some(eframe::egui::vec2(623.0, 550.0)),
+            initial_window_size: Some(eframe::egui::vec2(623.0, 600.0)),
             ..eframe::NativeOptions::default()
         },
         Box::new(|cc| {

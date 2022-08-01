@@ -29,15 +29,17 @@ pub(crate) struct ModLoaderApp {
     pub reloading: Arc<AtomicBool>,
 
     pub platform_selector_open: bool,
+    pub selected_mod_id: Option<String>,
 }
 
 impl App for ModLoaderApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
-                .size(Size::exact(30.0))
+                .size(Size::exact(22.0))
                 .size(Size::relative(0.45))
                 .size(Size::remainder())
+                .size(Size::exact(48.0))
                 .size(Size::exact(30.0))
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
@@ -52,12 +54,20 @@ impl App for ModLoaderApp {
                                     self.show_change_platform(ui);
                                 });
                             });
+
+                        ui.separator();
                     });
                     strip.cell(|ui| {
+                        ui.separator();
                         self.show_table(ui);
                     });
                     strip.cell(|ui| {
+                        ui.separator();
                         self.show_bottom(ui);
+                    });
+                    strip.cell(|ui| {
+                        ui.separator();
+                        self.show_status(ui);
                     });
                     strip.cell(|ui| {
                         self.show_footer(ui, frame);
@@ -213,7 +223,7 @@ impl ModLoaderApp {
         });
     }
 
-    fn show_table(&self, ui: &mut egui::Ui) {
+    fn show_table(&mut self, ui: &mut egui::Ui) {
         let mut data = self.data.lock();
 
         TableBuilder::new(ui)
@@ -247,7 +257,7 @@ impl ModLoaderApp {
                 });
             })
             .body(|mut body| {
-                for (_, game_mod) in data.game_mods.iter_mut() {
+                for (mod_id, game_mod) in data.game_mods.iter_mut() {
                     body.row(18.0, |mut row| {
                         row.col(|ui| {
                             if ui.checkbox(&mut game_mod.enabled, "").changed() {
@@ -261,7 +271,7 @@ impl ModLoaderApp {
                             // becasue ComboBox .chnaged doesn't seem to work
                             let prev_selceted = game_mod.selected_version;
 
-                            self.show_version_select(ui, game_mod);
+                            Self::show_version_select(ui, game_mod);
 
                             // this may look dumb but is what is needed
                             if prev_selceted != game_mod.selected_version {
@@ -289,7 +299,7 @@ impl ModLoaderApp {
                         });
                         row.col(|ui| {
                             if ui.button("More Info").clicked() {
-                                println!("More info {}", game_mod.name);
+                                self.selected_mod_id = Some(mod_id.to_owned());
                             };
                         });
                     });
@@ -297,7 +307,8 @@ impl ModLoaderApp {
             });
     }
 
-    fn show_version_select(&self, ui: &mut egui::Ui, game_mod: &mut GameMod) {
+    // this is just an associated function to avoid upsetting the borrow checker
+    fn show_version_select(ui: &mut egui::Ui, game_mod: &mut GameMod) {
         egui::ComboBox::from_id_source(&game_mod.name)
             .selected_text(format!("{}", game_mod.selected_version))
             .show_ui(ui, |ui| {
@@ -338,37 +349,83 @@ impl ModLoaderApp {
     }
 
     fn show_bottom(&self, ui: &mut egui::Ui) {
+        let data = self.data.lock();
+
+        match self.selected_mod_id {
+            Some(ref mod_id) => {
+                let game_mod = data.game_mods.get(mod_id).unwrap();
+
+                // ui.horizontal(|ui| {
+                //     ui.label("Name:");
+                ui.heading(&game_mod.name);
+                //});
+
+                ui.label(format!("Mod Id: {}", mod_id));
+                ui.label(format!(
+                    "Desciption: {}",
+                    game_mod.description.as_ref().unwrap_or(&"None".to_owned())
+                ));
+                ui.label(format!("Sync: {}", game_mod.sync));
+                //TODO: size
+                ui.horizontal(|ui| {
+                    ui.label("Website:");
+                    match game_mod.homepage {
+                        Some(ref url) => ui.hyperlink(url.as_str()),
+                        None => ui.label("None"),
+                    }
+                });
+            }
+            None => {
+                ui.label("Drop a .pak file onto this window to install the mod.");
+                ui.label("To enable/disable mods click the checkbox to the left of the mod name.");
+                ui.label("Then press \"Play\" ro start the game with mods.");
+                ui.label("Note: The game will also start with mods if you launch it without the Modloader.");
+
+                ui.label("");
+                ui.label("Click on a mod to see more info.");
+                ui.label("");
+
+                ui.label("Mod/game install folders.");
+                ui.label(match data.paks_path {
+                    Some(ref path) => path.to_str().unwrap(),
+                    None => "No paks path",
+                });
+                ui.label(match data.game_install_path {
+                    Some(ref path) => path.to_str().unwrap(),
+                    None => "No install path",
+                });
+            }
+        }
+    }
+
+    fn show_status(&self, ui: &mut egui::Ui) {
         let mut data = self.data.lock();
 
-        ui.label("Mod config");
-        ui.label("TODO");
+        StripBuilder::new(ui)
+            .size(Size::remainder())
+            .size(Size::exact(70.0))
+            .horizontal(|mut strip| {
+                strip.cell(|ui| {
+                    if ui
+                        .checkbox(
+                            &mut data.refuse_mismatched_connections,
+                            "Refuse mismatched connections",
+                        )
+                        .changed()
+                    {
+                        self.should_integrate.store(true, Ordering::Release);
+                    };
 
-        ui.label(format!(
-            "Time since last integration {}s",
-            self.last_integration_time.lock().elapsed().as_secs()
-        ));
+                    ui.label(format!(
+                        "Time since last integration {}s",
+                        self.last_integration_time.lock().elapsed().as_secs()
+                    ));
+                });
 
-        ui.label(match data.paks_path {
-            Some(ref path) => path.to_str().unwrap(),
-            None => "No paks path",
-        });
-
-        ui.label(match data.game_install_path {
-            Some(ref path) => path.to_str().unwrap(),
-            None => "No install path",
-        });
-
-        if ui
-            .checkbox(
-                &mut data.refuse_mismatched_connections,
-                "Refuse mismatched connections",
-            )
-            .changed()
-        {
-            self.should_integrate.store(true, Ordering::Release);
-        };
-
-        egui::warn_if_debug_build(ui);
+                strip.cell(|ui| {
+                    egui::warn_if_debug_build(ui);
+                });
+            });
     }
 
     fn show_footer(&self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {

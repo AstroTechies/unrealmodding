@@ -37,6 +37,17 @@ impl Default for SyncMode {
     }
 }
 
+impl std::fmt::Display for SyncMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SyncMode::ServerAndClient => write!(f, "Server and Client"),
+            SyncMode::ServerOnly => write!(f, "Server only"),
+            SyncMode::ClientOnly => write!(f, "Client only"),
+            SyncMode::None => write!(f, "None"),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum DownloadMode {
     #[serde(rename = "index_file")]
