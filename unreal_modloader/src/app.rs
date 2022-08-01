@@ -374,7 +374,7 @@ impl ModLoaderApp {
     fn show_footer(&self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let mut data = self.data.lock();
 
-        ui.style_mut().spacing.button_padding = egui::vec2(9.0, 7.0);
+        ui.style_mut().spacing.button_padding = egui::vec2(9.0, 6.0);
         ui.style_mut()
             .text_styles
             .get_mut(&egui::TextStyle::Button)
@@ -399,15 +399,16 @@ impl ModLoaderApp {
 
                 strip.cell(|ui| {
                     ui.with_layout(ui.layout().with_cross_align(Align::Max), |ui| {
-                        ui.horizontal(|ui| {
-                            if ui.button("Quit").clicked() {
-                                frame.quit();
-                            }
-
-                            if self.should_exit.load(Ordering::Acquire) {
-                                ui.label("Exiting...");
-                            }
-                        });
+                        if ui
+                            .button(if !self.should_exit.load(Ordering::Acquire) {
+                                "Quit"
+                            } else {
+                                "Exiting..."
+                            })
+                            .clicked()
+                        {
+                            frame.quit();
+                        }
                     });
                 });
             });
