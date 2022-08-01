@@ -2,7 +2,7 @@ use std::error;
 use std::fmt;
 use std::io;
 
-use unreal_modintegrator::unreal_pak::error::UnrealPakError;
+use unreal_pak::error::UnrealPakError;
 
 /// For critical errors that can happen during runtime which prevent further
 /// operation of the modloader and cannot be handled gracefully.

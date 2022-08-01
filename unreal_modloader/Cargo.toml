@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 unreal_modintegrator = { version = "0.1.0", path = "../unreal_modintegrator" }
+unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
+unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
+unreal_modmetadata = { version = "0.1.0", path = "../unreal_modmetadata" }
 
 directories = "4.0.1"
 eframe = "0.18.0"

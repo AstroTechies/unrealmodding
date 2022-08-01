@@ -28,10 +28,6 @@ use unreal_pak::{PakFile, PakRecord};
 
 use crate::error::Error;
 
-pub use unreal_asset;
-pub use unreal_modmetadata;
-pub use unreal_pak;
-
 pub trait IntegratorInfo {}
 
 pub const INTEGRATOR_PAK_FILE_NAME: &str = "900-ModIntegrator_P.pak";
