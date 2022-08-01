@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use log::{debug, warn};
-use unreal_modmetadata::{Metadata, SyncMode};
+use unreal_modmetadata::{self, Metadata, SyncMode};
 use unreal_pak::PakFile;
 
 use crate::error::ModLoaderWarning;
