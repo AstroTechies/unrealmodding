@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    io::{self},
-};
+use std::{collections::HashMap, io};
 
 use unreal_asset::ue4version::VER_UE4_23;
 use unreal_modintegrator::IntegratorConfig;
