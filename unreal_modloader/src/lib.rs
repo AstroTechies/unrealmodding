@@ -35,6 +35,7 @@ use mod_processing::process_modfiles;
 use version::GameBuild;
 
 pub use unreal_asset;
+pub use unreal_modintegrator;
 pub use unreal_modmetadata;
 pub use unreal_pak;
 
