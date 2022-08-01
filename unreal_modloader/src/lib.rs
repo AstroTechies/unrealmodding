@@ -34,6 +34,10 @@ use mod_config::{load_config, write_config};
 use mod_processing::process_modfiles;
 use version::GameBuild;
 
+pub use unreal_modintegrator::unreal_asset;
+pub use unreal_modintegrator::unreal_modmetadata;
+pub use unreal_modintegrator::unreal_pak;
+
 #[derive(Debug)]
 pub(crate) struct ModLoaderAppData {
     /// %LocalAppData%\[GameName]\Saved\Mods

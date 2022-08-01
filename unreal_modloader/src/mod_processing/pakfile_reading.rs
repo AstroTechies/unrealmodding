@@ -3,8 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use log::{debug, warn};
-use unreal_modmetadata::{Metadata, SyncMode};
-use unreal_pak::PakFile;
+use unreal_modintegrator::unreal_modmetadata::{self, Metadata, SyncMode};
+use unreal_modintegrator::unreal_pak::PakFile;
 
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, GameModVersion, SelectedVersion};

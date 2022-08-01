@@ -4,7 +4,7 @@ use std::thread;
 use log::{debug, warn};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use unreal_modmetadata::DownloadInfo;
+use unreal_modintegrator::unreal_modmetadata::DownloadInfo;
 
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameModVersion, SelectedVersion};
