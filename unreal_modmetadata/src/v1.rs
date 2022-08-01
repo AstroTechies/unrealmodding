@@ -1,3 +1,7 @@
+/// The version 1 of the metadata is considered deprecated.
+/// It is recommended to use the version 2.
+/// Support for the version 1 will be removed in a future release.
+/// The current implementation that ensures backwards compatibility (for now) contains some Astroneer specific data.
 use std::{collections::HashMap, hash::Hash};
 
 use serde::{Deserialize, Serialize};
@@ -19,6 +23,7 @@ pub struct Metadata {
     pub homepage: Option<String>,
     pub download: Option<DownloadInfo>,
 
+    /// Astroneer specific data.
     pub persistent_actors: Option<Value>,
     pub mission_trailheads: Option<Value>,
     pub linked_actor_components: Option<Value>,
