@@ -469,7 +469,6 @@ impl ModLoaderApp {
                 ui.label("Drop a .pak file onto this window to install the mod.");
                 ui.label("To enable/disable mods click the checkbox to the left of the mod name.");
                 ui.label("Then press \"Play\" ro start the game with mods.");
-                ui.label("Note: The game will also start with mods if you launch it without the Modloader.");
 
                 ui.label("");
                 ui.label("Click on a mod to see more info.");
