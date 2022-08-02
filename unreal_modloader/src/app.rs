@@ -1,18 +1,21 @@
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicI32, Ordering},
     Arc,
 };
 use std::time::Instant;
 
-use eframe::egui::{Button, Sense};
+use eframe::egui::{Button, ProgressBar, Sense, Widget};
 use eframe::emath::Align;
 use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::{debug, info};
 use parking_lot::Mutex;
 
-use crate::game_mod::{GameMod, SelectedVersion};
 use crate::version::Version;
+use crate::{
+    game_mod::{GameMod, SelectedVersion},
+    update_info::UpdateInfo,
+};
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,
@@ -30,6 +33,10 @@ pub(crate) struct ModLoaderApp {
 
     pub platform_selector_open: bool,
     pub selected_mod_id: Option<String>,
+
+    pub newer_update: Arc<Mutex<Option<UpdateInfo>>>,
+    pub should_update: Arc<AtomicBool>,
+    pub update_progress: Arc<AtomicI32>,
 }
 
 impl App for ModLoaderApp {
@@ -75,6 +82,82 @@ impl App for ModLoaderApp {
         let mut data = self.data.lock();
 
         let mut should_darken = false;
+
+        let mut update_cancelled = false;
+        let newer_update = self.newer_update.lock();
+        if let Some(newer_update) = newer_update.as_ref() {
+            egui::Window::new("A new update is available")
+                .resizable(false)
+                .collapsible(false)
+                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+                .default_size((600.0, 400.0))
+                .show(ctx, |ui| {
+                    StripBuilder::new(ui)
+                        .size(Size::exact(22.0))
+                        .size(Size::remainder())
+                        .size(Size::exact(22.0))
+                        .size(Size::exact(45.0))
+                        .vertical(|mut strip| {
+                            strip.cell(|ui| {
+                                ui.heading(format!(
+                                    "Update version {} is available!",
+                                    newer_update.version
+                                ));
+                            });
+
+                            strip.cell(|ui| {
+                                ui.label(format!("Changelog:\n {}", newer_update.changelog));
+                            });
+
+                            strip.cell(|ui| {
+                                if self.should_update.load(Ordering::Acquire) {
+                                    let bar = ProgressBar::new(
+                                        self.update_progress.load(Ordering::Acquire) as f32 / 100.0,
+                                    );
+                                    bar.ui(ui);
+                                }
+                            });
+
+                            strip.cell(|ui| {
+                                ui.separator();
+                                ui.style_mut().spacing.button_padding = egui::vec2(9.0, 6.0);
+                                ui.style_mut()
+                                    .text_styles
+                                    .get_mut(&egui::TextStyle::Button)
+                                    .unwrap()
+                                    .size = 16.0;
+
+                                ui.with_layout(ui.layout().with_cross_align(Align::Center), |ui| {
+                                    StripBuilder::new(ui)
+                                        .size(Size::relative(0.5))
+                                        .size(Size::remainder())
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|ui| {
+                                                if ui.button("Download").clicked() {
+                                                    self.should_update
+                                                        .store(true, Ordering::Release);
+                                                }
+                                            });
+
+                                            strip.cell(|ui| {
+                                                if ui.button("Cancel").clicked() {
+                                                    update_cancelled = true;
+                                                }
+                                            });
+                                        });
+                                });
+                            });
+                        });
+                });
+
+            should_darken = true;
+        }
+        drop(newer_update);
+
+        if update_cancelled {
+            *self.newer_update.lock() = None;
+        }
+
         if data.error.is_some() {
             egui::Window::new("Critical Error")
                 .resizable(false)

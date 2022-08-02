@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
+use std::env;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use std::process::Command;
+use std::sync::atomic::AtomicI32;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -26,6 +29,7 @@ pub mod game_path_helpers;
 pub mod game_platform_managers;
 mod mod_config;
 mod mod_processing;
+pub mod update_info;
 pub mod version;
 
 use error::{ModLoaderError, ModLoaderWarning};
@@ -116,6 +120,11 @@ where
     let reloading = Arc::new(AtomicBool::new(true));
     let working = Arc::new(AtomicBool::new(true));
 
+    let newer_update = Arc::new(Mutex::new(config.get_newer_update().ok().flatten()));
+
+    let should_update = Arc::new(AtomicBool::new(false));
+    let update_progress = Arc::new(AtomicI32::new(0));
+
     // instantiate the GUI app
     let app = app::ModLoaderApp {
         data: Arc::clone(&data),
@@ -132,6 +141,9 @@ where
 
         platform_selector_open: false,
         selected_mod_id: None,
+        newer_update: Arc::clone(&newer_update),
+        should_update: Arc::clone(&should_update),
+        update_progress: Arc::clone(&update_progress),
     };
 
     // spawn a background thread to handle long running tasks
@@ -146,7 +158,6 @@ where
                 .join(D::GAME_NAME)
                 .join("Saved")
                 .join("Mods");
-            println!("{:?}", mods_path);
             fs::create_dir_all(&mods_path).unwrap();
 
             data.lock().mods_path = Some(mods_path);
@@ -157,6 +168,29 @@ where
                     debug!("Background thread exiting...");
                     ready_exit.store(true, Ordering::Release);
                     break;
+                }
+
+                let newer_update = newer_update.lock();
+                if newer_update.is_some() {
+                    drop(newer_update);
+                    if should_update.load(Ordering::Acquire) {
+                        let update_progress = Arc::clone(&update_progress);
+                        config
+                            .update_modloader(Box::new(move |progress| {
+                                update_progress
+                                    .store(f32::round(progress * 100.0) as i32, Ordering::Release);
+                            }))
+                            .unwrap();
+                        should_update.store(false, Ordering::Release);
+
+                        Command::new(env::current_exe().unwrap()).spawn().unwrap();
+                        should_exit.store(true, Ordering::Release);
+                        continue;
+                    }
+                    thread::sleep(Duration::from_millis(50));
+                    continue;
+                } else {
+                    drop(newer_update);
                 }
                 // reloading
                 if reloading.load(Ordering::Acquire) {
