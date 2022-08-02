@@ -266,18 +266,20 @@ impl ModLoaderApp {
                             };
                         });
                         row.col(|ui| {
-                            ui.label(game_mod.name.as_str());
+                            ui.label(&game_mod.name);
                         });
                         row.col(|ui| {
-                            // becasue ComboBox .chnaged doesn't seem to work
-                            let prev_selected = game_mod.selected_version;
+                            ui.push_id(mod_id, |ui| {
+                                // becasue ComboBox .chnaged doesn't seem to work
+                                let prev_selected = game_mod.selected_version;
 
-                            Self::show_version_select(ui, game_mod);
+                                Self::show_version_select(ui, game_mod);
 
-                            // this may look dumb but is what is needed
-                            if prev_selected != game_mod.selected_version {
-                                self.should_integrate.store(true, Ordering::Release);
-                            }
+                                // this may look dumb but is what is needed
+                                if prev_selected != game_mod.selected_version {
+                                    self.should_integrate.store(true, Ordering::Release);
+                                }
+                            });
                         });
                         row.col(|ui| {
                             ui.label(
