@@ -92,8 +92,17 @@ impl ModLoaderAppData {
     }
 }
 
-pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(config: C)
-where
+#[derive(Clone)]
+pub struct IconData {
+    pub data: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+}
+
+pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
+    config: C,
+    icon_data: Option<IconData>,
+) where
     D: 'static + IntegratorConfig<'a, T, E>,
     C: 'static + config::GameConfig<'a, D, T, E>,
 {
@@ -460,11 +469,21 @@ where
             panic!();
         });
 
+    let icon_data = match icon_data {
+        Some(data) => Some(eframe::IconData {
+            rgba: data.data.to_vec(),
+            width: data.width,
+            height: data.height,
+        }),
+        None => None,
+    };
+
     // run the GUI app
     eframe::run_native(
         app.window_title.clone().as_str(),
         eframe::NativeOptions {
             initial_window_size: Some(eframe::egui::vec2(623.0, 600.0)),
+            icon_data,
             ..eframe::NativeOptions::default()
         },
         Box::new(|cc| {
