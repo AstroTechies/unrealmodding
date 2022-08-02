@@ -72,6 +72,10 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
     //     VER_UE4_23
     // }
     const ENGINE_VERSION: i32 = VER_UE4_23;
+
+    fn get_instructions(&self) -> Option<unreal_modintegrator::BakedInstructions> {
+        None
+    }
 }
 
 fn main() {

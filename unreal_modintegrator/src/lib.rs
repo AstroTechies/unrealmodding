@@ -22,7 +22,7 @@ use unreal_pak::pakversion::PakVersion;
 mod assets;
 pub mod error;
 pub mod helpers;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use unreal_asset::Asset;
 use unreal_pak::{PakFile, PakRecord};
 
@@ -31,6 +31,23 @@ use crate::error::Error;
 pub trait IntegratorInfo {}
 
 pub const INTEGRATOR_PAK_FILE_NAME: &str = "900-ModIntegrator_P.pak";
+
+pub struct BakedInstructions {
+    pub file_refs: HashMap<String, &'static [u8]>,
+    pub instructions: Map<String, Value>,
+}
+
+impl BakedInstructions {
+    pub fn new(
+        file_refs: HashMap<String, &'static [u8]>,
+        instructions: Map<String, Value>,
+    ) -> Self {
+        BakedInstructions {
+            file_refs,
+            instructions,
+        }
+    }
+}
 
 #[allow(clippy::type_complexity)]
 pub trait IntegratorConfig<'data, T, E: std::error::Error> {
@@ -49,6 +66,8 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
             ) -> Result<(), E>,
         >,
     >;
+
+    fn get_instructions(&self) -> Option<BakedInstructions>;
 
     const GAME_NAME: &'static str;
     const INTEGRATOR_VERSION: &'static str;
@@ -433,6 +452,26 @@ pub fn integrate_mods<
                 unreal_pak::CompressionMethod::Zlib,
             )?;
             generated_pak.add_record(record)?;
+        }
+
+        let instructions = integrator_config.get_instructions();
+        if let Some(instructions) = instructions {
+            for (file_path, data) in instructions.file_refs {
+                let record = PakRecord::new(
+                    file_path,
+                    data.to_vec(),
+                    unreal_pak::CompressionMethod::Zlib,
+                )?;
+                generated_pak.add_record(record)?;
+            }
+
+            for (instruction_name, instruction) in instructions.instructions {
+                println!("Pushing instruction {} {:?}", instruction_name, instruction);
+                optional_mods_data
+                    .entry(instruction_name)
+                    .or_insert_with(Vec::new)
+                    .push(instruction);
+            }
         }
 
         let mut game_paks = Vec::new();
