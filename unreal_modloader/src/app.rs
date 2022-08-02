@@ -244,9 +244,12 @@ impl App for ModLoaderApp {
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
         // Or keep it running while the background thread is actively working.
+        // Or while integration is pending.
         // Or while the last integration was not long ago.
         if self.should_exit.load(Ordering::Acquire)
             || self.working.load(Ordering::Acquire)
+            || self.should_integrate.load(Ordering::Acquire)
+            || self.reloading.load(Ordering::Acquire)
             || self.last_integration_time.lock().elapsed().as_secs() < 5
         {
             ctx.request_repaint();
