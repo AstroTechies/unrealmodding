@@ -1,10 +1,14 @@
 [package]
 name = "unreal_modintegrator"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [features]
 bulk_data = []
+# Ue versions
+# If you want support for other ue versions, you can make a pull request with the support added,
+# or make an issue asking for a specific ue version to be supported.
+ue4_23 = []
 
 [dependencies]
 unreal_asset = { version = "0.1.0", path = "../unreal_asset" }

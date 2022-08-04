@@ -1,13 +1,14 @@
 [package]
 name = "unreal_modloader"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [features]
 bulk_data = ["unreal_modintegrator/bulk_data"]
+ue4_23 = ["unreal_modintegrator/ue4_23"]
 
 [dependencies]
-unreal_modintegrator = { version = "0.1.0", path = "../unreal_modintegrator" }
+unreal_modintegrator = { version = "0.1.1", path = "../unreal_modintegrator" }
 unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
 unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 unreal_modmetadata = { version = "0.1.0", path = "../unreal_modmetadata" }
