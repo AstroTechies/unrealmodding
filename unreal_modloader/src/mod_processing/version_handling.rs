@@ -18,24 +18,6 @@ pub(crate) fn auto_pick_versions(data: &mut ModLoaderAppData) {
 
             game_mod.latest_version = Some(**versions.last().unwrap());
         }
-
-        // if latest is set directly it means this was processed before and an index file was downlaoded
-        // but the actual mod .pak for that version might not be downloaded and therefore trying to use
-        // it's metadata in the next step will fail. That's why we need to revert to the latest indirect
-        // if the version is not downloaded.
-        if let SelectedVersion::Latest(_) = game_mod.selected_version {
-            let mut versions = game_mod
-                .versions
-                .iter()
-                .filter(|v| v.1.downloaded)
-                .map(|v| v.0)
-                .collect::<Vec<&Version>>();
-            versions.sort();
-            game_mod.selected_version =
-                SelectedVersion::LatestIndirect(Some(**versions.last().unwrap()));
-
-            game_mod.latest_version = Some(**versions.last().unwrap());
-        }
     }
 }
 
@@ -51,29 +33,29 @@ pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &[S
             .versions
             .get(&game_mod.selected_version.unwrap())
             .unwrap();
-        let metadata = version_data.metadata.as_ref().unwrap();
-
-        game_mod.name = metadata.name.to_owned();
-        game_mod.author = metadata.author.to_owned();
-        game_mod.description = metadata.description.to_owned();
-        game_mod.game_build = match metadata.game_build {
-            Some(ref game_build) => match GameBuild::try_from(game_build) {
-                Ok(game_build) => Some(game_build),
-                Err(_) => {
-                    warn!("Failed to parse game build for mod {:?}", mod_id);
-                    None
-                }
-            },
-            None => None,
-        };
-        game_mod.sync = metadata.sync.unwrap_or(SyncMode::ServerAndClient);
-        game_mod.homepage = metadata.homepage.clone();
-        game_mod.download = metadata.download.clone();
-        let path = data
-            .mods_path
-            .as_ref()
-            .unwrap()
-            .join(version_data.file_name.clone());
-        game_mod.size = fs::metadata(&path).unwrap().len();
+        if let Some(ref metadata) = version_data.metadata {
+            game_mod.name = metadata.name.to_owned();
+            game_mod.author = metadata.author.to_owned();
+            game_mod.description = metadata.description.to_owned();
+            game_mod.game_build = match metadata.game_build {
+                Some(ref game_build) => match GameBuild::try_from(game_build) {
+                    Ok(game_build) => Some(game_build),
+                    Err(_) => {
+                        warn!("Failed to parse game build for mod {:?}", mod_id);
+                        None
+                    }
+                },
+                None => None,
+            };
+            game_mod.sync = metadata.sync.unwrap_or(SyncMode::ServerAndClient);
+            game_mod.homepage = metadata.homepage.clone();
+            game_mod.download = metadata.download.clone();
+            let path = data
+                .mods_path
+                .as_ref()
+                .unwrap()
+                .join(version_data.file_name.clone());
+            game_mod.size = fs::metadata(&path).unwrap().len();
+        }
     }
 }
