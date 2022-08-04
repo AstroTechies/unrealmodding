@@ -22,6 +22,7 @@ pub struct Metadata {
     pub homepage: Option<String>,
     pub download: Option<DownloadInfo>,
 
+    #[serde(default)]
     pub integrator: HashMap<String, Value>,
 }
 
