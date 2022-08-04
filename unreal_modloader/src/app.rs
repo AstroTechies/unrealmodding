@@ -232,6 +232,13 @@ impl App for ModLoaderApp {
             should_darken = true;
         }
 
+        // Keyboard shortcuts
+
+        // esc show default bottom text
+        if ctx.input().key_pressed(egui::Key::Escape) {
+            self.selected_mod_id = None;
+        }
+
         drop(data);
 
         if should_darken {
