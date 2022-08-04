@@ -77,7 +77,13 @@ pub fn handle_persistent_actors(
     }
 
     for map_path in map_paths {
-        let mut asset = get_asset(integrated_pak, game_paks, &map_path.to_string(), VER_UE4_23)?;
+        let mut asset = get_asset(
+            integrated_pak,
+            game_paks,
+            mod_paks,
+            &map_path.to_string(),
+            VER_UE4_23,
+        )?;
 
         let mut level_export_index = None;
         for i in 0..asset.exports.len() {

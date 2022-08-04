@@ -35,14 +35,21 @@ pub fn game_to_absolute(game_name: &str, path: &str) -> Option<String> {
 pub fn get_asset(
     integrated_pak: &mut PakFile,
     game_paks: &mut [PakFile],
+    mod_paks: &mut [PakFile],
     name: &String,
     version: i32,
 ) -> Result<Asset, io::Error> {
     if let Ok(asset) = read_asset(integrated_pak, version, name) {
         return Ok(asset);
     }
+
+    if let Some(mod_asset) = find_asset(mod_paks, name) {
+        return read_asset(&mut mod_paks[mod_asset], version, name)
+            .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()));
+    }
+
     let original_asset = find_asset(game_paks, name)
-        .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such asset"))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::Other, format!("No such asset {}", name)))?;
 
     read_asset(&mut game_paks[original_asset], version, name)
         .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))
