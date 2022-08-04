@@ -92,18 +92,8 @@ impl ModLoaderAppData {
     }
 }
 
-#[derive(Clone)]
-pub struct IconData {
-    pub data: Vec<u8>,
-    pub width: u32,
-    pub height: u32,
-}
-
-pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
-    config: C,
-    icon_data: Option<IconData>,
-    version: &'static str,
-) where
+pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(config: C)
+where
     D: 'static + IntegratorConfig<'a, T, E>,
     C: 'static + config::GameConfig<'a, D, T, E>,
 {
@@ -122,6 +112,8 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
         install_managers: config.get_install_managers(),
         selected_game_platform: None,
     }));
+
+    let icon_data = config.get_icon();
 
     let should_exit = Arc::new(AtomicBool::new(false));
     let ready_exit = Arc::new(AtomicBool::new(false));
@@ -155,7 +147,7 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
         should_update: Arc::clone(&should_update),
         update_progress: Arc::clone(&update_progress),
 
-        modloader_version: version,
+        modloader_version: C::CRATE_VERSION,
     };
 
     // spawn a background thread to handle long running tasks

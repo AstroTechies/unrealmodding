@@ -12,6 +12,13 @@ use crate::{
     update_info::UpdateInfo,
 };
 
+#[derive(Clone)]
+pub struct IconData {
+    pub data: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+}
+
 pub trait InstallManager: Debug + std::marker::Send {
     fn get_game_install_path(&self) -> Option<PathBuf>;
     fn get_paks_path(&self) -> Option<PathBuf>;
@@ -30,6 +37,9 @@ where
     fn get_newer_update(&self) -> Result<Option<UpdateInfo>, ModLoaderError>;
     fn update_modloader(&self, progress_callback: Box<dyn Fn(f32)>) -> Result<(), ModLoaderError>;
 
+    fn get_icon(&self) -> Option<IconData>;
+
     const WINDOW_TITLE: &'static str;
     const CONFIG_DIR: &'static str;
+    const CRATE_VERSION: &'static str;
 }
