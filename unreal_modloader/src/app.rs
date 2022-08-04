@@ -493,7 +493,7 @@ impl ModLoaderApp {
             None => {
                 ui.label("Drop a .pak file onto this window to install the mod.");
                 ui.label("To enable/disable mods click the checkbox to the left of the mod name.");
-                ui.label("Then press \"Play\" ro start the game with mods.");
+                ui.label("Then press \"Play\" to start the game with mods.");
                 ui.label(egui::RichText::new("").size(5.0));
 
                 ui.label("Click on a mod to see more info.");
