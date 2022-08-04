@@ -37,6 +37,8 @@ pub(crate) struct ModLoaderApp {
     pub newer_update: Arc<Mutex<Option<UpdateInfo>>>,
     pub should_update: Arc<AtomicBool>,
     pub update_progress: Arc<AtomicI32>,
+
+    pub modloader_version: &'static str,
 }
 
 impl App for ModLoaderApp {
@@ -46,6 +48,7 @@ impl App for ModLoaderApp {
                 .size(Size::exact(22.0))
                 .size(Size::relative(0.45))
                 .size(Size::remainder())
+                .size(Size::exact(14.0))
                 .size(Size::exact(45.0))
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
@@ -70,6 +73,12 @@ impl App for ModLoaderApp {
                     strip.cell(|ui| {
                         ui.separator();
                         self.show_bottom(ui);
+                    });
+
+                    strip.cell(|ui| {
+                        ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                            ui.label(format!("Version: {}", self.modloader_version));
+                        });
                     });
 
                     strip.cell(|ui| {

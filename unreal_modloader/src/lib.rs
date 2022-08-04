@@ -102,6 +102,7 @@ pub struct IconData {
 pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
     config: C,
     icon_data: Option<IconData>,
+    version: &'static str,
 ) where
     D: 'static + IntegratorConfig<'a, T, E>,
     C: 'static + config::GameConfig<'a, D, T, E>,
@@ -153,6 +154,8 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
         newer_update: Arc::clone(&newer_update),
         should_update: Arc::clone(&should_update),
         update_progress: Arc::clone(&update_progress),
+
+        modloader_version: version,
     };
 
     // spawn a background thread to handle long running tasks
