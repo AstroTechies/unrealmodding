@@ -126,7 +126,6 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
     let ready_exit = Arc::new(AtomicBool::new(false));
     let should_integrate = Arc::new(AtomicBool::new(true));
     let last_integration_time = Arc::new(Mutex::new(Instant::now()));
-    let reloading = Arc::new(AtomicBool::new(true));
     let working = Arc::new(AtomicBool::new(true));
 
     let newer_update = Arc::new(Mutex::new(config.get_newer_update().ok().flatten()));
@@ -145,7 +144,6 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
         should_integrate: Arc::clone(&should_integrate),
         last_integration_time: Arc::clone(&last_integration_time),
 
-        reloading: Arc::clone(&reloading),
         working: Arc::clone(&working),
 
         platform_selector_open: false,
@@ -161,15 +159,61 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
         .spawn(move || {
             debug!("Starting background thread");
 
-            let mods_path = BaseDirs::new()
-                .unwrap()
-                .data_local_dir()
-                .join(D::GAME_NAME)
-                .join("Saved")
-                .join("Mods");
-            fs::create_dir_all(&mods_path).unwrap();
+            let start = Instant::now();
+            working.store(true, Ordering::Release);
 
-            data.lock().mods_path = Some(mods_path);
+            let startup_work = || -> Result<(), ModLoaderError> {
+                let mods_path = BaseDirs::new()
+                    .ok_or_else(ModLoaderError::no_base_path)?
+                    .data_local_dir()
+                    .join(D::GAME_NAME)
+                    .join("Saved")
+                    .join("Mods");
+
+                data.lock().mods_path = Some(mods_path.clone());
+
+                // ensure the base_path/Mods directory exists
+                fs::create_dir_all(&mods_path).map_err(|err| {
+                    ModLoaderError::io_error_with_message("create Mods directory".to_owned(), err)
+                })?;
+
+                // gather mods
+                let mods_dir = fs::read_dir(&mods_path).map_err(|err| {
+                    ModLoaderError::io_error_with_message("read Mods directory".to_owned(), err)
+                })?;
+
+                let mod_files: Vec<PathBuf> = mods_dir
+                    .filter_map(|e| e.ok())
+                    .filter(|e| match e.file_name().into_string() {
+                        Ok(s) => s.ends_with("_P.pak") && s != INTEGRATOR_PAK_FILE_NAME,
+                        Err(_) => false,
+                    })
+                    .map(|e| e.path())
+                    .collect();
+
+                let warnings = process_modfiles(&mod_files, &data, false);
+                debug!("warnings: {:?}", warnings);
+
+                let mut data_guard = data.lock();
+                data_guard.warnings.extend(warnings);
+
+                // load config
+                load_config(&mut *data_guard);
+
+                // debug!("{:#?}", data_guard.game_mods);
+                Ok(())
+            };
+            match startup_work() {
+                Ok(_) => {}
+                Err(err) => {
+                    data.lock().error = Some(err);
+                }
+            }
+
+            debug!(
+                "Background thread startup took {} milliseconds",
+                start.elapsed().as_millis()
+            );
 
             // background loop
             loop {
@@ -179,6 +223,7 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                     break;
                 }
 
+                // auto update
                 let newer_update = newer_update.lock();
                 if newer_update.is_some() {
                     drop(newer_update);
@@ -201,74 +246,14 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                 } else {
                     drop(newer_update);
                 }
-                // reloading
-                if reloading.load(Ordering::Acquire) {
-                    let start = Instant::now();
-                    working.store(true, Ordering::Release);
 
-                    let data_guard = data.lock();
-                    let mods_path = data_guard.mods_path.to_owned();
-                    if let Some(mods_path) = mods_path {
-                        drop(data_guard);
-
-                        let startup_work = || -> Result<(), ModLoaderError> {
-                            // ensure the base_path/Mods directory exists
-                            fs::create_dir_all(&mods_path).map_err(|err| {
-                                ModLoaderError::io_error_with_message(
-                                    "Mods directory".to_owned(),
-                                    err,
-                                )
-                            })?;
-
-                            // gather mods
-                            let mods_dir = fs::read_dir(&mods_path).map_err(|err| {
-                                ModLoaderError::io_error_with_message(
-                                    "Mods directory".to_owned(),
-                                    err,
-                                )
-                            })?;
-
-                            let mod_files: Vec<PathBuf> = mods_dir
-                                .filter_map(|e| e.ok())
-                                .filter(|e| match e.file_name().into_string() {
-                                    Ok(s) => s.ends_with("_P.pak") && s != INTEGRATOR_PAK_FILE_NAME,
-                                    Err(_) => false,
-                                })
-                                .map(|e| e.path())
-                                .collect();
-
-                            let warnings = process_modfiles(&mod_files, &data, false);
-                            debug!("warnings: {:?}", warnings);
-
-                            let mut data_guard = data.lock();
-                            data_guard.warnings.extend(warnings);
-
-                            // load config
-                            load_config(&mut *data_guard);
-
-                            // debug!("{:#?}", data_guard.game_mods);
-                            Ok(())
-                        };
-                        match startup_work() {
-                            Ok(_) => {}
-                            Err(err) => {
-                                data.lock().error = Some(err);
-                            }
-                        }
-
-                        debug!(
-                            "Background thread reload took {} milliseconds",
-                            start.elapsed().as_millis()
-                        );
-                    }
-                }
-
-                working.store(false, Ordering::Release);
-                reloading.store(false, Ordering::Release);
+                let mods_path = data.lock().mods_path.clone().unwrap();
 
                 // process dropped files
                 let mut data_guard = data.lock();
                 if !data_guard.files_to_process.is_empty() {
+                    working.store(true, Ordering::Release);
+
                     let files_to_process = data_guard
                         .files_to_process
                         .clone()
@@ -277,8 +262,7 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                             let file_name = file_path.file_name().unwrap();
 
                             // copy the file to the mods directory
-                            let new_file_path =
-                                data_guard.mods_path.as_ref().unwrap().join(file_name);
+                            let new_file_path = mods_path.join(file_name);
                             match fs::copy(file_path, &new_file_path) {
                                 Ok(_) => Some(new_file_path),
                                 Err(err) => {
@@ -294,6 +278,8 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                         })
                         .collect::<Vec<PathBuf>>();
                     data_guard.files_to_process.clear();
+
+                    // drop here because process_modfiles takes time
                     drop(data_guard);
 
                     let warnings = process_modfiles(&files_to_process, &data, true);
@@ -306,14 +292,17 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                 }
 
                 let data_guard = data.lock();
+
+                // integrate
                 if should_integrate.load(Ordering::Acquire)
                     && data_guard.game_install_path.is_some()
                     && data_guard.warnings.is_empty()
                 {
-                    working.store(true, Ordering::Release);
-
                     let integration_work = (|| -> Result<(), ModLoaderWarning> {
                         should_integrate.store(false, Ordering::Release);
+                        working.store(true, Ordering::Release);
+
+                        let start_pre = Instant::now();
 
                         // gather mods to be installed
                         let mods_to_install = data_guard
@@ -328,7 +317,6 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                             })
                             .collect::<Vec<_>>();
 
-                        let mods_path = data_guard.mods_path.as_ref().unwrap().to_owned();
                         let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
                         let install_path =
                             data_guard.game_install_path.as_ref().unwrap().to_owned();
@@ -366,7 +354,7 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                                     debug!("Downloading {:?}", file_name);
 
                                     // this is safe because the filename has already been validated
-                                    let file_path = mods_path.clone().join(file_name.clone());
+                                    let file_path = mods_path.join(file_name.clone());
                                     let mut file = fs::File::create(&file_path)?;
 
                                     let mut response = reqwest::blocking::get(url.as_str())
@@ -389,7 +377,7 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                             let warnings = process_modfiles(
                                 &files_to_download
                                     .iter()
-                                    .map(|f| mods_path.clone().join(f.0.clone()))
+                                    .map(|f| mods_path.join(f.0.clone()))
                                     .collect::<Vec<_>>(),
                                 &data,
                                 false,
@@ -423,7 +411,12 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                             .map(|_| ())?;
                         }
 
-                        let start = Instant::now();
+                        debug!(
+                            "Pre Integration took {} milliseconds",
+                            start_pre.elapsed().as_millis()
+                        );
+
+                        let start_integrator = Instant::now();
 
                         // run integrator
                         debug!("Integrating mods");
@@ -436,15 +429,13 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
 
                         debug!(
                             "Integration took {} milliseconds",
-                            start.elapsed().as_millis()
+                            start_integrator.elapsed().as_millis()
                         );
 
                         *last_integration_time.lock() = Instant::now();
 
-                        let mut data_guard = data.lock();
-
                         // update config file
-                        write_config(&mut data_guard);
+                        write_config(&mut data.lock());
 
                         Ok(())
                     })();
@@ -455,12 +446,11 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                             data.lock().warnings.push(err);
                         }
                     }
-
-                    working.store(false, Ordering::Release);
                 } else {
                     drop(data_guard);
                 }
 
+                working.store(false, Ordering::Release);
                 thread::sleep(Duration::from_millis(50));
             }
         })

@@ -29,7 +29,6 @@ pub(crate) struct ModLoaderApp {
     pub last_integration_time: Arc<Mutex<Instant>>,
 
     pub working: Arc<AtomicBool>,
-    pub reloading: Arc<AtomicBool>,
 
     pub platform_selector_open: bool,
     pub selected_mod_id: Option<String>,
@@ -223,7 +222,6 @@ impl App for ModLoaderApp {
                         if ui.add(button).clicked() {
                             data.set_game_platform(&platform);
                             self.platform_selector_open = false;
-                            self.reloading.store(true, Ordering::Release);
                             self.should_integrate.store(true, Ordering::Release);
                             ctx.request_repaint();
                         }
@@ -256,7 +254,6 @@ impl App for ModLoaderApp {
         if self.should_exit.load(Ordering::Acquire)
             || self.working.load(Ordering::Acquire)
             || self.should_integrate.load(Ordering::Acquire)
-            || self.reloading.load(Ordering::Acquire)
             || self.last_integration_time.lock().elapsed().as_secs() < 5
         {
             ctx.request_repaint();
