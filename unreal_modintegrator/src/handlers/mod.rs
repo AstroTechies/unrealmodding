@@ -5,6 +5,8 @@ use unreal_pak::PakFile;
 #[cfg(feature = "ue4_23")]
 mod ue4_23;
 
+#[allow(unused_variables)]
+#[allow(clippy::ptr_arg)]
 pub fn handle_persistent_actors(
     game_name: &'static str,
     map_paths: &[&str],

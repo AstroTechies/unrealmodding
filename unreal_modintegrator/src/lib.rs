@@ -2,8 +2,6 @@ use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_J
 #[cfg(feature = "bulk_data")]
 use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 
-use lazy_static::lazy_static;
-
 use error::IntegrationError;
 use log::{debug, trace};
 use std::collections::HashMap;
@@ -492,10 +490,9 @@ pub fn integrate_mods<
         let persistent_actor_maps: Vec<&str> = optional_mods_data
             .get("persistent_actor_maps")
             .unwrap_or(&empty_vec)
-            .into_iter()
+            .iter()
             .filter_map(|e| e.as_array())
-            .map(|e| e.into_iter().filter_map(|e| e.as_str()))
-            .flatten()
+            .flat_map(|e| e.iter().filter_map(|e| e.as_str()))
             .collect();
 
         let persistent_actors = optional_mods_data
@@ -508,7 +505,7 @@ pub fn integrate_mods<
             &mut generated_pak,
             &mut game_paks,
             &mut mod_paks,
-            &persistent_actors,
+            persistent_actors,
         )?;
 
         for (name, mut exec) in integrator_config.get_handlers() {
