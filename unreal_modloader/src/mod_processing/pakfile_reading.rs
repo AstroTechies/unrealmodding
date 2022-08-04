@@ -126,6 +126,7 @@ pub(crate) fn insert_mods_from_readdata(
                 latest_version: None,
 
                 enabled: set_enabled,
+                remove: false,
 
                 name: "".to_owned(),
                 author: None,

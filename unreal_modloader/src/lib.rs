@@ -291,7 +291,32 @@ pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
                     drop(data_guard);
                 }
 
-                let data_guard = data.lock();
+                let mut data_guard = data.lock();
+
+                // mod deletion
+                let mut to_remove = Vec::new();
+                let mut del_warnings = Vec::new();
+                for (mod_id, game_mod) in data_guard.game_mods.iter_mut().filter(|(_, m)| m.remove)
+                {
+                    // remove file for each version
+                    for (_, version) in game_mod.versions.iter_mut().filter(|v| v.1.downloaded) {
+                        println!("Removing {:?}", mods_path.join(&version.file_name));
+                        match fs::remove_file(mods_path.join(&version.file_name)) {
+                            Ok(_) => {}
+                            Err(err) => {
+                                del_warnings.push(ModLoaderWarning::io_error_with_message(
+                                    "Removing file from mods directory".to_owned(),
+                                    err,
+                                ));
+                            }
+                        }
+                    }
+                    to_remove.push(mod_id.clone());
+                }
+                for mod_id in to_remove {
+                    data_guard.game_mods.remove(&mod_id);
+                }
+                data_guard.warnings.extend(del_warnings);
 
                 // integrate
                 if should_integrate.load(Ordering::Acquire)

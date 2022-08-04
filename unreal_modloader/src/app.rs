@@ -237,6 +237,15 @@ impl App for ModLoaderApp {
             self.selected_mod_id = None;
         }
 
+        // delete to remove a mod
+        if ctx.input().key_pressed(egui::Key::Delete) {
+            if let Some(ref id) = self.selected_mod_id {
+                data.game_mods.get_mut(id).unwrap().remove = true;
+                self.selected_mod_id = None;
+                self.should_integrate.store(true, Ordering::Release);
+            }
+        }
+
         drop(data);
 
         if should_darken {
@@ -468,15 +477,18 @@ impl ModLoaderApp {
                         None => ui.label("None"),
                     }
                 });
+
+                ui.label(egui::RichText::new("").size(5.0));
+                ui.label(egui::RichText::new("Press DEL to remove this mod.").size(12.0));
             }
             None => {
                 ui.label("Drop a .pak file onto this window to install the mod.");
                 ui.label("To enable/disable mods click the checkbox to the left of the mod name.");
                 ui.label("Then press \"Play\" ro start the game with mods.");
+                ui.label(egui::RichText::new("").size(5.0));
 
-                ui.label("");
                 ui.label("Click on a mod to see more info.");
-                ui.label("");
+                ui.label(egui::RichText::new("").size(5.0));
 
                 if cfg!(debug_assertions) {
                     egui::warn_if_debug_build(ui);
