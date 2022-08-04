@@ -2,8 +2,10 @@ use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_J
 #[cfg(feature = "bulk_data")]
 use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 
+use lazy_static::lazy_static;
+
 use error::IntegrationError;
-use log::debug;
+use log::{debug, trace};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -22,11 +24,15 @@ use unreal_pak::pakversion::PakVersion;
 mod assets;
 pub mod error;
 pub mod helpers;
+pub mod macros;
 use serde_json::{Map, Value};
 use unreal_asset::Asset;
 use unreal_pak::{PakFile, PakRecord};
 
 use crate::error::Error;
+use crate::handlers::handle_persistent_actors;
+
+mod handlers;
 
 pub trait IntegratorInfo {}
 
@@ -466,7 +472,7 @@ pub fn integrate_mods<
             }
 
             for (instruction_name, instruction) in instructions.instructions {
-                println!("Pushing instruction {} {:?}", instruction_name, instruction);
+                trace!("Pushing instruction {} {:?}", instruction_name, instruction);
                 optional_mods_data
                     .entry(instruction_name)
                     .or_insert_with(Vec::new)
@@ -481,7 +487,30 @@ pub fn integrate_mods<
             game_paks.push(pak);
         }
 
-        let empty_vec = Vec::new();
+        let empty_vec: Vec<Value> = Vec::new();
+
+        let persistent_actor_maps: Vec<&str> = optional_mods_data
+            .get("persistent_actor_maps")
+            .unwrap_or(&empty_vec)
+            .into_iter()
+            .filter_map(|e| e.as_array())
+            .map(|e| e.into_iter().filter_map(|e| e.as_str()))
+            .flatten()
+            .collect();
+
+        let persistent_actors = optional_mods_data
+            .get("persistent_actors")
+            .unwrap_or(&empty_vec);
+
+        handle_persistent_actors(
+            C::GAME_NAME,
+            &persistent_actor_maps,
+            &mut generated_pak,
+            &mut game_paks,
+            &mut mod_paks,
+            &persistent_actors,
+        )?;
+
         for (name, mut exec) in integrator_config.get_handlers() {
             let all_mods = optional_mods_data.get(&name).unwrap_or(&empty_vec);
 
