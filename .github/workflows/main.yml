@@ -32,16 +32,16 @@ jobs:
         with:
           repository: 'AstroTechies/ModIntegrator'
           latest: true
-          fileName: 'assets.zip'
+          fileName: 'ue4_23.zip'
           token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Unzip ModIntegrator assets
-        run: unzip assets.zip -d assets
+        run: unzip ue4_23.zip -d Integrator
           
       - uses: actions-rs/clippy-check@v1
         name: Clippy check
         env:
-          PREBUILT_ASSETS: ${{env.GITHUB_WORKSPACE}}/assets
+          PREBUILT_ASSETS: ${{env.GITHUB_WORKSPACE}}/Integrator
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features -D warnings
