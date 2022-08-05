@@ -32,18 +32,18 @@ pub(crate) fn process_modfiles(
     let filter: Vec<String> = mods_read.keys().cloned().collect();
 
     // turn metadata into proper data structures
-    insert_mods_from_readdata(&mods_read, &mut *data_guard, set_enabled);
+    insert_mods_from_readdata(&mods_read, &mut data_guard, set_enabled);
 
     // pick version
-    auto_pick_versions(&mut *data_guard);
+    auto_pick_versions(&mut data_guard);
 
     // set top level data
-    set_mod_data_from_version(&mut *data_guard, &filter);
+    set_mod_data_from_version(&mut data_guard, &filter);
 
     // fetch index files
 
     // gather index files from all the mods
-    let index_files_info = gather_index_files(&mut *data_guard, &filter);
+    let index_files_info = gather_index_files(&mut data_guard, &filter);
 
     // drop guard to allow UI to render while index files are being downloaded
     drop(data_guard);
@@ -55,7 +55,7 @@ pub(crate) fn process_modfiles(
     let mut data_guard = data.lock();
 
     // insert index file data into the mod data
-    let insert_warnings = insert_index_file_data(&index_files, &mut *data_guard);
+    let insert_warnings = insert_index_file_data(&index_files, &mut data_guard);
     warnings.extend(insert_warnings);
 
     warnings

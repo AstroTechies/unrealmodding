@@ -193,7 +193,7 @@ where
                 data_guard.warnings.extend(warnings);
 
                 // load config
-                load_config(&mut *data_guard);
+                load_config(&mut data_guard);
 
                 // debug!("{:#?}", data_guard.game_mods);
                 Ok(())

@@ -41,6 +41,7 @@ struct ScsNode {
     original_category: PackageIndex,
 }
 
+#[allow(clippy::ptr_arg)]
 pub fn handle_persistent_actors(
     game_name: &'static str,
     map_paths: &[&str],

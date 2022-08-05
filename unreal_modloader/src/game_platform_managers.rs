@@ -1,10 +1,10 @@
-use std::{cell::RefCell, fmt::Debug, fs::File, io::Read, path::PathBuf};
+use std::{cell::RefCell, fmt::Debug, path::PathBuf};
+
+#[cfg(windows)]
+use std::{fs::File, io::Read};
 
 use crate::{
-    config::InstallManager,
-    error::ModLoaderWarning,
-    game_path_helpers::{self, MsStoreInfo},
-    version::GameBuild,
+    config::InstallManager, error::ModLoaderWarning, game_path_helpers, version::GameBuild,
 };
 
 pub trait GetGameBuildTrait<T>: Debug + Send {
@@ -65,9 +65,10 @@ impl InstallManager for SteamInstallManager {
     }
 }
 
+#[cfg(windows)]
 #[derive(Debug)]
 pub struct MsStoreInstallManager {
-    store_info: RefCell<Option<MsStoreInfo>>,
+    store_info: RefCell<Option<game_path_helpers::MsStoreInfo>>,
     mods_path: RefCell<Option<PathBuf>>,
     game_build: RefCell<Option<GameBuild>>,
 
@@ -75,6 +76,7 @@ pub struct MsStoreInstallManager {
     game_name: &'static str,
 }
 
+#[cfg(windows)]
 impl MsStoreInstallManager {
     pub fn new(winstore_vendor_id: &'static str, game_name: &'static str) -> Self {
         MsStoreInstallManager {
@@ -86,7 +88,7 @@ impl MsStoreInstallManager {
         }
     }
 
-    fn get_store_info(&self) -> Option<MsStoreInfo> {
+    fn get_store_info(&self) -> Option<game_path_helpers::MsStoreInfo> {
         if self.store_info.borrow().is_none() {
             *self.store_info.borrow_mut() =
                 game_path_helpers::determine_install_path_winstore(self.winstore_vendor_id).ok()
@@ -95,6 +97,7 @@ impl MsStoreInstallManager {
     }
 }
 
+#[cfg(windows)]
 impl InstallManager for MsStoreInstallManager {
     fn get_game_install_path(&self) -> Option<PathBuf> {
         self.get_store_info().map(|e| e.path)
