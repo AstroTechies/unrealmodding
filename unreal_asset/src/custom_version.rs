@@ -1135,7 +1135,7 @@ impl FAssetRegistryVersionType {
     }
 
     pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
-        writer.write_all(&(*ASSET_REGISTRY_VERSION_GUID))?;
+        writer.write_all(&*ASSET_REGISTRY_VERSION_GUID)?;
         writer.write_i32::<LittleEndian>((*self).into())?;
         Ok(())
     }

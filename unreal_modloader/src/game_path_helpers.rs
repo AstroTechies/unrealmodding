@@ -4,6 +4,8 @@ use log::{trace, warn};
 use regex::Regex;
 use std::path::PathBuf;
 use steamlocate::SteamDir;
+
+#[cfg(windows)]
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 use crate::error::ModLoaderWarning;
@@ -34,6 +36,7 @@ pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
     base_path
 }
 
+#[cfg(windows)]
 pub fn determine_installed_mods_path_winstore(
     store_info: &MsStoreInfo,
     game_name: &str,
@@ -73,6 +76,7 @@ pub fn determine_install_path_steam(app_id: u32) -> Result<PathBuf, ModLoaderWar
     a
 }
 
+#[cfg(windows)]
 fn convert_runtime_id(package_id: &str) -> Option<String> {
     let id_bits: Vec<&str> = package_id.split('_').collect();
 
@@ -82,6 +86,7 @@ fn convert_runtime_id(package_id: &str) -> Option<String> {
     None
 }
 
+#[cfg(windows)]
 pub fn determine_install_path_winstore(vendor: &str) -> Result<MsStoreInfo, ModLoaderWarning> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let packages = hkcu.open_subkey("Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages")
