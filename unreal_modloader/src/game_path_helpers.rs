@@ -21,7 +21,7 @@ lazy_static! {
         Regex::new("(?x)<Identity(.*?)Publisher(.*?)Version=\"([^\"]*)\"").unwrap();
 }
 
-pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
+pub fn determine_installed_mods_path_steam(game_name: &str, app_id: u32) -> Option<PathBuf> {
     let base_dirs = BaseDirs::new();
     if base_dirs.is_none() {
         warn!("Could not determine base directory");
@@ -30,6 +30,23 @@ pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
     let base_dirs = base_dirs.unwrap();
 
     let data_dir = base_dirs.data_local_dir();
+    let base_path = Some(data_dir.join(game_name).join("Saved").join("Paks"));
+    trace!("base_path: {:?}", base_path);
+
+    base_path
+}
+
+pub fn determine_installed_mods_path_proton(game_name: &str, app_id: u32) -> Option<PathBuf> {
+    let data_dir: PathBuf = SteamDir::locate()?.path
+                .join("steamapps")
+                .join("compatdata")
+                .join(app_id.to_string())
+                .join("pfx")
+                .join("drive_c")
+                .join("users")
+                .join("steamuser")
+                .join("AppData")
+                .join("Local");
     let base_path = Some(data_dir.join(game_name).join("Saved").join("Paks"));
     trace!("base_path: {:?}", base_path);
 

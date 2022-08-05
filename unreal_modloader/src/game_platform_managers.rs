@@ -50,7 +50,61 @@ impl InstallManager for SteamInstallManager {
     fn get_paks_path(&self) -> Option<PathBuf> {
         if self.mods_path.borrow().is_none() {
             *self.mods_path.borrow_mut() =
-                game_path_helpers::determine_installed_mods_path_steam(self.game_name);
+                game_path_helpers::determine_installed_mods_path_steam(self.game_name, self.app_id);
+        }
+        self.mods_path.borrow().clone()
+    }
+
+    fn get_game_build(&self) -> Option<GameBuild> {
+        self.game_build_getter.get_game_build(self)
+    }
+
+    fn launch_game(&self) -> Result<(), ModLoaderWarning> {
+        open::that(format!("steam://run/{}", self.app_id))?;
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct ProtonInstallManager {
+    pub game_path: RefCell<Option<PathBuf>>,
+    pub mods_path: RefCell<Option<PathBuf>>,
+
+    app_id: u32,
+    game_name: &'static str,
+    game_build_getter: Box<dyn GetGameBuildTrait<ProtonInstallManager>>,
+}
+
+impl ProtonInstallManager {
+    pub fn new(
+        app_id: u32,
+        game_name: &'static str,
+        game_build_getter: Box<dyn GetGameBuildTrait<ProtonInstallManager>>,
+    ) -> Self {
+        ProtonInstallManager {
+            game_path: RefCell::new(None),
+            mods_path: RefCell::new(None),
+
+            app_id,
+            game_name,
+            game_build_getter,
+        }
+    }
+}
+
+impl InstallManager for ProtonInstallManager {
+    fn get_game_install_path(&self) -> Option<PathBuf> {
+        if self.game_path.borrow().is_none() {
+            *self.game_path.borrow_mut() =
+                game_path_helpers::determine_install_path_steam(self.app_id).ok();
+        }
+        self.game_path.borrow().clone()
+    }
+
+    fn get_paks_path(&self) -> Option<PathBuf> {
+        if self.mods_path.borrow().is_none() {
+            *self.mods_path.borrow_mut() =
+                game_path_helpers::determine_installed_mods_path_proton(self.game_name, self.app_id);
         }
         self.mods_path.borrow().clone()
     }
