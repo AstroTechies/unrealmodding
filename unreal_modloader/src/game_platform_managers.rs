@@ -50,7 +50,7 @@ impl InstallManager for SteamInstallManager {
     fn get_paks_path(&self) -> Option<PathBuf> {
         if self.mods_path.borrow().is_none() {
             *self.mods_path.borrow_mut() =
-                game_path_helpers::determine_installed_mods_path_steam(self.game_name, self.app_id);
+                game_path_helpers::determine_installed_mods_path_steam(self.game_name);
         }
         self.mods_path.borrow().clone()
     }

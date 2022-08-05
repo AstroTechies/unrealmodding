@@ -21,7 +21,7 @@ lazy_static! {
         Regex::new("(?x)<Identity(.*?)Publisher(.*?)Version=\"([^\"]*)\"").unwrap();
 }
 
-pub fn determine_installed_mods_path_steam(game_name: &str, app_id: u32) -> Option<PathBuf> {
+pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
     let base_dirs = BaseDirs::new();
     if base_dirs.is_none() {
         warn!("Could not determine base directory");
