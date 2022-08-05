@@ -1,11 +1,24 @@
 use std::{env, fs, path::Path, process::Command};
 
+use fs_extra::dir::CopyOptions;
+
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     let out_dir = env::var_os("OUT_DIR").unwrap();
 
     let project_dir = Path::new(&out_dir).join("ModIntegrator");
     fs::remove_dir_all(&project_dir).unwrap_or(());
+
+    if env::var_os("CI").is_some() {
+        let assets = env::var_os("PREBUILT_ASSETS").expect("PREBUILT_ASSETS not set for CI");
+        let assets = Path::new(&assets);
+        let out_dir = Path::new(&out_dir)
+            .join("ModIntegrator/Saved/Cooked/WindowsNoEditor/ModIntegrator/Content/");
+        fs::create_dir_all(&out_dir).unwrap();
+        fs_extra::dir::copy(assets, out_dir, &CopyOptions::new()).unwrap();
+
+        return;
+    }
 
     let mut git = Command::new("git")
         .args(["clone", "https://github.com/AstroTechies/ModIntegrator.git"])
