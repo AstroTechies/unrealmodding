@@ -62,7 +62,6 @@ pub fn determine_installed_mods_path_winstore(
 pub fn determine_install_path_steam(app_id: u32) -> Result<PathBuf, ModLoaderWarning> {
     let steamdir = SteamDir::locate();
     if steamdir.is_none() {
-        println!("No steam");
         return Err(ModLoaderWarning::steam_error());
     }
 

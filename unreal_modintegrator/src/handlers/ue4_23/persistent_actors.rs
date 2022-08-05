@@ -6,26 +6,32 @@ use std::{
 
 use unreal_asset::{
     cast,
-    exports::{normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},
-    properties::{
-        array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
-        object_property::ObjectProperty, Property, PropertyDataTrait,
-    },
+    exports::Export,
     reader::asset_trait::AssetTrait,
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     Asset, Import,
 };
-use unreal_modintegrator::{
-    find_asset,
-    helpers::{game_to_absolute, get_asset},
-    read_asset, write_asset, IntegratorConfig,
+use unreal_asset::{
+    exports::ExportBaseTrait,
+    properties::{
+        array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
+        object_property::ObjectProperty, PropertyDataTrait,
+    },
+};
+use unreal_asset::{
+    exports::{normal_export::NormalExport, ExportNormalTrait},
+    properties::Property,
 };
 use unreal_pak::PakFile;
 
-use crate::astro_integrator::AstroIntegratorConfig;
+use crate::{
+    find_asset,
+    helpers::{game_to_absolute, get_asset},
+    read_asset, write_asset,
+};
 
-use super::MAP_PATHS;
+const LEVEL_TEMPLATE_ASSET: &[u8] = include_bytes!("assets/LevelTemplate.umap");
 
 #[derive(Default)]
 struct ScsNode {
@@ -35,15 +41,15 @@ struct ScsNode {
     original_category: PackageIndex,
 }
 
-#[allow(clippy::ptr_arg)]
-pub(crate) fn handle_persistent_actors(
-    _data: &(),
+pub fn handle_persistent_actors(
+    game_name: &'static str,
+    map_paths: &[&str],
     integrated_pak: &mut PakFile,
     game_paks: &mut Vec<PakFile>,
     mod_paks: &mut Vec<PakFile>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
-    let mut level_asset = Asset::new(crate::assets::LEVEL_TEMPLATE_ASSET.to_vec(), None);
+    let mut level_asset = Asset::new(LEVEL_TEMPLATE_ASSET.to_vec(), None);
     level_asset.engine_version = VER_UE4_23;
     level_asset
         .parse_data()
@@ -70,8 +76,14 @@ pub(crate) fn handle_persistent_actors(
         }
     }
 
-    for map_path in MAP_PATHS {
-        let mut asset = get_asset(integrated_pak, game_paks, &map_path.to_string(), VER_UE4_23)?;
+    for map_path in map_paths {
+        let mut asset = get_asset(
+            integrated_pak,
+            game_paks,
+            mod_paks,
+            &map_path.to_string(),
+            VER_UE4_23,
+        )?;
 
         let mut level_export_index = None;
         for i in 0..asset.exports.len() {
@@ -142,13 +154,15 @@ pub(crate) fn handle_persistent_actors(
             actor_template.base_export.outer_index =
                 PackageIndex::new(level_export_index as i32 + 1); // package index starts from 1
 
-            let actor_asset_path =
-                game_to_absolute(AstroIntegratorConfig::GAME_NAME, &component_path_raw)
-                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
-            let pak_index = find_asset(mod_paks, &actor_asset_path)
-                .ok_or_else(|| io::Error::new(ErrorKind::Other, "No such asset"))?;
-            let actor_asset = read_asset(&mut mod_paks[pak_index], VER_UE4_23, &actor_asset_path)
-                .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+            let actor_asset_path = game_to_absolute(game_name, &component_path_raw)
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
+
+            let actor_asset = match find_asset(mod_paks, &actor_asset_path) {
+                Some(index) => read_asset(&mut mod_paks[index], VER_UE4_23, &actor_asset_path)
+                    .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?,
+                None => read_asset(integrated_pak, VER_UE4_23, &actor_asset_path)
+                    .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?,
+            };
 
             let mut scs_location = None;
             for i in 0..actor_asset.exports.len() {
@@ -495,7 +509,7 @@ pub(crate) fn handle_persistent_actors(
                 .push(PackageIndex::new(exports_len as i32));
         }
 
-        write_asset(integrated_pak, &asset, &String::from(map_path))
+        write_asset(integrated_pak, &asset, &map_path.to_string())
             .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
     }
     Ok(())

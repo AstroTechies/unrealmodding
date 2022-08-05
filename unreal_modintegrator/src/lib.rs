@@ -3,6 +3,7 @@ use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_J
 use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 
 use error::IntegrationError;
+use log::{debug, trace};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -21,15 +22,36 @@ use unreal_pak::pakversion::PakVersion;
 mod assets;
 pub mod error;
 pub mod helpers;
-use serde_json::Value;
+pub mod macros;
+use serde_json::{Map, Value};
 use unreal_asset::Asset;
 use unreal_pak::{PakFile, PakRecord};
 
 use crate::error::Error;
+use crate::handlers::handle_persistent_actors;
+
+mod handlers;
 
 pub trait IntegratorInfo {}
 
 pub const INTEGRATOR_PAK_FILE_NAME: &str = "900-ModIntegrator_P.pak";
+
+pub struct BakedInstructions {
+    pub file_refs: HashMap<String, &'static [u8]>,
+    pub instructions: Map<String, Value>,
+}
+
+impl BakedInstructions {
+    pub fn new(
+        file_refs: HashMap<String, &'static [u8]>,
+        instructions: Map<String, Value>,
+    ) -> Self {
+        BakedInstructions {
+            file_refs,
+            instructions,
+        }
+    }
+}
 
 #[allow(clippy::type_complexity)]
 pub trait IntegratorConfig<'data, T, E: std::error::Error> {
@@ -48,6 +70,8 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
             ) -> Result<(), E>,
         >,
     >;
+
+    fn get_instructions(&self) -> Option<BakedInstructions>;
 
     const GAME_NAME: &'static str;
     const INTEGRATOR_VERSION: &'static str;
@@ -319,6 +343,12 @@ pub fn integrate_mods<
         .filter_map(|e| e.ok())
         .collect();
 
+    debug!(
+        "Integrating {} mods, refuse_mismatched_connections: {}",
+        mod_files.len(),
+        refuse_mismatched_connections
+    );
+
     let game_dir = fs::read_dir(game_path)?;
     let game_files: Vec<File> = game_dir
         .filter_map(|e| e.ok())
@@ -343,6 +373,11 @@ pub fn integrate_mods<
             .unwrap();
         let metadata = unreal_modmetadata::from_slice(record)?;
         mods.push(metadata.clone());
+
+        debug!(
+            "Integrating modid {} version {}",
+            metadata.mod_id, metadata.mod_version
+        );
 
         // let optional_metadata: Value = serde_json::from_slice(record)?;
         // optional_mods_data.push(optional_metadata);
@@ -423,6 +458,26 @@ pub fn integrate_mods<
             generated_pak.add_record(record)?;
         }
 
+        let instructions = integrator_config.get_instructions();
+        if let Some(instructions) = instructions {
+            for (file_path, data) in instructions.file_refs {
+                let record = PakRecord::new(
+                    file_path,
+                    data.to_vec(),
+                    unreal_pak::CompressionMethod::Zlib,
+                )?;
+                generated_pak.add_record(record)?;
+            }
+
+            for (instruction_name, instruction) in instructions.instructions {
+                trace!("Pushing instruction {} {:?}", instruction_name, instruction);
+                optional_mods_data
+                    .entry(instruction_name)
+                    .or_insert_with(Vec::new)
+                    .push(instruction);
+            }
+        }
+
         let mut game_paks = Vec::new();
         for game_file in &game_files {
             let mut pak = PakFile::reader(game_file);
@@ -430,7 +485,29 @@ pub fn integrate_mods<
             game_paks.push(pak);
         }
 
-        let empty_vec = Vec::new();
+        let empty_vec: Vec<Value> = Vec::new();
+
+        let persistent_actor_maps: Vec<&str> = optional_mods_data
+            .get("persistent_actor_maps")
+            .unwrap_or(&empty_vec)
+            .iter()
+            .filter_map(|e| e.as_array())
+            .flat_map(|e| e.iter().filter_map(|e| e.as_str()))
+            .collect();
+
+        let persistent_actors = optional_mods_data
+            .get("persistent_actors")
+            .unwrap_or(&empty_vec);
+
+        handle_persistent_actors(
+            C::GAME_NAME,
+            &persistent_actor_maps,
+            &mut generated_pak,
+            &mut game_paks,
+            &mut mod_paks,
+            persistent_actors,
+        )?;
+
         for (name, mut exec) in integrator_config.get_handlers() {
             let all_mods = optional_mods_data.get(&name).unwrap_or(&empty_vec);
 

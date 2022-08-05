@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use log::{debug, warn};
-use unreal_modmetadata::{Metadata, SyncMode};
+use unreal_modmetadata::{self, Metadata, SyncMode};
 use unreal_pak::PakFile;
 
 use crate::error::ModLoaderWarning;
@@ -126,6 +126,7 @@ pub(crate) fn insert_mods_from_readdata(
                 latest_version: None,
 
                 enabled: set_enabled,
+                remove: false,
 
                 name: "".to_owned(),
                 author: None,

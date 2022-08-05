@@ -1,6 +1,5 @@
 use error::Error;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 pub mod error;
 pub(crate) mod v1;
@@ -38,6 +37,17 @@ impl Default for SyncMode {
     }
 }
 
+impl std::fmt::Display for SyncMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SyncMode::ServerAndClient => write!(f, "Server and Client"),
+            SyncMode::ServerOnly => write!(f, "Server only"),
+            SyncMode::ClientOnly => write!(f, "Client only"),
+            SyncMode::None => write!(f, "None"),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum DownloadMode {
     #[serde(rename = "index_file")]
@@ -52,9 +62,12 @@ pub struct DownloadInfo {
 }
 
 pub fn from_slice(slice: &[u8]) -> Result<Metadata, Error> {
-    let value: Value = serde_json::from_slice(slice)?;
-    let value = value.as_object().ok_or_else(Error::invalid_metadata)?;
-    let schema_version = value["schema_version"].as_u64().unwrap_or(1u64);
+    #[derive(Debug, Deserialize)]
+    struct VersionMetadata {
+        schema_version: Option<u64>,
+    }
+    let value: VersionMetadata = serde_json::from_slice(slice)?;
+    let schema_version = value.schema_version.unwrap_or(1);
 
     match schema_version {
         1 => Ok(v1::Metadata::to_v2(slice)?),

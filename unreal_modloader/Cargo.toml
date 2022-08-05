@@ -1,12 +1,18 @@
 [package]
 name = "unreal_modloader"
-version = "0.1.0"
+version = "0.1.4"
 edition = "2021"
 
+[features]
+bulk_data = ["unreal_modintegrator/bulk_data"]
+ue4_23 = ["unreal_modintegrator/ue4_23"]
+
 [dependencies]
-unreal_modintegrator = { version = "0.1.0", path = "../unreal_modintegrator" }
-unreal_modmetadata = { version = "0.1.0", path = "../unreal_modmetadata" }
+unreal_modintegrator = { version = "0.1.2", path = "../unreal_modintegrator" }
+unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
 unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
+unreal_modmetadata = { version = "0.1.0", path = "../unreal_modmetadata" }
+
 directories = "4.0.1"
 eframe = "0.18.0"
 egui_extras = "0.18.0"
@@ -19,3 +25,4 @@ regex = "1.6.0"
 lazy_static = "1.4.0"
 winreg = "0.10.1"
 open = "3.0.2"
+parking_lot = "0.12.1"

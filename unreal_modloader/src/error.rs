@@ -18,6 +18,7 @@ pub enum ModLoaderErrorKind {
     UnrealPakError(UnrealPakError),
     NoBasePath,
     Generic(Box<dyn std::error::Error + Send>),
+    Other(Box<str>),
 }
 
 impl ModLoaderError {
@@ -29,6 +30,12 @@ impl ModLoaderError {
     pub fn no_base_path() -> Self {
         ModLoaderError {
             kind: ModLoaderErrorKind::NoBasePath,
+        }
+    }
+
+    pub fn other(msg: String) -> Self {
+        ModLoaderError {
+            kind: ModLoaderErrorKind::Other(msg.into_boxed_str()),
         }
     }
 }
@@ -45,6 +52,7 @@ impl fmt::Display for ModLoaderError {
                 "No base path found (%localappdata%\\GameName)".to_owned()
             }
             ModLoaderErrorKind::Generic(ref err) => format!("Error: {}", err),
+            ModLoaderErrorKind::Other(ref msg) => format!("Other: {}", msg),
         };
 
         write!(f, "{}", err_msg)
