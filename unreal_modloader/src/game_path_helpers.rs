@@ -36,6 +36,23 @@ pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
     base_path
 }
 
+pub fn determine_installed_mods_path_proton(game_name: &str, app_id: u32) -> Option<PathBuf> {
+    let data_dir: PathBuf = SteamDir::locate()?.path
+                .join("steamapps")
+                .join("compatdata")
+                .join(app_id.to_string())
+                .join("pfx")
+                .join("drive_c")
+                .join("users")
+                .join("steamuser")
+                .join("AppData")
+                .join("Local");
+    let base_path = Some(data_dir.join(game_name).join("Saved").join("Paks"));
+    trace!("base_path: {:?}", base_path);
+
+    base_path
+}
+
 #[cfg(windows)]
 pub fn determine_installed_mods_path_winstore(
     store_info: &MsStoreInfo,

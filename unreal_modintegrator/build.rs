@@ -30,7 +30,7 @@ fn main() {
         panic!("git failed to finish {}", status);
     }
 
-    let version_selector = env::var_os("UE_VERSION_SELECTOR").expect("UE_VERISON_SELECTOR not set");
+    let version_selector = env::var_os("UE_VERSION_SELECTOR").expect("UE_VERSION_SELECTOR not set");
     let engine_path = env::var_os("UE_PATH").expect("UE_PATH not set");
 
     let project_file = project_dir.join("ModIntegrator.uproject");
