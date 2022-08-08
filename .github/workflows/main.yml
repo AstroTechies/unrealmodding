@@ -39,9 +39,9 @@ jobs:
         run: unzip ue4_23.zip -d Integrator
           
       - uses: actions-rs/clippy-check@v1
-        name: Clippy check
+        name: Clippy check ue 4.23 w/bulk
         env:
           PREBUILT_ASSETS: ${{ github.workspace }}/Integrator
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features -- -D warnings
+          args: --features="ue4_23" -- -D warnings
