@@ -26,22 +26,11 @@ jobs:
           toolchain: stable
           components: clippy
           override: true
-
-      - uses: robinraju/release-downloader@v1.4
-        name: Get prebuilt ModIntegrator assets
-        with:
-          repository: 'AstroTechies/ModIntegrator'
-          latest: true
-          fileName: 'ue4_23.zip'
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Unzip ModIntegrator assets
-        run: unzip ue4_23.zip -d Integrator
           
       - uses: actions-rs/clippy-check@v1
-        name: Clippy check
+        name: Clippy check ue 4.23 w/bulk
         env:
-          PREBUILT_ASSETS: ${{ github.workspace }}/Integrator
+          USE_PREBUILT_ASSETS: 1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features -- -D warnings
+          args: --features "ue4_23" -- -D warnings
