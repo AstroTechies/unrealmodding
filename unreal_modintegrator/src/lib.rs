@@ -1,5 +1,5 @@
 use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_JSON};
-#[cfg(feature = "bulk_data")]
+#[cfg(not(feature = "no_bulk_data"))]
 use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 
 use error::IntegrationError;
@@ -403,10 +403,10 @@ pub fn integrate_mods<
         let mut generated_pak =
             PakFile::writer(PakVersion::PakFileVersionFnameBasedCompressionMethod, &file);
 
-        #[cfg(not(feature = "bulk_data"))]
-        let list_of_mods_bulk = None;
-        #[cfg(feature = "bulk_data")]
+        #[cfg(not(feature = "no_bulk_data"))]
         let list_of_mods_bulk = Some(LIST_OF_MODS_BULK.to_vec());
+        #[cfg(feature = "no_bulk_data")]
+        let list_of_mods_bulk = None;
 
         let mut list_of_mods = read_in_memory(
             LIST_OF_MODS_ASSET.to_vec(),
@@ -420,10 +420,10 @@ pub fn integrate_mods<
             &(C::GAME_NAME.to_owned() + "/Content/Integrator/ListOfMods.uasset"),
         )?;
 
-        #[cfg(not(feature = "bulk_data"))]
-        let integrator_statics_bulk = None;
-        #[cfg(feature = "bulk_data")]
+        #[cfg(not(feature = "no_bulk_data"))]
         let integrator_statics_bulk = Some(INTEGRATOR_STATICS_BULK.to_vec());
+        #[cfg(feature = "no_bulk_data")]
+        let integrator_statics_bulk = None;
 
         let mut integrator_statics = read_in_memory(
             INTEGRATOR_STATICS_ASSET.to_vec(),

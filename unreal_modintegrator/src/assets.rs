@@ -14,17 +14,17 @@ pub(crate) const METADATA_JSON: &[u8] = include_bytes!("../assets/metadata.json"
 
 pub(crate) const INTEGRATOR_STATICS_ASSET: &[u8] =
     include_bytes!(concat!(cooked_path!(), "IntegratorStatics_BP.uasset"));
-#[cfg(feature = "bulk_data")]
+#[cfg(not(feature = "no_bulk_data"))]
 pub(crate) const INTEGRATOR_STATICS_BULK: &[u8] =
     include_bytes!(concat!(cooked_path!(), "IntegratorStatics_BP.uexp"));
 
 pub(crate) const LIST_OF_MODS_ASSET: &[u8] =
     include_bytes!(concat!(cooked_path!(), "ListOfMods.uasset"));
-#[cfg(feature = "bulk_data")]
+#[cfg(not(feature = "no_bulk_data"))]
 pub(crate) const LIST_OF_MODS_BULK: &[u8] =
     include_bytes!(concat!(cooked_path!(), "ListOfMods.uexp"));
 
-#[cfg(not(feature = "bulk_data"))]
+#[cfg(feature = "no_bulk_data")]
 pub(crate) const COPY_OVER: [(&[u8], &str); 5] = [
     (
         include_bytes!(concat!(cooked_path!(), "Mod.uasset")),
@@ -48,7 +48,7 @@ pub(crate) const COPY_OVER: [(&[u8], &str); 5] = [
     ),
 ];
 
-#[cfg(feature = "bulk_data")]
+#[cfg(not(feature = "no_bulk_data"))]
 pub(crate) const COPY_OVER: [(&[u8], &str); 10] = [
     (
         include_bytes!(concat!(cooked_path!(), "Mod.uasset")),
