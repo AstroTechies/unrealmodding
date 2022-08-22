@@ -75,7 +75,7 @@ impl App for ModLoaderApp {
                     });
 
                     strip.cell(|ui| {
-                        ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                             ui.label(format!("Version: {}", self.modloader_version));
                         });
                     });
@@ -178,7 +178,7 @@ impl App for ModLoaderApp {
                     ui.label(format!("{}", data.error.as_ref().unwrap()));
 
                     if ui.button("Quit").clicked() {
-                        frame.quit();
+                        frame.close();
                     }
                 });
 
@@ -278,11 +278,11 @@ impl App for ModLoaderApp {
         }
 
         if self.should_exit.load(Ordering::Acquire) && self.ready_exit.load(Ordering::Acquire) {
-            frame.quit();
+            frame.close();
         }
     }
 
-    fn on_exit_event(&mut self) -> bool {
+    fn on_close_event(&mut self) -> bool {
         self.should_exit.store(true, Ordering::Release);
 
         if self.ready_exit.load(Ordering::Acquire) {
@@ -337,7 +337,7 @@ impl ModLoaderApp {
 
         TableBuilder::new(ui)
             .striped(true)
-            .cell_layout(egui::Layout::left_to_right().with_cross_align(egui::Align::Center))
+            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
             .column(Size::initial(42.0).at_least(42.0))
             .column(Size::initial(170.0).at_least(20.0))
             .column(Size::initial(120.0).at_least(120.0))
@@ -478,7 +478,6 @@ impl ModLoaderApp {
                     game_mod.description.as_ref().unwrap_or(&"None".to_owned())
                 ));
                 ui.label(format!("Sync: {}", game_mod.sync));
-                //TODO: size
                 ui.horizontal(|ui| {
                     ui.label("Website:");
                     match game_mod.homepage {
