@@ -9,7 +9,7 @@ use serde_json::Value;
 
 use crate::{error::Error, hash_value, v2, DownloadInfo, SyncMode};
 
-#[derive(Debug, Clone, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Eq, Serialize, Deserialize)]
 pub struct Metadata {
     pub schema_version: Option<usize>,
     pub name: String,
@@ -125,6 +125,66 @@ impl Metadata {
             homepage: metadata.homepage,
             download: metadata.download,
             integrator,
+            dependencies: HashMap::new(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{v1::Metadata, SyncMode};
+
+    #[test]
+    fn v1_simple_test() {
+        let src = r#"
+        {
+            "schema_version": 1,
+            "name": "Test",
+            "mod_id": "TestModId",
+            "author": "TestAuthor",
+            "description": "Test Description",
+            "version": "1.0.0",
+            "game_build": "1.2.3",
+            "sync": "serverclient"
+        }
+    "#;
+
+        let parsed: Metadata = serde_json::from_str(src).unwrap();
+
+        let expected = Metadata {
+            schema_version: Some(1),
+            name: "Test".to_string(),
+            mod_id: "TestModId".to_string(),
+            author: Some("TestAuthor".to_string()),
+            description: Some("Test Description".to_string()),
+            mod_version: "1.0.0".to_string(),
+            game_build: Some("1.2.3".to_string()),
+            sync: Some(SyncMode::ServerAndClient),
+            ..Default::default()
+        };
+
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn v1_minimal_test() {
+        let src = r#"
+            {
+                "name": "Test",
+                "mod_id": "TestModId",
+                "version": "1.0.0"
+            }
+        "#;
+
+        let parsed: Metadata = serde_json::from_str(src).unwrap();
+
+        let expected = Metadata {
+            name: "Test".to_string(),
+            mod_id: "TestModId".to_string(),
+            mod_version: "1.0.0".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(parsed, expected)
     }
 }

@@ -6,6 +6,7 @@ pub enum ErrorCode {
     UnsupportedSchema(u64),
 
     Json(serde_json::Error),
+    SemVer(semver::Error),
 }
 
 impl Display for ErrorCode {
@@ -16,6 +17,7 @@ impl Display for ErrorCode {
                 write!(f, "Unsupported schema version {}", schema)
             }
             ErrorCode::Json(ref err) => Display::fmt(err, f),
+            ErrorCode::SemVer(ref err) => Display::fmt(err, f),
         }
     }
 }
@@ -43,6 +45,14 @@ impl From<serde_json::Error> for Error {
     fn from(e: serde_json::Error) -> Self {
         Error {
             code: ErrorCode::Json(e),
+        }
+    }
+}
+
+impl From<semver::Error> for Error {
+    fn from(e: semver::Error) -> Self {
+        Error {
+            code: ErrorCode::SemVer(e),
         }
     }
 }

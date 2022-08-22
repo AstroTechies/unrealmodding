@@ -75,3 +75,93 @@ pub fn from_slice(slice: &[u8]) -> Result<Metadata, Error> {
         _ => Err(Error::unsupported_schema(schema_version)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{from_slice, Metadata};
+
+    #[test]
+    fn v1_no_version_test() {
+        let src = r#"
+            {
+                "name": "Test",
+                "mod_id": "TestModId",
+                "version": "1.0.0"
+            }
+        "#;
+
+        let parsed = from_slice(src.as_bytes()).unwrap();
+
+        let expected = Metadata {
+            schema_version: 2,
+            name: "Test".to_string(),
+            mod_id: "TestModId".to_string(),
+            mod_version: "1.0.0".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn v1_with_version_test() {
+        let src = r#"
+            {
+                "schema_version": 1,
+                "name": "Test",
+                "mod_id": "TestModId",
+                "version": "1.0.0"
+            }
+        "#;
+
+        let parsed = from_slice(src.as_bytes()).unwrap();
+
+        let expected = Metadata {
+            schema_version: 2,
+            name: "Test".to_string(),
+            mod_id: "TestModId".to_string(),
+            mod_version: "1.0.0".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn v2_test() {
+        let src = r#"
+            {
+                "schema_version": 2,
+                "name": "Test",
+                "mod_id": "TestModId",
+                "version": "1.0.0"
+            }
+        "#;
+
+        let parsed = from_slice(src.as_bytes()).unwrap();
+
+        let expected = Metadata {
+            schema_version: 2,
+            name: "Test".to_string(),
+            mod_id: "TestModId".to_string(),
+            mod_version: "1.0.0".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn unsupported_test() {
+        let src = r#"
+            {
+                "schema_version": 3,
+                "name": "Test",
+                "mod_id": "TestModId",
+                "version": "1.0.0"
+            }
+        "#;
+
+        assert_eq!(true, from_slice(src.as_bytes()).is_err());
+    }
+}
