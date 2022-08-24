@@ -71,15 +71,12 @@ pub struct Dependency {
         deserialize_with = "semver_from_string"
     )]
     pub version: VersionReq,
-    pub index_file: Option<String>,
+    pub download: Option<DownloadInfo>,
 }
 
 impl Dependency {
-    pub fn new(version: VersionReq, index_file: Option<String>) -> Self {
-        Dependency {
-            version,
-            index_file,
-        }
+    pub fn new(version: VersionReq, download: Option<DownloadInfo>) -> Self {
+        Dependency { version, download }
     }
 }
 
@@ -90,7 +87,7 @@ impl FromStr for Dependency {
         let version = VersionReq::parse(s)?;
         Ok(Dependency {
             version,
-            index_file: None,
+            download: None,
         })
     }
 }
@@ -192,7 +189,7 @@ mod tests {
 
     use semver::VersionReq;
 
-    use crate::{v2::Metadata, SyncMode};
+    use crate::{v2::Metadata, DownloadInfo, SyncMode};
 
     use super::Dependency;
 
@@ -271,7 +268,10 @@ mod tests {
                     "ThirdMod": "<=2.1.0",
                     "FourthMod": {
                         "version": ">=1.2.0",
-                        "index_file": "https://example.com"
+                        "download": {
+                            "type": "index_file",
+                            "url": "https://example.com"
+                        }
                     }
                 }
             }
@@ -296,7 +296,10 @@ mod tests {
             "FourthMod".to_string(),
             Dependency::new(
                 VersionReq::parse(">=1.2.0").unwrap(),
-                Some("https://example.com".to_string()),
+                Some(DownloadInfo {
+                    download_mode: crate::DownloadMode::IndexFile,
+                    url: "https://example.com".to_string(),
+                }),
             ),
         );
 
