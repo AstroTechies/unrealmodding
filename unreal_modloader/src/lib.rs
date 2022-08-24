@@ -492,6 +492,7 @@ where
     eframe::run_native(
         app.window_title.clone().as_str(),
         eframe::NativeOptions {
+            follow_system_theme: true,
             initial_window_size: Some(eframe::egui::vec2(623.0, 600.0)),
             icon_data,
             ..eframe::NativeOptions::default()
