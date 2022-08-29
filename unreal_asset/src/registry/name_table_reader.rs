@@ -131,9 +131,6 @@ impl<'reader, Reader: AssetReader> AssetReader for NameTableReader<'reader, Read
     ) -> Result<Vec<T>, Error> {
         let mut array = Vec::with_capacity(length as usize);
         for i in 0..length {
-            if i == 2 {
-                println!("HERE");
-            }
             array.push(getter(self)?);
         }
         Ok(array)

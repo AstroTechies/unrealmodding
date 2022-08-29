@@ -73,7 +73,6 @@ impl CursorExt for Cursor<Vec<u8>> {
         let is_unicode = string.len() != string.chars().count();
 
         if is_unicode {
-            println!("Writing unicode string at {}", self.position());
             unsafe {
                 let utf16 = string.encode_utf16().collect::<Vec<_>>();
                 let aligned = utf16.align_to::<u8>();
