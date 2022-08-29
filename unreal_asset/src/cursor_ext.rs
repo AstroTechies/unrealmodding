@@ -1,6 +1,6 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
-use std::mem::size_of;
+use std::mem::{size_of, transmute};
 
 use super::error::Error;
 
@@ -73,6 +73,8 @@ impl CursorExt for Cursor<Vec<u8>> {
         let is_unicode = string.len() != string.chars().count();
 
         if is_unicode {
+            // this is safe because we know that string is utf16 and therefore can easily be aligned to u8
+            // this is also faster than alternatives without unsafe block
             unsafe {
                 let utf16 = string.encode_utf16().collect::<Vec<_>>();
                 let aligned = utf16.align_to::<u8>();
