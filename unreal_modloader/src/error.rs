@@ -95,6 +95,10 @@ pub enum ModLoaderWarningKind {
     IoErrorWithMessage(io::Error, String),
     UnrealPakError(UnrealPakError),
     IntegratorError(unreal_modintegrator::error::Error),
+
+    UnresolvedDependency(String, Vec<(String, String)>),
+    ReferencedByOtherMods(String, Vec<String>),
+
     SteamError,
     WinStoreError,
 
@@ -103,7 +107,7 @@ pub enum ModLoaderWarningKind {
     InvalidModId,
     InvalidModFileName,
     InvalidVersion,
-    IndexFileDownlaodFailed,
+    IndexFileDownloadFailed,
     InvalidIndexFile,
     IndexFileMissingMod,
     DownloadFailed,
@@ -124,6 +128,21 @@ impl ModLoaderWarning {
             mod_id: None,
         }
     }
+
+    pub fn unresolved_dependency(mod_id: String, requesting_modids: Vec<(String, String)>) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::UnresolvedDependency(mod_id, requesting_modids),
+            mod_id: None,
+        }
+    }
+
+    pub fn referenced_by_other_mods(mod_id: String, referencers: Vec<String>) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::ReferencedByOtherMods(mod_id.clone(), referencers),
+            mod_id: Some(mod_id),
+        }
+    }
+
     pub fn steam_error() -> Self {
         ModLoaderWarning {
             kind: ModLoaderWarningKind::SteamError,
@@ -168,7 +187,7 @@ impl ModLoaderWarning {
     }
     pub fn index_file_download_failed(mod_id: String) -> Self {
         ModLoaderWarning {
-            kind: ModLoaderWarningKind::IndexFileDownlaodFailed,
+            kind: ModLoaderWarningKind::IndexFileDownloadFailed,
             mod_id: Some(mod_id),
         }
     }
@@ -231,7 +250,7 @@ impl fmt::Display for ModLoaderWarning {
                 format!("{}Invalid mod file name", mod_name)
             }
             ModLoaderWarningKind::InvalidVersion => format!("{}Invalid version", mod_name),
-            ModLoaderWarningKind::IndexFileDownlaodFailed => {
+            ModLoaderWarningKind::IndexFileDownloadFailed => {
                 format!("{}Failed to download index file", mod_name)
             }
             ModLoaderWarningKind::InvalidIndexFile => format!("{}Invalid index file", mod_name),
@@ -242,6 +261,25 @@ impl fmt::Display for ModLoaderWarning {
 
             ModLoaderWarningKind::Other(ref message) => format!("{}{}", mod_name, message),
             ModLoaderWarningKind::Generic(ref err) => format!("{}Error: {}", mod_name, err),
+            ModLoaderWarningKind::UnresolvedDependency(ref dependency, ref requesters) => {
+                format!(
+                    "Error: Unresolved dependency {} for mods: \n{}",
+                    dependency,
+                    requesters
+                        .iter()
+                        .map(|(requester, requested_version)| format!(
+                            "{}: {}\n",
+                            requester, requested_version
+                        ))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                )
+            }
+            ModLoaderWarningKind::ReferencedByOtherMods(ref mod_id, ref referencers) => format!(
+                "Error: {} is required by these mods, disable them to disable this mod: \n{}",
+                mod_id,
+                referencers.join("\n")
+            ),
         };
 
         write!(f, "{}", err_msg)

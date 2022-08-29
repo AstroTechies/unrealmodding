@@ -26,7 +26,7 @@ pub trait InstallManager: Debug + std::marker::Send {
     fn launch_game(&self) -> Result<(), ModLoaderWarning>;
 }
 
-pub trait GameConfig<'a, C, T, E: std::error::Error>: std::marker::Send
+pub trait GameConfig<'a, C, T, E: std::error::Error + 'static>: std::marker::Send
 where
     C: IntegratorConfig<'a, T, E>,
 {

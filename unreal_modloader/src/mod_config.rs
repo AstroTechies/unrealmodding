@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::fs;
 
 use log::{error, warn};
+use semver::Version;
 use serde::{Deserialize, Serialize};
 
 use crate::game_mod::SelectedVersion;
-use crate::version::Version;
 use crate::ModLoaderAppData;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -56,7 +56,7 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
             game_mod.enabled = mod_config.enabled;
 
             if !mod_config.force_latest.unwrap_or(true) {
-                let config_version = Version::try_from(&mod_config.version);
+                let config_version = Version::parse(&mod_config.version);
                 if config_version.is_err() {
                     warn!(
                         "Failed to parse version {} for mod {}",
@@ -99,7 +99,7 @@ pub(crate) fn write_config(data: &mut ModLoaderAppData) {
             }),
             priority: 0,
             enabled: game_mod.enabled,
-            version: game_mod.selected_version.unwrap().to_string(),
+            version: game_mod.selected_version.clone().unwrap().to_string(),
         };
 
         config.current.mods.insert(mod_id.to_owned(), mod_config);

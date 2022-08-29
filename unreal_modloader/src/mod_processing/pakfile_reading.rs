@@ -1,14 +1,14 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 use log::{debug, warn};
-use unreal_modmetadata::{self, Metadata, SyncMode};
+use semver::Version;
+use unreal_modmetadata::{self, Metadata};
 use unreal_pak::PakFile;
 
 use crate::error::ModLoaderWarning;
-use crate::game_mod::{GameMod, GameModVersion, SelectedVersion};
-use crate::version::Version;
+use crate::game_mod::{GameMod, GameModVersion};
 use crate::ModLoaderAppData;
 
 use super::verify;
@@ -118,43 +118,24 @@ pub(crate) fn insert_mods_from_readdata(
     set_enabled: bool,
 ) {
     for (mod_id, mod_files) in mods_read.iter() {
-        // check if mod is in global list, if not insert empty
-        if !data.game_mods.contains_key(mod_id) {
-            let game_mod = GameMod {
-                versions: BTreeMap::new(),
-                selected_version: SelectedVersion::LatestIndirect(None),
-                latest_version: None,
-
-                enabled: set_enabled,
-                remove: false,
-
-                name: "".to_owned(),
-                author: None,
-                description: None,
-                game_build: None,
-                sync: SyncMode::ServerAndClient,
-                homepage: None,
-                download: None,
-                size: 0,
-            };
-
-            data.game_mods.insert(mod_id.to_owned(), game_mod);
-        }
-
         // insert metadata
         for read_data in mod_files {
             let version = GameModVersion {
+                mod_id: read_data.1.mod_id.clone(),
                 file_name: read_data.0.clone(),
                 downloaded: true,
                 download_url: None,
                 metadata: Some(read_data.1.clone()),
             };
             let key: Result<Version, _> =
-                Version::try_from(&version.metadata.as_ref().unwrap().mod_version);
+                Version::parse(&version.metadata.as_ref().unwrap().mod_version);
 
             data.game_mods
-                .get_mut(mod_id)
-                .unwrap()
+                .entry(mod_id.clone())
+                .or_insert_with(|| GameMod {
+                    enabled: set_enabled,
+                    ..Default::default()
+                })
                 .versions
                 .insert(key.unwrap(), version);
         }

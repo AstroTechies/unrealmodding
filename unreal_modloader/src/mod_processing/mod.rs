@@ -6,7 +6,8 @@ use parking_lot::Mutex;
 
 use crate::error::ModLoaderWarning;
 use crate::ModLoaderAppData;
-mod index_file;
+pub(crate) mod dependencies;
+pub(crate) mod index_file;
 use index_file::{download_index_files, gather_index_files, insert_index_file_data};
 mod pakfile_reading;
 use pakfile_reading::{insert_mods_from_readdata, read_pak_files};
