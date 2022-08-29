@@ -12,7 +12,7 @@ no_bulk_data = ["unreal_modintegrator/no_bulk_data"]
 ue4_23 = ["unreal_modintegrator/ue4_23"]
 
 [dependencies]
-unreal_modintegrator = { version = "0.1.4", path = "../unreal_modintegrator" }
+unreal_modintegrator = { version = "0.1.5", path = "../unreal_modintegrator" }
 unreal_asset = { version = "0.1.0", path = "../unreal_asset" }
 unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
 unreal_modmetadata = { version = "0.1.0", path = "../unreal_modmetadata" }
