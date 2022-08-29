@@ -130,17 +130,23 @@ pub struct MsStoreInstallManager {
 
     winstore_vendor_id: &'static str,
     game_name: &'static str,
+    state_game_name: &'static str,
 }
 
 #[cfg(windows)]
 impl MsStoreInstallManager {
-    pub fn new(winstore_vendor_id: &'static str, game_name: &'static str) -> Self {
+    pub fn new(
+        winstore_vendor_id: &'static str,
+        game_name: &'static str,
+        state_game_name: &'static str,
+    ) -> Self {
         MsStoreInstallManager {
             store_info: RefCell::new(None),
             mods_path: RefCell::new(None),
             game_build: RefCell::new(None),
             winstore_vendor_id,
             game_name,
+            state_game_name,
         }
     }
 
@@ -165,7 +171,7 @@ impl InstallManager for MsStoreInstallManager {
                 *self.mods_path.borrow_mut() =
                     game_path_helpers::determine_installed_mods_path_winstore(
                         &store_info,
-                        self.game_name,
+                        self.state_game_name,
                     );
             }
         }

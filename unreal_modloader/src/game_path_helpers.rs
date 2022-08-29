@@ -73,7 +73,8 @@ pub fn determine_installed_mods_path_winstore(
             .join(store_info.runtime_id.clone())
             .join("LocalState")
             .join(game_name)
-            .join("Saved"),
+            .join("Saved")
+            .join("Paks"),
     );
     trace!("base_path: {:?}", base_path);
 

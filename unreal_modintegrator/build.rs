@@ -118,7 +118,7 @@ fn cook_now(out_dir: &PathBuf) {
     let version_selector = env::var_os("UE_VERSION_SELECTOR").expect("UE_VERSION_SELECTOR not set");
     let engine_path = env::var_os("UE_PATH").expect("UE_PATH not set");
 
-    let project_file = out_dir.join("Integrator").join("ModIntegrator.uproject");
+    let project_file = out_dir.join("ModIntegrator").join("ModIntegrator.uproject");
     let mut version_selector = Command::new(version_selector)
         .arg("/switchversionsilent")
         .arg(project_file.as_os_str())
