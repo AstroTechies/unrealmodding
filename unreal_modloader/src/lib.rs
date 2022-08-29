@@ -593,10 +593,19 @@ where
                         FileMod {
                             path: paks_path.join(mod_version.file_name.as_str()),
                             mod_id: mod_version.mod_id.clone(),
+                            priority: mod_version
+                                .file_name
+                                .split('-')
+                                .next()
+                                .unwrap()
+                                .parse::<u32>()
+                                .unwrap(),
                         }
                         .into(),
                     );
                 }
+
+                mods_to_integrate.sort_by_key(|a| a.get_priority());
 
                 debug!(
                     "Pre Integration took {} milliseconds",
