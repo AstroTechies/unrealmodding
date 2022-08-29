@@ -5,14 +5,13 @@ use std::{
     str::FromStr,
 };
 
-use semver::VersionReq;
 use serde::{
     de::{self, MapAccess, Visitor},
-    Deserialize, Deserializer, Serialize, Serializer,
+    Deserialize, Deserializer, Serialize,
 };
 use serde_json::Value;
 
-use crate::{error, hash_value, DownloadInfo, SyncMode};
+use crate::{error, hash_value, Dependency, DownloadInfo, SyncMode};
 
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
@@ -47,49 +46,6 @@ where
     }
 
     deserializer.deserialize_any(StringOrStruct(PhantomData))
-}
-
-fn semver_to_string<S>(version: &VersionReq, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str(version.to_string().as_str())
-}
-
-fn semver_from_string<'de, D>(deserializer: D) -> Result<VersionReq, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    VersionReq::parse(&s).map_err(de::Error::custom)
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub struct Dependency {
-    #[serde(
-        serialize_with = "semver_to_string",
-        deserialize_with = "semver_from_string"
-    )]
-    pub version: VersionReq,
-    pub download: Option<DownloadInfo>,
-}
-
-impl Dependency {
-    pub fn new(version: VersionReq, download: Option<DownloadInfo>) -> Self {
-        Dependency { version, download }
-    }
-}
-
-impl FromStr for Dependency {
-    type Err = error::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let version = VersionReq::parse(s)?;
-        Ok(Dependency {
-            version,
-            download: None,
-        })
-    }
 }
 
 fn deserialize_dependency_map<'de, D>(
