@@ -5,16 +5,16 @@ use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 use error::IntegrationError;
 use log::{debug, trace};
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
-use std::io::{Cursor, Write};
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Cursor, Write};
 use std::path::{Path, PathBuf};
-use std::{fs, io};
-use unreal_asset::exports::data_table_export::DataTable;
-use unreal_asset::exports::{Export, ExportBaseTrait};
-use unreal_asset::properties::int_property::{BoolProperty, ByteProperty};
-use unreal_asset::properties::str_property::StrProperty;
-use unreal_asset::properties::struct_property::StructProperty;
-use unreal_asset::properties::{Property, PropertyDataTrait};
+use unreal_asset::exports::{data_table_export::DataTable, Export, ExportBaseTrait};
+use unreal_asset::properties::{
+    int_property::{BoolProperty, ByteProperty},
+    str_property::StrProperty,
+    struct_property::StructProperty,
+    Property, PropertyDataTrait,
+};
 use unreal_asset::unreal_types::FName;
 use unreal_modmetadata::{Metadata, SyncMode};
 use unreal_pak::pakversion::PakVersion;
