@@ -451,10 +451,7 @@ pub fn integrate_mods<
     );
 
     let baked_mods = integrator_config.get_baked_mods();
-    let core_mods = baked_mods.iter().filter(|e| e.is_core()).filter(|e| {
-        mods.iter()
-            .any(|provided_mod| provided_mod.get_mod_id() == e.get_mod_id())
-    });
+    let core_mods = baked_mods.iter().filter(|e| e.is_core());
 
     let enabled_baked_mods = baked_mods.iter().filter(|e| !e.is_core()).filter(|e| {
         mods.iter()
