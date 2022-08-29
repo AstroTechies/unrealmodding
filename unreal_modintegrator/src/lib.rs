@@ -61,6 +61,7 @@ pub enum IntegratorMod<E: std::error::Error> {
 
 pub trait IntegratorModInfo {
     fn get_mod_id(&self) -> String;
+    fn get_priority(&self) -> u32;
     fn is_core(&self) -> bool;
 }
 
@@ -80,6 +81,14 @@ impl<E: std::error::Error> IntegratorModInfo for IntegratorMod<E> {
             IntegratorMod::Dynamic(dynamic_mod) => dynamic_mod.is_core(),
         }
     }
+
+    fn get_priority(&self) -> u32 {
+        match self {
+            IntegratorMod::File(file_mod) => file_mod.get_priority(),
+            IntegratorMod::Baked(baked_mod) => baked_mod.get_priority(),
+            IntegratorMod::Dynamic(dynamic_mod) => dynamic_mod.get_priority(),
+        }
+    }
 }
 
 impl<E: std::error::Error> From<BakedMod> for IntegratorMod<E> {
@@ -97,6 +106,7 @@ impl<E: std::error::Error> From<FileMod> for IntegratorMod<E> {
 pub struct FileMod {
     pub path: PathBuf,
     pub mod_id: String,
+    pub priority: u32,
 }
 
 impl IntegratorModInfo for FileMod {
@@ -107,12 +117,17 @@ impl IntegratorModInfo for FileMod {
     fn is_core(&self) -> bool {
         false
     }
+
+    fn get_priority(&self) -> u32 {
+        self.priority
+    }
 }
 
 pub struct BakedMod {
     pub data: &'static [u8],
     pub mod_id: String,
     pub filename: &'static str,
+    pub priority: u32,
     pub is_core: bool,
 }
 
@@ -134,6 +149,10 @@ impl IntegratorModInfo for BakedMod {
 
     fn is_core(&self) -> bool {
         self.is_core
+    }
+
+    fn get_priority(&self) -> u32 {
+        self.priority
     }
 }
 
@@ -425,48 +444,6 @@ pub fn integrate_mods<
     game_path: &Path,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
-    // let mods_dir = fs::read_dir(paks_path)?;
-
-    // let mut mod_filenames: Vec<fs::DirEntry> = mods_dir
-    //     .filter_map(|e| e.ok())
-    //     .filter(|e| {
-    //         e.file_name()
-    //             .into_string()
-    //             .map(|e| e.ends_with("_P.pak") && e != INTEGRATOR_PAK_FILE_NAME)
-    //             .unwrap_or(false)
-    //     })
-    //     .collect();
-
-    // mod_filenames.sort_by(|a, b| {
-    //     let a_priority = a
-    //         .file_name()
-    //         .into_string()
-    //         .unwrap()
-    //         .split("-")
-    //         .next()
-    //         .map(|e| u32::from_str_radix(e, 10).ok())
-    //         .flatten()
-    //         .unwrap_or(0);
-
-    //     let b_priority = b
-    //         .file_name()
-    //         .into_string()
-    //         .unwrap()
-    //         .split("-")
-    //         .next()
-    //         .map(|e| u32::from_str_radix(e, 10).ok())
-    //         .flatten()
-    //         .unwrap_or(0);
-
-    //     a_priority.cmp(&b_priority)
-    // });
-
-    // let mod_files: Vec<File> = mod_filenames
-    //     .into_iter()
-    //     .map(|e| File::open(&e.path()))
-    //     .filter_map(|e| e.ok())
-    //     .collect();
-
     debug!(
         "Integrating {} mods, refuse_mismatched_connections: {}",
         mods.len(),
