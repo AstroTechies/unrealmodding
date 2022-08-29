@@ -1,6 +1,6 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
-use std::mem::{size_of, transmute};
+use std::mem::size_of;
 
 use super::error::Error;
 
