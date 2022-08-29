@@ -1,10 +1,11 @@
 use std::fs;
 
 use log::warn;
+use semver::Version;
 use unreal_modmetadata::SyncMode;
 
 use crate::game_mod::SelectedVersion;
-use crate::version::{GameBuild, Version};
+use crate::version::GameBuild;
 use crate::ModLoaderAppData;
 
 pub(crate) fn auto_pick_versions(data: &mut ModLoaderAppData) {
@@ -14,9 +15,9 @@ pub(crate) fn auto_pick_versions(data: &mut ModLoaderAppData) {
             let mut versions = game_mod.versions.keys().collect::<Vec<&Version>>();
             versions.sort();
             game_mod.selected_version =
-                SelectedVersion::LatestIndirect(Some(**versions.last().unwrap()));
+                SelectedVersion::LatestIndirect(Some((*versions.last().unwrap()).clone()));
 
-            game_mod.latest_version = Some(**versions.last().unwrap());
+            game_mod.latest_version = Some((*versions.last().unwrap()).clone());
         }
     }
 }
@@ -31,7 +32,7 @@ pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &[S
 
         let version_data = game_mod
             .versions
-            .get(&game_mod.selected_version.unwrap())
+            .get(&game_mod.selected_version.clone().unwrap())
             .unwrap();
         if let Some(ref metadata) = version_data.metadata {
             game_mod.name = metadata.name.to_owned();
@@ -50,6 +51,7 @@ pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &[S
             game_mod.sync = metadata.sync.unwrap_or(SyncMode::ServerAndClient);
             game_mod.homepage = metadata.homepage.clone();
             game_mod.download = metadata.download.clone();
+            game_mod.dependencies = metadata.dependencies.clone();
             let path = data
                 .mods_path
                 .as_ref()

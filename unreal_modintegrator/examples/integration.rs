@@ -76,6 +76,10 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
     fn get_instructions(&self) -> Option<unreal_modintegrator::BakedInstructions> {
         None
     }
+
+    fn get_baked_mods(&self) -> Vec<unreal_modintegrator::IntegratorMod<io::Error>> {
+        Vec::new()
+    }
 }
 
 fn main() {
@@ -89,6 +93,7 @@ fn main() {
     let mods_path = args[1].clone();
     unreal_modintegrator::integrate_mods(
         &config,
+        &[],
         &PathBuf::from(&mods_path),
         &PathBuf::from(&game_path),
         true,

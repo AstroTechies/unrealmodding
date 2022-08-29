@@ -1,11 +1,12 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
-use unreal_modmetadata::{DownloadInfo, Metadata, SyncMode};
+use semver::Version;
+use unreal_modmetadata::{Dependency, DownloadInfo, Metadata, SyncMode};
 
-use crate::version::{GameBuild, Version};
+use crate::version::GameBuild;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SelectedVersion {
     /// Used when reading from index file
     Latest(Version),
@@ -13,6 +14,12 @@ pub enum SelectedVersion {
     LatestIndirect(Option<Version>),
     /// Used when a specific version is selected
     Specific(Version),
+}
+
+impl Default for SelectedVersion {
+    fn default() -> Self {
+        Self::LatestIndirect(None)
+    }
 }
 
 impl SelectedVersion {
@@ -41,7 +48,7 @@ impl fmt::Display for SelectedVersion {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct GameMod {
     pub versions: BTreeMap<Version, GameModVersion>,
     pub selected_version: SelectedVersion,
@@ -58,11 +65,13 @@ pub struct GameMod {
     pub sync: SyncMode,
     pub homepage: Option<String>,
     pub download: Option<DownloadInfo>,
+    pub dependencies: HashMap<String, Dependency>,
     pub size: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GameModVersion {
+    pub mod_id: String,
     pub file_name: String,
     pub downloaded: bool,
     pub download_url: Option<String>,

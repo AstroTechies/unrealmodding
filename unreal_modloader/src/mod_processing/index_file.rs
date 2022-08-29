@@ -1,33 +1,86 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
+use std::str::FromStr;
 use std::thread;
 
 use log::{debug, warn};
 use reqwest::blocking::Client;
-use serde::{Deserialize, Serialize};
+use semver::Version;
+use serde::de::{self, Visitor};
+use serde::{Deserialize, Deserializer};
 use unreal_modmetadata::DownloadInfo;
 
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameModVersion, SelectedVersion};
-use crate::version::Version;
 use crate::ModLoaderAppData;
 
 use super::verify;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub(crate) struct IndexFile {
     mods: HashMap<String, IndexFileMod>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct IndexFileMod {
-    latest_version: String,
-    versions: HashMap<String, IndexFileModVersion>,
+fn string_to_version<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+where
+    T: FromStr<Err = semver::Error>,
+    D: Deserializer<'de>,
+{
+    struct StringDeserializer<T>(PhantomData<T>);
+
+    impl<'de, T> Visitor<'de> for StringDeserializer<T>
+    where
+        T: FromStr<Err = semver::Error>,
+    {
+        type Value = T;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("string")
+        }
+        fn visit_str<E>(self, value: &str) -> Result<T, E>
+        where
+            E: de::Error,
+        {
+            Ok(FromStr::from_str(value).unwrap())
+        }
+    }
+    deserializer.deserialize_any(StringDeserializer(PhantomData))
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+fn deserialize_version_map<'de, D>(
+    deserializer: D,
+) -> Result<HashMap<Version, IndexFileModVersion>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Hash, PartialEq, Eq, Deserialize)]
+    struct Wrapper(#[serde(deserialize_with = "string_to_version")] Version);
+    let a: HashMap<Wrapper, IndexFileModVersion> = HashMap::deserialize(deserializer)?;
+    Ok(a.into_iter().map(|(Wrapper(k), v)| (k, v)).collect())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub(crate) struct IndexFileMod {
+    #[serde(deserialize_with = "string_to_version")]
+    pub latest_version: Version,
+    #[serde(deserialize_with = "deserialize_version_map")]
+    pub versions: HashMap<Version, IndexFileModVersion>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash)]
 pub(crate) struct IndexFileModVersion {
-    download_url: String,
-    filename: String,
+    pub download_url: String,
+    #[serde(rename = "filename")]
+    pub file_name: String,
+}
+
+impl IndexFileModVersion {
+    pub fn new(download_url: String, file_name: String) -> Self {
+        IndexFileModVersion {
+            download_url,
+            file_name,
+        }
+    }
 }
 
 pub(crate) fn gather_index_files(
@@ -46,62 +99,69 @@ pub(crate) fn gather_index_files(
     index_files
 }
 
-pub(crate) fn download_index_files(
-    index_files_info: HashMap<String, DownloadInfo>,
-) -> (HashMap<String, IndexFileMod>, Vec<ModLoaderWarning>) {
+pub(crate) fn download_index_file(
+    mod_id: String,
+    download_info: &DownloadInfo,
+) -> Result<(String, IndexFileMod), ModLoaderWarning> {
+    let client = Client::new();
+    let response = client.get(download_info.url.as_str()).send();
+    if response.is_err() {
+        warn!(
+            "Failed to download index file for {:?}, {}",
+            mod_id,
+            response.unwrap_err()
+        );
+
+        return Err(ModLoaderWarning::index_file_download_failed(mod_id));
+    }
+
+    let response = response.unwrap();
+    if !response.status().is_success() {
+        warn!(
+            "Failed to download index file for {:?}, {}",
+            mod_id,
+            response.status()
+        );
+
+        return Err(ModLoaderWarning::index_file_download_failed(mod_id));
+    }
+
+    let index_file = serde_json::from_str::<IndexFile>(response.text().unwrap().as_str());
+
+    if index_file.is_err() {
+        warn!(
+            "Failed to parse index file for {}: {}",
+            mod_id,
+            index_file.unwrap_err()
+        );
+
+        return Err(ModLoaderWarning::invalid_index_file(mod_id));
+    }
+    let index_file = index_file.unwrap();
+
+    let index_file_mod = index_file.mods.get(&mod_id);
+
+    if index_file_mod.is_none() {
+        warn!("Index file for {} does not contain that mod", mod_id);
+
+        return Err(ModLoaderWarning::index_file_missing_mod(mod_id));
+    }
+
+    Ok((mod_id, index_file_mod.unwrap().clone()))
+}
+
+pub(crate) fn download_index_files<I>(
+    index_files_info: I,
+) -> (HashMap<String, IndexFileMod>, Vec<ModLoaderWarning>)
+where
+    I: IntoIterator<Item = (String, DownloadInfo)>,
+{
     // we need to collect to allow multi threading to actually happen
     #[allow(clippy::needless_collect)]
     let handles = index_files_info
         .into_iter()
         .map(|(mod_id, download_info)| {
-            thread::spawn(move || {
-                let client = Client::new();
-                let response = client.get(download_info.url.as_str()).send();
-                if response.is_err() {
-                    warn!(
-                        "Failed to download index file for {:?}, {}",
-                        mod_id,
-                        response.unwrap_err()
-                    );
-
-                    return Err(ModLoaderWarning::index_file_download_failed(mod_id));
-                }
-
-                let response = response.unwrap();
-                if !response.status().is_success() {
-                    warn!(
-                        "Failed to download index file for {:?}, {}",
-                        mod_id,
-                        response.status()
-                    );
-
-                    return Err(ModLoaderWarning::index_file_download_failed(mod_id));
-                }
-
-                let index_file =
-                    serde_json::from_str::<IndexFile>(response.text().unwrap().as_str());
-
-                if index_file.is_err() {
-                    warn!(
-                        "Failed to parse index file for {}: {}",
-                        mod_id,
-                        index_file.unwrap_err()
-                    );
-
-                    return Err(ModLoaderWarning::invalid_index_file(mod_id));
-                }
-                let index_file = index_file.unwrap();
-
-                let index_file_mod = index_file.mods.get(&mod_id);
-
-                if index_file_mod.is_none() {
-                    warn!("Index file for {} does not contain that mod", mod_id);
-
-                    return Err(ModLoaderWarning::index_file_missing_mod(mod_id));
-                }
-
-                Ok((mod_id, index_file_mod.unwrap().clone()))
-            })
+            thread::spawn(move || download_index_file(mod_id, &download_info))
         })
         .collect::<Vec<_>>();
 
@@ -146,40 +206,27 @@ pub(crate) fn insert_index_file_data(
     for (mod_id, index_file) in index_files.iter() {
         let game_mod = data.game_mods.get_mut(mod_id).unwrap();
 
-        for (version_raw, version_info) in index_file.versions.iter() {
-            let version = Version::try_from(version_raw);
-            if version.is_err() {
-                warn!(
-                    "Failed to parse version {:?} from index file for mod {:?}",
-                    version_raw, mod_id
-                );
-                warnings.push(ModLoaderWarning::invalid_index_file(mod_id.to_owned()));
-
-                continue;
-            }
-
-            if !verify::verify_mod_file_name(&version_info.filename) {
+        for (version, version_info) in index_file.versions.iter() {
+            if !verify::verify_mod_file_name(&version_info.file_name) {
                 warn!(
                     "Failed to verify filename {:?} from index file for mod {:?}",
-                    version_info.filename, mod_id
+                    version_info.file_name, mod_id
                 );
                 warnings.push(ModLoaderWarning::invalid_index_file(mod_id.to_owned()));
 
                 continue;
             }
 
-            if game_mod.versions.contains_key(version.as_ref().unwrap()) {
-                let mut existing_version_data = game_mod
-                    .versions
-                    .get_mut(version.as_ref().unwrap())
-                    .unwrap();
+            if game_mod.versions.contains_key(version) {
+                let mut existing_version_data = game_mod.versions.get_mut(version).unwrap();
 
                 existing_version_data.download_url = Some(version_info.download_url.clone());
             } else {
                 game_mod.versions.insert(
-                    version.unwrap(),
+                    version.clone(),
                     GameModVersion {
-                        file_name: version_info.filename.clone(),
+                        mod_id: mod_id.clone(),
+                        file_name: version_info.file_name.clone(),
                         downloaded: false,
                         download_url: Some(version_info.download_url.clone()),
                         metadata: None,
@@ -188,30 +235,19 @@ pub(crate) fn insert_index_file_data(
             }
         }
 
-        let latest_version = Version::try_from(&index_file.latest_version);
-        if latest_version.is_err() {
-            warn!(
-                "Failed to parse version {:?} from index file for mod {:?}",
-                index_file.latest_version, mod_id
-            );
-            warnings.push(ModLoaderWarning::invalid_index_file(mod_id.to_owned()));
-
-            continue;
-        }
-
         match game_mod.selected_version {
             SelectedVersion::Latest(_) => {
                 game_mod.selected_version =
-                    SelectedVersion::Latest(*latest_version.as_ref().unwrap());
+                    SelectedVersion::Latest(index_file.latest_version.clone());
             }
             SelectedVersion::LatestIndirect(_) => {
                 game_mod.selected_version =
-                    SelectedVersion::Latest(*latest_version.as_ref().unwrap());
+                    SelectedVersion::Latest(index_file.latest_version.clone());
             }
             SelectedVersion::Specific(_) => {}
         }
 
-        game_mod.latest_version = Some(latest_version.unwrap());
+        game_mod.latest_version = Some(index_file.latest_version.clone());
 
         debug!("Loaded index file for {}", mod_id);
     }

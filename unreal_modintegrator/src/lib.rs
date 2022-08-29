@@ -5,16 +5,16 @@ use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 use error::IntegrationError;
 use log::{debug, trace};
 use std::collections::HashMap;
-use std::fs;
-use std::fs::{File, OpenOptions};
-use std::io::Cursor;
-use std::path::Path;
-use unreal_asset::exports::data_table_export::DataTable;
-use unreal_asset::exports::{Export, ExportBaseTrait};
-use unreal_asset::properties::int_property::{BoolProperty, ByteProperty};
-use unreal_asset::properties::str_property::StrProperty;
-use unreal_asset::properties::struct_property::StructProperty;
-use unreal_asset::properties::{Property, PropertyDataTrait};
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Cursor, Write};
+use std::path::{Path, PathBuf};
+use unreal_asset::exports::{data_table_export::DataTable, Export, ExportBaseTrait};
+use unreal_asset::properties::{
+    int_property::{BoolProperty, ByteProperty},
+    str_property::StrProperty,
+    struct_property::StructProperty,
+    Property, PropertyDataTrait,
+};
 use unreal_asset::unreal_types::FName;
 use unreal_modmetadata::{Metadata, SyncMode};
 use unreal_pak::pakversion::PakVersion;
@@ -53,8 +53,120 @@ impl BakedInstructions {
     }
 }
 
+pub enum IntegratorMod<E: std::error::Error> {
+    File(FileMod),
+    Baked(BakedMod),
+    Dynamic(Box<dyn DynamicMod<E>>),
+}
+
+pub trait IntegratorModInfo {
+    fn get_mod_id(&self) -> String;
+    fn get_priority(&self) -> u32;
+    fn is_core(&self) -> bool;
+}
+
+impl<E: std::error::Error> IntegratorModInfo for IntegratorMod<E> {
+    fn get_mod_id(&self) -> String {
+        match self {
+            IntegratorMod::File(file_mod) => file_mod.get_mod_id(),
+            IntegratorMod::Baked(baked_mod) => baked_mod.get_mod_id(),
+            IntegratorMod::Dynamic(dynamic_mod) => dynamic_mod.get_mod_id(),
+        }
+    }
+
+    fn is_core(&self) -> bool {
+        match self {
+            IntegratorMod::File(file_mod) => file_mod.is_core(),
+            IntegratorMod::Baked(baked_mod) => baked_mod.is_core(),
+            IntegratorMod::Dynamic(dynamic_mod) => dynamic_mod.is_core(),
+        }
+    }
+
+    fn get_priority(&self) -> u32 {
+        match self {
+            IntegratorMod::File(file_mod) => file_mod.get_priority(),
+            IntegratorMod::Baked(baked_mod) => baked_mod.get_priority(),
+            IntegratorMod::Dynamic(dynamic_mod) => dynamic_mod.get_priority(),
+        }
+    }
+}
+
+impl<E: std::error::Error> From<BakedMod> for IntegratorMod<E> {
+    fn from(e: BakedMod) -> Self {
+        IntegratorMod::Baked(e)
+    }
+}
+
+impl<E: std::error::Error> From<FileMod> for IntegratorMod<E> {
+    fn from(e: FileMod) -> Self {
+        IntegratorMod::File(e)
+    }
+}
+
+pub struct FileMod {
+    pub path: PathBuf,
+    pub mod_id: String,
+    pub priority: u32,
+}
+
+impl IntegratorModInfo for FileMod {
+    fn get_mod_id(&self) -> String {
+        self.mod_id.clone()
+    }
+
+    fn is_core(&self) -> bool {
+        false
+    }
+
+    fn get_priority(&self) -> u32 {
+        self.priority
+    }
+}
+
+pub struct BakedMod {
+    pub data: &'static [u8],
+    pub mod_id: String,
+    pub filename: &'static str,
+    pub priority: u32,
+    pub is_core: bool,
+}
+
+impl BakedMod {
+    pub fn write(&self, path: &Path) -> Result<File, io::Error> {
+        let mut file = File::create(path.join(self.filename))?;
+        file.write_all(self.data)?;
+        drop(file);
+
+        let file = File::open(path.join(self.filename))?;
+        Ok(file)
+    }
+}
+
+impl IntegratorModInfo for BakedMod {
+    fn get_mod_id(&self) -> String {
+        self.mod_id.clone()
+    }
+
+    fn is_core(&self) -> bool {
+        self.is_core
+    }
+
+    fn get_priority(&self) -> u32 {
+        self.priority
+    }
+}
+
+pub trait DynamicMod<E: std::error::Error>: IntegratorModInfo {
+    fn integrate(
+        &self,
+        integrated_pak: &mut PakFile,
+        game_paks: &mut Vec<PakFile>,
+        mod_paks: &mut Vec<PakFile>,
+    ) -> Result<(), E>;
+}
+
 #[allow(clippy::type_complexity)]
-pub trait IntegratorConfig<'data, T, E: std::error::Error> {
+pub trait IntegratorConfig<'data, T, E: std::error::Error + 'static> {
     fn get_data(&self) -> &'data T;
     fn get_handlers(
         &self,
@@ -72,6 +184,7 @@ pub trait IntegratorConfig<'data, T, E: std::error::Error> {
     >;
 
     fn get_instructions(&self) -> Option<BakedInstructions>;
+    fn get_baked_mods(&self) -> Vec<IntegratorMod<E>>;
 
     const GAME_NAME: &'static str;
     const INTEGRATOR_VERSION: &'static str;
@@ -326,28 +439,27 @@ pub fn integrate_mods<
     C: IntegratorConfig<'data, T, E>,
 >(
     integrator_config: &C,
+    mods: &[IntegratorMod<E>],
     paks_path: &Path,
     game_path: &Path,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
-    let mods_dir = fs::read_dir(paks_path)?;
-    let mod_files: Vec<File> = mods_dir
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.file_name()
-                .into_string()
-                .map(|e| e.ends_with("_P.pak") && e != INTEGRATOR_PAK_FILE_NAME)
-                .unwrap_or(false)
-        })
-        .map(|e| File::open(&e.path()))
-        .filter_map(|e| e.ok())
-        .collect();
-
     debug!(
         "Integrating {} mods, refuse_mismatched_connections: {}",
-        mod_files.len(),
+        mods.len(),
         refuse_mismatched_connections
     );
+
+    let baked_mods = integrator_config.get_baked_mods();
+    let core_mods = baked_mods.iter().filter(|e| e.is_core()).filter(|e| {
+        mods.iter()
+            .any(|provided_mod| provided_mod.get_mod_id() == e.get_mod_id())
+    });
+
+    let enabled_baked_mods = baked_mods.iter().filter(|e| !e.is_core()).filter(|e| {
+        mods.iter()
+            .any(|provided_mod| provided_mod.get_mod_id() == e.get_mod_id())
+    });
 
     let game_dir = fs::read_dir(game_path)?;
     let game_files: Vec<File> = game_dir
@@ -359,9 +471,21 @@ pub fn integrate_mods<
         return Err(IntegrationError::game_not_found().into());
     }
 
-    let mut mods = Vec::new();
+    let mod_files = mods
+        .iter()
+        .chain(core_mods.into_iter())
+        .chain(enabled_baked_mods.into_iter())
+        .filter_map(|e| match e {
+            IntegratorMod::File(file_mod) => File::open(&file_mod.path).ok(),
+            IntegratorMod::Baked(baked_mod) => baked_mod.write(paks_path).ok(),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
     let mut mod_paks = Vec::new();
+    let mut read_mods = Vec::new();
     let mut optional_mods_data = HashMap::new();
+
     for mod_file in &mod_files {
         let mut pak = PakFile::reader(mod_file);
         pak.load_records()?;
@@ -372,15 +496,13 @@ pub fn integrate_mods<
             .as_ref()
             .unwrap();
         let metadata = unreal_modmetadata::from_slice(record)?;
-        mods.push(metadata.clone());
+        read_mods.push(metadata.clone());
 
         debug!(
             "Integrating modid {} version {}",
             metadata.mod_id, metadata.mod_version
         );
 
-        // let optional_metadata: Value = serde_json::from_slice(record)?;
-        // optional_mods_data.push(optional_metadata);
         for (name, data) in &metadata.integrator {
             optional_mods_data
                 .entry(name.clone())
@@ -413,7 +535,7 @@ pub fn integrate_mods<
             list_of_mods_bulk,
             C::ENGINE_VERSION,
         )?;
-        bake_mod_data(&mut list_of_mods, &mods)?;
+        bake_mod_data(&mut list_of_mods, &read_mods)?;
         write_asset(
             &mut generated_pak,
             &list_of_mods,
@@ -507,6 +629,14 @@ pub fn integrate_mods<
             &mut mod_paks,
             persistent_actors,
         )?;
+
+        for dynamic_mod in mods.iter() {
+            if let IntegratorMod::Dynamic(dynamic_mod) = dynamic_mod {
+                dynamic_mod
+                    .integrate(&mut generated_pak, &mut game_paks, &mut mod_paks)
+                    .map_err(|e| Error::other(Box::new(e)))?;
+            }
+        }
 
         for (name, mut exec) in integrator_config.get_handlers() {
             let all_mods = optional_mods_data.get(&name).unwrap_or(&empty_vec);

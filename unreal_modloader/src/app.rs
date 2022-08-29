@@ -10,10 +10,12 @@ use eframe::{egui, App};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::{debug, info};
 use parking_lot::Mutex;
+use semver::Version;
 
-use crate::version::Version;
 use crate::{
+    error::ModLoaderWarning,
     game_mod::{GameMod, SelectedVersion},
+    mod_processing::dependencies::DependencyGraph,
     update_info::UpdateInfo,
 };
 
@@ -366,10 +368,30 @@ impl ModLoaderApp {
                 });
             })
             .body(|mut body| {
+                // ugly hack to bypass borrow checker
+                // this is safe because we are getting mut references to different struct fields
+                let dependency_graph = &data.dependency_graph as *const Option<DependencyGraph>;
+                let warnings = &mut data.warnings as *mut Vec<ModLoaderWarning>;
+
                 for (mod_id, game_mod) in data.game_mods.iter_mut() {
                     body.row(18.0, |mut row| {
                         row.col(|ui| {
                             if ui.checkbox(&mut game_mod.enabled, "").changed() {
+                                if !game_mod.enabled {
+                                    // ugly hack to bypass borrow checker
+                                    if let Some(dependency_graph) = unsafe { &*dependency_graph } {
+                                        let dependents =
+                                            dependency_graph.find_mod_dependents(mod_id);
+                                        if !dependents.is_empty() {
+                                            unsafe { &mut *warnings }.push(
+                                                ModLoaderWarning::referenced_by_other_mods(
+                                                    mod_id.clone(),
+                                                    dependents,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                }
                                 self.should_integrate.store(true, Ordering::Release);
                             };
                         });
@@ -379,7 +401,7 @@ impl ModLoaderApp {
                         row.col(|ui| {
                             ui.push_id(mod_id, |ui| {
                                 // becasue ComboBox .chnaged doesn't seem to work
-                                let prev_selected = game_mod.selected_version;
+                                let prev_selected = game_mod.selected_version.clone();
 
                                 Self::show_version_select(ui, game_mod);
 
@@ -427,10 +449,10 @@ impl ModLoaderApp {
                 // for when there is an Index file show force latest version, this to diecrtly indicate that there
                 // is the possibility of an auto update vie an index file.
                 if game_mod.download.is_some() {
-                    let latest_version = game_mod.latest_version.unwrap();
+                    let latest_version = game_mod.latest_version.clone().unwrap();
                     ui.selectable_value(
                         &mut game_mod.selected_version,
-                        SelectedVersion::Latest(latest_version),
+                        SelectedVersion::Latest(latest_version.clone()),
                         format!("{}", SelectedVersion::Latest(latest_version)),
                     );
                 }
@@ -443,17 +465,18 @@ impl ModLoaderApp {
                     let is_latest = *version.0
                         == game_mod
                             .latest_version
+                            .clone()
                             .unwrap_or_else(|| Version::new(0, 0, 0));
 
                     let show_version = if is_latest {
-                        SelectedVersion::LatestIndirect(Some(*version.0))
+                        SelectedVersion::LatestIndirect(Some(version.0.clone()))
                     } else {
-                        SelectedVersion::Specific(*version.0)
+                        SelectedVersion::Specific(version.0.clone())
                     };
 
                     ui.selectable_value(
                         &mut game_mod.selected_version,
-                        show_version,
+                        show_version.clone(),
                         format!("{}", show_version),
                     );
                 }
@@ -555,7 +578,11 @@ impl ModLoaderApp {
                         egui::Align::Center,
                     );
                     ui.with_layout(layout, |ui| {
-                        if ui.button("Play").clicked() {
+                        let button = match data.failed {
+                            true => Button::new("Play").sense(Sense::hover()),
+                            false => Button::new("Play"),
+                        };
+                        if ui.add(button).clicked() {
                             let install_manager = data.get_install_manager();
                             if let Some(install_manager) = install_manager {
                                 match install_manager.launch_game() {
