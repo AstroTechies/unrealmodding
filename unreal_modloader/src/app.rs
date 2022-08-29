@@ -368,6 +368,7 @@ impl ModLoaderApp {
                 });
             })
             .body(|mut body| {
+                // ugly hack to bypass borrow checker
                 let dependency_graph = &data.dependency_graph as *const Option<DependencyGraph>;
                 let warnings = &mut data.warnings as *mut Vec<ModLoaderWarning>;
 
@@ -376,6 +377,7 @@ impl ModLoaderApp {
                         row.col(|ui| {
                             if ui.checkbox(&mut game_mod.enabled, "").changed() {
                                 if !game_mod.enabled {
+                                    // ugly hack to bypass borrow checker
                                     if let Some(dependency_graph) = unsafe { &*dependency_graph } {
                                         let dependents =
                                             dependency_graph.find_mod_dependents(mod_id);
