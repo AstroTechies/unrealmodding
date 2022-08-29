@@ -369,6 +369,7 @@ impl ModLoaderApp {
             })
             .body(|mut body| {
                 // ugly hack to bypass borrow checker
+                // this is safe because we are getting a second mut reference to the data that we are currently accessing
                 let dependency_graph = &data.dependency_graph as *const Option<DependencyGraph>;
                 let warnings = &mut data.warnings as *mut Vec<ModLoaderWarning>;
 
