@@ -11,7 +11,7 @@ use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, GameModVersion};
 use crate::ModLoaderAppData;
 
-use super::verify;
+use super::verify::{self, MOD_FILENAME_REGEX};
 
 #[derive(Debug)]
 pub(crate) struct ReadData(String, Metadata);
@@ -55,24 +55,29 @@ pub(crate) fn read_pak_files(
                 return Err(ModLoaderWarning::invalid_mod_file_name(file_name));
             }
 
-            let file_name_parts = file_name.split('_').collect::<Vec<&str>>()[0]
-                .split('-')
-                .collect::<Vec<&str>>();
+            let file_name_parts = MOD_FILENAME_REGEX
+                .captures(&file_name)
+                .ok_or_else(|| ModLoaderWarning::invalid_metadata(file_name.clone()))?;
+
+            let (mod_id, version) = (
+                file_name_parts.get(2).unwrap().as_str(),
+                file_name_parts.get(4).unwrap().as_str(),
+            );
 
             // check that mod id in file name matches metadata
-            if file_name_parts[1] != metadata.mod_id {
+            if mod_id != metadata.mod_id {
                 warn!(
                     "Mod id in file name does not match metadata id: {:?} != {:?}",
-                    file_name_parts[1], metadata.mod_id
+                    mod_id, metadata.mod_id
                 );
                 return Err(ModLoaderWarning::invalid_metadata(file_name));
             }
 
             // check that version in file name matches metadata
-            if file_name_parts[2] != metadata.mod_version {
+            if version != metadata.mod_version {
                 warn!(
                     "Version in file name does not match metadata version: {:?} != {:?}",
-                    file_name_parts[2], metadata.mod_version
+                    version, metadata.mod_version
                 );
                 return Err(ModLoaderWarning::invalid_metadata(file_name));
             }
