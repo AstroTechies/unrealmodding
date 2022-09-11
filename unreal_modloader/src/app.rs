@@ -17,6 +17,7 @@ use crate::{
     game_mod::{GameMod, SelectedVersion},
     mod_processing::dependencies::DependencyGraph,
     update_info::UpdateInfo,
+    FileToProcess,
 };
 
 pub(crate) struct ModLoaderApp {
@@ -653,10 +654,10 @@ impl ModLoaderApp {
         for dropped_file in ctx.input().raw.dropped_files.iter() {
             debug!("Dropped file: {:?}", dropped_file.path);
 
-            self.data
-                .lock()
-                .files_to_process
-                .push(dropped_file.path.as_ref().unwrap().to_owned());
+            self.data.lock().files_to_process.push(FileToProcess::new(
+                dropped_file.path.as_ref().unwrap().to_owned(),
+                true,
+            ));
 
             self.working.store(true, Ordering::Release);
         }

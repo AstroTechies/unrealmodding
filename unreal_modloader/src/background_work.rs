@@ -25,6 +25,7 @@ use crate::mod_processing::{
     process_modfiles,
 };
 use crate::update_info::UpdateInfo;
+use crate::FileToProcess;
 use crate::ModLoaderAppData;
 
 use directories::BaseDirs;
@@ -134,13 +135,13 @@ where
             ModLoaderError::io_error_with_message("read Mods directory".to_owned(), err)
         })?;
 
-        let mod_files: Vec<PathBuf> = mods_dir
+        let mod_files: Vec<FileToProcess> = mods_dir
             .filter_map(|e| e.ok())
             .filter(|e| match e.file_name().into_string() {
                 Ok(s) => s.ends_with("_P.pak") && s != INTEGRATOR_PAK_FILE_NAME,
                 Err(_) => false,
             })
-            .map(|e| e.path())
+            .map(|e| FileToProcess::new(e.path(), false))
             .collect();
 
         let warnings = process_modfiles(&mod_files, &background_thread_data.data, false);
@@ -223,13 +224,14 @@ where
                 .files_to_process
                 .clone()
                 .iter()
-                .filter_map(|file_path| {
+                .filter_map(|file| {
+                    let file_path = &file.path;
                     let file_name = file_path.file_name().unwrap();
 
                     // copy the file to the mods directory
                     let new_file_path = mods_path.join(file_name);
                     match fs::copy(file_path, &new_file_path) {
-                        Ok(_) => Some(new_file_path),
+                        Ok(_) => Some(FileToProcess::new(new_file_path, file.newly_added)),
                         Err(err) => {
                             data_guard
                                 .warnings
@@ -241,7 +243,7 @@ where
                         }
                     }
                 })
-                .collect::<Vec<PathBuf>>();
+                .collect::<Vec<FileToProcess>>();
             data_guard.files_to_process.clear();
 
             // drop here because process_modfiles takes time
@@ -335,7 +337,7 @@ where
                 let warnings = process_modfiles(
                     &mods_to_install
                         .iter()
-                        .map(|f| mods_path.join(f.file_name.clone()))
+                        .map(|f| FileToProcess::new(mods_path.join(f.file_name.clone()), false))
                         .collect::<Vec<_>>(),
                     &background_thread_data.data,
                     false,
@@ -460,7 +462,7 @@ where
                                 metadata: Some(metadata),
                             });
                             to_enable.push(mod_id.clone());
-                            downloaded_mods.push(mod_path);
+                            downloaded_mods.push(FileToProcess::new(mod_path, false));
                         }
                         None => {
                             let dependents = graph.find_mod_dependents_with_version(&mod_id);
