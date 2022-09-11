@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
 
 use log::{debug, warn};
 use semver::Version;
@@ -9,7 +8,7 @@ use unreal_pak::PakFile;
 
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, GameModVersion};
-use crate::ModLoaderAppData;
+use crate::{FileToProcess, ModLoaderAppData};
 
 use super::verify::{self, MOD_FILENAME_REGEX};
 
@@ -17,13 +16,14 @@ use super::verify::{self, MOD_FILENAME_REGEX};
 pub(crate) struct ReadData(String, Metadata);
 
 pub(crate) fn read_pak_files(
-    mod_files: &[PathBuf],
+    mod_files: &[FileToProcess],
 ) -> (HashMap<String, Vec<ReadData>>, Vec<ModLoaderWarning>) {
     let mut mods_read: HashMap<String, Vec<ReadData>> = HashMap::new();
     let mut warnings = Vec::new();
 
     // read metadata
-    for file_path in mod_files.iter() {
+    for file in mod_files.iter() {
+        let file_path = &file.path;
         let file_result = (|| -> Result<(), ModLoaderWarning> {
             let file_name = file_path.file_name().unwrap().to_str().unwrap().to_owned();
 
@@ -105,10 +105,14 @@ pub(crate) fn read_pak_files(
             }
             Err(e) => {
                 warn!(
-                    "Failed to read pak file {:?}, error: {}",
+                    "Failed to read pak file {:?}, error: {}, deleting...",
                     file_path.file_name().unwrap().to_str().unwrap(),
                     e
                 );
+
+                if file.newly_added {
+                    let _ = fs::remove_file(file_path);
+                }
                 warnings.push(e);
             }
         }

@@ -40,6 +40,18 @@ pub use unreal_pak;
 
 use crate::mod_processing::dependencies::DependencyGraph;
 
+#[derive(Debug, Clone)]
+pub(crate) struct FileToProcess {
+    pub path: PathBuf,
+    pub newly_added: bool,
+}
+
+impl FileToProcess {
+    pub fn new(path: PathBuf, newly_added: bool) -> Self {
+        FileToProcess { path, newly_added }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct ModLoaderAppData {
     /// %LocalAppData%\[GameName]\Saved\Mods
@@ -51,7 +63,7 @@ pub(crate) struct ModLoaderAppData {
 
     pub game_build: Option<GameBuild>,
     pub refuse_mismatched_connections: bool,
-    pub files_to_process: Vec<PathBuf>,
+    pub files_to_process: Vec<FileToProcess>,
 
     pub game_mods: BTreeMap<String, GameMod>,
 

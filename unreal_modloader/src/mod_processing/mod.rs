@@ -1,11 +1,10 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use log::debug;
 use parking_lot::Mutex;
 
-use crate::error::ModLoaderWarning;
 use crate::ModLoaderAppData;
+use crate::{error::ModLoaderWarning, FileToProcess};
 pub(crate) mod dependencies;
 pub(crate) mod index_file;
 use index_file::{download_index_files, gather_index_files, insert_index_file_data};
@@ -17,7 +16,7 @@ use version_handling::{auto_pick_versions, set_mod_data_from_version};
 mod verify;
 
 pub(crate) fn process_modfiles(
-    mod_files: &Vec<PathBuf>,
+    mod_files: &Vec<FileToProcess>,
     data: &Arc<Mutex<ModLoaderAppData>>,
     set_enabled: bool,
 ) -> Vec<ModLoaderWarning> {

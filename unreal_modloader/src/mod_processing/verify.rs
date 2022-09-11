@@ -21,7 +21,12 @@ lazy_static! {
 pub fn verify_mod_file_name(mod_id: &str) -> bool {
     if let Some(matches) = MOD_FILENAME_REGEX.captures(mod_id) {
         if let Some(mod_name) = matches.get(2) {
-            return mod_name.as_str().chars().next().map(|e| e.is_uppercase()).unwrap_or(false);
+            return mod_name
+                .as_str()
+                .chars()
+                .next()
+                .map(|e| e.is_uppercase())
+                .unwrap_or(false);
         }
     }
 
