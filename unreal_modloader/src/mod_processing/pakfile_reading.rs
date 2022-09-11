@@ -61,7 +61,7 @@ pub(crate) fn read_pak_files(
 
             let (mod_id, version) = (
                 file_name_parts.get(2).unwrap().as_str(),
-                file_name_parts.get(4).unwrap().as_str(),
+                file_name_parts.get(3).unwrap().as_str(),
             );
 
             // check that mod id in file name matches metadata

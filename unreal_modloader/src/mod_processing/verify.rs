@@ -10,18 +10,22 @@ use regex::Regex;
 //     RE.is_match(mod_id)
 // }
 lazy_static! {
-    //                                   000 - ModName69 (.author) - 1.1.1  _P.pak
+    //                                   000 - ModName69(.author) - 1.1.1  _P.pak
     //                                   Match 1: 000
-    //                                   Match 2: ModName69
-    //                                   Match 3: author
-    //                                   Match 4: 1.1.1
-    pub(crate) static ref MOD_FILENAME_REGEX: Regex = Regex::new(r"(^\d{3})-([a-zA-Z0-9]+)\.?([a-zA-Z0-9]+)?-(\d+.\d+.\d+)_P.pak$").unwrap();
+    //                                   Match 2: ModName69.author
+    //                                   Match 3: 1.1.1
+    pub(crate) static ref MOD_FILENAME_REGEX: Regex = Regex::new(r"(^\d{3})-([a-zA-Z0-9\.]+)-(\d+.\d+.\d+)_P.pak$").unwrap();
 }
 
 pub fn verify_mod_file_name(mod_id: &str) -> bool {
     if let Some(matches) = MOD_FILENAME_REGEX.captures(mod_id) {
         if let Some(mod_name) = matches.get(2) {
-            return mod_name.as_str().chars().next().map(|e| e.is_uppercase()).unwrap_or(false);
+            return mod_name
+                .as_str()
+                .chars()
+                .next()
+                .map(|e| e.is_uppercase())
+                .unwrap_or(false);
         }
     }
 
