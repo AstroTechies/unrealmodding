@@ -2,6 +2,7 @@ use std::error;
 use std::fmt;
 use std::io;
 
+use reqwest::StatusCode;
 use unreal_pak::error::UnrealPakError;
 
 /// For critical errors that can happen during runtime which prevent further
@@ -107,10 +108,11 @@ pub enum ModLoaderWarningKind {
     InvalidModId,
     InvalidModFileName,
     InvalidVersion,
-    IndexFileDownloadFailed,
+    IndexFileDownloadFailed(reqwest::Error),
+    IndexFileDownloadFailedStatus(StatusCode),
     InvalidIndexFile,
     IndexFileMissingMod,
-    DownloadFailed,
+    DownloadFailed(reqwest::Error),
 
     Other(String),
     Generic(Box<dyn std::error::Error + Send>),
@@ -185,9 +187,15 @@ impl ModLoaderWarning {
             mod_id: Some(mod_id),
         }
     }
-    pub fn index_file_download_failed(mod_id: String) -> Self {
+    pub fn index_file_download_failed(mod_id: String, err: reqwest::Error) -> Self {
         ModLoaderWarning {
-            kind: ModLoaderWarningKind::IndexFileDownloadFailed,
+            kind: ModLoaderWarningKind::IndexFileDownloadFailed(err),
+            mod_id: Some(mod_id),
+        }
+    }
+    pub fn index_file_download_failed_status(mod_id: String, status: StatusCode) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::IndexFileDownloadFailedStatus(status),
             mod_id: Some(mod_id),
         }
     }
@@ -203,9 +211,9 @@ impl ModLoaderWarning {
             mod_id: Some(mod_id),
         }
     }
-    pub fn download_failed(mod_id: String) -> Self {
+    pub fn download_failed(mod_id: String, err: reqwest::Error) -> Self {
         ModLoaderWarning {
-            kind: ModLoaderWarningKind::DownloadFailed,
+            kind: ModLoaderWarningKind::DownloadFailed(err),
             mod_id: Some(mod_id),
         }
     }
@@ -250,14 +258,20 @@ impl fmt::Display for ModLoaderWarning {
                 format!("{}Invalid mod file name", mod_name)
             }
             ModLoaderWarningKind::InvalidVersion => format!("{}Invalid version", mod_name),
-            ModLoaderWarningKind::IndexFileDownloadFailed => {
-                format!("{}Failed to download index file", mod_name)
+            ModLoaderWarningKind::IndexFileDownloadFailed(ref err) => {
+                format!("{}Failed to download index file {}", mod_name, err)
             }
+            ModLoaderWarningKind::IndexFileDownloadFailedStatus(ref status) => format!(
+                "{}Failed to download index file, status: {}",
+                mod_name, status
+            ),
             ModLoaderWarningKind::InvalidIndexFile => format!("{}Invalid index file", mod_name),
             ModLoaderWarningKind::IndexFileMissingMod => {
                 format!("{}Index file missing mod", mod_name)
             }
-            ModLoaderWarningKind::DownloadFailed => format!("{}Download failed", mod_name),
+            ModLoaderWarningKind::DownloadFailed(ref err) => {
+                format!("{}Download failed: {}", mod_name, err)
+            }
 
             ModLoaderWarningKind::Other(ref message) => format!("{}{}", mod_name, message),
             ModLoaderWarningKind::Generic(ref err) => format!("{}Error: {}", mod_name, err),

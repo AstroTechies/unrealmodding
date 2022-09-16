@@ -105,14 +105,10 @@ pub(crate) fn download_index_file(
 ) -> Result<(String, IndexFileMod), ModLoaderWarning> {
     let client = Client::new();
     let response = client.get(download_info.url.as_str()).send();
-    if response.is_err() {
-        warn!(
-            "Failed to download index file for {:?}, {}",
-            mod_id,
-            response.unwrap_err()
-        );
+    if let Err(err) = response {
+        warn!("Failed to download index file for {:?}, {}", mod_id, err);
 
-        return Err(ModLoaderWarning::index_file_download_failed(mod_id));
+        return Err(ModLoaderWarning::index_file_download_failed(mod_id, err));
     }
 
     let response = response.unwrap();
@@ -123,7 +119,10 @@ pub(crate) fn download_index_file(
             response.status()
         );
 
-        return Err(ModLoaderWarning::index_file_download_failed(mod_id));
+        return Err(ModLoaderWarning::index_file_download_failed_status(
+            mod_id,
+            response.status(),
+        ));
     }
 
     let index_file = serde_json::from_str::<IndexFile>(response.text().unwrap().as_str());
