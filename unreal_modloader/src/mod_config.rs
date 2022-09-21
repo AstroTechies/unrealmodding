@@ -34,12 +34,21 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
     let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
     let mut selected_game_platform = None;
     if config_path.is_file() {
-        let config_str = fs::read_to_string(config_path).unwrap();
-        let config: ModConfig = serde_json::from_str(&config_str).unwrap_or_else(|_| {
-            error!("Failed to parse modconfig.json");
-            panic!();
-        });
+        let config_str = fs::read_to_string(&config_path).unwrap();
+        let config: Option<ModConfig> = serde_json::from_str(&config_str).ok();
 
+        if config.is_none() {
+            error!("Failed to parse modconfig.json");
+            let _ = fs::remove_file(&config_path);
+
+            if !data.set_game_platform("Steam") {
+                let first_platform = data.install_managers.keys().next().unwrap();
+                data.set_game_platform(first_platform);
+            }
+            return;
+        }
+
+        let config = config.unwrap();
         data.refuse_mismatched_connections = config.refuse_mismatched_connections;
 
         for (mod_id, mod_config) in config.current.mods.iter() {
