@@ -103,10 +103,10 @@ impl ModLoaderAppData {
     }
 }
 
-pub fn run<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(config: C)
+pub fn run<'data, GC, IC, D: 'data, E: 'static + std::error::Error + Send>(config: GC)
 where
-    D: 'static + IntegratorConfig<'a, T, E>,
-    C: 'static + config::GameConfig<'a, D, T, E>,
+    GC: 'static + config::GameConfig<'data, IC, D, E>,
+    IC: 'static + IntegratorConfig<'data, D, E>,
 {
     let data = Arc::new(Mutex::new(ModLoaderAppData {
         mods_path: None,
@@ -142,7 +142,7 @@ where
     // instantiate the GUI app
     let app = app::ModLoaderApp {
         data: Arc::clone(&data),
-        window_title: C::WINDOW_TITLE.to_owned(),
+        window_title: GC::WINDOW_TITLE.to_owned(),
 
         should_exit: Arc::clone(&should_exit),
         ready_exit: Arc::clone(&ready_exit),
@@ -158,7 +158,7 @@ where
         should_update: Arc::clone(&should_update),
         update_progress: Arc::clone(&update_progress),
 
-        modloader_version: C::CRATE_VERSION,
+        modloader_version: GC::CRATE_VERSION,
     };
 
     // spawn a background thread to handle long running tasks

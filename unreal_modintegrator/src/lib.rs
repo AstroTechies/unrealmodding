@@ -4,8 +4,8 @@ use std::io::{self, Cursor, Write};
 use std::path::{Path, PathBuf};
 
 use error::IntegrationError;
-use log::{debug, trace};
-use serde_json::{Map, Value};
+use log::debug;
+use serde_json::Value;
 
 use unreal_asset::{
     exports::{data_table_export::DataTable, Export, ExportBaseTrait},
@@ -37,23 +37,6 @@ use crate::handlers::handle_persistent_actors;
 pub trait IntegratorInfo {}
 
 pub const INTEGRATOR_PAK_FILE_NAME: &str = "900-ModIntegrator_P.pak";
-
-pub struct BakedInstructions {
-    pub file_refs: HashMap<String, &'static [u8]>,
-    pub instructions: Map<String, Value>,
-}
-
-impl BakedInstructions {
-    pub fn new(
-        file_refs: HashMap<String, &'static [u8]>,
-        instructions: Map<String, Value>,
-    ) -> Self {
-        BakedInstructions {
-            file_refs,
-            instructions,
-        }
-    }
-}
 
 pub enum IntegratorMod<E: std::error::Error> {
     File(FileMod),
@@ -167,25 +150,13 @@ pub trait DynamicMod<E: std::error::Error>: IntegratorModInfo {
     ) -> Result<(), E>;
 }
 
-#[allow(clippy::type_complexity)]
-pub trait IntegratorConfig<'data, T, E: std::error::Error + 'static> {
-    fn get_data(&self) -> &'data T;
-    fn get_handlers(
-        &self,
-    ) -> HashMap<
-        String,
-        Box<
-            dyn FnMut(
-                &T,
-                &mut PakFile,
-                &mut Vec<PakFile>,
-                &mut Vec<PakFile>,
-                &Vec<Value>,
-            ) -> Result<(), E>,
-        >,
-    >;
+pub type HandlerFn<D, E> =
+    dyn FnMut(&D, &mut PakFile, &mut Vec<PakFile>, &mut Vec<PakFile>, &Vec<Value>) -> Result<(), E>;
 
-    fn get_instructions(&self) -> Option<BakedInstructions>;
+pub trait IntegratorConfig<'data, D, E: std::error::Error + 'static> {
+    fn get_data(&self) -> &'data D;
+    fn get_handlers(&self) -> HashMap<String, Box<HandlerFn<D, E>>>;
+
     fn get_baked_mods(&self) -> Vec<IntegratorMod<E>>;
 
     const GAME_NAME: &'static str;
@@ -577,26 +548,6 @@ pub fn integrate_mods<
                 unreal_pak::CompressionMethod::Zlib,
             )?;
             generated_pak.add_record(record)?;
-        }
-
-        let instructions = integrator_config.get_instructions();
-        if let Some(instructions) = instructions {
-            for (file_path, data) in instructions.file_refs {
-                let record = PakRecord::new(
-                    file_path,
-                    data.to_vec(),
-                    unreal_pak::CompressionMethod::Zlib,
-                )?;
-                generated_pak.add_record(record)?;
-            }
-
-            for (instruction_name, instruction) in instructions.instructions {
-                trace!("Pushing instruction {} {:?}", instruction_name, instruction);
-                optional_mods_data
-                    .entry(instruction_name)
-                    .or_insert_with(Vec::new)
-                    .push(instruction);
-            }
         }
 
         let mut game_paks = Vec::new();

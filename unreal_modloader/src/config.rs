@@ -24,11 +24,11 @@ pub trait InstallManager: Debug + std::marker::Send {
     fn launch_game(&self) -> Result<(), ModLoaderWarning>;
 }
 
-pub trait GameConfig<'a, C, T, E: std::error::Error + 'static>: std::marker::Send
+pub trait GameConfig<'data, IC, D, E: std::error::Error + 'static>: std::marker::Send
 where
-    C: IntegratorConfig<'a, T, E>,
+    IC: IntegratorConfig<'data, D, E>,
 {
-    fn get_integrator_config(&self) -> &C;
+    fn get_integrator_config(&self) -> &IC;
     fn get_game_build(&self, install_path: &Path) -> Option<GameBuild>;
     fn get_install_managers(&self) -> BTreeMap<&'static str, Box<dyn InstallManager>>;
 

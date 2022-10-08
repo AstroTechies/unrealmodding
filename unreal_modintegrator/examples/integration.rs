@@ -73,10 +73,6 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
     // }
     const ENGINE_VERSION: i32 = VER_UE4_23;
 
-    fn get_instructions(&self) -> Option<unreal_modintegrator::BakedInstructions> {
-        None
-    }
-
     fn get_baked_mods(&self) -> Vec<unreal_modintegrator::IntegratorMod<io::Error>> {
         Vec::new()
     }
