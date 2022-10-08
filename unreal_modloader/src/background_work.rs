@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-
 use std::io::{self, Error};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -12,8 +11,16 @@ use std::sync::{
 use std::thread;
 use std::time::{Duration, Instant};
 
+use directories::BaseDirs;
 use log::{debug, warn};
 use parking_lot::Mutex;
+use semver::Version;
+
+use unreal_modintegrator::{
+    integrate_mods, FileMod, IntegratorConfig, IntegratorModInfo, INTEGRATOR_PAK_FILE_NAME,
+};
+use unreal_modmetadata::Metadata;
+use unreal_pak::PakFile;
 
 use crate::config;
 use crate::error::{ModLoaderError, ModLoaderWarning};
@@ -27,16 +34,6 @@ use crate::mod_processing::{
 use crate::update_info::UpdateInfo;
 use crate::FileToProcess;
 use crate::ModLoaderAppData;
-
-use directories::BaseDirs;
-
-use semver::Version;
-use unreal_modintegrator::{
-    integrate_mods, FileMod, IntegratorConfig, IntegratorModInfo, INTEGRATOR_PAK_FILE_NAME,
-};
-
-use unreal_modmetadata::Metadata;
-use unreal_pak::PakFile;
 
 pub(crate) struct BackgroundThreadData {
     pub(crate) data: Arc<Mutex<ModLoaderAppData>>,

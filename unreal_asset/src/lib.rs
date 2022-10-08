@@ -1,48 +1,10 @@
-use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
-
+use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::fmt::{Debug, Formatter};
-
 use std::hash::{Hash, Hasher};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use exports::function_export::FunctionExport;
-use reader::asset_reader::AssetReader;
-use reader::asset_trait::AssetTrait;
-use reader::asset_writer::AssetWriter;
-
-use crate::exports::base_export::BaseExport;
-use crate::exports::class_export::ClassExport;
-use crate::exports::data_table_export::DataTableExport;
-use crate::exports::enum_export::EnumExport;
-use crate::exports::level_export::LevelExport;
-use crate::exports::normal_export::NormalExport;
-use crate::exports::property_export::PropertyExport;
-use crate::exports::raw_export::RawExport;
-use crate::exports::string_table_export::StringTableExport;
-
-use crate::exports::{ExportBaseTrait, ExportTrait};
-use crate::fproperty::FProperty;
-use crate::ue4version::{
-    VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE,
-    VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP,
-    VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT,
-    VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_NAME_HASHES_SERIALIZED,
-    VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION,
-    VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG,
-    VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS,
-    VER_UE4_WORLD_LEVEL_INFO,
-};
-
-use self::cursor_ext::CursorExt;
-use self::custom_version::CustomVersionTrait;
-use self::error::Error;
-use self::exports::{Export, ExportNormalTrait};
-
-use self::properties::world_tile_property::FWorldTileInfo;
-use self::unreal_types::Guid;
 
 pub mod bitvec_ext;
 mod crc;
@@ -61,8 +23,31 @@ pub mod types;
 pub mod ue4version;
 pub mod unreal_types;
 pub mod uproperty;
-use custom_version::CustomVersion;
-use unreal_types::{FName, GenerationInfo, PackageIndex};
+
+use cursor_ext::CursorExt;
+use custom_version::{CustomVersion, CustomVersionTrait};
+use error::Error;
+use exports::{
+    base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
+    enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
+    normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
+    string_table_export::StringTableExport, Export, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
+};
+use fproperty::FProperty;
+use properties::world_tile_property::FWorldTileInfo;
+use reader::{asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter};
+use ue4version::{
+    VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE,
+    VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP,
+    VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT,
+    VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_NAME_HASHES_SERIALIZED,
+    VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION,
+    VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG,
+    VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS,
+    VER_UE4_WORLD_LEVEL_INFO,
+};
+use unreal_types::{FName, GenerationInfo, Guid, PackageIndex};
 
 #[macro_export]
 macro_rules! cast {

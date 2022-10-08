@@ -1,11 +1,9 @@
 use byteorder::LittleEndian;
 
-use crate::{
-    error::Error,
-    properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::FName,
-};
+use crate::error::Error;
+use crate::properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::FName;
 
 #[derive(Debug, Clone)]
 pub struct AssetBundleEntry {

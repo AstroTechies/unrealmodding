@@ -1,21 +1,21 @@
+use std::collections::HashMap;
+use std::io::SeekFrom;
+use std::mem::size_of;
+
+use byteorder::LittleEndian;
+
 use crate::error::Error;
-use crate::exports::base_export::BaseExport;
-use crate::exports::struct_export::StructExport;
-use crate::exports::{ExportBaseTrait, ExportTrait};
+use crate::exports::{
+    base_export::BaseExport, struct_export::StructExport, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
+};
 use crate::flags::EClassFlags;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::ue4version::{
     VER_UE4_ADD_COOKED_TO_UCLASS, VER_UE4_CLASS_NOTPLACEABLE_ADDED,
     VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING,
 };
 use crate::unreal_types::{FName, PackageIndex};
-use byteorder::LittleEndian;
-use std::collections::HashMap;
-use std::io::SeekFrom;
-use std::mem::size_of;
-
-use super::ExportNormalTrait;
 
 #[derive(Clone)]
 pub struct SerializedInterfaceReference {

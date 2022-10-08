@@ -2,14 +2,12 @@ use bitvec::{order::Lsb0, prelude::BitVec};
 use byteorder::LittleEndian;
 use lazy_static::lazy_static;
 
-use crate::{
-    bitvec_ext::BitVecExt,
-    custom_version::FAssetRegistryVersionType,
-    error::{Error, RegistryError},
-    flags::EDependencyProperty,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::FName,
-};
+use crate::bitvec_ext::BitVecExt;
+use crate::custom_version::FAssetRegistryVersionType;
+use crate::error::{Error, RegistryError};
+use crate::flags::EDependencyProperty;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::FName;
 
 #[derive(Debug, Clone, Default)]
 pub struct AssetIdentifier {

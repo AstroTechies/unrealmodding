@@ -4,21 +4,21 @@ use std::sync::{
 };
 use std::time::Instant;
 
-use eframe::egui::{Button, ProgressBar, Sense, Widget};
-use eframe::emath::Align;
-use eframe::{egui, App};
+use eframe::{
+    egui::{self, Button, ProgressBar, Sense, Widget},
+    emath::Align,
+    App,
+};
 use egui_extras::{Size, StripBuilder, TableBuilder};
 use log::{debug, info};
 use parking_lot::Mutex;
 use semver::Version;
 
-use crate::{
-    error::ModLoaderWarning,
-    game_mod::{GameMod, SelectedVersion},
-    mod_processing::dependencies::DependencyGraph,
-    update_info::UpdateInfo,
-    FileToProcess,
-};
+use crate::error::ModLoaderWarning;
+use crate::game_mod::{GameMod, SelectedVersion};
+use crate::mod_processing::dependencies::DependencyGraph;
+use crate::update_info::UpdateInfo;
+use crate::FileToProcess;
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,

@@ -1,19 +1,14 @@
-use std::{
-    collections::HashMap,
-    io::{self, Cursor, Seek, Write},
-};
+use std::collections::HashMap;
+use std::io::{self, Cursor, Seek, Write};
 
 use byteorder::WriteBytesExt;
 
-use crate::{
-    cursor_ext::CursorExt,
-    custom_version::{CustomVersion, CustomVersionTrait},
-    ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG,
-    unreal_types::{FName, PackageIndex},
-    Import,
-};
-
-use super::{asset_trait::AssetTrait, asset_writer::AssetWriter};
+use crate::cursor_ext::CursorExt;
+use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
+use crate::ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG;
+use crate::unreal_types::{FName, PackageIndex};
+use crate::Import;
 
 pub struct RawWriter<'cursor> {
     cursor: &'cursor mut Cursor<Vec<u8>>,

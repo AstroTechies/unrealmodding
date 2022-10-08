@@ -1,20 +1,15 @@
-use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
-    io::{self, SeekFrom},
-};
+use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::hash::{Hash, Hasher};
+use std::io::{self, SeekFrom};
 
 use byteorder::LittleEndian;
 
-use crate::{
-    custom_version::{CustomVersion, CustomVersionTrait},
-    error::Error,
-    reader::asset_reader::AssetReader,
-    reader::asset_trait::AssetTrait,
-    ue4version::VER_UE4_NAME_HASHES_SERIALIZED,
-    unreal_types::{FName, Guid, PackageIndex},
-    Import,
-};
+use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::error::Error;
+use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
+use crate::ue4version::VER_UE4_NAME_HASHES_SERIALIZED;
+use crate::unreal_types::{FName, Guid, PackageIndex};
+use crate::Import;
 
 pub struct NameTableReader<'reader, Reader: AssetReader> {
     reader: &'reader mut Reader,

@@ -1,17 +1,14 @@
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
+use std::fmt::Display;
 
-use crate::{
-    error::Error,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-};
-
-use super::{
-    ue4version,
-    unreal_types::{new_guid, Guid},
-};
 use byteorder::LittleEndian;
 use lazy_static::lazy_static;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+use crate::error::Error;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::ue4version;
+use crate::unreal_types::{new_guid, Guid};
 
 #[derive(Debug, Clone)]
 pub struct CustomVersion {

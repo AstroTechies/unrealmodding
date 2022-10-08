@@ -1,9 +1,8 @@
-use std::{
-    io::{self, ErrorKind},
-    path::Path,
-};
+use std::io::{self, ErrorKind};
+use std::path::Path;
 
 use serde_json::Map;
+
 use unreal_asset::{
     cast,
     exports::{Export, ExportNormalTrait},
@@ -17,7 +16,8 @@ use unreal_asset::{
 };
 use unreal_pak::PakFile;
 
-use crate::{error::Error, write_asset};
+use crate::error::Error;
+use crate::write_asset;
 
 pub(crate) struct GameInfo {
     pub(crate) game_name: String,

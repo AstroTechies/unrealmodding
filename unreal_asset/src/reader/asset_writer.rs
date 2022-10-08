@@ -2,12 +2,9 @@ use std::io;
 
 use byteorder::ByteOrder;
 
-use crate::{
-    error::Error,
-    unreal_types::{FName, Guid},
-};
-
-use super::asset_trait::AssetTrait;
+use crate::error::Error;
+use crate::unreal_types::{FName, Guid};
+use crate::reader::asset_trait::AssetTrait;
 
 pub trait AssetWriter: AssetTrait {
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error>;

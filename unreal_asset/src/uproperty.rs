@@ -1,12 +1,12 @@
+use byteorder::LittleEndian;
+use enum_dispatch::enum_dispatch;
+
 use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::flags::EPropertyFlags;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Error;
-use byteorder::LittleEndian;
-use enum_dispatch::enum_dispatch;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {

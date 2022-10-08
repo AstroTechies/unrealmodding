@@ -1,10 +1,7 @@
 use crate::error::Error;
-use crate::exports::ExportTrait;
+use crate::exports::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::{FName, Guid, PackageIndex};
-
-use super::ExportBaseTrait;
-use super::ExportNormalTrait;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseExport {

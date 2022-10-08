@@ -3,13 +3,13 @@ use std::mem::size_of;
 use byteorder::LittleEndian;
 
 use crate::error::Error;
+use crate::impl_property_data_trait;
+use crate::optional_guid;
+use crate::optional_guid_write;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    impl_property_data_trait, optional_guid, optional_guid_write, simple_property_write,
-    unreal_types::{FName, Guid},
-};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::simple_property_write;
+use crate::unreal_types::{FName, Guid};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TimeSpanProperty {

@@ -1,8 +1,9 @@
 use std::str::FromStr;
 
-use error::Error;
 use semver::VersionReq;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+
+use error::Error;
 
 pub mod error;
 pub(crate) mod v1;

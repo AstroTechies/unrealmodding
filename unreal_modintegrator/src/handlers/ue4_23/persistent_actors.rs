@@ -1,35 +1,25 @@
-use std::{
-    collections::HashMap,
-    io::{self, ErrorKind},
-    path::Path,
-};
+use std::collections::HashMap;
+use std::io::{self, ErrorKind};
+use std::path::Path;
 
 use unreal_asset::{
     cast,
-    exports::Export,
+    exports::{normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},
+    properties::{
+        array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
+        object_property::ObjectProperty, Property, PropertyDataTrait,
+    },
     reader::asset_trait::AssetTrait,
     ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     Asset, Import,
 };
-use unreal_asset::{
-    exports::ExportBaseTrait,
-    properties::{
-        array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
-        object_property::ObjectProperty, PropertyDataTrait,
-    },
-};
-use unreal_asset::{
-    exports::{normal_export::NormalExport, ExportNormalTrait},
-    properties::Property,
-};
 use unreal_pak::PakFile;
 
-use crate::{
-    find_asset,
-    helpers::{game_to_absolute, get_asset},
-    read_asset, write_asset,
-};
+use crate::find_asset;
+use crate::helpers::{game_to_absolute, get_asset};
+use crate::read_asset;
+use crate::write_asset;
 
 const LEVEL_TEMPLATE_ASSET: &[u8] = include_bytes!("assets/LevelTemplate.umap");
 

@@ -1,13 +1,9 @@
-use std::{
-    collections::HashMap,
-    io::{self, SeekFrom},
-};
+use std::collections::HashMap;
+use std::io::{self, SeekFrom};
 
-use crate::{
-    custom_version::{CustomVersion, CustomVersionTrait},
-    unreal_types::{FName, PackageIndex},
-    Import,
-};
+use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::unreal_types::{FName, PackageIndex};
+use crate::Import;
 
 pub trait AssetTrait {
     fn get_custom_version<T>(&self) -> CustomVersion

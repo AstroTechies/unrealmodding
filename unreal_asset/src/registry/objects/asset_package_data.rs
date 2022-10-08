@@ -1,13 +1,10 @@
 use byteorder::LittleEndian;
 
-use crate::{
-    custom_version::{CustomVersion, FAssetRegistryVersionType},
-    error::{Error, RegistryError},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::{FName, Guid},
-};
-
-use super::md5_hash::FMD5Hash;
+use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
+use crate::error::{Error, RegistryError};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::registry::objects::md5_hash::FMD5Hash;
+use crate::unreal_types::{FName, Guid};
 
 #[derive(Debug)]
 pub struct AssetPackageData {

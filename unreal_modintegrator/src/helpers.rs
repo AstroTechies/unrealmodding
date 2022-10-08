@@ -5,10 +5,12 @@ use std::{
 
 use lazy_static::lazy_static;
 use regex::Regex;
+
 use unreal_asset::Asset;
 use unreal_pak::PakFile;
 
-use crate::{find_asset, read_asset};
+use crate::find_asset;
+use crate::read_asset;
 
 lazy_static! {
     static ref GAME_REGEX: Regex = Regex::new(r"^/Game/").unwrap();

@@ -1,12 +1,8 @@
 use crate::error::Error;
-use crate::exports::base_export::BaseExport;
-use crate::exports::{ExportBaseTrait, ExportTrait};
+use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::properties::Property;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::FName;
-
-use super::ExportNormalTrait;
 
 #[derive(Clone)]
 pub struct NormalExport {

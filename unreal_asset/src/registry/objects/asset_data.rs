@@ -2,15 +2,12 @@ use std::collections::HashMap;
 
 use byteorder::LittleEndian;
 
-use crate::{
-    custom_version::FAssetRegistryVersionType,
-    error::Error,
-    flags::EPackageFlags,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::FName,
-};
-
-use super::asset_bundle_data::AssetBundleData;
+use crate::custom_version::FAssetRegistryVersionType;
+use crate::error::Error;
+use crate::flags::EPackageFlags;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::registry::objects::asset_bundle_data::AssetBundleData;
+use crate::unreal_types::FName;
 
 #[derive(Clone, Debug)]
 pub struct TopLevelAssetPath {

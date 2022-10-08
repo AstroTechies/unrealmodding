@@ -1,36 +1,38 @@
-use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_JSON};
-#[cfg(not(feature = "no_bulk_data"))]
-use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
-
-use error::IntegrationError;
-use log::{debug, trace};
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Cursor, Write};
 use std::path::{Path, PathBuf};
-use unreal_asset::exports::{data_table_export::DataTable, Export, ExportBaseTrait};
-use unreal_asset::properties::{
-    int_property::{BoolProperty, ByteProperty},
-    str_property::StrProperty,
-    struct_property::StructProperty,
-    Property, PropertyDataTrait,
+
+use error::IntegrationError;
+use log::{debug, trace};
+use serde_json::{Map, Value};
+
+use unreal_asset::{
+    exports::{data_table_export::DataTable, Export, ExportBaseTrait},
+    properties::{
+        int_property::{BoolProperty, ByteProperty},
+        str_property::StrProperty,
+        struct_property::StructProperty,
+        Property, PropertyDataTrait,
+    },
+    unreal_types::FName,
+    Asset,
 };
-use unreal_asset::unreal_types::FName;
 use unreal_modmetadata::{Metadata, SyncMode};
-use unreal_pak::pakversion::PakVersion;
+use unreal_pak::{pakversion::PakVersion, PakFile, PakRecord};
 
 mod assets;
 pub mod error;
+mod handlers;
 pub mod helpers;
 pub mod macros;
-use serde_json::{Map, Value};
-use unreal_asset::Asset;
-use unreal_pak::{PakFile, PakRecord};
+
+use assets::{COPY_OVER, INTEGRATOR_STATICS_ASSET, LIST_OF_MODS_ASSET, METADATA_JSON};
+#[cfg(not(feature = "no_bulk_data"))]
+use assets::{INTEGRATOR_STATICS_BULK, LIST_OF_MODS_BULK};
 
 use crate::error::Error;
 use crate::handlers::handle_persistent_actors;
-
-mod handlers;
 
 pub trait IntegratorInfo {}
 

@@ -1,18 +1,16 @@
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::Error;
+use std::mem::size_of;
+
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::mem::size_of;
 
 use crate::enums::EBlueprintTextLiteralType;
-
+use crate::error::KismetError;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{Transform, Vector, Vector4};
 use crate::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETARRAY_BYTECODE};
 use crate::unreal_types::{FName, FieldPath, PackageIndex};
-
-use super::error::KismetError;
+use crate::Error;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
