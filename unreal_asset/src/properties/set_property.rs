@@ -1,14 +1,8 @@
 use crate::error::{Error, PropertyError};
-use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::unreal_types::ToFName;
-use crate::{
-    impl_property_data_trait,
-    unreal_types::{FName, Guid},
-};
-
-use super::array_property::ArrayProperty;
+use crate::impl_property_data_trait;
+use crate::properties::{array_property::ArrayProperty, PropertyDataTrait, PropertyTrait};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::{FName, Guid, ToFName};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {

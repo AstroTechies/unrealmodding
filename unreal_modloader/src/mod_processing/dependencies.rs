@@ -1,13 +1,8 @@
 use std::collections::HashMap;
 
-use petgraph::graph::NodeIndex;
-use petgraph::prelude::DiGraph;
-use petgraph::visit::IntoNodeReferences;
-use petgraph::Direction;
-use semver::Version;
-use semver::VersionReq;
-use unreal_modmetadata::Dependency;
-use unreal_modmetadata::DownloadInfo;
+use petgraph::{graph::NodeIndex, prelude::DiGraph, visit::IntoNodeReferences, Direction};
+use semver::{Version, VersionReq};
+use unreal_modmetadata::{Dependency, DownloadInfo};
 
 use crate::error::ModLoaderWarning;
 

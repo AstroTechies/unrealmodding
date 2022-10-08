@@ -1,16 +1,9 @@
 use crate::error::{Error, PropertyError};
-use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    impl_property_data_trait,
-    {
-        ue4version::{VER_UE4_SERIALIZE_RICH_CURVE_KEY, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG},
-        unreal_types::{FName, Guid},
-    },
-};
-
-use super::Property;
+use crate::impl_property_data_trait;
+use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::ue4version::{VER_UE4_SERIALIZE_RICH_CURVE_KEY, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
+use crate::unreal_types::{FName, Guid};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub struct StructProperty {

@@ -3,20 +3,16 @@ use std::io::SeekFrom;
 use byteorder::LittleEndian;
 
 use crate::error::{Error, PropertyError};
-use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::impl_property_data_trait;
+use crate::properties::{
+    struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait,
+};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::ue4version::{
-    VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG,
+    VER_UE4_INNER_ARRAY_TAG_INFO, VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG,
+    VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG,
 };
-use crate::unreal_types::{default_guid, ToFName};
-use crate::{
-    impl_property_data_trait,
-    ue4version::VER_UE4_INNER_ARRAY_TAG_INFO,
-    unreal_types::{FName, Guid},
-};
-
-use super::{struct_property::StructProperty, Property};
+use crate::unreal_types::{default_guid, FName, Guid, ToFName};
 
 #[derive(Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {

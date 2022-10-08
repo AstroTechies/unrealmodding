@@ -1,3 +1,5 @@
+use enum_dispatch::enum_dispatch;
+
 pub mod base_export;
 pub mod class_export;
 pub mod data_table_export;
@@ -10,8 +12,7 @@ pub mod raw_export;
 pub mod string_table_export;
 pub mod struct_export;
 
-use enum_dispatch::enum_dispatch;
-
+use crate::error::Error;
 use crate::reader::asset_writer::AssetWriter;
 
 use self::{
@@ -20,7 +21,6 @@ use self::{
     normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
     string_table_export::StringTableExport, struct_export::StructExport,
 };
-use super::error::Error;
 
 #[enum_dispatch]
 pub trait ExportNormalTrait {

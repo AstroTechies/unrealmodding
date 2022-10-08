@@ -1,18 +1,17 @@
-use crate::custom_version::FCoreObjectVersion;
-use crate::exports::base_export::BaseExport;
-use crate::exports::normal_export::NormalExport;
-use crate::implement_get;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use byteorder::LittleEndian;
 use std::io::SeekFrom;
 
-use super::ExportBaseTrait;
-use super::ExportNormalTrait;
+use byteorder::LittleEndian;
+
+use crate::custom_version::FCoreObjectVersion;
 use crate::error::Error;
-use crate::exports::ExportTrait;
+use crate::exports::{
+    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
+};
 use crate::fproperty::FProperty;
+use crate::implement_get;
 use crate::kismet::KismetExpression;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::ue4version::VER_UE4_16;
 use crate::unreal_types::PackageIndex;
 use crate::uproperty::UField;

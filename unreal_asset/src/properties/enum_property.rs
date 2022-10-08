@@ -1,13 +1,10 @@
 use std::mem::size_of;
 
 use crate::error::{Error, PropertyError};
+use crate::impl_property_data_trait;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    impl_property_data_trait,
-    unreal_types::{FName, Guid},
-};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::{FName, Guid};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub struct EnumProperty {

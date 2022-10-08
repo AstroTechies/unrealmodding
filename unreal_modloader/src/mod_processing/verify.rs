@@ -10,10 +10,10 @@ use regex::Regex;
 //     RE.is_match(mod_id)
 // }
 lazy_static! {
-    //                                   000 - ModName69(.author) - 1.1.1  _P.pak
-    //                                   Match 1: 000
-    //                                   Match 2: ModName69.author
-    //                                   Match 3: 1.1.1
+    /// Match 1: 000
+    /// Match 2: ModName69.author
+    /// Match 3: 1.1.1
+    // regex explanation                                              000  - Mod69().author) - 1.1.1      _P.pak
     pub(crate) static ref MOD_FILENAME_REGEX: Regex = Regex::new(r"(^\d{3})-([a-zA-Z0-9\.]+)-(\d+.\d+.\d+)_P.pak$").unwrap();
 }
 

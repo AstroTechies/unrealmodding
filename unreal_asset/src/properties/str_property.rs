@@ -2,19 +2,16 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 
+use crate::custom_version::{CustomVersion, FEditorObjectVersion};
+use crate::enums::TextHistoryType;
 use crate::error::{Error, PropertyError};
+use crate::impl_property_data_trait;
+use crate::optional_guid;
+use crate::optional_guid_write;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    {
-        custom_version::{CustomVersion, FEditorObjectVersion},
-        enums::TextHistoryType,
-        ue4version::{VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT, VER_UE4_FTEXT_HISTORY},
-        unreal_types::{FName, Guid},
-    },
-};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::ue4version::{VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT, VER_UE4_FTEXT_HISTORY};
+use crate::unreal_types::{FName, Guid};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct StrProperty {

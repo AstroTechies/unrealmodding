@@ -1,8 +1,6 @@
-use std::{
-    collections::BTreeMap,
-    fmt::Debug,
-    path::{Path, PathBuf},
-};
+use std::collections::BTreeMap;
+use std::fmt::Debug;
+use std::path::{Path, PathBuf};
 
 use unreal_modintegrator::IntegratorConfig;
 

@@ -1,14 +1,12 @@
 use byteorder::LittleEndian;
 
-use crate::{
-    error::Error, flags::EFunctionFlags, reader::asset_reader::AssetReader,
-    reader::asset_writer::AssetWriter,
-};
-
-use super::{
+use crate::error::Error;
+use crate::exports::{
     base_export::BaseExport, struct_export::StructExport, ExportBaseTrait, ExportNormalTrait,
     ExportTrait,
 };
+use crate::flags::EFunctionFlags;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
 #[derive(Clone)]
 pub struct FunctionExport {

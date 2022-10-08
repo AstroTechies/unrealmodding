@@ -1,18 +1,14 @@
-use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
-    io::{self, SeekFrom},
-};
+use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::hash::{Hash, Hasher};
+use std::io::{self, SeekFrom};
 
 use byteorder::LittleEndian;
 
-use crate::{
-    custom_version::{CustomVersion, CustomVersionTrait},
-    error::Error,
-    reader::{asset_trait::AssetTrait, asset_writer::AssetWriter},
-    unreal_types::{FName, PackageIndex},
-    Import,
-};
+use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::error::Error;
+use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
+use crate::unreal_types::{FName, PackageIndex};
+use crate::Import;
 
 pub struct NameTableWriter<'name_map, 'writer, Writer: AssetWriter> {
     writer: &'writer mut Writer,

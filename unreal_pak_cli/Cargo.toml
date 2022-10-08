@@ -1,9 +1,12 @@
 [package]
 name = "unreal_pak_cli"
-version = "0.1.0"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
 edition = "2021"
 
 [dependencies]
-unreal_pak = { version = "0.1.0", path = "../unreal_pak" }
-clap = { version = "3.2.14", features = ["derive"] }
+unreal_pak.workspace = true
+
+clap = { version = "4.0.10", features = ["derive"] }
 walkdir = "2.3.2"

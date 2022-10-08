@@ -3,17 +3,11 @@ use std::{collections::HashMap, hash::Hash};
 use byteorder::LittleEndian;
 
 use crate::error::Error;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::impl_property_data_trait;
+use crate::properties::{PropertyDataTrait, PropertyTrait, struct_property::StructProperty, Property};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::ToFName;
-use crate::{
-    impl_property_data_trait,
-    unreal_types::{FName, Guid},
-};
-
-use super::struct_property::StructProperty;
-use super::Property;
+use crate::unreal_types::{FName, Guid};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct MapProperty {

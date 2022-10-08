@@ -1,14 +1,11 @@
 use crate::error::{Error, PropertyError};
+use crate::impl_property_data_trait;
+use crate::optional_guid;
+use crate::optional_guid_write;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    {
-        ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH,
-        unreal_types::{FName, Guid},
-    },
-};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::ue4version::VER_UE4_ADDED_SOFT_OBJECT_PATH;
+use crate::unreal_types::{FName, Guid};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {

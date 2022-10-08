@@ -7,11 +7,8 @@ use std::sync::{
 use std::thread;
 use std::time::Instant;
 
-use background_work::BackgroundThreadData;
-use config::InstallManager;
 use eframe::egui;
 use log::error;
-
 use parking_lot::Mutex;
 
 use unreal_modintegrator::IntegratorConfig;
@@ -28,17 +25,18 @@ mod mod_processing;
 pub mod update_info;
 pub mod version;
 
+use background_work::BackgroundThreadData;
+use config::InstallManager;
 use error::{ModLoaderError, ModLoaderWarning};
 use game_mod::GameMod;
 use mod_config::write_config;
+use mod_processing::dependencies::DependencyGraph;
 use version::GameBuild;
 
 pub use unreal_asset;
 pub use unreal_modintegrator;
 pub use unreal_modmetadata;
 pub use unreal_pak;
-
-use crate::mod_processing::dependencies::DependencyGraph;
 
 #[derive(Debug, Clone)]
 pub(crate) struct FileToProcess {

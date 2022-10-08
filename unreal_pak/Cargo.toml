@@ -1,10 +1,12 @@
 [package]
 name = "unreal_pak"
-version = "0.1.0"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
 edition = "2021"
 
 [dependencies]
-num_enum = "0.5.7"
-byteorder = "1.4.3"
+byteorder.workspace = true
 flate2 = { version = "1.0.24", features = ["zlib"], default-features = false }
+num_enum.workspace = true
 sha-1 = "0.10.0"

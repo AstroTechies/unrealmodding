@@ -1,19 +1,18 @@
+use std::collections::HashMap;
+
+use byteorder::LittleEndian;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 use crate::custom_version::FCoreObjectVersion;
-use crate::exports::base_export::BaseExport;
-use crate::exports::normal_export::NormalExport;
-use crate::exports::ExportTrait;
+use crate::exports::{
+    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
+};
 use crate::implement_get;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::ue4version::{VER_UE4_ENUM_CLASS_SUPPORT, VER_UE4_TIGHTLY_PACKED_ENUMS};
 use crate::unreal_types::FName;
 use crate::Error;
-use byteorder::LittleEndian;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::collections::HashMap;
-
-use super::ExportBaseTrait;
-use super::ExportNormalTrait;
 
 #[derive(Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]

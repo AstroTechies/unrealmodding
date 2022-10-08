@@ -1,10 +1,9 @@
 use crate::error::Error;
-use crate::exports::base_export::BaseExport;
-use crate::exports::{ExportBaseTrait, ExportTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-
-use super::ExportNormalTrait;
+use crate::exports::{
+    base_export::BaseExport, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
+};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
 #[derive(Clone)]
 pub struct RawExport {

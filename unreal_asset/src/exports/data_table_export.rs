@@ -1,18 +1,14 @@
 use byteorder::LittleEndian;
 
 use crate::error::Error;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    implement_get,
-    properties::{struct_property::StructProperty, Property, PropertyDataTrait},
-    unreal_types::FName,
-};
-
-use super::{
+use crate::exports::{
     base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
 };
-use crate::exports::ExportTrait;
+use crate::implement_get;
+use crate::properties::{struct_property::StructProperty, Property, PropertyDataTrait};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::FName;
 
 #[derive(Clone)]
 pub struct DataTable {

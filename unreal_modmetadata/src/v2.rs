@@ -1,9 +1,7 @@
-use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
-    marker::PhantomData,
-    str::FromStr,
-};
+use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
+use std::str::FromStr;
 
 use serde::{
     de::{self, MapAccess, Visitor},

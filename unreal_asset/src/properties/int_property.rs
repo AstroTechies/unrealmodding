@@ -4,13 +4,13 @@ use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
 use crate::error::{Error, PropertyError};
+use crate::impl_property_data_trait;
+use crate::optional_guid;
+use crate::optional_guid_write;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    impl_property_data_trait, optional_guid, optional_guid_write, simple_property_write,
-    unreal_types::{FName, Guid},
-};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::simple_property_write;
+use crate::unreal_types::{FName, Guid};
 
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {

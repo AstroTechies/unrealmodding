@@ -1,15 +1,13 @@
-use crate::exports::base_export::BaseExport;
-use crate::exports::normal_export::NormalExport;
-use crate::exports::ExportTrait;
-use crate::implement_get;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::uproperty::{UProperty, UPropertyTrait};
-use crate::Error;
 use byteorder::LittleEndian;
 
-use super::ExportBaseTrait;
-use super::ExportNormalTrait;
+use crate::exports::{
+    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
+};
+use crate::implement_get;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::uproperty::{UProperty, UPropertyTrait};
+use crate::Error;
 
 #[derive(Clone)]
 pub struct PropertyExport {

@@ -1,18 +1,15 @@
 use byteorder::LittleEndian;
 
-use super::vector_property::{BoxProperty, IntPointProperty};
+use crate::custom_version::FFortniteMainBranchObjectVersion;
 use crate::error::Error;
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::{
-    custom_version::FFortniteMainBranchObjectVersion,
-    types::Vector,
-    ue4version::{
-        VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST,
-        VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LEVEL_INFO_ZORDER,
-    },
-    unreal_types::FName,
+use crate::properties::vector_property::{BoxProperty, IntPointProperty};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::types::Vector;
+use crate::ue4version::{
+    VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST,
+    VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LEVEL_INFO_ZORDER,
 };
+use crate::unreal_types::FName;
 
 //todo: what is this file even doing in properties?
 #[derive(Clone)]

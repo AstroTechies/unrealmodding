@@ -1,3 +1,14 @@
+use std::hash::Hash;
+use std::io::SeekFrom;
+
+use byteorder::LittleEndian;
+use enum_dispatch::enum_dispatch;
+use lazy_static::lazy_static;
+
+use crate::error::Error;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::{FName, Guid, ToFName};
+
 pub mod array_property;
 pub mod color_property;
 pub mod date_property;
@@ -22,24 +33,10 @@ pub mod vector_property;
 pub mod view_target_blend_property;
 pub mod world_tile_property;
 
-use crate::properties::date_property::TimeSpanProperty;
-use crate::properties::sampler_property::SkeletalMeshAreaWeightedTriangleSampler;
-use crate::properties::soft_path_property::{
-    SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty,
-};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
-use crate::unreal_types::{Guid, ToFName};
-use byteorder::LittleEndian;
-use enum_dispatch::enum_dispatch;
-use lazy_static::lazy_static;
-use std::hash::Hash;
-use std::io::SeekFrom;
-
 use self::{
     array_property::ArrayProperty,
     color_property::{ColorProperty, LinearColorProperty},
-    date_property::DateTimeProperty,
+    date_property::{DateTimeProperty, TimeSpanProperty},
     delegate_property::MulticastDelegateProperty,
     enum_property::EnumProperty,
     gameplay_tag_container_property::GameplayTagContainerProperty,
@@ -59,9 +56,13 @@ use self::{
         PerPlatformBoolProperty, PerPlatformFloatProperty, PerPlatformIntProperty,
     },
     rich_curve_key_property::RichCurveKeyProperty,
-    sampler_property::{SkeletalMeshSamplingLODBuiltDataProperty, WeightedRandomSamplerProperty},
+    sampler_property::{
+        SkeletalMeshAreaWeightedTriangleSampler, SkeletalMeshSamplingLODBuiltDataProperty,
+        WeightedRandomSamplerProperty,
+    },
     set_property::SetProperty,
     smart_name_property::SmartNameProperty,
+    soft_path_property::{SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty},
     str_property::{NameProperty, StrProperty, TextProperty},
     struct_property::StructProperty,
     unknown_property::UnknownProperty,
@@ -71,8 +72,6 @@ use self::{
     },
     view_target_blend_property::ViewTargetBlendParamsProperty,
 };
-use super::error::Error;
-use super::unreal_types::FName;
 
 #[macro_export]
 macro_rules! optional_guid {

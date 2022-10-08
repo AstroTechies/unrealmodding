@@ -1,29 +1,24 @@
-use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
-    io::{Cursor, SeekFrom},
-};
+use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::hash::{Hash, Hasher};
+use std::io::{Cursor, SeekFrom};
 
 use byteorder::LittleEndian;
 
-use crate::{
-    crc,
-    custom_version::FAssetRegistryVersionType,
-    error::{Error, RegistryError},
-    reader::{
-        asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter,
-        raw_writer::RawWriter,
-    },
-    registry::name_table_reader::NameTableReader,
-    ue4version::VER_UE4_NAME_HASHES_SERIALIZED,
+use crate::crc;
+use crate::custom_version::FAssetRegistryVersionType;
+use crate::error::{Error, RegistryError};
+use crate::reader::{
+    asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter,
+    raw_writer::RawWriter,
 };
-
-use self::{
+use crate::registry::{
+    name_table_reader::NameTableReader,
     name_table_writer::NameTableWriter,
     objects::{
         asset_data::AssetData, asset_package_data::AssetPackageData, depends_node::DependsNode,
     },
 };
+use crate::ue4version::VER_UE4_NAME_HASHES_SERIALIZED;
 
 pub(crate) mod name_table_reader;
 pub(crate) mod name_table_writer;

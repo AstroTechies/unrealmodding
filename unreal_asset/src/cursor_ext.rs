@@ -1,8 +1,9 @@
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
-use super::error::Error;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+
+use crate::error::Error;
 
 pub trait CursorExt {
     fn read_string(&mut self) -> Result<Option<String>, Error>;

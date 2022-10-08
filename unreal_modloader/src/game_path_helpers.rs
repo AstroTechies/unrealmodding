@@ -1,8 +1,9 @@
+use std::path::PathBuf;
+
 use directories::BaseDirs;
 use lazy_static::lazy_static;
 use log::{trace, warn};
 use regex::Regex;
-use std::path::PathBuf;
 use steamlocate::SteamDir;
 
 #[cfg(windows)]

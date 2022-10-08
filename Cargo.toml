@@ -1,5 +1,4 @@
 [workspace]
-
 members = [
     "unreal_pak", "unreal_pak_cli",
     "unreal_asset",
@@ -7,11 +6,31 @@ members = [
     "unreal_modloader", "unreal_modintegrator"
 ]
 
+[workspace.package]
+version = "0.1.9"
+authors = ["AstroTechies, localcc, konsti219"]
+description = "Tools for making and loading Unreal Engine Mods."
+
+[workspace.dependencies]
+unreal_modintegrator = { path = "./unreal_modintegrator" }
+unreal_asset = { path = "./unreal_asset" }
+unreal_pak = { path = "./unreal_pak" }
+unreal_modmetadata = { path = "./unreal_modmetadata" }
+
+byteorder = "1.4.3"
+lazy_static = "1.4.0"
+log = "0.4.17"
+num_enum = "0.5.7"
+regex = "1.6.0"
+reqwest = { version = "0.11.12", features = ["blocking", "json"] }
+semver = "1.0.14"
+serde_json = "1.0.85"
+serde = { version = "1.0.145", features = ["derive"] }
+
+[patch.crates-io]
+steamy-vdf = { git = "https://github.com/icewind1991/steamy" }
+
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
-
-
-[patch.crates-io]
-steamy-vdf = { git = "https://github.com/icewind1991/steamy" }

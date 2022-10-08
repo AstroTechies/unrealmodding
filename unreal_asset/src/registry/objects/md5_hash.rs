@@ -1,9 +1,7 @@
 use byteorder::LittleEndian;
 
-use crate::{
-    error::Error,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-};
+use crate::error::Error;
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
 #[derive(Debug)]
 pub struct FMD5Hash {

@@ -1,6 +1,7 @@
-use std::fmt::Formatter;
+use std::error;
+use std::fmt::{Display, Formatter};
+use std::io;
 use std::string::{FromUtf16Error, FromUtf8Error};
-use std::{error, fmt::Display, io};
 
 use num_enum::{TryFromPrimitive, TryFromPrimitiveError};
 

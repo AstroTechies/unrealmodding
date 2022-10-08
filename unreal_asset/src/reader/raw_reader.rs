@@ -1,19 +1,14 @@
-use std::{
-    collections::HashMap,
-    io::{self, Cursor, Read, Seek},
-};
+use std::collections::HashMap;
+use std::io::{self, Cursor, Read, Seek};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{
-    cursor_ext::CursorExt,
-    custom_version::{CustomVersion, CustomVersionTrait},
-    error::Error,
-    unreal_types::{FName, Guid, PackageIndex},
-    Import,
-};
-
-use super::{asset_reader::AssetReader, asset_trait::AssetTrait};
+use crate::cursor_ext::CursorExt;
+use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::error::Error;
+use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
+use crate::unreal_types::{FName, Guid, PackageIndex};
+use crate::Import;
 
 pub struct RawReader {
     cursor: Cursor<Vec<u8>>,
