@@ -15,11 +15,12 @@ use log::{debug, info};
 use parking_lot::Mutex;
 use semver::Version;
 
+use crate::background_work::BackgroundThreadMessage;
+use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
 use crate::update_info::UpdateInfo;
 use crate::FileToProcess;
-use crate::{background_work::BackgroundThreadMessage, error::ModLoaderWarning};
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,

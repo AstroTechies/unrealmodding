@@ -1,9 +1,8 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::mpsc;
 use std::sync::{
     atomic::{AtomicBool, AtomicI32},
-    Arc,
+    mpsc, Arc,
 };
 use std::thread;
 use std::time::Instant;
