@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::sync::{
     atomic::{AtomicBool, AtomicI32},
     Arc,
@@ -25,7 +26,7 @@ mod mod_processing;
 pub mod update_info;
 pub mod version;
 
-use background_work::BackgroundThreadData;
+use background_work::{BackgroundThreadData, BackgroundThreadMessage};
 use config::InstallManager;
 use error::{ModLoaderError, ModLoaderWarning};
 use game_mod::GameMod;
@@ -128,7 +129,6 @@ where
 
     let icon_data = config.get_icon();
 
-    let should_exit = Arc::new(AtomicBool::new(false));
     let ready_exit = Arc::new(AtomicBool::new(false));
     let should_integrate = Arc::new(AtomicBool::new(true));
     let last_integration_time = Arc::new(Mutex::new(Instant::now()));
@@ -139,33 +139,26 @@ where
     let should_update = Arc::new(AtomicBool::new(false));
     let update_progress = Arc::new(AtomicI32::new(0));
 
+    let (background_tx, background_rx) = mpsc::channel::<BackgroundThreadMessage>();
+    let _ = background_tx.send(BackgroundThreadMessage::Integrate);
+
     // instantiate the GUI app
-    let app = app::ModLoaderApp {
-        data: Arc::clone(&data),
-        window_title: GC::WINDOW_TITLE.to_owned(),
-
-        should_exit: Arc::clone(&should_exit),
-        ready_exit: Arc::clone(&ready_exit),
-
-        should_integrate: Arc::clone(&should_integrate),
-        last_integration_time: Arc::clone(&last_integration_time),
-
-        working: Arc::clone(&working),
-
-        platform_selector_open: false,
-        selected_mod_id: None,
-        newer_update: Arc::clone(&newer_update),
-        should_update: Arc::clone(&should_update),
-        update_progress: Arc::clone(&update_progress),
-
-        modloader_version: GC::CRATE_VERSION,
-    };
+    let app = app::ModLoaderApp::new(
+        data.clone(),
+        GC::WINDOW_TITLE.to_owned(),
+        ready_exit.clone(),
+        last_integration_time.clone(),
+        working.clone(),
+        newer_update.clone(),
+        update_progress.clone(),
+        GC::CRATE_VERSION,
+        background_tx,
+    );
 
     // spawn a background thread to handle long running tasks
 
     let background_thread_data = BackgroundThreadData {
         data,
-        should_exit,
         ready_exit,
         should_integrate,
         last_integration_time,
@@ -177,7 +170,9 @@ where
 
     thread::Builder::new()
         .name("background".to_string())
-        .spawn(move || background_work::background_work(config, background_thread_data))
+        .spawn(move || {
+            background_work::background_work(config, background_thread_data, background_rx)
+        })
         .unwrap_or_else(|_| {
             error!("Failed to start background thread");
             panic!();
