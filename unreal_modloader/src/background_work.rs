@@ -105,14 +105,14 @@ fn download_mods(
     warnings
 }
 
-pub(crate) fn background_work<'a, C, D, T: 'a, E: 'static + std::error::Error + Send>(
-    config: C,
+pub(crate) fn background_work<'data, GC, IC, D: 'data, E: 'static + std::error::Error + Send>(
+    config: GC,
     background_thread_data: BackgroundThreadData,
     receiver: Receiver<BackgroundThreadMessage>,
 ) -> Result<(), Error>
 where
-    D: 'static + IntegratorConfig<'a, T, E>,
-    C: 'static + config::GameConfig<'a, D, T, E>,
+    IC: 'static + IntegratorConfig<'data, D, E>,
+    GC: 'static + config::GameConfig<'data, IC, D, E>,
 {
     debug!("Starting background thread");
 
@@ -125,7 +125,7 @@ where
         let mods_path = BaseDirs::new()
             .ok_or_else(ModLoaderError::no_base_path)?
             .data_local_dir()
-            .join(D::GAME_NAME)
+            .join(IC::GAME_NAME)
             .join("Saved")
             .join("Mods");
 
@@ -538,7 +538,10 @@ where
                             config.get_integrator_config(),
                             &mods_to_integrate,
                             &paks_path,
-                            &install_path.join(D::GAME_NAME).join("Content").join("Paks"),
+                            &install_path
+                                .join(IC::GAME_NAME)
+                                .join("Content")
+                                .join("Paks"),
                             refuse_mismatched_connections,
                         )?;
 
