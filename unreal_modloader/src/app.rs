@@ -272,7 +272,9 @@ impl App for ModLoaderApp {
                         if ui.add(button).clicked() {
                             data.set_game_platform(&platform);
                             self.platform_selector_open = false;
-                            let _ = self.background_tx.send(BackgroundThreadMessage::Integrate);
+                            let _ = self
+                                .background_tx
+                                .send(BackgroundThreadMessage::integrate());
                             ctx.request_repaint();
                         }
                     }
@@ -294,7 +296,9 @@ impl App for ModLoaderApp {
                     .background_tx
                     .send(BackgroundThreadMessage::RemoveMod(id.clone()));
                 self.selected_mod_id = None;
-                let _ = self.background_tx.send(BackgroundThreadMessage::Integrate);
+                let _ = self
+                    .background_tx
+                    .send(BackgroundThreadMessage::integrate());
             }
         }
 
@@ -431,7 +435,9 @@ impl ModLoaderApp {
                                         }
                                     }
                                 }
-                                let _ = self.background_tx.send(BackgroundThreadMessage::Integrate);
+                                let _ = self
+                                    .background_tx
+                                    .send(BackgroundThreadMessage::integrate());
                             };
                         });
                         row.col(|ui| {
@@ -446,8 +452,9 @@ impl ModLoaderApp {
 
                                 // this may look dumb but is what is needed
                                 if prev_selected != game_mod.selected_version {
-                                    let _ =
-                                        self.background_tx.send(BackgroundThreadMessage::Integrate);
+                                    let _ = self
+                                        .background_tx
+                                        .send(BackgroundThreadMessage::integrate());
                                 }
                             });
                         });
@@ -592,7 +599,9 @@ impl ModLoaderApp {
                         )
                         .changed()
                     {
-                        let _ = self.background_tx.send(BackgroundThreadMessage::Integrate);
+                        let _ = self
+                            .background_tx
+                            .send(BackgroundThreadMessage::integrate());
                     };
 
                     ui.label(format!(
@@ -706,7 +715,9 @@ impl ModLoaderApp {
             let _ = self
                 .background_tx
                 .send(BackgroundThreadMessage::Import(files_to_import));
-            let _ = self.background_tx.send(BackgroundThreadMessage::Integrate);
+            let _ = self
+                .background_tx
+                .send(BackgroundThreadMessage::integrate());
         }
     }
 }

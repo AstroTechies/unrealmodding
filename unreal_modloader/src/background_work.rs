@@ -50,9 +50,15 @@ pub(crate) struct BackgroundThreadData {
 pub(crate) enum BackgroundThreadMessage {
     Import(Vec<FileToProcess>),
     RemoveMod(String),
-    Integrate,
+    Integrate(Instant),
     UpdateApp,
     Exit,
+}
+
+impl BackgroundThreadMessage {
+    pub fn integrate() -> Self {
+        BackgroundThreadMessage::Integrate(Instant::now())
+    }
 }
 
 fn download_mod(
@@ -185,6 +191,8 @@ where
         .clone()
         .unwrap();
 
+    let mut last_integration_time = None;
+
     while let Ok(message) = receiver.recv() {
         match message {
             BackgroundThreadMessage::Import(files_to_process) => {
@@ -272,7 +280,15 @@ where
                     break;
                 }
             }
-            BackgroundThreadMessage::Integrate => {
+            BackgroundThreadMessage::Integrate(time) => {
+                if let Some(last_integration_time) = last_integration_time {
+                    if time < last_integration_time {
+                        continue;
+                    }
+                }
+
+                last_integration_time = Some(Instant::now());
+
                 let mut data_guard = background_thread_data.data.lock();
 
                 if data_guard.game_install_path.is_some() && data_guard.warnings.is_empty() {

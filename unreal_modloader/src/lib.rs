@@ -139,7 +139,7 @@ where
     let update_progress = Arc::new(AtomicI32::new(0));
 
     let (background_tx, background_rx) = mpsc::channel::<BackgroundThreadMessage>();
-    let _ = background_tx.send(BackgroundThreadMessage::Integrate);
+    let _ = background_tx.send(BackgroundThreadMessage::integrate());
 
     // instantiate the GUI app
     let app = app::ModLoaderApp::new(
