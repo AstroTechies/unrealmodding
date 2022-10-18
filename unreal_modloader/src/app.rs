@@ -1,5 +1,6 @@
 use std::sync::{
     atomic::{AtomicBool, AtomicI32, Ordering},
+    mpsc::Sender,
     Arc,
 };
 use std::time::Instant;
@@ -14,6 +15,7 @@ use log::{debug, info};
 use parking_lot::Mutex;
 use semver::Version;
 
+use crate::background_work::BackgroundThreadMessage;
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
@@ -25,10 +27,8 @@ pub(crate) struct ModLoaderApp {
 
     pub window_title: String,
 
-    pub should_exit: Arc<AtomicBool>,
     pub ready_exit: Arc<AtomicBool>,
 
-    pub should_integrate: Arc<AtomicBool>,
     pub last_integration_time: Arc<Mutex<Instant>>,
 
     pub working: Arc<AtomicBool>,
@@ -37,10 +37,45 @@ pub(crate) struct ModLoaderApp {
     pub selected_mod_id: Option<String>,
 
     pub newer_update: Arc<Mutex<Option<UpdateInfo>>>,
-    pub should_update: Arc<AtomicBool>,
     pub update_progress: Arc<AtomicI32>,
 
     pub modloader_version: &'static str,
+
+    pub background_tx: Sender<BackgroundThreadMessage>,
+
+    updating: bool,
+}
+
+impl ModLoaderApp {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        data: Arc<Mutex<crate::ModLoaderAppData>>,
+        window_title: String,
+        ready_exit: Arc<AtomicBool>,
+        last_integration_time: Arc<Mutex<Instant>>,
+        working: Arc<AtomicBool>,
+        newer_update: Arc<Mutex<Option<UpdateInfo>>>,
+        update_progress: Arc<AtomicI32>,
+        modloader_version: &'static str,
+        background_tx: Sender<BackgroundThreadMessage>,
+    ) -> Self {
+        ModLoaderApp {
+            data,
+            window_title,
+            ready_exit,
+            last_integration_time,
+            working,
+            newer_update,
+            update_progress,
+            modloader_version,
+            background_tx,
+
+            platform_selector_open: false,
+            selected_mod_id: None,
+
+            updating: false,
+        }
+    }
 }
 
 impl App for ModLoaderApp {
@@ -121,7 +156,7 @@ impl App for ModLoaderApp {
                             });
 
                             strip.cell(|ui| {
-                                if self.should_update.load(Ordering::Acquire) {
+                                if self.updating {
                                     let bar = ProgressBar::new(
                                         self.update_progress.load(Ordering::Acquire) as f32 / 100.0,
                                     );
@@ -145,8 +180,11 @@ impl App for ModLoaderApp {
                                         .horizontal(|mut strip| {
                                             strip.cell(|ui| {
                                                 if ui.button("Download").clicked() {
-                                                    self.should_update
-                                                        .store(true, Ordering::Release);
+                                                    // todo: error
+                                                    let _ = self
+                                                        .background_tx
+                                                        .send(BackgroundThreadMessage::UpdateApp);
+                                                    self.updating = true;
                                                 }
                                             });
 
@@ -234,7 +272,9 @@ impl App for ModLoaderApp {
                         if ui.add(button).clicked() {
                             data.set_game_platform(&platform);
                             self.platform_selector_open = false;
-                            self.should_integrate.store(true, Ordering::Release);
+                            let _ = self
+                                .background_tx
+                                .send(BackgroundThreadMessage::integrate());
                             ctx.request_repaint();
                         }
                     }
@@ -252,9 +292,13 @@ impl App for ModLoaderApp {
         // delete to remove a mod
         if ctx.input().key_pressed(egui::Key::Delete) {
             if let Some(ref id) = self.selected_mod_id {
-                data.game_mods.get_mut(id).unwrap().remove = true;
+                let _ = self
+                    .background_tx
+                    .send(BackgroundThreadMessage::RemoveMod(id.clone()));
                 self.selected_mod_id = None;
-                self.should_integrate.store(true, Ordering::Release);
+                let _ = self
+                    .background_tx
+                    .send(BackgroundThreadMessage::integrate());
             }
         }
 
@@ -272,21 +316,19 @@ impl App for ModLoaderApp {
         // Or keep it running while the background thread is actively working.
         // Or while integration is pending.
         // Or while the last integration was not long ago.
-        if self.should_exit.load(Ordering::Acquire)
-            || self.working.load(Ordering::Acquire)
-            || self.should_integrate.load(Ordering::Acquire)
+        if self.working.load(Ordering::Acquire)
             || self.last_integration_time.lock().elapsed().as_secs() < 5
         {
             ctx.request_repaint();
         }
 
-        if self.should_exit.load(Ordering::Acquire) && self.ready_exit.load(Ordering::Acquire) {
+        if self.ready_exit.load(Ordering::Acquire) {
             frame.close();
         }
     }
 
     fn on_close_event(&mut self) -> bool {
-        self.should_exit.store(true, Ordering::Release);
+        let _ = self.background_tx.send(BackgroundThreadMessage::Exit);
 
         if self.ready_exit.load(Ordering::Acquire) {
             info!("Exiting...");
@@ -393,7 +435,9 @@ impl ModLoaderApp {
                                         }
                                     }
                                 }
-                                self.should_integrate.store(true, Ordering::Release);
+                                let _ = self
+                                    .background_tx
+                                    .send(BackgroundThreadMessage::integrate());
                             };
                         });
                         row.col(|ui| {
@@ -408,7 +452,9 @@ impl ModLoaderApp {
 
                                 // this may look dumb but is what is needed
                                 if prev_selected != game_mod.selected_version {
-                                    self.should_integrate.store(true, Ordering::Release);
+                                    let _ = self
+                                        .background_tx
+                                        .send(BackgroundThreadMessage::integrate());
                                 }
                             });
                         });
@@ -553,7 +599,9 @@ impl ModLoaderApp {
                         )
                         .changed()
                     {
-                        self.should_integrate.store(true, Ordering::Release);
+                        let _ = self
+                            .background_tx
+                            .send(BackgroundThreadMessage::integrate());
                     };
 
                     ui.label(format!(
@@ -651,15 +699,25 @@ impl ModLoaderApp {
         }
 
         // Collect dropped files
+        let mut files_to_import = Vec::new();
         for dropped_file in ctx.input().raw.dropped_files.iter() {
             debug!("Dropped file: {:?}", dropped_file.path);
 
-            self.data.lock().files_to_process.push(FileToProcess::new(
+            files_to_import.push(FileToProcess::new(
                 dropped_file.path.as_ref().unwrap().to_owned(),
                 true,
             ));
 
-            self.working.store(true, Ordering::Release);
+            self.working.store(true, Ordering::Release); // why is ui setting self.working?
+        }
+
+        if !files_to_import.is_empty() {
+            let _ = self
+                .background_tx
+                .send(BackgroundThreadMessage::Import(files_to_import));
+            let _ = self
+                .background_tx
+                .send(BackgroundThreadMessage::integrate());
         }
     }
 }
