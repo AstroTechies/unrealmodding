@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.9"
+version = "0.1.10"
 authors = ["AstroTechies, localcc, konsti219"]
 description = "Tools for making and loading Unreal Engine Mods."
 
