@@ -214,13 +214,19 @@ impl App for ModLoaderApp {
                 .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
                 .fixed_size((600.0, 400.0))
                 .show(ctx, |ui| {
-                    ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
 
-                    ui.label(format!("{}", data.error.as_ref().unwrap()));
+                        ui.label(format!("{}", data.error.as_ref().unwrap()));
+                    });
 
-                    if ui.button("Quit").clicked() {
-                        frame.close();
-                    }
+                    ui.separator();
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                        if ui.button("Quit").clicked() {
+                            frame.close();
+                        }
+                    });
                 });
 
             should_darken = true;
@@ -231,20 +237,26 @@ impl App for ModLoaderApp {
                 .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
                 .fixed_size((600.0, 400.0))
                 .show(ctx, |ui| {
-                    //ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        //ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
 
-                    //ui.label(format!("{}", data.error.as_ref().unwrap()));
-                    for warning in &data.warnings {
-                        ui.label(format!("{}", warning));
-                    }
+                        //ui.label(format!("{}", data.error.as_ref().unwrap()));
+                        for warning in &data.warnings {
+                            ui.label(format!("{}", warning));
+                        }
 
-                    ui.label("");
-                    ui.label("See modloader_log.txt for more details.");
-                    ui.label("");
+                        ui.label("");
+                        ui.label("See modloader_log.txt for more details.");
+                        ui.label("");
+                    });
 
-                    if ui.button("Ok").clicked() {
-                        data.warnings.clear();
-                    }
+                    ui.separator();
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                        if ui.button("Ok").clicked() {
+                            data.warnings.clear();
+                        }
+                    });
                 });
 
             should_darken = true;
