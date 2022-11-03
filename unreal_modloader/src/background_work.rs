@@ -23,7 +23,7 @@ use unreal_modmetadata::Metadata;
 use unreal_pak::PakFile;
 
 use crate::config;
-use crate::error::{ModLoaderError, ModLoaderWarning};
+use crate::error::{ModLoaderError, ModLoaderWarning, ModLoaderWarningKind};
 use crate::game_mod::{self, GameModVersion};
 use crate::mod_config::{load_config, write_config};
 use crate::mod_processing::{
@@ -109,6 +109,17 @@ fn download_mods(
     }
 
     warnings
+}
+
+pub(crate) fn has_critical_warnings(warnings: &Vec<ModLoaderWarning>) -> bool {
+    return warnings.iter().any(|warning| match warning.kind {
+        ModLoaderWarningKind::IndexFileDownloadFailed(_) => false,
+        ModLoaderWarningKind::IndexFileDownloadFailedStatus(_) => false,
+        ModLoaderWarningKind::InvalidIndexFile => false,
+        ModLoaderWarningKind::IndexFileMissingMod => false,
+        ModLoaderWarningKind::DownloadFailed(_) => false,
+        _ => true,
+    });
 }
 
 pub(crate) fn background_work<'data, GC, IC, D: 'data, E: 'static + std::error::Error + Send>(
@@ -291,7 +302,9 @@ where
 
                 let mut data_guard = background_thread_data.data.lock();
 
-                if data_guard.game_install_path.is_some() && data_guard.warnings.is_empty() {
+                if data_guard.game_install_path.is_some()
+                    && !has_critical_warnings(&data_guard.warnings)
+                {
                     data_guard.failed = false;
                     let integration_work = (|| -> Result<(), ModLoaderWarning> {
                         background_thread_data
@@ -482,10 +495,12 @@ where
 
                         background_thread_data.data.lock().dependency_graph = Some(graph);
 
-                        if !warnings.is_empty() {
+                        if has_critical_warnings(&warnings) {
                             background_thread_data.data.lock().failed = true;
                             background_thread_data.data.lock().warnings.extend(warnings);
                             return Ok(());
+                        } else {
+                            background_thread_data.data.lock().warnings.extend(warnings);
                         }
 
                         // process dependencies
