@@ -12,7 +12,7 @@ use crate::PAK_MAGIC;
 #[derive(Debug)]
 pub(crate) struct Index {
     pub mount_point: String,
-    pub files: Vec<(String, Header)>,
+    pub entries: Vec<(String, Header)>,
     pub footer: Footer,
 }
 
@@ -24,14 +24,14 @@ impl Index {
 
         let mount_point = reader.read_fstring()?.unwrap_or_default();
 
-        let file_count = reader.read_u32::<LittleEndian>()?;
-        let mut files = Vec::with_capacity(file_count as usize);
+        let entry_count = reader.read_u32::<LittleEndian>()?;
+        let mut entries = Vec::with_capacity(entry_count as usize);
 
         if footer.pak_version < PakVersion::PakFileVersionPathHashIndex {
-            for _ in 0..file_count {
+            for _ in 0..entry_count {
                 let file_name = reader.read_fstring()?.ok_or_else(PakError::pak_invalid)?;
 
-                files.push((file_name, Header::read(reader, footer.pak_version)?));
+                entries.push((file_name, Header::read(reader, footer.pak_version)?));
             }
         } else {
             return Err(PakError::pak_version_unsupported(footer.pak_version));
@@ -39,7 +39,7 @@ impl Index {
 
         Ok(Index {
             mount_point,
-            files,
+            entries,
             footer,
         })
     }
@@ -51,10 +51,10 @@ impl Index {
 
         index_writer.write_fstring(Some(&index.mount_point))?;
 
-        index_writer.write_u32::<LittleEndian>(index.files.len() as u32)?;
+        index_writer.write_u32::<LittleEndian>(index.entries.len() as u32)?;
 
         if index.footer.pak_version < PakVersion::PakFileVersionPathHashIndex {
-            for (name, header) in index.files {
+            for (name, header) in index.entries {
                 index_writer.write_fstring(Some(name.as_str()))?;
                 Header::write(&mut index_writer, index.footer.pak_version, &header)?;
             }

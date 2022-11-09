@@ -24,23 +24,24 @@ pub mod error;
 mod header;
 mod index;
 pub mod pakfile;
-//pub mod pakmemory;
+pub mod pakmemory;
 pub mod pakversion;
 
 pub use pakfile::PakFile;
-//pub use pakmemory::PakMemory;
+pub use pakmemory::PakMemory;
 
 pub(crate) const PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
 
 /// Enum representing which compression method is being used for an entry
 #[derive(
-    PartialEq, Eq, Debug, Clone, Copy, num_enum::IntoPrimitive, num_enum::TryFromPrimitive,
+    PartialEq, Eq, Debug, Clone, Copy, Default, num_enum::IntoPrimitive, num_enum::TryFromPrimitive,
 )]
 #[repr(i32)]
 pub enum CompressionMethod {
     /// No comprssion
     None = 0,
     /// Standard Zlib comprssion
+    #[default]
     Zlib = 1,
     /// BiasMemory comprssion
     BiasMemory = 2,

@@ -39,7 +39,7 @@ where
 {
     /// Creates a new `PakFile` configured to read files.
     pub fn reader(reader: &'data R) -> Self {
-        PakFile {
+        Self {
             pak_version: PakVersion::PakFileVersionInvalid,
             mount_point: "".to_owned(),
             compression: CompressionMethod::Unknown,
@@ -56,7 +56,7 @@ where
         pak_version: PakVersion,
         compression: CompressionMethod,
     ) -> Self {
-        PakFile {
+        Self {
             pak_version,
             mount_point: "../../../".to_owned(),
             compression,
@@ -76,7 +76,7 @@ where
             self.mount_point = index.mount_point.clone();
             //? maybe also store compression somehow?
 
-            for (name, header) in index.files {
+            for (name, header) in index.entries {
                 self.entries.insert(name, header);
             }
 
@@ -142,7 +142,7 @@ where
 
             let index = Index {
                 mount_point: self.mount_point,
-                files: self.entries.into_iter().collect::<Vec<_>>(),
+                entries: self.entries.into_iter().collect::<Vec<_>>(),
                 footer,
             };
 
