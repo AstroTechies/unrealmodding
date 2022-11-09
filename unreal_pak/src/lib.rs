@@ -23,12 +23,14 @@ mod entry;
 pub mod error;
 mod header;
 mod index;
-pub mod pakfile;
 pub mod pakmemory;
+pub mod pakreader;
 pub mod pakversion;
+pub mod pakwriter;
 
-pub use pakfile::PakFile;
 pub use pakmemory::PakMemory;
+pub use pakreader::PakReader;
+pub use pakwriter::PakWriter;
 
 pub(crate) const PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
 

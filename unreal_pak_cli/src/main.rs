@@ -7,7 +7,7 @@ use std::time::SystemTime;
 
 use clap::{Parser, Subcommand};
 use path_absolutize::Absolutize;
-use unreal_pak::{pakversion::PakVersion, CompressionMethod, PakFile};
+use unreal_pak::{pakversion::PakVersion, CompressionMethod, PakReader, PakWriter};
 use walkdir::WalkDir;
 
 /// Command line tool for working with Unreal Engine .pak files.
@@ -63,12 +63,12 @@ fn main() {
     match args.commands {
         Commands::CheckHeader { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = PakFile::reader(&file);
+            let mut pak = PakReader::new(&file);
             check_header(&mut pak);
         }
         Commands::Check { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = unreal_pak::PakFile::reader(&file);
+            let mut pak = PakReader::new(&file);
             check_header(&mut pak);
 
             // TODO: get rid of this clone
@@ -92,7 +92,7 @@ fn main() {
         Commands::Extract { pakfile, outdir } => {
             let path = Path::new(&pakfile);
             let file = open_file(path);
-            let mut pak = unreal_pak::PakFile::reader(&file);
+            let mut pak = PakReader::new(&file);
             check_header(&mut pak);
 
             // temp values required to extend lifetimes outside of match scope
@@ -196,7 +196,7 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak = unreal_pak::PakFile::writer(
+            let mut pak = PakWriter::new(
                 &file,
                 PakVersion::PakFileVersionFnameBasedCompressionMethod,
                 CompressionMethod::Zlib,
@@ -280,7 +280,7 @@ fn open_file(path: &Path) -> File {
     }
 }
 
-fn check_header(pak: &mut PakFile<File, File>) {
+fn check_header(pak: &mut PakReader<File>) {
     match pak.load_index() {
         Ok(_) => println!("Header is ok"),
         Err(err) => {
