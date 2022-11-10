@@ -112,7 +112,7 @@ fn main() {
             for (i, file_name) in names.iter().enumerate() {
                 match pak.read_entry(file_name) {
                     Ok(data) => {
-                        let path = output_folder.join(&file_name);
+                        let path = output_folder.join(file_name);
                         let dir_path = match path.parent() {
                             Some(dir) => dir,
                             None => {
@@ -229,16 +229,12 @@ fn main() {
                     components.next();
                 }
 
-                let mut file_name = components
-                    .as_path()
-                    .to_string_lossy()
-                    .to_owned()
-                    .replace('\\', "/");
+                let mut file_name = components.as_path().to_string_lossy().replace('\\', "/");
                 if file_name.starts_with('/') {
                     file_name = file_name[1..].to_owned();
                 }
 
-                let file_data = match std::fs::read(&file_path) {
+                let file_data = match std::fs::read(file_path) {
                     Ok(file_data) => file_data,
                     Err(err) => {
                         eprintln!("Error reading file {:?}! Error: {}", file_path, err);
@@ -271,7 +267,7 @@ fn main() {
 }
 
 fn open_file(path: &Path) -> File {
-    match OpenOptions::new().read(true).open(&path) {
+    match OpenOptions::new().read(true).open(path) {
         Ok(file) => file,
         Err(err) => {
             eprintln!("Could not find/open file! Error: {}", err);

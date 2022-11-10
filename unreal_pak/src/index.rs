@@ -153,11 +153,7 @@ impl Footer {
 
         // write index_encrypted
         if footer.pak_version >= PakVersion::PakFileVersionIndexEncryption {
-            writer.write_u8(if footer.index_encrypted.unwrap_or_default() {
-                1
-            } else {
-                0
-            })?;
+            writer.write_u8(u8::from(footer.index_encrypted.unwrap_or_default()))?;
         }
 
         // write magic and pak version

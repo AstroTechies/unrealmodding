@@ -107,7 +107,7 @@ fn cook_now(out_dir: &PathBuf) {
             "clone",
             format!("https://github.com/{}.git", ASSET_REPO).as_str(),
         ])
-        .current_dir(&out_dir)
+        .current_dir(out_dir)
         .spawn()
         .expect("failed to clone repo");
     let status = git.wait().expect("failed to run git");

@@ -115,7 +115,7 @@ where
     };
 
     let mut hasher = Sha1::new();
-    hasher.update(&data);
+    hasher.update(data);
     // sha1 always outputs 20 bytes
     let hash: [u8; 20] = hasher.finalize().to_vec().try_into().unwrap();
 
