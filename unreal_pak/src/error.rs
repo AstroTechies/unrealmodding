@@ -10,7 +10,8 @@ use crate::CompressionMethod;
 /// Error type used by unreal_pak
 #[derive(Debug)]
 pub struct PakError {
-    kind: PakErrorKind,
+    /// Type of the error
+    pub kind: PakErrorKind,
 }
 
 impl PakError {
