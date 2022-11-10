@@ -111,14 +111,16 @@ fn download_mods(
     warnings
 }
 
-pub(crate) fn has_critical_warnings(warnings: &Vec<ModLoaderWarning>) -> bool {
-    return warnings.iter().any(|warning| match warning.kind {
-        ModLoaderWarningKind::IndexFileDownloadFailed(_) => false,
-        ModLoaderWarningKind::IndexFileDownloadFailedStatus(_) => false,
-        ModLoaderWarningKind::InvalidIndexFile => false,
-        ModLoaderWarningKind::IndexFileMissingMod => false,
-        ModLoaderWarningKind::DownloadFailed(_) => false,
-        _ => true,
+pub(crate) fn has_critical_warnings(warnings: &[ModLoaderWarning]) -> bool {
+    return warnings.iter().any(|warning| {
+        !matches!(
+            warning.kind,
+            ModLoaderWarningKind::IndexFileDownloadFailed(_)
+                | ModLoaderWarningKind::IndexFileDownloadFailedStatus(_)
+                | ModLoaderWarningKind::InvalidIndexFile
+                | ModLoaderWarningKind::IndexFileMissingMod
+                | ModLoaderWarningKind::DownloadFailed(_)
+        )
     });
 }
 
