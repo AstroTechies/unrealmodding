@@ -20,7 +20,7 @@ use unreal_modintegrator::{
     integrate_mods, FileMod, IntegratorConfig, IntegratorModInfo, INTEGRATOR_PAK_FILE_NAME,
 };
 use unreal_modmetadata::Metadata;
-use unreal_pak::PakFile;
+use unreal_pak::PakReader;
 
 use crate::config;
 use crate::error::{ModLoaderError, ModLoaderWarning, ModLoaderWarningKind};
@@ -77,11 +77,11 @@ fn download_mod(
     drop(file);
     let file = fs::File::open(&file_path)?;
 
-    let mut pak = PakFile::reader(&file);
-    pak.load_records()?;
+    let mut pak = PakReader::new(&file);
+    pak.load_index()?;
 
-    let metadata = pak.get_record(&String::from("metadata.json"))?;
-    let metadata = unreal_modmetadata::from_slice(metadata.data.as_ref().unwrap())
+    let metadata = pak.read_entry(&String::from("metadata.json"))?;
+    let metadata = unreal_modmetadata::from_slice(&metadata)
         .map_err(|_| ModLoaderWarning::invalid_metadata(mod_version.file_name.clone()))?;
 
     Ok((metadata, file_path))

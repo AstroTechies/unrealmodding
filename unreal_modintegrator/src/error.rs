@@ -3,12 +3,17 @@ use std::{fmt::Display, io};
 #[derive(Debug)]
 pub enum IntegrationError {
     GameNotFound,
+    AssetNotFound(String),
     CorruptedStarterPak,
 }
 
 impl IntegrationError {
     pub fn game_not_found() -> Self {
         Self::GameNotFound
+    }
+
+    pub fn asset_not_found(name: String) -> Self {
+        Self::AssetNotFound(name)
     }
 
     pub fn corrupted_starter_pak() -> Self {
@@ -19,8 +24,9 @@ impl IntegrationError {
 impl Display for IntegrationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            IntegrationError::GameNotFound => write!(f, "Game not found"),
-            IntegrationError::CorruptedStarterPak => write!(f, "Corrupted starter pak"),
+            Self::GameNotFound => write!(f, "Game not found"),
+            Self::AssetNotFound(ref name) => write!(f, "Asset {:?} not found", name),
+            Self::CorruptedStarterPak => write!(f, "Corrupted starter pak"),
         }
     }
 }
@@ -29,7 +35,7 @@ impl Display for IntegrationError {
 pub enum ErrorCode {
     Io(io::Error),
     Uasset(unreal_asset::error::Error),
-    UnrealPak(unreal_pak::error::UnrealPakError),
+    Pak(unreal_pak::error::PakError),
     UnrealModMetaData(unreal_modmetadata::error::Error),
     Json(serde_json::Error),
     Integration(IntegrationError),
@@ -41,7 +47,7 @@ impl Display for ErrorCode {
         match *self {
             ErrorCode::Io(ref err) => Display::fmt(err, f),
             ErrorCode::Uasset(ref err) => Display::fmt(err, f),
-            ErrorCode::UnrealPak(ref err) => Display::fmt(err, f),
+            ErrorCode::Pak(ref err) => Display::fmt(err, f),
             ErrorCode::Json(ref err) => Display::fmt(err, f),
             ErrorCode::Integration(ref err) => Display::fmt(err, f),
             ErrorCode::Other(ref err) => Display::fmt(err, f),
@@ -87,10 +93,10 @@ impl From<unreal_asset::error::Error> for Error {
     }
 }
 
-impl From<unreal_pak::error::UnrealPakError> for Error {
-    fn from(e: unreal_pak::error::UnrealPakError) -> Self {
+impl From<unreal_pak::error::PakError> for Error {
+    fn from(e: unreal_pak::error::PakError) -> Self {
         Error {
-            code: ErrorCode::UnrealPak(e),
+            code: ErrorCode::Pak(e),
         }
     }
 }

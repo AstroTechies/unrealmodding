@@ -1,8 +1,5 @@
 use crate::error::Error;
-use crate::exports::{
-    base_export::BaseExport, ExportBaseTrait, ExportNormalTrait,
-    ExportTrait,
-};
+use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
 #[derive(Clone)]

@@ -4,7 +4,7 @@ use std::fs;
 use log::{debug, warn};
 use semver::Version;
 use unreal_modmetadata::{self, Metadata};
-use unreal_pak::PakFile;
+use unreal_pak::{error::PakErrorKind, PakReader};
 
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, GameModVersion};
@@ -27,26 +27,27 @@ pub(crate) fn read_pak_files(
         let file_result = (|| -> Result<(), ModLoaderWarning> {
             let file_name = file_path.file_name().unwrap().to_str().unwrap().to_owned();
 
-            let file = fs::File::open(&file_path)
+            let file = fs::File::open(file_path)
                 .map_err(|err| ModLoaderWarning::from(err).with_mod_id(file_name.clone()))?;
-            let mut pak = PakFile::reader(&file);
+            let mut pak = PakReader::new(&file);
 
-            pak.load_records()
+            pak.load_index()
                 .map_err(|err| ModLoaderWarning::from(err).with_mod_id(file_name.clone()))?;
 
             let record = pak
-                .get_record(&String::from("metadata.json"))?
-                .data
-                .as_ref();
-            if record.is_none() {
-                return Err(ModLoaderWarning::missing_metadata(file_name));
-            }
-
-            let metadata: Metadata =
-                unreal_modmetadata::from_slice(record.unwrap()).map_err(|err| {
-                    warn!("json error: {}", err);
-                    ModLoaderWarning::invalid_metadata(file_name)
+                .read_entry(&String::from("metadata.json"))
+                .map_err(|err| {
+                    if matches!(err.kind, PakErrorKind::EntryNotFound(_)) {
+                        ModLoaderWarning::missing_metadata(file_name.clone())
+                    } else {
+                        err.into()
+                    }
                 })?;
+
+            let metadata: Metadata = unreal_modmetadata::from_slice(&record).map_err(|err| {
+                warn!("json error: {}", err);
+                ModLoaderWarning::invalid_metadata(file_name)
+            })?;
 
             let file_name = file_path.file_name().unwrap().to_str().unwrap().to_owned();
 

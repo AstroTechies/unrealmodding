@@ -1,19 +1,21 @@
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
+use crate::error::PakError;
+
 pub trait BufReaderExt {
-    fn read_string(&mut self) -> Result<Option<String>, std::io::Error>;
+    fn read_fstring(&mut self) -> Result<Option<String>, PakError>;
 }
 pub trait BufWriterExt {
-    fn write_string(&mut self, string: Option<&str>) -> Result<(), std::io::Error>;
+    fn write_fstring(&mut self, string: Option<&str>) -> Result<(), PakError>;
 }
 
 impl<R> BufReaderExt for R
 where
-    R: Read + Seek,
+    R: Read,
 {
-    fn read_string(&mut self) -> Result<Option<String>, std::io::Error> {
+    fn read_fstring(&mut self) -> Result<Option<String>, PakError> {
         // todo: unicode encoding
         let len = self.read_u32::<LittleEndian>()?;
 
@@ -23,7 +25,10 @@ where
 
         let mut buf = vec![0u8; len as usize - 1];
         self.read_exact(&mut buf)?;
-        self.seek(SeekFrom::Current(1))?;
+
+        // skip null terminator
+        self.read_exact(&mut [0])?;
+
         Ok(Some(
             String::from_utf8(buf).unwrap_or_else(|_| String::from("None")),
         ))
@@ -32,9 +37,9 @@ where
 
 impl<W> BufWriterExt for W
 where
-    W: Write + Seek,
+    W: Write,
 {
-    fn write_string(&mut self, string: Option<&str>) -> Result<(), std::io::Error> {
+    fn write_fstring(&mut self, string: Option<&str>) -> Result<(), PakError> {
         if string.is_none() {
             self.write_i32::<LittleEndian>(0)?;
             return Ok(());

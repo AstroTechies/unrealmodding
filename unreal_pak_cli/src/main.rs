@@ -6,7 +6,8 @@ use std::process::exit;
 use std::time::SystemTime;
 
 use clap::{Parser, Subcommand};
-use unreal_pak::PakRecord;
+use path_absolutize::Absolutize;
+use unreal_pak::{pakversion::PakVersion, CompressionMethod, PakReader, PakWriter};
 use walkdir::WalkDir;
 
 /// Command line tool for working with Unreal Engine .pak files.
@@ -48,7 +49,7 @@ enum Commands {
         indir: String,
         /// The .pak file to create, if not supplied the dir name will be used
         pakfile: Option<String>,
-        /// Whether to compress the file
+        /// Do not use compression when writing the file
         #[clap(short, long)]
         no_compression: bool,
     },
@@ -62,22 +63,27 @@ fn main() {
     match args.commands {
         Commands::CheckHeader { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = unreal_pak::PakFile::reader(&file);
+            let mut pak = PakReader::new(&file);
             check_header(&mut pak);
         }
         Commands::Check { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = unreal_pak::PakFile::reader(&file);
+            let mut pak = PakReader::new(&file);
             check_header(&mut pak);
 
             // TODO: get rid of this clone
-            for (i, (record_name, _)) in pak.records.clone().iter().enumerate() {
-                println!("Record {}: {}", i, record_name);
+            let names = pak
+                .get_entry_names()
+                .into_iter()
+                .cloned()
+                .collect::<Vec<_>>();
+            for (i, file_name) in names.iter().enumerate() {
+                println!("Record {}: {:?}", i, file_name);
 
-                match pak.get_record(record_name) {
+                match pak.read_entry(file_name) {
                     Ok(_) => (),
                     Err(e) => {
-                        eprintln!("Error reading record {}: {}, Error: {}", i, record_name, e);
+                        eprintln!("Error reading record {}: {:?}! Error: {}", i, file_name, e);
                         exit(1);
                     }
                 }
@@ -86,34 +92,31 @@ fn main() {
         Commands::Extract { pakfile, outdir } => {
             let path = Path::new(&pakfile);
             let file = open_file(path);
-            let mut pak = unreal_pak::PakFile::reader(&file);
+            let mut pak = PakReader::new(&file);
             check_header(&mut pak);
 
             // temp values required to extend lifetimes outside of match scope
-            let temp;
-            let temp2;
-            let output_folder: &Path = match outdir {
-                Some(ref outdir) => {
-                    temp = outdir.clone();
-                    Path::new(&temp)
-                }
-                None => {
-                    temp2 = path.parent().unwrap().join(path.file_stem().unwrap());
-                    &temp2
-                }
+            let output_folder: PathBuf = match outdir {
+                Some(ref outdir) => PathBuf::from(outdir),
+                None => path.parent().unwrap().join(path.file_stem().unwrap()),
             };
 
-            println!("Extracting to {}", output_folder.display());
+            println!("Extracting to {:?}", output_folder);
 
             // TODO: get rid of this clone
-            for (i, (record_name, _)) in pak.records.clone().iter().enumerate() {
-                match pak.get_record(record_name) {
-                    Ok(record_data) => {
-                        let path = Path::new(output_folder).join(&record_name[..]);
+            let names = pak
+                .get_entry_names()
+                .into_iter()
+                .cloned()
+                .collect::<Vec<_>>();
+            for (i, file_name) in names.iter().enumerate() {
+                match pak.read_entry(file_name) {
+                    Ok(data) => {
+                        let path = output_folder.join(file_name);
                         let dir_path = match path.parent() {
                             Some(dir) => dir,
                             None => {
-                                eprintln!("No parent directories found! {}: {}", i, record_name);
+                                eprintln!("No parent directories found! {}: {:?}", i, file_name);
                                 exit(1);
                             }
                         };
@@ -124,30 +127,42 @@ fn main() {
                                 // Create the file
                                 let mut file = match File::create(&path) {
                                     Ok(file) => file,
-                                    Err(_) => {
-                                        eprintln!("Error creating file! {}: {:?}", i, path);
+                                    Err(err) => {
+                                        eprintln!(
+                                            "Error creating file {}: {:?}! Error: {}",
+                                            i, path, err
+                                        );
                                         exit(1);
                                     }
                                 };
                                 // Write the file
-                                match file.write_all(record_data.data.as_ref().unwrap()) {
+                                match file.write_all(data.as_slice()) {
                                     Ok(_) => {
-                                        println!("Record {}: {}", i, record_name);
+                                        println!("Record {}: {}", i, file_name);
                                     }
-                                    Err(_) => {
-                                        eprintln!("Error writing to file! {}: {:?}", i, path);
+                                    Err(err) => {
+                                        eprintln!(
+                                            "Error writing to file {}: {:?}! Error: {}",
+                                            i, path, err
+                                        );
                                         exit(1);
                                     }
                                 }
                             }
-                            Err(_) => {
-                                eprintln!("Error creating directories! {:?}", dir_path);
+                            Err(err) => {
+                                eprintln!(
+                                    "Error creating directories {:?}! Error: {}",
+                                    dir_path, err
+                                );
                                 exit(1);
                             }
                         };
                     }
-                    Err(_) => {
-                        eprintln!("Error reading record {}: {}", i, record_name);
+                    Err(err) => {
+                        eprintln!(
+                            "Error reading record {}: {:?}! Error: {}",
+                            i, file_name, err
+                        );
                         exit(1);
                     }
                 }
@@ -159,14 +174,17 @@ fn main() {
             no_compression,
         } => {
             let pakfile = match pakfile {
-                Some(pakfile) => pakfile,
+                Some(pakfile) => Path::new(&pakfile).absolutize().unwrap().to_path_buf(),
                 None => {
-                    let mut path = PathBuf::from(&indir);
+                    let mut path = Path::new(&indir).absolutize().unwrap().to_path_buf();
                     path.set_extension("pak");
-                    path.to_str().unwrap().to_string()
+                    path
                 }
             };
-            println!("Creating {}", pakfile);
+            let indir = Path::new(&indir).absolutize().unwrap().to_path_buf();
+            let indir_len = indir.components().count();
+
+            println!("Creating {:?}", pakfile);
 
             // clear file
             OpenOptions::new()
@@ -178,9 +196,10 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak = unreal_pak::PakFile::writer(
-                unreal_pak::pakversion::PakVersion::PakFileVersionFnameBasedCompressionMethod,
+            let mut pak = PakWriter::new(
                 &file,
+                PakVersion::PakFileVersionFnameBasedCompressionMethod,
+                CompressionMethod::Zlib,
             );
 
             let compression_method = if no_compression {
@@ -190,40 +209,55 @@ fn main() {
             };
 
             println!("Using compression method: {:?}", compression_method);
+            pak.compression = compression_method;
 
             // Get all files and write them to the .pak file
-            for entry in WalkDir::new(&indir) {
-                let entry = entry.unwrap();
-                if entry.file_type().is_file() {
-                    let file_path = entry.path().to_str().unwrap().to_owned();
+            let files = WalkDir::new(&indir)
+                .into_iter()
+                .filter_map(|entry| entry.ok())
+                .filter(|entry| entry.file_type().is_file())
+                .collect::<Vec<_>>();
+            //files.sort_unstable_by_key(|entry| entry.file_name().to_owned());
 
-                    let mut record_name = file_path[indir.len()..].to_owned().replace('\\', "/");
-                    if record_name.starts_with('/') {
-                        record_name = record_name[1..].to_owned();
+            println!("Writing {} files", files.len());
+
+            for (i, entry) in files.iter().enumerate() {
+                // file_path is the OS absolute path, file_name is the folders and file name written to the pak
+                let file_path = entry.path();
+                let mut components = file_path.components();
+                for _ in 0..indir_len {
+                    components.next();
+                }
+
+                let mut file_name = components.as_path().to_string_lossy().replace('\\', "/");
+                if file_name.starts_with('/') {
+                    file_name = file_name[1..].to_owned();
+                }
+
+                let file_data = match std::fs::read(file_path) {
+                    Ok(file_data) => file_data,
+                    Err(err) => {
+                        eprintln!("Error reading file {:?}! Error: {}", file_path, err);
+                        exit(1);
                     }
+                };
 
-                    println!("Adding record: {}", record_name);
-
-                    let file_data = match std::fs::read(&file_path) {
-                        Ok(file_data) => file_data,
-                        Err(_) => {
-                            eprintln!("Error reading file! {}", file_path);
-                            exit(1);
-                        }
-                    };
-
-                    let record = PakRecord::new(record_name.clone(), file_data, compression_method)
-                        .unwrap_or_else(|_| {
-                            panic!("Error creating record {}", record_name.clone())
-                        });
-                    pak.add_record(record)
-                        .unwrap_or_else(|_| panic!("Error adding record {}", record_name));
+                match pak.write_entry(&file_name, &file_data) {
+                    Ok(_) => println!("Wrote file {}: {}", i, file_name),
+                    Err(err) => {
+                        eprintln!("Error writing file in pak {:?}! Error: {}", file_name, err);
+                        exit(1);
+                    }
                 }
             }
 
-            println!("Writing pak file to disk. For large files this may take a while.");
-
-            pak.write().expect("Failed to write");
+            match pak.finish_write() {
+                Ok(_) => println!("Finsihed writing pak index and footer"),
+                Err(err) => {
+                    eprintln!("Error writing pak index or footer! Error: {}", err);
+                    exit(1);
+                }
+            }
         }
     }
     println!(
@@ -233,22 +267,22 @@ fn main() {
 }
 
 fn open_file(path: &Path) -> File {
-    match OpenOptions::new().read(true).open(&path) {
+    match OpenOptions::new().read(true).open(path) {
         Ok(file) => file,
-        Err(_) => {
-            eprintln!("Could not find/open file");
+        Err(err) => {
+            eprintln!("Could not find/open file! Error: {}", err);
             exit(1);
         }
     }
 }
 
-fn check_header(pak: &mut unreal_pak::PakFile) {
-    match pak.load_records() {
+fn check_header(pak: &mut PakReader<File>) {
+    match pak.load_index() {
         Ok(_) => println!("Header is ok"),
-        Err(e) => {
-            eprintln!("Error reading header: {}", e);
+        Err(err) => {
+            eprintln!("Error reading header! Error: {}", err);
             exit(1);
         }
     }
-    println!("Found {:?} records", pak.records.len());
+    println!("Found {:?} records", pak.get_entry_names().len());
 }

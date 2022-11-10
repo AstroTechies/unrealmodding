@@ -1,17 +1,20 @@
+use std::collections::HashMap;
+use std::env;
+use std::fs::File;
+use std::io;
 use std::path::PathBuf;
-use std::{collections::HashMap, env, io};
 
 use unreal_asset::ue4version::VER_UE4_23;
-use unreal_modintegrator::IntegratorConfig;
-use unreal_pak::PakFile;
+use unreal_modintegrator::{HandlerFn, IntegratorConfig};
+use unreal_pak::{PakMemory, PakReader};
 
 pub struct Config;
 
 fn handle_persistent_actors(
     _data: &(),
-    _integrated_pak: &mut PakFile,
-    _game_paks: &mut Vec<PakFile>,
-    _mod_paks: &mut Vec<PakFile>,
+    _integrated_pak: &mut PakMemory,
+    _game_paks: &mut Vec<PakReader<File>>,
+    _mod_paks: &mut Vec<PakReader<File>>,
     actors: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     println!("{:?}", actors);
@@ -23,32 +26,9 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
         &()
     }
 
-    fn get_handlers(
-        &self,
-    ) -> std::collections::HashMap<
-        String,
-        Box<
-            dyn FnMut(
-                &(),
-                &mut unreal_pak::PakFile,
-                &mut Vec<unreal_pak::PakFile>,
-                &mut Vec<unreal_pak::PakFile>,
-                &Vec<serde_json::Value>,
-            ) -> Result<(), io::Error>,
-        >,
-    > {
-        let mut handlers: std::collections::HashMap<
-            String,
-            Box<
-                dyn FnMut(
-                    &(),
-                    &mut unreal_pak::PakFile,
-                    &mut Vec<unreal_pak::PakFile>,
-                    &mut Vec<unreal_pak::PakFile>,
-                    &Vec<serde_json::Value>,
-                ) -> Result<(), io::Error>,
-            >,
-        > = HashMap::new();
+    fn get_handlers(&self) -> std::collections::HashMap<String, Box<HandlerFn<(), io::Error>>> {
+        let mut handlers: std::collections::HashMap<String, Box<HandlerFn<(), io::Error>>> =
+            HashMap::new();
 
         handlers.insert(
             String::from("persistent_actors"),
