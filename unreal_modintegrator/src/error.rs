@@ -122,3 +122,4 @@ impl Display for Error {
         Display::fmt(&self.code, f)
     }
 }
+impl std::error::Error for Error {}
