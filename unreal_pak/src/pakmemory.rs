@@ -32,7 +32,7 @@ impl PakMemory {
             mount_point: "../../../".to_owned(),
             compression: CompressionMethod::default(),
             block_size: 0x010000,
-            entries: BTreeMap::new()
+            entries: BTreeMap::new(),
         }
     }
 
@@ -44,7 +44,10 @@ impl PakMemory {
         self.mount_point = index.mount_point.clone();
 
         for (name, header) in index.entries {
-            self.entries.insert(name, read_entry(&mut reader, self.pak_version, header.offset)?);
+            self.entries.insert(
+                name,
+                read_entry(&mut reader, self.pak_version, header.offset)?,
+            );
         }
 
         Ok(())
@@ -60,6 +63,11 @@ impl PakMemory {
     /// Returns the names of all entries stored in this PakMemory.
     pub fn get_entry_names(&self) -> Vec<&String> {
         self.entries.keys().collect()
+    }
+
+    /// Checks if the pak file contains an entry with the given name
+    pub fn contains_entry(&self, name: &String) -> bool {
+        self.entries.contains_key(name)
     }
 
     /// Get the data of an entry.

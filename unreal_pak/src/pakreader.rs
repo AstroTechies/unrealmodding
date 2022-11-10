@@ -57,6 +57,11 @@ where
         self.entries.keys().collect()
     }
 
+    /// Checks if the pak file contains an entry with the given name
+    pub fn contains_entry(&self, name: &String) -> bool {
+        self.entries.contains_key(name)
+    }
+
     /// Reads an entry from the pak on disk into memory and returns it's data.
     pub fn read_entry(&mut self, name: &String) -> Result<Vec<u8>, PakError> {
         let header = self
