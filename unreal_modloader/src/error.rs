@@ -3,7 +3,7 @@ use std::fmt;
 use std::io;
 
 use reqwest::StatusCode;
-use unreal_pak::error::UnrealPakError;
+use unreal_pak::error::PakError;
 
 /// For critical errors that can happen during runtime which prevent further
 /// operation of the modloader and cannot be handled gracefully.
@@ -16,7 +16,7 @@ pub struct ModLoaderError {
 pub enum ModLoaderErrorKind {
     IoError(io::Error),
     IoErrorWithMessage(io::Error, String),
-    UnrealPakError(UnrealPakError),
+    PakError(PakError),
     NoBasePath,
     Generic(Box<dyn std::error::Error + Send>),
     Other(Box<str>),
@@ -48,7 +48,7 @@ impl fmt::Display for ModLoaderError {
             ModLoaderErrorKind::IoErrorWithMessage(ref err, ref message) => {
                 format!("IO error: {}: {}", err, message)
             }
-            ModLoaderErrorKind::UnrealPakError(ref err) => format!("UnrealPak error: {}", err),
+            ModLoaderErrorKind::PakError(ref err) => format!("UnrealPak error: {}", err),
             ModLoaderErrorKind::NoBasePath => {
                 "No base path found (%localappdata%\\GameName)".to_owned()
             }
@@ -68,10 +68,10 @@ impl From<io::Error> for ModLoaderError {
     }
 }
 
-impl From<UnrealPakError> for ModLoaderError {
-    fn from(err: UnrealPakError) -> Self {
+impl From<PakError> for ModLoaderError {
+    fn from(err: PakError) -> Self {
         ModLoaderError {
-            kind: ModLoaderErrorKind::UnrealPakError(err),
+            kind: ModLoaderErrorKind::PakError(err),
         }
     }
 }
@@ -94,7 +94,7 @@ pub struct ModLoaderWarning {
 pub enum ModLoaderWarningKind {
     IoError(io::Error),
     IoErrorWithMessage(io::Error, String),
-    UnrealPakError(UnrealPakError),
+    UnrealPakError(PakError),
     IntegratorError(unreal_modintegrator::error::Error),
 
     UnresolvedDependency(String, Vec<(String, String)>),
@@ -309,8 +309,8 @@ impl From<io::Error> for ModLoaderWarning {
     }
 }
 
-impl From<UnrealPakError> for ModLoaderWarning {
-    fn from(err: UnrealPakError) -> Self {
+impl From<PakError> for ModLoaderWarning {
+    fn from(err: PakError) -> Self {
         ModLoaderWarning {
             kind: ModLoaderWarningKind::UnrealPakError(err),
             mod_id: None,
