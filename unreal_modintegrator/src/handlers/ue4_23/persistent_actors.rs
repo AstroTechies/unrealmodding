@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{self, ErrorKind};
 use std::path::Path;
 
@@ -14,12 +15,10 @@ use unreal_asset::{
     unreal_types::{FName, PackageIndex},
     Asset, Import,
 };
-use unreal_pak::PakFile;
+use unreal_pak::{PakMemory, PakReader};
 
-use crate::find_asset;
-use crate::helpers::{game_to_absolute, get_asset};
-use crate::read_asset;
-use crate::write_asset;
+use crate::helpers::{game_to_absolute, get_asset, write_asset};
+use crate::Error;
 
 const LEVEL_TEMPLATE_ASSET: &[u8] = include_bytes!("assets/LevelTemplate.umap");
 
@@ -35,11 +34,11 @@ struct ScsNode {
 pub fn handle_persistent_actors(
     game_name: &'static str,
     map_paths: &[&str],
-    integrated_pak: &mut PakFile,
-    game_paks: &mut Vec<PakFile>,
-    mod_paks: &mut Vec<PakFile>,
+    integrated_pak: &mut PakMemory,
+    game_paks: &mut Vec<PakReader<File>>,
+    mod_paks: &mut Vec<PakReader<File>>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
-) -> Result<(), io::Error> {
+) -> Result<(), Error> {
     let mut level_asset = Asset::new(LEVEL_TEMPLATE_ASSET.to_vec(), None);
     level_asset.engine_version = VER_UE4_23;
     level_asset
@@ -148,12 +147,13 @@ pub fn handle_persistent_actors(
             let actor_asset_path = game_to_absolute(game_name, &component_path_raw)
                 .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
 
-            let actor_asset = match find_asset(mod_paks, &actor_asset_path) {
-                Some(index) => read_asset(&mut mod_paks[index], VER_UE4_23, &actor_asset_path)
-                    .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?,
-                None => read_asset(integrated_pak, VER_UE4_23, &actor_asset_path)
-                    .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?,
-            };
+            let actor_asset = get_asset(
+                integrated_pak,
+                game_paks,
+                mod_paks,
+                &actor_asset_path,
+                VER_UE4_23,
+            )?;
 
             let mut scs_location = None;
             for i in 0..actor_asset.exports.len() {

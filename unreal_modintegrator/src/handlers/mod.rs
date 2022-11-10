@@ -1,6 +1,8 @@
-use std::io;
+use std::fs::File;
 
-use unreal_pak::PakFile;
+use unreal_pak::{PakMemory, PakReader};
+
+use crate::Error;
 
 #[cfg(feature = "ue4_23")]
 mod ue4_23;
@@ -10,11 +12,11 @@ mod ue4_23;
 pub fn handle_persistent_actors(
     game_name: &'static str,
     map_paths: &[&str],
-    integrated_pak: &mut PakFile,
-    game_paks: &mut Vec<PakFile>,
-    mod_paks: &mut Vec<PakFile>,
+    integrated_pak: &mut PakMemory,
+    game_paks: &mut Vec<PakReader<File>>,
+    mod_paks: &mut Vec<PakReader<File>>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
-) -> Result<(), io::Error> {
+) -> Result<(), Error> {
     #[cfg(feature = "ue4_23")]
     ue4_23::persistent_actors::handle_persistent_actors(
         game_name,
