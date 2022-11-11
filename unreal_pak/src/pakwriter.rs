@@ -12,7 +12,7 @@ use crate::CompressionMethod;
 
 /// An Unreal pak file writer which allows incrementally writing data.
 /// Good for working with very large files, but it has restrictions when it
-/// comes to writing files. For a more flexible alternative see <insert doc link> PakMemory
+/// comes to writing files. For a more flexible alternative see \<insert doc link\> PakMemory
 #[derive(Debug)]
 pub struct PakWriter<'data, W>
 where
