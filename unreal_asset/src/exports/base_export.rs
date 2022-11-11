@@ -3,6 +3,7 @@ use crate::exports::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::{FName, Guid, PackageIndex};
 
+/// Minimal information about an export
 #[derive(Debug, Default, Clone)]
 pub struct BaseExport {
     pub class_index: PackageIndex,

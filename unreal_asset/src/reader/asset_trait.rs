@@ -5,6 +5,7 @@ use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
 
+/// A trait that allows accessing data about the archive that is currently being read
 pub trait AssetTrait {
     fn get_custom_version<T>(&self) -> CustomVersion
     where

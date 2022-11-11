@@ -1,3 +1,8 @@
+//! Asset Registry
+//!
+//! Asset Registry is used for storing information about assets
+//! The information from Asset Registry is primarily used in Content Browser,
+//! but some games might require modifying it before your assets will get loaded
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::hash::{Hash, Hasher};
 use std::io::{Cursor, SeekFrom};
@@ -121,6 +126,36 @@ impl AssetRegistryState {
         Ok(())
     }
 
+    /// Reads asset registry from a Reader
+    ///
+    /// # Errors
+    ///
+    /// If an asset registry is invalid throws ['RegistryError']
+    ///
+    /// If there was an IO error during read throws ['Io']
+    ///
+    /// ['RegistryError']: error/enum.RegistryError.html
+    /// ['Io']: error/enum.ErrorCode.html#variant.Ios
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::{
+    ///     fs::File,
+    ///     io::{Cursor, Read},
+    ///     path::Path,
+    /// };
+    ///
+    /// let mut file = File::open("AssetRegistry.bin").unwrap();
+    /// let mut data = Vec::new();
+    /// file.read_to_end(&mut data).unwrap();
+    ///
+    /// let cursor = Cursor::new(data);
+    /// let raw_reader = RawReader::new(cursor, UE4_VER_23);
+    /// let asset_registry = AssetRegistryState::new(raw_reader).unwrap();
+    ///
+    /// println!("{:#?}", asset_registry);
+    /// ```
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let version = FAssetRegistryVersionType::new(asset)?;
         let mut assets_data = Vec::new();
@@ -170,6 +205,39 @@ impl AssetRegistryState {
         })
     }
 
+    /// Writes asset registry to a binary cursor
+    ///
+    /// # Errors
+    ///
+    /// If this asset registry was modified in a way that makes it invalid throws ['RegistryError']
+    ///
+    /// If there is an IO error during write throws ['Io`] error.
+    ///
+    /// ['RegistryError']: error/enum.RegistryError.html
+    /// ['Io`]: error/enum.ErrorCode.html#variant.Io
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::{
+    ///     fs::File,
+    ///     io::{Cursor, Read},
+    ///     path::Path,
+    /// };
+    ///
+    /// let mut file = File::open("AssetRegistry.bin").unwrap();
+    /// let mut data = Vec::new();
+    /// file.read_to_end(&mut data).unwrap();
+    ///
+    /// let cursor = Cursor::new(data);
+    /// let raw_reader = RawReader::new(cursor, UE4_VER_23);
+    /// let asset_registry = AssetRegistryState::new(raw_reader).unwrap();
+    ///
+    /// let mut cursor = Cursor::new(Vec::new());
+    /// asset_registry.write(&mut cursor).unwrap();
+    ///
+    /// println!("{:#?}", cursor.get_ref());
+    /// ```
     pub fn write(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         let mut writer = RawWriter::new(cursor, self.engine_version);
         self.version.write(&mut writer)?;
@@ -222,6 +290,7 @@ impl AssetRegistryState {
         Ok(())
     }
 
+    /// Adds a name reference to the string lookup table
     pub fn add_name_reference(&mut self, string: &str, add_duplicates: bool) -> i32 {
         let mut hasher = DefaultHasher::new();
         string.hash(&mut hasher);
@@ -245,10 +314,12 @@ impl AssetRegistryState {
         0
     }
 
+    /// Does the same as ['add_name_reference'] without adding duplicates
     pub fn add_fname(&mut self, string: &str) -> i32 {
         self.add_name_reference(string, false)
     }
 
+    /// Gets current AssetRegistry version
     pub fn get_version(&self) -> FAssetRegistryVersionType {
         self.version
     }

@@ -1,3 +1,4 @@
+//! UAsset exports
 use enum_dispatch::enum_dispatch;
 
 pub mod base_export;
@@ -22,12 +23,16 @@ use self::{
     string_table_export::StringTableExport, struct_export::StructExport,
 };
 
+/// This must be implemented for all Exports
+/// Allows for getting a NormalExport from any export containing one
+/// If an export doesn't have one return None
 #[enum_dispatch]
 pub trait ExportNormalTrait {
     fn get_normal_export(&'_ self) -> Option<&'_ NormalExport>;
     fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport>;
 }
 
+/// This must be implemented for all Exports
 #[enum_dispatch]
 pub trait ExportBaseTrait {
     fn get_base_export(&'_ self) -> &'_ BaseExport;
@@ -59,6 +64,7 @@ macro_rules! implement_get {
     };
 }
 
+/// This must be implemented for all Exports
 #[enum_dispatch]
 pub trait ExportTrait {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;

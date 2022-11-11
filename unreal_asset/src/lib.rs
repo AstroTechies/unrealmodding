@@ -1,3 +1,46 @@
+//! This crate is used for parsing Unreal Engine uasset files
+//!
+//! # Examples
+//!
+//! ```no_run
+//! use std::{
+//!     fs::File,
+//!     io::{Cursor, Read},
+//!     path::Path,
+//! };
+//!
+//! let mut file = File::open("asset.uasset").unwrap();
+//! let mut data = Vec::new();
+//! file.read_to_end(&mut data).unwrap();
+//!
+//! let mut asset = Asset:new(data, None);
+//! asset.parse_data().unwrap();
+//!
+//! println!("{:#?}", asset.engine_version);
+//! ```
+//!
+//! ## Reading an asset that uses bulk data
+//!
+//! ```no_run
+//! use std::{
+//!     fs::File,
+//!     io::{Cursor, Read},
+//!     path::Path,
+//! };
+//!
+//! let mut file = File::open("asset.uasset").unwrap();
+//! let mut data = Vec::new();
+//! file.read_to_end(&mut data).unwrap();
+//!
+//! let mut file = File::open("asset.uexp").unwrap();
+//! let mut bulk_data = Vec::new();
+//! file.read_to_end(&mut bulk_data).unwrap();
+//!
+//! let mut asset = Asset:new(data, Some(bulk_data));
+//! asset.parse_data().unwrap();
+//!
+//! println!("{:#?}", asset.engine_version);
+//! ```
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
@@ -49,6 +92,14 @@ use ue4version::{
 };
 use unreal_types::{FName, GenerationInfo, Guid, PackageIndex};
 
+/// Cast a Property/Export to a more specific type
+///
+/// # Examples
+///
+/// ```no_run
+/// let a: Property = ...;
+/// let b: &DoubleProperty = cast!(Property, DoubleProperty, &a).unwrap();
+/// ```
 #[macro_export]
 macro_rules! cast {
     ($namespace:ident, $type:ident, $field:expr) => {
@@ -59,6 +110,9 @@ macro_rules! cast {
     };
 }
 
+/// Import struct for an Asset
+///
+/// This is used for referencing other assets
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Import {
     pub class_package: FName,
@@ -100,6 +154,7 @@ struct AssetHeader {
 }
 
 //#[derive(Debug)]
+/// Unreal Engine uasset
 pub struct Asset {
     // raw data
     cursor: Cursor<Vec<u8>>,
@@ -458,6 +513,7 @@ impl AssetReader for Asset {
 }
 
 impl<'a> Asset {
+    /// Create an asset from a binary file
     pub fn new(asset_data: Vec<u8>, bulk_data: Option<Vec<u8>>) -> Self {
         let raw_data = match &bulk_data {
             Some(e) => {
@@ -818,6 +874,7 @@ impl<'a> Asset {
         Some(&mut self.exports[index as usize])
     }
 
+    /// Parse current asset
     pub fn parse_data(&mut self) -> Result<(), Error> {
         self.parse_header()?;
         self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
@@ -1611,6 +1668,7 @@ impl Debug for Asset {
     }
 }
 
+/// EngineVersion for an Asset
 #[derive(Debug, Clone)]
 pub struct EngineVersion {
     major: u16,

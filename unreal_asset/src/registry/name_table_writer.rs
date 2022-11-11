@@ -1,3 +1,4 @@
+//! Asset registry NameTableWriter
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::hash::{Hash, Hasher};
 use std::io::{self, SeekFrom};
@@ -10,6 +11,8 @@ use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
 
+/// Used to write NameTable entries by modifying the behavior
+/// of some of the value write methods.
 pub struct NameTableWriter<'name_map, 'writer, Writer: AssetWriter> {
     writer: &'writer mut Writer,
 

@@ -1,3 +1,5 @@
+//! Vector/Quat/etc. types
+//!
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector<T> {
     pub x: T,

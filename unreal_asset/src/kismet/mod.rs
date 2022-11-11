@@ -1,3 +1,4 @@
+//! Kismet bytecode
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -15,98 +16,98 @@ use crate::Error;
 #[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EExprToken {
-    // A local variable.
+    /// A local variable.
     ExLocalVariable = 0x00,
-    // An object variable.
+    /// An object variable.
     ExInstanceVariable = 0x01,
-    // Default variable for a class context.
+    /// Default variable for a class context.
     ExDefaultVariable = 0x02,
-    // Return from function.
+    /// Return from function.
     ExReturn = 0x04,
-    // Goto a local address in code.
+    /// Goto a local address in code.
     ExJump = 0x06,
-    // Goto if not expression.
+    /// Goto if not expression.
     ExJumpIfNot = 0x07,
-    // Assertion.
+    /// Assertion.
     ExAssert = 0x09,
-    // No operation.
+    /// No operation.
     ExNothing = 0x0B,
-    // Assign an arbitrary size value to a variable.
+    /// Assign an arbitrary size value to a variable.
     ExLet = 0x0F,
-    // Class default object context.
+    /// Class default object context.
     ExClassContext = 0x12,
-    // Metaclass cast.
+    /// Metaclass cast.
     ExMetaCast = 0x13,
-    // Let boolean variable.
+    /// Let boolean variable.
     ExLetBool = 0x14,
-    // end of default value for optional function parameter
+    /// end of default value for optional function parameter
     ExEndParmValue = 0x15,
-    // End of function call parameters.
+    /// End of function call parameters.
     ExEndFunctionParms = 0x16,
-    // Self object.
+    /// Self object.
     ExSelf = 0x17,
-    // Skippable expression.
+    /// Skippable expression.
     ExSkip = 0x18,
-    // Call a function through an object context.
+    /// Call a function through an object context.
     ExContext = 0x19,
-    // Call a function through an object context (can fail silently if the context is NULL; only generated for functions that don't have output or return values).
+    /// Call a function through an object context (can fail silently if the context is NULL; only generated for functions that don't have output or return values).
     ExContextFailSilent = 0x1A,
-    // A function call with parameters.
+    /// A function call with parameters.
     ExVirtualFunction = 0x1B,
-    // A prebound function call with parameters.
+    /// A prebound function call with parameters.
     ExFinalFunction = 0x1C,
-    // Int constant.
+    /// Int constant.
     ExIntConst = 0x1D,
-    // Floating point constant.
+    /// Floating point constant.
     ExFloatConst = 0x1E,
-    // String constant.
+    /// String constant.
     ExStringConst = 0x1F,
-    // An object constant.
+    /// An object constant.
     ExObjectConst = 0x20,
-    // A name constant.
+    /// A name constant.
     ExNameConst = 0x21,
-    // A rotation constant.
+    /// A rotation constant.
     ExRotationConst = 0x22,
-    // A vector constant.
+    /// A vector constant.
     ExVectorConst = 0x23,
-    // A byte constant.
+    /// A byte constant.
     ExByteConst = 0x24,
-    // Zero.
+    /// Zero.
     ExIntZero = 0x25,
-    // One.
+    /// One.
     ExIntOne = 0x26,
-    // Bool True.
+    /// Bool True.
     ExTrue = 0x27,
-    // Bool False.
+    /// Bool False.
     ExFalse = 0x28,
-    // FText constant
+    /// FText constant
     ExTextConst = 0x29,
-    // NoObject.
+    /// NoObject.
     ExNoObject = 0x2A,
-    // A transform constant
+    /// A transform constant
     ExTransformConst = 0x2B,
-    // Int constant that requires 1 byte.
+    /// Int constant that requires 1 byte.
     ExIntConstByte = 0x2C,
-    // A null interface (similar to ExNoObject, but for interfaces)
+    /// A null interface (similar to ExNoObject, but for interfaces)
     ExNoInterface = 0x2D,
-    // Safe dynamic class casting.
+    /// Safe dynamic class casting.
     ExDynamicCast = 0x2E,
-    // An arbitrary UStruct constant
+    /// An arbitrary UStruct constant
     ExStructConst = 0x2F,
-    // End of UStruct constant
+    /// End of UStruct constant
     ExEndStructConst = 0x30,
-    // Set the value of arbitrary array
+    /// Set the value of arbitrary array
     ExSetArray = 0x31,
     ExEndArray = 0x32,
-    // FProperty constant.
+    /// FProperty constant.
     ExPropertyConst = 0x33,
-    // Unicode string constant.
+    /// Unicode string constant.
     ExUnicodeStringConst = 0x34,
-    // 64-bit integer constant.
+    /// 64-bit integer constant.
     ExInt64Const = 0x35,
-    // 64-bit unsigned integer constant.
+    /// 64-bit unsigned integer constant.
     ExUInt64Const = 0x36,
-    // A casting operator for primitives which reads the type as the subsequent byte
+    /// A casting operator for primitives which reads the type as the subsequent byte
     ExPrimitiveCast = 0x38,
     ExSetSet = 0x39,
     ExEndSet = 0x3A,
@@ -116,72 +117,72 @@ pub enum EExprToken {
     ExEndSetConst = 0x3E,
     ExMapConst = 0x3F,
     ExEndMapConst = 0x40,
-    // Context expression to address a property within a struct
+    /// Context expression to address a property within a struct
     ExStructMemberContext = 0x42,
-    // Assignment to a multi-cast delegate
+    /// Assignment to a multi-cast delegate
     ExLetMulticastDelegate = 0x43,
-    // Assignment to a delegate
+    /// Assignment to a delegate
     ExLetDelegate = 0x44,
-    // Special instructions to quickly call a virtual function that we know is going to run only locally
+    /// Special instructions to quickly call a virtual function that we know is going to run only locally
     ExLocalVirtualFunction = 0x45,
-    // Special instructions to quickly call a final function that we know is going to run only locally
+    /// Special instructions to quickly call a final function that we know is going to run only locally
     ExLocalFinalFunction = 0x46,
-    // local out (pass by reference) function parameter
+    /// local out (pass by reference) function parameter
     ExLocalOutVariable = 0x48,
     ExDeprecatedOp4A = 0x4A,
-    // const reference to a delegate or normal function object
+    /// const reference to a delegate or normal function object
     ExInstanceDelegate = 0x4B,
-    // push an address on to the execution flow stack for future execution when a ExPopExecutionFlow is executed. Execution continues on normally and doesn't change to the pushed address.
+    /// push an address on to the execution flow stack for future execution when a ExPopExecutionFlow is executed. Execution continues on normally and doesn't change to the pushed address.
     ExPushExecutionFlow = 0x4C,
-    // continue execution at the last address previously pushed onto the execution flow stack.
+    /// continue execution at the last address previously pushed onto the execution flow stack.
     ExPopExecutionFlow = 0x4D,
-    // Goto a local address in code, specified by an integer value.
+    /// Goto a local address in code, specified by an integer value.
     ExComputedJump = 0x4E,
-    // continue execution at the last address previously pushed onto the execution flow stack, if the condition is not true.
+    /// continue execution at the last address previously pushed onto the execution flow stack, if the condition is not true.
     ExPopExecutionFlowIfNot = 0x4F,
-    // Breakpoint. Only observed in the editor, otherwise it behaves like ExNothing.
+    /// Breakpoint. Only observed in the editor, otherwise it behaves like ExNothing.
     ExBreakpoint = 0x50,
-    // Call a function through a native interface variable
+    /// Call a function through a native interface variable
     ExInterfaceContext = 0x51,
-    // Converting an object reference to native interface variable
+    /// Converting an object reference to native interface variable
     ExObjToInterfaceCast = 0x52,
-    // Last byte in script code
+    /// Last byte in script code
     ExEndOfScript = 0x53,
-    // Converting an interface variable reference to native interface variable
+    /// Converting an interface variable reference to native interface variable
     ExCrossInterfaceCast = 0x54,
-    // Converting an interface variable reference to an object
+    /// Converting an interface variable reference to an object
     ExInterfaceToObjCast = 0x55,
-    // Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
+    /// Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
     ExWireTracepoint = 0x5A,
-    // A CodeSizeSkipOffset constant
+    /// A CodeSizeSkipOffset constant
     ExSkipOffsetConst = 0x5B,
-    // Adds a delegate to a multicast delegate's targets
+    /// Adds a delegate to a multicast delegate's targets
     ExAddMulticastDelegate = 0x5C,
-    // Clears all delegates in a multicast target
+    /// Clears all delegates in a multicast target
     ExClearMulticastDelegate = 0x5D,
-    // Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
+    /// Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
     ExTracepoint = 0x5E,
-    // assign to any object ref pointer
+    /// assign to any object ref pointer
     ExLetObj = 0x5F,
-    // assign to a weak object pointer
+    /// assign to a weak object pointer
     ExLetWeakObjPtr = 0x60,
-    // bind object and name to delegate
+    /// bind object and name to delegate
     ExBindDelegate = 0x61,
-    // Remove a delegate from a multicast delegate's targets
+    /// Remove a delegate from a multicast delegate's targets
     ExRemoveMulticastDelegate = 0x62,
-    // Call multicast delegate
+    /// Call multicast delegate
     ExCallMulticastDelegate = 0x63,
     ExLetValueOnPersistentFrame = 0x64,
     ExArrayConst = 0x65,
     ExEndArrayConst = 0x66,
     ExSoftObjectConst = 0x67,
-    // static pure function from on local call space
+    /// static pure function from on local call space
     ExCallMath = 0x68,
     ExSwitchValue = 0x69,
-    // Instrumentation event
+    /// Instrumentation event
     ExInstrumentationEvent = 0x6A,
     ExArrayGetByRef = 0x6B,
-    // Sparse data variable
+    /// Sparse data variable
     ExClassSparseDataVariable = 0x6C,
     ExFieldPathConst = 0x6D,
     ExMax = 0xff,
@@ -561,16 +562,19 @@ impl KismetSwitchCase {
     }
 }
 
+/// This must be implemented for all KismetExpressions
 #[enum_dispatch]
 pub trait KismetExpressionTrait {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error>;
 }
 
+/// Allows for getting a token from a KismetExpression
 #[enum_dispatch]
 pub trait KismetExpressionDataTrait {
     fn get_token(&self) -> EExprToken;
 }
 
+/// Allows for comparing two KismetExpressions based on their token
 #[enum_dispatch]
 pub trait KismetExpressionEnumEqTrait {
     fn enum_eq(&self, token: &EExprToken) -> bool;

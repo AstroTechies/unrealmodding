@@ -1,3 +1,4 @@
+//! Asset registry NameTableReader
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::hash::{Hash, Hasher};
 use std::io::{self, SeekFrom};
@@ -11,6 +12,8 @@ use crate::ue4version::VER_UE4_NAME_HASHES_SERIALIZED;
 use crate::unreal_types::{FName, Guid, PackageIndex};
 use crate::Import;
 
+/// Used for reading NameTable entries by modifying the behavior
+/// of some of the value read methods.
 pub struct NameTableReader<'reader, Reader: AssetReader> {
     reader: &'reader mut Reader,
     pub(crate) name_map: Vec<String>,

@@ -1,4 +1,6 @@
-// based on https://github.com/atenfyr/UAssetAPI/blob/1ea96c6bbd469e38074a341582b06ed7401da61a/UAssetAPI/UE4Version.cs
+//! Unreal Engine version numbers
+//!
+//! based on <https://github.com/atenfyr/UAssetAPI/blob/1ea96c6bbd469e38074a341582b06ed7401da61a/UAssetAPI/UE4Version.cs>
 
 pub const UNKNOWN: i32 = 0;
 pub const VER_UE4_OLDEST_LOADABLE_PACKAGE: i32 = 214;
@@ -377,6 +379,7 @@ const LOOKUP_TABLE: &[(&str, i32)] = &[
     ("4.27", VER_UE4_27),
 ];
 
+/// Lookup ue4 version number from a version string
 pub fn lookup(version: &str) -> i32 {
     LOOKUP_TABLE
         .iter()

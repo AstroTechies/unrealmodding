@@ -1,3 +1,5 @@
+//! BitVec extensions for easier deserialization
+
 use bitvec::{order::BitOrder, prelude::BitVec, store::BitStore};
 
 pub trait BitVecExt<T: BitStore, O: BitOrder> {

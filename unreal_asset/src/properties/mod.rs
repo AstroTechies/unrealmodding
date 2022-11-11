@@ -1,3 +1,4 @@
+//! All UAsset properties
 use std::hash::Hash;
 use std::io::SeekFrom;
 
@@ -172,6 +173,7 @@ pub trait PropertyDataTrait {
     fn get_property_guid(&self) -> Option<Guid>;
 }
 
+/// This must be implemented for all Properties
 #[enum_dispatch]
 pub trait PropertyTrait {
     fn write<Writer: AssetWriter>(
@@ -483,6 +485,7 @@ impl Clone for Property {
 }
 
 impl Property {
+    /// Tries to read a property from an AssetReader
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         include_header: bool,
@@ -507,6 +510,8 @@ impl Property {
         )
         .map(Some)
     }
+
+    /// Tries to read a property from an AssetReader while specified a type and length
     pub fn from_type<Reader: AssetReader>(
         asset: &mut Reader,
         type_name: &FName,
@@ -781,6 +786,7 @@ impl Property {
         Ok(res)
     }
 
+    /// Writes a property to an AssetWriter
     pub fn write<Writer: AssetWriter>(
         property: &Property,
         asset: &mut Writer,
@@ -801,6 +807,7 @@ impl Property {
         Ok(begin as usize)
     }
 
+    /// Check if a property type has custom serialization
     pub fn has_custom_serialization(name: &String) -> bool {
         CUSTOM_SERIALIZATION.contains(name)
     }

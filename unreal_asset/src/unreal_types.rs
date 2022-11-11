@@ -1,9 +1,11 @@
+//! Various Unreal Engine types
 use std::collections::HashMap;
 
 use crate::error::Error;
 
 pub type Guid = [u8; 16];
 
+/// Create a Guid from 4 u32 values
 #[rustfmt::skip]
 pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     [
@@ -14,6 +16,7 @@ pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     ]
 }
 
+/// Create a default Guid filled with all zeroes
 pub fn default_guid() -> Guid {
     new_guid(0, 0, 0, 0)
 }
@@ -33,6 +36,11 @@ impl GenerationInfo {
     }
 }
 
+/// FName is used to store most of the Strings in UE4.
+///
+/// They are represented by an index+instance number inside a string table inside the asset file.
+///
+/// Here we are representing them by a string and an instance number.
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone)]
 pub struct FName {
     pub content: String,
@@ -83,6 +91,15 @@ impl StringTable {
     }
 }
 
+/// PackageIndex is one of the most important structs in UE4
+///
+/// It is basically a reference into an import/export table
+/// which helps "glue" together assets.
+///
+/// If a PackageIndex is negative it's an index inside an export table
+/// if it's positive it's an index inside an import table.
+///
+/// When PackageIndex is 0 it makes for a non-existent link.
 #[derive(Debug, Hash, Copy, Clone, Default, PartialEq, Eq)]
 pub struct PackageIndex {
     pub index: i32,

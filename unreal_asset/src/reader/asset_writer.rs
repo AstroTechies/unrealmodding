@@ -6,6 +6,7 @@ use crate::error::Error;
 use crate::reader::asset_trait::AssetTrait;
 use crate::unreal_types::{FName, Guid};
 
+/// A trait that allows for writing to an archive in an asset-specific way
 pub trait AssetWriter: AssetTrait {
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error>;
     fn write_fname(&mut self, fname: &FName) -> Result<(), Error>;

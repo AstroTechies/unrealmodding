@@ -10,6 +10,7 @@ use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
 use crate::unreal_types::{FName, Guid, PackageIndex};
 use crate::Import;
 
+/// A binary reader
 pub struct RawReader {
     cursor: Cursor<Vec<u8>>,
     engine_version: i32,

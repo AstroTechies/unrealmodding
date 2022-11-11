@@ -1,3 +1,5 @@
+//! CRC implementation
+
 use lazy_static::lazy_static;
 
 #[rustfmt::skip]
@@ -169,6 +171,7 @@ lazy_static! {
     ];
 }
 
+/// Generates CRC hash for a string
 pub fn generate_hash(string: &str) -> u32 {
     let algo1 = generate_hash_deprecated(string);
     let algo2 = generate_crc32(string, 0);

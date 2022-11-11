@@ -1,3 +1,5 @@
+//! All of Unreal Engine UProperties
+
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 
@@ -63,6 +65,7 @@ macro_rules! parse_simple_property {
     }
 }
 
+/// This must be implemented for all UProperties
 #[enum_dispatch]
 pub trait UPropertyTrait {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;

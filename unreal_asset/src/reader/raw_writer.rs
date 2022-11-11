@@ -10,6 +10,7 @@ use crate::ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG;
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
 
+/// A binary writer
 pub struct RawWriter<'cursor> {
     cursor: &'cursor mut Cursor<Vec<u8>>,
     engine_version: i32,

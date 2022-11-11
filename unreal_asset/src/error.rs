@@ -1,3 +1,5 @@
+//! All errors thrown by unreal_asset
+
 use std::error;
 use std::fmt::{Display, Formatter};
 use std::io;
@@ -7,6 +9,7 @@ use num_enum::{TryFromPrimitive, TryFromPrimitiveError};
 
 use crate::custom_version::FAssetRegistryVersionType;
 
+// Thrown when kismet bytecode failed to deserialize
 #[derive(Debug)]
 pub enum KismetError {
     InvalidToken(Box<str>),
@@ -32,6 +35,7 @@ impl Display for KismetError {
     }
 }
 
+/// Thrown when asset registry failed to deserialize
 #[derive(Debug)]
 pub enum RegistryError {
     InvalidIndex(i32),
@@ -67,6 +71,7 @@ impl Display for RegistryError {
     }
 }
 
+/// Thrown when a property failed to deserialize
 #[derive(Debug)]
 pub enum PropertyError {
     HeaderlessProperty,

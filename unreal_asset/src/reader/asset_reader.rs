@@ -6,6 +6,7 @@ use crate::error::Error;
 use crate::reader::asset_trait::AssetTrait;
 use crate::unreal_types::{FName, Guid};
 
+/// A trait that allows reading from an archive in an asset-specific way
 pub trait AssetReader: AssetTrait {
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error>;
     fn read_fname(&mut self) -> Result<FName, Error>;
