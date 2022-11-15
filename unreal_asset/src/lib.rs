@@ -59,11 +59,11 @@ pub mod exports;
 pub mod flags;
 pub mod fproperty;
 pub mod kismet;
+pub mod object_version;
 pub mod properties;
 pub mod reader;
 pub mod registry;
 pub mod types;
-pub mod ue4version;
 pub mod unreal_types;
 pub mod uproperty;
 
@@ -78,18 +78,9 @@ use exports::{
     ExportTrait,
 };
 use fproperty::FProperty;
+use object_version::{ObjectVersion, ObjectVersionUE5};
 use properties::world_tile_property::FWorldTileInfo;
 use reader::{asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter};
-use ue4version::{
-    VER_UE4_64BIT_EXPORTMAP_SERIALSIZES, VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE,
-    VER_UE4_ADDED_SEARCHABLE_NAMES, VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP,
-    VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS, VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT,
-    VER_UE4_ENGINE_VERSION_OBJECT, VER_UE4_LOAD_FOR_EDITOR_GAME, VER_UE4_NAME_HASHES_SERIALIZED,
-    VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION,
-    VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS, VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG,
-    VER_UE4_SERIALIZE_TEXT_IN_PACKAGES, VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS,
-    VER_UE4_WORLD_LEVEL_INFO,
-};
 use unreal_types::{FName, GenerationInfo, Guid, PackageIndex};
 
 /// Cast a Property/Export to a more specific type
@@ -163,7 +154,8 @@ pub struct Asset {
     // parsed data
     pub info: String,
     pub use_separate_bulk_data_files: bool,
-    pub engine_version: i32,
+    pub object_version: ObjectVersion,
+    pub object_version_ue5: ObjectVersionUE5,
     pub legacy_file_version: i32,
     pub unversioned: bool,
     pub file_license_version: i32,
@@ -260,8 +252,13 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
     }
 
     #[inline(always)]
-    fn get_engine_version(&self) -> i32 {
-        self.asset.get_engine_version()
+    fn get_object_version(&self) -> ObjectVersion {
+        self.asset.get_object_version()
+    }
+
+    #[inline(always)]
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.asset.get_object_version_ue5()
     }
 
     fn get_import(&self, index: PackageIndex) -> Option<&Import> {
@@ -275,7 +272,7 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
 
 impl<'asset, 'cursor> AssetWriter for AssetSerializer<'asset, 'cursor> {
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
-        if self.asset.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+        if self.asset.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.cursor.write_bool(guid.is_some())?;
             if let Some(ref data) = guid {
                 self.cursor.write_all(data)?;
@@ -357,17 +354,7 @@ impl AssetTrait for Asset {
     where
         T: CustomVersionTrait + Into<i32>,
     {
-        let version_friendly_name = T::friendly_name();
-        for i in 0..self.custom_version.len() {
-            if let Some(friendly_name) = &self.custom_version[i].friendly_name {
-                if friendly_name.as_str() == version_friendly_name {
-                    return self.custom_version[i].clone();
-                }
-            }
-        }
-
-        let guess = T::from_engine_version(self.engine_version);
-        CustomVersion::from_version(guess)
+        todo!("Rework to a custom version container");
     }
 
     fn position(&self) -> u64 {
@@ -391,8 +378,13 @@ impl AssetTrait for Asset {
     }
 
     #[inline(always)]
-    fn get_engine_version(&self) -> i32 {
-        self.engine_version
+    fn get_object_version(&self) -> ObjectVersion {
+        self.object_version
+    }
+
+    #[inline(always)]
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.object_version_ue5
     }
 
     fn get_import(&self, index: PackageIndex) -> Option<&Import> {
@@ -418,7 +410,7 @@ impl AssetTrait for Asset {
 
 impl AssetReader for Asset {
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
-        if self.engine_version >= ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+        if self.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             let has_property_guid = self.cursor.read_bool()?;
             if has_property_guid {
                 let mut guid = [0u8; 16];
@@ -529,7 +521,8 @@ impl<'a> Asset {
             cursor: Cursor::new(raw_data),
             info: String::from("Serialized with unrealmodding/uasset"),
             use_separate_bulk_data_files: bulk_data.is_some(),
-            engine_version: 0,
+            object_version: ObjectVersion::UNKNOWN,
+            object_version_ue5: ObjectVersionUE5::UNKNOWN,
             legacy_file_version: 0,
             unversioned: true,
             file_license_version: 0,
@@ -597,16 +590,16 @@ impl<'a> Asset {
         }
 
         // read unreal version
-        let file_version = self.cursor.read_i32::<LittleEndian>()?;
+        let file_version = self.cursor.read_i32::<LittleEndian>()?.try_into()?;
 
-        self.unversioned = file_version == ue4version::UNKNOWN;
+        self.unversioned = file_version == ObjectVersion::UNKNOWN;
 
         if self.unversioned {
-            if self.engine_version == ue4version::UNKNOWN {
+            if self.object_version == ObjectVersion::UNKNOWN {
                 return Err(Error::invalid_file("Cannot begin serialization of an unversioned asset before an engine version is manually specified".to_string()));
             }
         } else {
-            self.engine_version = file_version;
+            self.object_version = file_version;
         }
 
         // read file license version
@@ -646,7 +639,7 @@ impl<'a> Asset {
         self.name_count = self.cursor.read_i32::<LittleEndian>()?;
         self.name_offset = self.cursor.read_i32::<LittleEndian>()?;
         // read text gatherable data
-        if self.engine_version >= ue4version::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
+        if self.object_version >= ObjectVersion::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
             self.gatherable_text_data_count = self.cursor.read_i32::<LittleEndian>()?;
             self.gatherable_text_data_offset = self.cursor.read_i32::<LittleEndian>()?;
         }
@@ -657,11 +650,11 @@ impl<'a> Asset {
         self.import_count = self.cursor.read_i32::<LittleEndian>()?;
         self.import_offset = self.cursor.read_i32::<LittleEndian>()?;
         self.depends_offset = self.cursor.read_i32::<LittleEndian>()?;
-        if self.engine_version >= ue4version::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP {
+        if self.object_version >= ObjectVersion::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP {
             self.soft_package_reference_count = self.cursor.read_i32::<LittleEndian>()?;
             self.soft_package_reference_offset = self.cursor.read_i32::<LittleEndian>()?;
         }
-        if self.engine_version >= ue4version::VER_UE4_ADDED_SEARCHABLE_NAMES {
+        if self.object_version >= ObjectVersion::VER_UE4_ADDED_SEARCHABLE_NAMES {
             self.searchable_names_offset = self.cursor.read_i32::<LittleEndian>()?;
         }
         self.thumbnail_table_offset = self.cursor.read_i32::<LittleEndian>()?;
@@ -681,13 +674,14 @@ impl<'a> Asset {
         }
 
         // read advanced engine version
-        if self.engine_version >= ue4version::VER_UE4_ENGINE_VERSION_OBJECT {
+        if self.object_version >= ObjectVersion::VER_UE4_ENGINE_VERSION_OBJECT {
             self.engine_version_recorded = EngineVersion::read(&mut self.cursor)?;
         } else {
             self.engine_version_recorded =
                 EngineVersion::new(4, 0, 0, self.cursor.read_u32::<LittleEndian>()?, None);
         }
-        if self.engine_version >= ue4version::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
+        if self.object_version
+            >= ObjectVersion::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
         {
             self.engine_version_compatible = EngineVersion::read(&mut self.cursor)?;
         } else {
@@ -724,24 +718,26 @@ impl<'a> Asset {
         self.asset_registry_data_offset = self.cursor.read_i32::<LittleEndian>()?;
         self.bulk_data_start_offset = self.cursor.read_i64::<LittleEndian>()?;
 
-        if self.engine_version >= ue4version::VER_UE4_WORLD_LEVEL_INFO {
+        if self.object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO {
             self.world_tile_info_offset = self.cursor.read_i32::<LittleEndian>()?;
         }
 
-        if self.engine_version >= ue4version::VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS {
+        if self.object_version >= ObjectVersion::VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS
+        {
             let chunk_id_count = self.cursor.read_i32::<LittleEndian>()?;
 
             for _ in 0..chunk_id_count {
                 let chunk_id = self.cursor.read_i32::<LittleEndian>()?;
                 self.chunk_ids.push(chunk_id);
             }
-        } else if self.engine_version >= ue4version::VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE
+        } else if self.object_version
+            >= ObjectVersion::VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE
         {
             self.chunk_ids = vec![];
             self.chunk_ids[0] = self.cursor.read_i32::<LittleEndian>()?;
         }
 
-        if self.engine_version >= ue4version::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+        if self.object_version >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
             self.preload_dependency_count = self.cursor.read_i32::<LittleEndian>()?;
             self.preload_dependency_offset = self.cursor.read_i32::<LittleEndian>()?;
         }
@@ -754,7 +750,7 @@ impl<'a> Asset {
             .read_string()?
             .ok_or_else(|| Error::no_data("name_map_string is None".to_string()))?;
         let mut hashes = 0;
-        if self.engine_version >= ue4version::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
+        if self.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
             hashes = self.cursor.read_u32::<LittleEndian>()?;
         }
         Ok((hashes, s))
@@ -913,7 +909,7 @@ impl<'a> Asset {
                     ..Default::default()
                 };
 
-                if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
+                if self.object_version >= ObjectVersion::VER_UE4_TemplateIndex_IN_COOKED_EXPORTS {
                     export.template_index =
                         PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
                 }
@@ -922,7 +918,7 @@ impl<'a> Asset {
                 export.object_name = self.read_fname()?;
                 export.object_flags = self.cursor.read_u32::<LittleEndian>()?;
 
-                if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
+                if self.object_version < ObjectVersion::VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
                     export.serial_size = self.cursor.read_i32::<LittleEndian>()? as i64;
                     export.serial_offset = self.cursor.read_i32::<LittleEndian>()? as i64;
                 } else {
@@ -936,16 +932,18 @@ impl<'a> Asset {
                 self.cursor.read_exact(&mut export.package_guid)?;
                 export.package_flags = self.cursor.read_u32::<LittleEndian>()?;
 
-                if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
+                if self.object_version >= ObjectVersion::VER_UE4_LOAD_FOR_EDITOR_GAME {
                     export.not_always_loaded_for_editor_game =
                         self.cursor.read_i32::<LittleEndian>()? == 1;
                 }
 
-                if self.engine_version >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
+                if self.object_version >= ObjectVersion::VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
                     export.is_asset = self.cursor.read_i32::<LittleEndian>()? == 1;
                 }
 
-                if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+                if self.object_version
+                    >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
+                {
                     export.first_export_dependency_offset =
                         self.cursor.read_i32::<LittleEndian>()?;
                     export.serialization_before_serialization_dependencies_size =
@@ -999,7 +997,7 @@ impl<'a> Asset {
         if self.world_tile_info_offset > 0 {
             self.cursor
                 .seek(SeekFrom::Start(self.world_tile_info_offset as u64))?;
-            self.world_tile_info = Some(FWorldTileInfo::new(self, self.engine_version)?);
+            self.world_tile_info = Some(FWorldTileInfo::new(self)?);
         }
 
         if self.use_separate_bulk_data_files {
@@ -1187,7 +1185,7 @@ impl<'a> Asset {
 
         match self.unversioned {
             true => cursor.write_i32::<LittleEndian>(0)?,
-            false => cursor.write_i32::<LittleEndian>(self.engine_version)?,
+            false => cursor.write_i32::<LittleEndian>(self.object_version as i32)?,
         };
 
         cursor.write_i32::<LittleEndian>(self.file_license_version)?;
@@ -1210,7 +1208,7 @@ impl<'a> Asset {
         cursor.write_i32::<LittleEndian>(self.name_map_index_list.len() as i32)?;
         cursor.write_i32::<LittleEndian>(asset_header.name_offset)?;
 
-        if self.engine_version >= VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
+        if self.object_version >= ObjectVersion::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
             cursor.write_i32::<LittleEndian>(self.gatherable_text_data_count)?;
             cursor.write_i32::<LittleEndian>(self.gatherable_text_data_offset)?;
         }
@@ -1221,12 +1219,12 @@ impl<'a> Asset {
         cursor.write_i32::<LittleEndian>(asset_header.import_offset)?;
         cursor.write_i32::<LittleEndian>(asset_header.depends_offset)?;
 
-        if self.engine_version >= VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP {
+        if self.object_version >= ObjectVersion::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP {
             cursor.write_i32::<LittleEndian>(self.soft_package_reference_count)?;
             cursor.write_i32::<LittleEndian>(asset_header.soft_package_reference_offset)?;
         }
 
-        if self.engine_version >= VER_UE4_ADDED_SEARCHABLE_NAMES {
+        if self.object_version >= ObjectVersion::VER_UE4_ADDED_SEARCHABLE_NAMES {
             cursor.write_i32::<LittleEndian>(self.searchable_names_offset)?;
         }
 
@@ -1239,13 +1237,15 @@ impl<'a> Asset {
             cursor.write_i32::<LittleEndian>(self.name_map_index_list.len() as i32)?;
         }
 
-        if self.engine_version >= VER_UE4_ENGINE_VERSION_OBJECT {
+        if self.object_version >= ObjectVersion::VER_UE4_ENGINE_VERSION_OBJECT {
             self.engine_version_recorded.write(cursor)?;
         } else {
             cursor.write_u32::<LittleEndian>(self.engine_version_recorded.build)?;
         }
 
-        if self.engine_version >= VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION {
+        if self.object_version
+            >= ObjectVersion::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
+        {
             self.engine_version_recorded.write(cursor)?;
         }
 
@@ -1261,20 +1261,23 @@ impl<'a> Asset {
         cursor.write_i32::<LittleEndian>(asset_header.asset_registry_data_offset)?;
         cursor.write_i64::<LittleEndian>(asset_header.bulk_data_start_offset)?;
 
-        if self.engine_version >= VER_UE4_WORLD_LEVEL_INFO {
+        if self.object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO {
             cursor.write_i32::<LittleEndian>(asset_header.world_tile_info_offset)?;
         }
 
-        if self.engine_version >= VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS {
+        if self.object_version >= ObjectVersion::VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS
+        {
             cursor.write_i32::<LittleEndian>(self.chunk_ids.len() as i32)?;
             for chunk_id in &self.chunk_ids {
                 cursor.write_i32::<LittleEndian>(*chunk_id)?;
             }
-        } else if self.engine_version >= VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE {
+        } else if self.object_version
+            >= ObjectVersion::VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE
+        {
             cursor.write_i32::<LittleEndian>(self.chunk_ids[0])?;
         }
 
-        if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+        if self.object_version >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
             cursor.write_i32::<LittleEndian>(asset_header.preload_dependency_count)?;
             cursor.write_i32::<LittleEndian>(asset_header.preload_dependency_offset)?;
         }
@@ -1293,7 +1296,7 @@ impl<'a> Asset {
         cursor.write_i32::<LittleEndian>(unk.class_index.index)?;
         cursor.write_i32::<LittleEndian>(unk.super_index.index)?;
 
-        if self.engine_version >= VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS {
+        if self.object_version >= ObjectVersion::VER_UE4_TemplateIndex_IN_COOKED_EXPORTS {
             cursor.write_i32::<LittleEndian>(unk.template_index.index)?;
         }
 
@@ -1301,7 +1304,7 @@ impl<'a> Asset {
         cursor.write_fname(&unk.object_name)?;
         cursor.write_u32::<LittleEndian>(unk.object_flags)?;
 
-        if self.engine_version < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
+        if self.object_version < ObjectVersion::VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
             cursor.write_i32::<LittleEndian>(serial_size as i32)?;
             cursor.write_i32::<LittleEndian>(serial_offset as i32)?;
         } else {
@@ -1324,21 +1327,21 @@ impl<'a> Asset {
         cursor.write_all(&unk.package_guid)?;
         cursor.write_u32::<LittleEndian>(unk.package_flags)?;
 
-        if self.engine_version >= VER_UE4_LOAD_FOR_EDITOR_GAME {
+        if self.object_version >= ObjectVersion::VER_UE4_LOAD_FOR_EDITOR_GAME {
             cursor.write_i32::<LittleEndian>(match unk.not_always_loaded_for_editor_game {
                 true => 1,
                 false => 0,
             })?;
         }
 
-        if self.engine_version >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
+        if self.object_version >= ObjectVersion::VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
             cursor.write_i32::<LittleEndian>(match unk.is_asset {
                 true => 1,
                 false => 0,
             })?;
         }
 
-        if self.engine_version >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
+        if self.object_version >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS {
             cursor.write_i32::<LittleEndian>(first_export_dependency_offset)?;
             cursor.write_i32::<LittleEndian>(
                 unk.serialization_before_serialization_dependencies.len() as i32,
@@ -1396,7 +1399,7 @@ impl<'a> Asset {
         for name in &self.name_map_index_list {
             serializer.write_string(&Some(name.clone()))?;
 
-            if self.engine_version >= VER_UE4_NAME_HASHES_SERIALIZED {
+            if self.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                 match self.override_name_map_hashes.get(name) {
                     Some(e) => serializer.write_u32::<LittleEndian>(*e)?,
                     None => serializer.write_u32::<LittleEndian>(crc::generate_hash(name))?,
@@ -1607,7 +1610,8 @@ impl Debug for Asset {
                 "use_separate_bulk_data_files",
                 &self.use_separate_bulk_data_files,
             )
-            .field("engine_version", &self.engine_version)
+            .field("object_version", &self.object_version)
+            .field("object_version_ue5", &self.object_version_ue5)
             .field("legacy_file_version", &self.legacy_file_version)
             .field("unversioned", &self.unversioned)
             .field("file_license_version", &self.file_license_version)

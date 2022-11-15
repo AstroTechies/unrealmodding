@@ -5,24 +5,30 @@ use byteorder::WriteBytesExt;
 
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
-use crate::ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG;
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
 
 /// A binary writer
 pub struct RawWriter<'cursor> {
     cursor: &'cursor mut Cursor<Vec<u8>>,
-    engine_version: i32,
+    object_version: ObjectVersion,
+    object_version_ue5: ObjectVersionUE5,
 
     empty_map: HashMap<String, String>,
 }
 
 impl<'cursor> RawWriter<'cursor> {
-    pub fn new(cursor: &'cursor mut Cursor<Vec<u8>>, engine_version: i32) -> Self {
+    pub fn new(
+        cursor: &'cursor mut Cursor<Vec<u8>>,
+        object_version: ObjectVersion,
+        object_version_ue5: ObjectVersionUE5,
+    ) -> Self {
         RawWriter {
             cursor,
-            engine_version,
+            object_version,
+            object_version_ue5,
             empty_map: HashMap::new(),
         }
     }
@@ -56,8 +62,12 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         &self.empty_map
     }
 
-    fn get_engine_version(&self) -> i32 {
-        self.engine_version
+    fn get_object_version(&self) -> ObjectVersion {
+        self.object_version
+    }
+
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.object_version_ue5
     }
 
     fn get_import(&self, _index: PackageIndex) -> Option<&Import> {
@@ -74,7 +84,7 @@ impl<'cursor> AssetWriter for RawWriter<'cursor> {
         &mut self,
         guid: &Option<crate::unreal_types::Guid>,
     ) -> Result<(), crate::error::Error> {
-        if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+        if self.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.cursor.write_bool(guid.is_some())?;
             if let Some(ref data) = guid {
                 self.cursor.write_all(data)?;

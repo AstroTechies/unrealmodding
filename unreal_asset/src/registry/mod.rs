@@ -12,6 +12,7 @@ use byteorder::LittleEndian;
 use crate::crc;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{
     asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter,
     raw_writer::RawWriter,
@@ -23,7 +24,6 @@ use crate::registry::{
         asset_data::AssetData, asset_package_data::AssetPackageData, depends_node::DependsNode,
     },
 };
-use crate::ue4version::VER_UE4_NAME_HASHES_SERIALIZED;
 
 pub(crate) mod name_table_reader;
 pub(crate) mod name_table_writer;
@@ -36,7 +36,8 @@ pub struct AssetRegistryState {
     pub package_data: Vec<AssetPackageData>,
 
     name_map: Option<Vec<String>>,
-    engine_version: i32,
+    object_version: ObjectVersion,
+    object_version_ue5: ObjectVersionUE5,
     name_map_lookup: Option<HashMap<u64, i32>>,
     version: FAssetRegistryVersionType,
 }
@@ -201,7 +202,8 @@ impl AssetRegistryState {
             name_map,
             name_map_lookup,
 
-            engine_version: asset.get_engine_version(),
+            object_version: asset.get_object_version(),
+            object_version_ue5: asset.get_object_version_ue5(),
         })
     }
 
@@ -239,7 +241,7 @@ impl AssetRegistryState {
     /// println!("{:#?}", cursor.get_ref());
     /// ```
     pub fn write(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-        let mut writer = RawWriter::new(cursor, self.engine_version);
+        let mut writer = RawWriter::new(cursor, self.object_version, self.object_version_ue5);
         self.version.write(&mut writer)?;
 
         if self.version < FAssetRegistryVersionType::RemovedMD5Hash {
@@ -269,7 +271,7 @@ impl AssetRegistryState {
             for name in name_map {
                 writer.write_string(&Some(name.clone()))?; // todo: no cloning
 
-                match writer.get_engine_version() >= VER_UE4_NAME_HASHES_SERIALIZED {
+                match writer.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                     true => {
                         let hash = crc::generate_hash(name);
                         writer.write_u32::<LittleEndian>(hash)?;

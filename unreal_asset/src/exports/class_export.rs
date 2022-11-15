@@ -10,11 +10,8 @@ use crate::exports::{
     ExportTrait,
 };
 use crate::flags::EClassFlags;
+use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::{
-    VER_UE4_ADD_COOKED_TO_UCLASS, VER_UE4_CLASS_NOTPLACEABLE_ADDED,
-    VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING,
-};
 use crate::unreal_types::{FName, PackageIndex};
 
 #[derive(Clone)]
@@ -67,7 +64,7 @@ impl ClassExport {
 
         let mut class_flags = EClassFlags::from_bits(asset.read_u32::<LittleEndian>()?)
             .ok_or_else(|| Error::invalid_file("Invalid class flags".to_string()))?;
-        if asset.get_engine_version() < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
+        if asset.get_object_version() < ObjectVersion::VER_UE4_CLASS_NOTPLACEABLE_ADDED {
             class_flags ^= EClassFlags::CLASS_NOT_PLACEABLE
         }
 
@@ -75,7 +72,9 @@ impl ClassExport {
         let class_config_name = asset.read_fname()?;
 
         let mut interfaces_start = None;
-        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+        if asset.get_object_version()
+            < ObjectVersion::VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING
+        {
             interfaces_start = Some(asset.position());
             let num_interfaces = asset.read_i32::<LittleEndian>()?;
             asset.seek(SeekFrom::Start(
@@ -88,7 +87,9 @@ impl ClassExport {
         let class_generated_by = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
         let current_offset = asset.position();
 
-        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+        if asset.get_object_version()
+            < ObjectVersion::VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING
+        {
             asset.seek(SeekFrom::Start(interfaces_start.unwrap()))?;
         }
         let num_interfaces = asset.read_i32::<LittleEndian>()? as usize;
@@ -101,14 +102,17 @@ impl ClassExport {
             ));
         }
 
-        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+        if asset.get_object_version()
+            < ObjectVersion::VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING
+        {
             asset.seek(SeekFrom::Start(current_offset))?;
         }
 
         let deprecated_force_script_order = asset.read_i32::<LittleEndian>()? == 1;
         asset.read_i64::<LittleEndian>()?; // none
 
-        let cooked = match asset.get_engine_version() >= VER_UE4_ADD_COOKED_TO_UCLASS {
+        let cooked = match asset.get_object_version() >= ObjectVersion::VER_UE4_ADD_COOKED_TO_UCLASS
+        {
             true => Some(asset.read_i32::<LittleEndian>()? == 1),
             false => None,
         };
@@ -175,7 +179,7 @@ impl ExportTrait for ClassExport {
         }
 
         let serializing_class_flags =
-            match asset.get_engine_version() < VER_UE4_CLASS_NOTPLACEABLE_ADDED {
+            match asset.get_object_version() < ObjectVersion::VER_UE4_CLASS_NOTPLACEABLE_ADDED {
                 true => self.class_flags ^ EClassFlags::CLASS_NOT_PLACEABLE,
                 false => self.class_flags,
             };
@@ -184,12 +188,16 @@ impl ExportTrait for ClassExport {
         asset.write_i32::<LittleEndian>(self.class_within.index)?;
         asset.write_fname(&self.class_config_name)?;
 
-        if asset.get_engine_version() < VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING as i32 {
+        if asset.get_object_version()
+            < ObjectVersion::VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING
+        {
             self.serialize_interfaces(asset)?;
         }
         asset.write_i32::<LittleEndian>(self.class_generated_by.index)?;
 
-        if asset.get_engine_version() >= VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING {
+        if asset.get_object_version()
+            >= ObjectVersion::VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING
+        {
             self.serialize_interfaces(asset)?;
         }
 
@@ -199,7 +207,7 @@ impl ExportTrait for ClassExport {
         })?;
         asset.write_fname(&FName::from_slice("None"))?;
 
-        if asset.get_engine_version() >= VER_UE4_ADD_COOKED_TO_UCLASS {
+        if asset.get_object_version() >= ObjectVersion::VER_UE4_ADD_COOKED_TO_UCLASS {
             asset.write_i32::<LittleEndian>(
                 match self.cooked.ok_or_else(|| {
                     Error::no_data(

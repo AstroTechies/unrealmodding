@@ -38,6 +38,7 @@ pub mod world_tile_property;
 
 use self::cloth_lod_property::ClothLodDataProperty;
 use self::delegate_property::DelegateProperty;
+use self::soft_path_property::StringAssetReferenceProperty;
 use self::vector_property::Box2DProperty;
 use self::{
     array_property::ArrayProperty,
@@ -142,6 +143,7 @@ lazy_static! {
         String::from("SoftObjectPath"),
         String::from("WeightedRandomSampler"),
         String::from("SoftClassPath"),
+        String::from("StringAssetReference"),
         String::from("Color"),
         String::from("ExpressionInput"),
         String::from("MaterialAttributesInput"),
@@ -240,6 +242,7 @@ pub enum Property {
     SoftAssetPathProperty,
     SoftObjectPathProperty,
     SoftClassPathProperty,
+    StringAssetReferenceProperty,
     DelegateProperty,
     MulticastDelegateProperty,
     RichCurveKeyProperty,
@@ -338,6 +341,7 @@ inner_trait!(
     SoftAssetPathProperty,
     SoftObjectPathProperty,
     SoftClassPathProperty,
+    StringAssetReferenceProperty,
     DelegateProperty,
     MulticastDelegateProperty,
     RichCurveKeyProperty,
@@ -478,25 +482,13 @@ impl Property {
             }
             "Guid" => GuidProperty::new(asset, name, include_header, duplication_index)?.into(),
 
-            "SetProperty" => SetProperty::new(
-                asset,
-                name,
-                include_header,
-                length,
-                duplication_index,
-                asset.get_engine_version(),
-            )?
-            .into(),
-            "ArrayProperty" => ArrayProperty::new(
-                asset,
-                name,
-                include_header,
-                length,
-                duplication_index,
-                asset.get_engine_version(),
-                true,
-            )?
-            .into(),
+            "SetProperty" => {
+                SetProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            }
+            "ArrayProperty" => {
+                ArrayProperty::new(asset, name, include_header, length, duplication_index, true)?
+                    .into()
+            }
             "MapProperty" => {
                 MapProperty::new(asset, name, include_header, duplication_index)?.into()
             }
@@ -595,6 +587,14 @@ impl Property {
                 SoftClassPathProperty::new(asset, name, include_header, length, duplication_index)?
                     .into()
             }
+            "StringAssetReference" => StringAssetReferenceProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
 
             "DelegateProperty" => {
                 DelegateProperty::new(asset, name, include_header, length, duplication_index)?
@@ -633,15 +633,9 @@ impl Property {
                     .into()
             }
 
-            "StructProperty" => StructProperty::new(
-                asset,
-                name,
-                include_header,
-                length,
-                duplication_index,
-                asset.get_engine_version(),
-            )?
-            .into(),
+            "StructProperty" => {
+                StructProperty::new(asset, name, include_header, length, duplication_index)?.into()
+            }
             "EnumProperty" => {
                 EnumProperty::new(asset, name, include_header, length, duplication_index)?.into()
             }
@@ -716,6 +710,7 @@ property_inner_fname! {
     SoftObjectPathProperty: "SoftObjectPath",
     WeightedRandomSamplerProperty: "WeightedRandomSampler",
     SoftClassPathProperty: "SoftClassPath",
+    StringAssetReferenceProperty: "StringAssetReference",
     ColorProperty: "Color",
     ExpressionInputProperty: "ExpressionInput",
     MaterialAttributesInputProperty: "MaterialAttributesInput",

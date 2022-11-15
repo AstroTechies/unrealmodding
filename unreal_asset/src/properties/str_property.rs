@@ -6,11 +6,11 @@ use crate::custom_version::{CustomVersion, FEditorObjectVersion};
 use crate::enums::TextHistoryType;
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
+use crate::object_version::ObjectVersion;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::{VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT, VER_UE4_FTEXT_HISTORY};
 use crate::unreal_types::{FName, Guid};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -89,9 +89,11 @@ impl TextProperty {
         let mut namespace = None;
         let mut value = None;
 
-        if asset.get_engine_version() < VER_UE4_FTEXT_HISTORY {
+        if asset.get_object_version() < ObjectVersion::VER_UE4_FTEXT_HISTORY {
             culture_invariant_string = asset.read_string()?;
-            if asset.get_engine_version() >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
+            if asset.get_object_version()
+                >= ObjectVersion::VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT
+            {
                 namespace = asset.read_string()?;
                 value = asset.read_string()?;
             } else {
@@ -103,7 +105,7 @@ impl TextProperty {
         let flags = asset.read_u32::<LittleEndian>()?;
         let mut history_type = TextHistoryType::Base;
         let mut table_id = None;
-        if asset.get_engine_version() >= VER_UE4_FTEXT_HISTORY {
+        if asset.get_object_version() >= ObjectVersion::VER_UE4_FTEXT_HISTORY {
             history_type = TextHistoryType::try_from(asset.read_i8()?)?;
 
             match history_type {
@@ -161,9 +163,11 @@ impl PropertyTrait for TextProperty {
         optional_guid_write!(self, asset, include_header);
         let begin = asset.position();
 
-        if asset.get_engine_version() < VER_UE4_FTEXT_HISTORY {
+        if asset.get_object_version() < ObjectVersion::VER_UE4_FTEXT_HISTORY {
             asset.write_string(&self.culture_invariant_string)?;
-            if asset.get_engine_version() >= VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT {
+            if asset.get_object_version()
+                >= ObjectVersion::VER_UE4_ADDED_NAMESPACE_AND_KEY_DATA_TO_FTEXT
+            {
                 asset.write_string(&self.namespace)?;
                 asset.write_string(&self.value)?;
             } else {
@@ -172,7 +176,7 @@ impl PropertyTrait for TextProperty {
         }
         asset.write_u32::<LittleEndian>(self.flags)?;
 
-        if asset.get_engine_version() >= VER_UE4_FTEXT_HISTORY {
+        if asset.get_object_version() >= ObjectVersion::VER_UE4_FTEXT_HISTORY {
             let history_type = self.history_type;
             asset.write_i8(history_type.into())?;
             match history_type {

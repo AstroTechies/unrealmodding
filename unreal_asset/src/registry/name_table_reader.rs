@@ -7,8 +7,8 @@ use byteorder::LittleEndian;
 
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::error::Error;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
-use crate::ue4version::VER_UE4_NAME_HASHES_SERIALIZED;
 use crate::unreal_types::{FName, Guid, PackageIndex};
 use crate::Import;
 
@@ -45,7 +45,7 @@ impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
                 name.hash(&mut s);
                 name_map_lookup.insert(s.finish(), i);
 
-                match reader.get_engine_version() >= VER_UE4_NAME_HASHES_SERIALIZED {
+                match reader.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                     true => {
                         let _non_case_preserving_hash = reader.read_u16::<LittleEndian>()?;
                         let _case_preserving_hash = reader.read_u16::<LittleEndian>()?;
@@ -94,8 +94,12 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
         self.reader.get_map_value_override()
     }
 
-    fn get_engine_version(&self) -> i32 {
-        self.reader.get_engine_version()
+    fn get_object_version(&self) -> ObjectVersion {
+        self.reader.get_object_version()
+    }
+
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.reader.get_object_version_ue5()
     }
 
     fn get_import(&self, index: PackageIndex) -> Option<&Import> {

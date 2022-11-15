@@ -7,9 +7,9 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::enums::EBlueprintTextLiteralType;
 use crate::error::KismetError;
+use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{Transform, Vector, Vector4};
-use crate::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETARRAY_BYTECODE};
 use crate::unreal_types::{FName, FieldPath, PackageIndex};
 use crate::Error;
 
@@ -501,7 +501,7 @@ impl KismetPropertyPointer {
     }
 
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        if asset.get_engine_version() >= VER_UE4_ADDED_PACKAGE_OWNER {
+        if asset.get_object_version() >= ObjectVersion::VER_UE4_ADDED_PACKAGE_OWNER {
             let num_entries = asset.read_i32::<LittleEndian>()?;
             let mut names = Vec::with_capacity(num_entries as usize);
             for _i in 0..num_entries as usize {
@@ -519,7 +519,7 @@ impl KismetPropertyPointer {
     }
 
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        if asset.get_engine_version() >= VER_UE4_ADDED_PACKAGE_OWNER {
+        if asset.get_object_version() >= ObjectVersion::VER_UE4_ADDED_PACKAGE_OWNER {
             let new = self.new.as_ref().ok_or_else(|| {
                 Error::no_data(
                     "engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string(),
@@ -1980,7 +1980,7 @@ declare_expression!(
 impl ExSetArray {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let (assigning_property, array_inner_prop) =
-            match asset.get_engine_version() >= VER_UE4_CHANGE_SETARRAY_BYTECODE {
+            match asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
                 true => (Some(Box::new(KismetExpression::new(asset)?)), None),
                 false => (
                     None,
@@ -1998,7 +1998,7 @@ impl ExSetArray {
 impl KismetExpressionTrait for ExSetArray {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = 0;
-        if asset.get_engine_version() >= VER_UE4_CHANGE_SETARRAY_BYTECODE {
+        if asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
             offset += KismetExpression::write(
                 self.assigning_property.as_ref().ok_or_else(|| {
                     Error::no_data(

@@ -4,14 +4,11 @@ use byteorder::LittleEndian;
 
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
+use crate::object_version::ObjectVersion;
 use crate::properties::{
     struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait,
 };
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::{
-    VER_UE4_INNER_ARRAY_TAG_INFO, VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG,
-    VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG,
-};
 use crate::unreal_types::{default_guid, FName, Guid, ToFName};
 
 #[derive(Default, Clone, Hash, PartialEq, Eq)]
@@ -33,7 +30,6 @@ impl ArrayProperty {
         include_header: bool,
         length: i64,
         duplication_index: i32,
-        engine_version: i32,
         serialize_struct_differently: bool,
     ) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
@@ -46,7 +42,6 @@ impl ArrayProperty {
             include_header,
             length,
             duplication_index,
-            engine_version,
             serialize_struct_differently,
             array_type,
             property_guid,
@@ -71,7 +66,6 @@ impl ArrayProperty {
         _include_header: bool,
         length: i64,
         duplication_index: i32,
-        engine_version: i32,
         serialize_struct_differently: bool,
         array_type: Option<FName>,
         property_guid: Option<Guid>,
@@ -89,7 +83,7 @@ impl ArrayProperty {
             && serialize_struct_differently
         {
             let mut full_type = FName::new(String::from("Generic"), 0);
-            if engine_version >= VER_UE4_INNER_ARRAY_TAG_INFO {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 name = asset.read_fname()?;
                 if &name.content == "None" {
                     return Ok(ArrayProperty::default());
@@ -206,7 +200,7 @@ impl ArrayProperty {
             }?;
 
             let mut length_loc = -1;
-            if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 asset.write_fname(&property.name)?;
                 asset.write_fname(&FName::from_slice("StructProperty"))?;
                 length_loc = asset.position() as i32;
@@ -216,10 +210,13 @@ impl ArrayProperty {
                         PropertyError::property_field_none("struct_type", "FName")
                     })?,
                 )?;
-                if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+                if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG
+                {
                     asset.write_all(&property.property_guid.unwrap_or_else(default_guid))?;
                 }
-                if asset.get_engine_version() >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+                if asset.get_object_version()
+                    >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG
+                {
                     asset.write_u8(0)?;
                 }
             }
@@ -235,7 +232,7 @@ impl ArrayProperty {
                 struct_property.write(asset, false)?;
             }
 
-            if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 let full_len = asset.position() as i32 - length_loc;
                 let new_loc = asset.position() as i32;
                 asset.seek(SeekFrom::Start(length_loc as u64))?;

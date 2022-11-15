@@ -5,7 +5,6 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     error::Error,
-    impl_property_data_trait,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     unreal_types::FName,
 };
@@ -96,7 +95,6 @@ pub struct ClothLodDataProperty {
     pub transition_up_skin_data: Vec<MeshToMeshVertData>,
     pub transition_down_skin_data: Vec<MeshToMeshVertData>,
 }
-impl_property_data_trait!(ClothLodDataProperty);
 
 impl ClothLodDataProperty {
     pub fn new<Reader: AssetReader>(
@@ -133,6 +131,20 @@ impl ClothLodDataProperty {
             transition_up_skin_data,
             transition_down_skin_data,
         })
+    }
+}
+
+impl PropertyDataTrait for ClothLodDataProperty {
+    fn get_name(&self) -> FName {
+        self.struct_property.get_name()
+    }
+
+    fn get_duplication_index(&self) -> i32 {
+        self.struct_property.get_duplication_index()
+    }
+
+    fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
+        self.struct_property.get_property_guid()
     }
 }
 

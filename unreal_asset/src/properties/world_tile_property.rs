@@ -2,13 +2,10 @@ use byteorder::LittleEndian;
 
 use crate::custom_version::FFortniteMainBranchObjectVersion;
 use crate::error::Error;
+use crate::object_version::ObjectVersion;
 use crate::properties::vector_property::{BoxProperty, IntPointProperty};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::Vector;
-use crate::ue4version::{
-    VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING, VER_UE4_WORLD_LEVEL_INFO_LOD_LIST,
-    VER_UE4_WORLD_LEVEL_INFO_UPDATED, VER_UE4_WORLD_LEVEL_INFO_ZORDER,
-};
 use crate::unreal_types::FName;
 
 //todo: what is this file even doing in properties?
@@ -22,21 +19,21 @@ pub struct FWorldTileLayer {
 }
 
 impl FWorldTileLayer {
-    pub fn new<Reader: AssetReader>(
-        asset: &mut Reader,
-        engine_version: i32,
-    ) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let object_version = asset.get_object_version();
+
         let name = asset.read_string()?;
         let reserved_0 = asset.read_i32::<LittleEndian>()?;
         let reserved_1 = IntPointProperty::new(asset, FName::default(), false, 0)?;
 
-        let streaming_distance = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
-            true => Some(asset.read_i32::<LittleEndian>()?),
-            false => None,
-        };
+        let streaming_distance =
+            match object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO_UPDATED {
+                true => Some(asset.read_i32::<LittleEndian>()?),
+                false => None,
+            };
 
         let distance_streaming_enabled =
-            match engine_version >= VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING {
+            match object_version >= ObjectVersion::VER_UE4_WORLD_LAYER_ENABLE_DISTANCE_STREAMING {
                 true => Some(asset.read_i32::<LittleEndian>()? == 1),
                 false => None,
             };
@@ -85,11 +82,9 @@ pub struct FWorldTileInfo {
 }
 
 impl FWorldTileInfo {
-    pub fn new<Reader: AssetReader>(
-        asset: &mut Reader,
-        engine_version: i32,
-    ) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let version = asset.get_custom_version::<FFortniteMainBranchObjectVersion>();
+        let object_version = asset.get_object_version();
 
         let position = match version.version
             < FFortniteMainBranchObjectVersion::WorldCompositionTile3DOffset as i32
@@ -107,17 +102,17 @@ impl FWorldTileInfo {
         };
 
         let bounds = BoxProperty::new(asset, FName::default(), false, 0)?;
-        let layer = FWorldTileLayer::new(asset, engine_version)?;
+        let layer = FWorldTileLayer::new(asset)?;
 
         let mut hide_in_tile_view = None;
         let mut parent_tile_package_name = None;
-        if engine_version >= VER_UE4_WORLD_LEVEL_INFO_UPDATED {
+        if object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO_UPDATED {
             hide_in_tile_view = Some(asset.read_i32::<LittleEndian>()? == 1);
             parent_tile_package_name = asset.read_string()?;
         }
 
         let mut lod_list = None;
-        if engine_version >= VER_UE4_WORLD_LEVEL_INFO_LOD_LIST {
+        if object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO_LOD_LIST {
             let num_entries = asset.read_i32::<LittleEndian>()? as usize;
             let mut list = Vec::with_capacity(num_entries);
             for _i in 0..num_entries {
@@ -126,7 +121,7 @@ impl FWorldTileInfo {
             lod_list = Some(list);
         }
 
-        let z_order = match engine_version >= VER_UE4_WORLD_LEVEL_INFO_ZORDER {
+        let z_order = match object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO_ZORDER {
             true => Some(asset.read_i32::<LittleEndian>()?),
             false => None,
         };

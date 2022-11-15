@@ -7,6 +7,7 @@ use byteorder::LittleEndian;
 
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::error::Error;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
@@ -58,8 +59,12 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
         self.writer.get_map_value_override()
     }
 
-    fn get_engine_version(&self) -> i32 {
-        self.writer.get_engine_version()
+    fn get_object_version(&self) -> ObjectVersion {
+        self.writer.get_object_version()
+    }
+
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.writer.get_object_version_ue5()
     }
 
     fn get_import(&self, index: PackageIndex) -> Option<&Import> {

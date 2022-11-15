@@ -12,7 +12,6 @@ use crate::fproperty::FProperty;
 use crate::implement_get;
 use crate::kismet::KismetExpression;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::VER_UE4_16;
 use crate::unreal_types::PackageIndex;
 use crate::uproperty::UField;
 

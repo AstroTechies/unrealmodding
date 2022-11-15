@@ -56,10 +56,7 @@ impl MapProperty {
                         .map(|s| s.to_owned()),
                 }
                 .unwrap_or_else(|| String::from("Generic"));
-                Ok(
-                    StructProperty::new(asset, name, false, 1, 0, asset.get_engine_version())?
-                        .into(),
-                )
+                Ok(StructProperty::new(asset, name, false, 1, 0)?.into())
             }
             _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
         }

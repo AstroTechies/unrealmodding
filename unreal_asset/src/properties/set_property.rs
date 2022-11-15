@@ -22,7 +22,6 @@ impl SetProperty {
         include_header: bool,
         length: i64,
         duplication_index: i32,
-        engine_version: i32,
     ) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
@@ -35,7 +34,6 @@ impl SetProperty {
             false,
             length,
             0,
-            engine_version,
             false,
             array_type.clone(),
             property_guid,
@@ -47,7 +45,6 @@ impl SetProperty {
             false,
             length,
             0,
-            engine_version,
             false,
             array_type.clone(),
             property_guid,

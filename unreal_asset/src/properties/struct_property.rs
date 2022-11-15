@@ -1,8 +1,8 @@
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
+use crate::object_version::ObjectVersion;
 use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::{VER_UE4_SERIALIZE_RICH_CURVE_KEY, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
 use crate::unreal_types::{FName, Guid};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
@@ -36,7 +36,6 @@ impl StructProperty {
         include_header: bool,
         length: i64,
         _duplication_index: i32,
-        engine_version: i32,
     ) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
@@ -44,7 +43,7 @@ impl StructProperty {
 
         if include_header {
             struct_type = Some(asset.read_fname()?);
-            if engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 let mut guid = [0u8; 16];
                 asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
@@ -79,7 +78,7 @@ impl StructProperty {
 
         if let Some(ref e) = struct_type {
             if e.content.as_str() == "RichCurveKey"
-                && asset.get_engine_version() < VER_UE4_SERIALIZE_RICH_CURVE_KEY
+                && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
             {
                 custom_serialization = false;
             }
@@ -146,7 +145,7 @@ impl StructProperty {
     ) -> Result<usize, Error> {
         if include_header {
             asset.write_fname(struct_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
-            if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 asset.write_all(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
             }
             asset.write_property_guid(&self.property_guid)?;
@@ -159,7 +158,7 @@ impl StructProperty {
 
         if (struct_type.is_some()
             && struct_type.as_ref().unwrap().content.as_str() == "RichCurveKey")
-            && asset.get_engine_version() < VER_UE4_SERIALIZE_RICH_CURVE_KEY
+            && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
         {
             has_custom_serialization = false;
         }

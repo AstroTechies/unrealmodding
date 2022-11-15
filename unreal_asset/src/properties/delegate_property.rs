@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use byteorder::LittleEndian;
 
 use crate::{

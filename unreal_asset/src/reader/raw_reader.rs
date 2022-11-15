@@ -6,6 +6,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::error::Error;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
 use crate::unreal_types::{FName, Guid, PackageIndex};
 use crate::Import;
@@ -13,16 +14,22 @@ use crate::Import;
 /// A binary reader
 pub struct RawReader {
     cursor: Cursor<Vec<u8>>,
-    engine_version: i32,
+    object_version: ObjectVersion,
+    object_version_ue5: ObjectVersionUE5,
 
     empty_map: HashMap<String, String>,
 }
 
 impl RawReader {
-    pub fn new(cursor: Cursor<Vec<u8>>, engine_version: i32) -> Self {
+    pub fn new(
+        cursor: Cursor<Vec<u8>>,
+        object_version: ObjectVersion,
+        object_version_ue5: ObjectVersionUE5,
+    ) -> Self {
         RawReader {
             cursor,
-            engine_version,
+            object_version,
+            object_version_ue5,
             empty_map: HashMap::new(),
         }
     }
@@ -56,8 +63,12 @@ impl AssetTrait for RawReader {
         &self.empty_map
     }
 
-    fn get_engine_version(&self) -> i32 {
-        self.engine_version
+    fn get_object_version(&self) -> ObjectVersion {
+        self.object_version
+    }
+
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.object_version_ue5
     }
 
     fn get_import(&self, _index: PackageIndex) -> Option<&Import> {
