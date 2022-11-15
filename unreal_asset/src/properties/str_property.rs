@@ -31,7 +31,7 @@ pub struct TextProperty {
     pub namespace: Option<String>,
     pub table_id: Option<FName>,
     pub flags: u32,
-    pub history_type: Option<i8>,
+    pub history_type: TextHistoryType,
     pub value: Option<String>,
 }
 impl_property_data_trait!(TextProperty);
@@ -101,11 +101,10 @@ impl TextProperty {
         }
 
         let flags = asset.read_u32::<LittleEndian>()?;
-        let mut history_type = None;
+        let mut history_type = TextHistoryType::Base;
         let mut table_id = None;
         if asset.get_engine_version() >= VER_UE4_FTEXT_HISTORY {
-            history_type = Some(asset.read_i8()?);
-            let history_type: TextHistoryType = history_type.unwrap().try_into()?;
+            history_type = TextHistoryType::try_from(asset.read_i8()?)?;
 
             match history_type {
                 TextHistoryType::None => {
@@ -174,11 +173,8 @@ impl PropertyTrait for TextProperty {
         asset.write_u32::<LittleEndian>(self.flags)?;
 
         if asset.get_engine_version() >= VER_UE4_FTEXT_HISTORY {
-            let history_type = self
-                .history_type
-                .ok_or_else(|| PropertyError::property_field_none("history_type", "i8"))?;
-            asset.write_i8(history_type)?;
-            let history_type = history_type.try_into()?;
+            let history_type = self.history_type;
+            asset.write_i8(history_type.into())?;
             match history_type {
                 TextHistoryType::None => {
                     if asset.get_custom_version::<FEditorObjectVersion>().version

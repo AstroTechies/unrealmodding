@@ -61,7 +61,7 @@ pub enum EBlueprintTextLiteralType {
     StringTableEntry,
 }
 
-#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(i8)]
 pub enum TextHistoryType {
     None = -1,
@@ -78,6 +78,7 @@ pub enum TextHistoryType {
     Transform,
     StringTableEntry,
     TextGenerator,
+    RawText, // Uncertain, Back 4 Blood specific serialization
 }
 
 impl Default for TextHistoryType {

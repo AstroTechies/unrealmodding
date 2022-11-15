@@ -79,6 +79,17 @@ pub struct BoxProperty {
 }
 impl_property_data_trait!(BoxProperty);
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct Box2DProperty {
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
+    pub v1: Vector2DProperty,
+    pub v2: Vector2DProperty,
+    pub is_valid: bool,
+}
+impl_property_data_trait!(Box2DProperty);
+
 impl VectorProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
@@ -330,6 +341,42 @@ impl PropertyTrait for BoxProperty {
         optional_guid_write!(self, asset, include_header);
         let total_size =
             self.v1.write(asset, include_header)? + self.v2.write(asset, include_header)?;
+        asset.write_bool(self.is_valid)?;
+        Ok(total_size + size_of::<bool>())
+    }
+}
+
+impl Box2DProperty {
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
+        name: FName,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+
+        Ok(Box2DProperty {
+            name: name.clone(),
+            property_guid,
+            duplication_index,
+            v1: Vector2DProperty::new(asset, name.clone(), false, 0)?,
+            v2: Vector2DProperty::new(asset, name.clone(), false, 0)?,
+            is_valid: asset.read_bool()?,
+        })
+    }
+}
+
+impl PropertyTrait for Box2DProperty {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &mut Writer,
+        include_header: bool,
+    ) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, include_header);
+
+        let total_size =
+            self.v1.write(asset, include_header)? + self.v2.write(asset, include_header)?;
+
         asset.write_bool(self.is_valid)?;
         Ok(total_size + size_of::<bool>())
     }

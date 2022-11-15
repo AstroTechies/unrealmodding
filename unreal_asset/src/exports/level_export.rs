@@ -13,7 +13,7 @@ use crate::unreal_types::NamespacedString;
 pub struct LevelExport {
     pub normal_export: NormalExport,
 
-    pub index_data: Vec<i32>,
+    pub actors: Vec<i32>,
     pub level_type: NamespacedString,
     pub flags_probably: u64,
     pub misc_category_data: Vec<i32>,
@@ -31,10 +31,10 @@ impl LevelExport {
 
         asset.read_i32::<LittleEndian>()?;
 
-        let num_index_entries = asset.read_i32::<LittleEndian>()?;
-        let mut index_data = Vec::with_capacity(num_index_entries as usize);
-        for _i in 0..num_index_entries as usize {
-            index_data.push(asset.read_i32::<LittleEndian>()?);
+        let num_actors = asset.read_i32::<LittleEndian>()?;
+        let mut actors = Vec::with_capacity(num_actors as usize);
+        for _i in 0..num_actors as usize {
+            actors.push(asset.read_i32::<LittleEndian>()?);
         }
 
         let nms = asset.read_string()?;
@@ -52,7 +52,7 @@ impl LevelExport {
 
         Ok(LevelExport {
             normal_export,
-            index_data,
+            actors,
             level_type,
             flags_probably,
             misc_category_data,
@@ -65,9 +65,9 @@ impl ExportTrait for LevelExport {
         self.normal_export.write(asset)?;
 
         asset.write_i32::<LittleEndian>(0)?;
-        asset.write_i32::<LittleEndian>(self.index_data.len() as i32)?;
-        for index in &self.index_data {
-            asset.write_i32::<LittleEndian>(*index)?;
+        asset.write_i32::<LittleEndian>(self.actors.len() as i32)?;
+        for actor in &self.actors {
+            asset.write_i32::<LittleEndian>(*actor)?;
         }
 
         asset.write_string(&self.level_type.namespace)?;
