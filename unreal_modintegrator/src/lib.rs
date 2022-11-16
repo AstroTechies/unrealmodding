@@ -7,6 +7,7 @@ use error::IntegrationError;
 use log::debug;
 use serde_json::Value;
 
+use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::{
     exports::{data_table_export::DataTable, Export, ExportBaseTrait},
     properties::{
@@ -167,16 +168,16 @@ pub trait IntegratorConfig<'data, D, E: std::error::Error + 'static> {
 
     const GAME_NAME: &'static str;
     const INTEGRATOR_VERSION: &'static str;
-    const ENGINE_VERSION: i32;
+    const ENGINE_VERSION: EngineVersion;
 }
 
 fn read_in_memory(
     uasset: Vec<u8>,
     uexp: Option<Vec<u8>>,
-    engine_version: i32,
+    engine_version: EngineVersion,
 ) -> Result<Asset, Error> {
     let mut asset = Asset::new(uasset, uexp);
-    asset.engine_version = engine_version;
+    asset.set_engine_version(engine_version);
     asset.parse_data()?;
     Ok(asset)
 }
