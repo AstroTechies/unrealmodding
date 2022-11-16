@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::io::{self, SeekFrom};
 
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
@@ -18,6 +19,7 @@ pub trait AssetTrait {
     fn get_map_key_override(&self) -> &HashMap<String, String>;
     fn get_map_value_override(&self) -> &HashMap<String, String>;
 
+    fn get_engine_version(&self) -> EngineVersion;
     fn get_object_version(&self) -> ObjectVersion;
     fn get_object_version_ue5(&self) -> ObjectVersionUE5;
 

@@ -6,6 +6,7 @@ use std::io::{self, SeekFrom};
 use byteorder::LittleEndian;
 
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::engine_version::EngineVersion;
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
@@ -92,6 +93,10 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
 
     fn get_map_value_override(&self) -> &HashMap<String, String> {
         self.reader.get_map_value_override()
+    }
+
+    fn get_engine_version(&self) -> EngineVersion {
+        self.reader.get_engine_version()
     }
 
     fn get_object_version(&self) -> ObjectVersion {

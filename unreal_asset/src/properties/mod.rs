@@ -753,6 +753,7 @@ property_inner_fname! {
     IntProperty: "IntProperty",
     MapProperty: "MapProperty",
     MulticastDelegateProperty: "MulticastDelegateProperty",
+    DelegateProperty: "DelegateProperty",
     NameProperty: "NameProperty",
     ObjectProperty: "ObjectProperty",
     AssetObjectProperty: "AssetObjectProperty",

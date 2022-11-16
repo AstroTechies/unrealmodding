@@ -7,6 +7,7 @@ use byteorder::LittleEndian;
 use lazy_static::lazy_static;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+use crate::engine_version::EngineVersion;
 use crate::error::Error;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{new_guid, Guid};
@@ -18,64 +19,66 @@ pub struct CustomVersion {
     pub guid: Guid,
     pub friendly_name: Option<String>,
     pub version: i32,
+    pub version_mappings: &'static [(EngineVersion, i32)],
 }
 
 #[rustfmt::skip]
 lazy_static! {
-    static ref GUID_TO_FRIENDLY_NAME: HashMap<Guid, String> = HashMap::from([
-        ( new_guid(0, 0, 0, 0xF99D40C1), String::from("UnusedCustomVersionKey") ),
-        ( new_guid(0xB0D832E4, 0x1F894F0D, 0xACCF7EB7, 0x36FD4AA2), String::from("FBlueprintsObjectVersion") ),
-        ( new_guid(0xE1C64328, 0xA22C4D53, 0xA36C8E86, 0x6417BD8C), String::from("FBuildObjectVersion") ),
-        ( new_guid(0xB02B49B5, 0xBB2044E9, 0xA30432B7, 0x52E40360), String::from("FMobileObjectVersion") ),
-        ( new_guid(0xA4E4105C, 0x59A149B5, 0xA7C540C4, 0x547EDFEE), String::from("FNetworkingObjectVersion") ),
-        ( new_guid(0x39C831C9, 0x5AE647DC, 0x9A449C17, 0x3E1C8E7C), String::from("FOnlineObjectVersion") ),
-        ( new_guid(0x78F01B33, 0xEBEA4F98, 0xB9B484EA, 0xCCB95AA2), String::from("FPhysicsObjectVersion") ),
-        ( new_guid(0x6631380F, 0x2D4D43E0, 0x8009CF27, 0x6956A95A), String::from("FPlatformObjectVersion") ),
-        ( new_guid(0x12F88B9F, 0x88754AFC, 0xA67CD90C, 0x383ABD29), String::from("FRenderingObjectVersion") ),
-        ( new_guid(0x7B5AE74C, 0xD2704C10, 0xA9585798, 0x0B212A5A), String::from("FSequencerObjectVersion") ),
-        ( new_guid(0xD7296918, 0x1DD64BDD, 0x9DE264A8, 0x3CC13884), String::from("FVRObjectVersion") ),
-        ( new_guid(0xC2A15278, 0xBFE74AFE, 0x6C1790FF, 0x531DF755), String::from("FLoadTimesObjectVersion") ),
-        ( new_guid(0x6EACA3D4, 0x40EC4CC1, 0xB7868BED, 0x9428FC5), String::from("FGeometryObjectVersion") ),
-        ( new_guid(0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA), String::from("FAnimPhysObjectVersion") ), //
-        ( new_guid(0xAF43A65D, 0x7FD34947, 0x98733E8E, 0xD9C1BB05), String::from("FAnimObjectVersion") ),
-        ( new_guid(0x6B266CEC, 0x1EC74B8F, 0xA30BE4D9, 0x0942FC07), String::from("FReflectionCaptureObjectVersion") ),
-        ( new_guid(0x0DF73D61, 0xA23F47EA, 0xB72789E9, 0x0C41499A), String::from("FAutomationObjectVersion") ),
-        ( new_guid(0x9DFFBCD6, 0x494F0158, 0xE2211282, 0x3C92A888), String::from("FEnterpriseObjectVersion") ),
-        ( new_guid(0xF2AED0AC, 0x9AFE416F, 0x8664AA7F, 0xFA26D6FC), String::from("FNiagaraObjectVersion") ),
-        ( new_guid(0x174F1F0B, 0xB4C645A5, 0xB13F2EE8, 0xD0FB917D), String::from("FDestructionObjectVersion") ),
-        ( new_guid(0x35F94A83, 0xE258406C, 0xA31809F5, 0x9610247C), String::from("FExternalPhysicsCustomObjectVersion") ),
-        ( new_guid(0xB68FC16E, 0x8B1B42E2, 0xB453215C, 0x058844FE), String::from("FExternalPhysicsMaterialCustomObjectVersion") ),
-        ( new_guid(0xB2E18506, 0x4273CFC2, 0xA54EF4BB, 0x758BBA07), String::from("FCineCameraObjectVersion") ),
-        ( new_guid(0x64F58936, 0xFD1B42BA, 0xBA967289, 0xD5D0FA4E), String::from("FVirtualProductionObjectVersion") ),
-        ( new_guid(0x6f0ed827, 0xa6094895, 0x9c91998d, 0x90180ea4), String::from("FMediaFrameworkObjectVersion") ),
-        ( new_guid(0xAFE08691, 0x3A0D4952, 0xB673673B, 0x7CF22D1E), String::from("FPoseDriverCustomVersion") ),
-        ( new_guid(0xCB8AB0CD, 0xE78C4BDE, 0xA8621393, 0x14E9EF62), String::from("FTempCustomVersion") ),
-        ( new_guid(0x2EB5FDBD, 0x01AC4D10, 0x8136F38F, 0x3393A5DA), String::from("FAnimationCustomVersion") ),
-        ( new_guid(0x717F9EE7, 0xE9B0493A, 0x88B39132, 0x1B388107), String::from("FAssetRegistryVersion") ),
-        ( new_guid(0xFB680AF2, 0x59EF4BA3, 0xBAA819B5, 0x73C8443D), String::from("FClothingAssetCustomVersion") ),
-        ( new_guid(0x4A56EB40, 0x10F511DC, 0x92D3347E, 0xB2C96AE7), String::from("FParticleSystemCustomVersion") ),
-        ( new_guid(0xD78A4A00, 0xE8584697, 0xBAA819B5, 0x487D46B4), String::from("FSkeletalMeshCustomVersion") ),
-        ( new_guid(0x5579F886, 0x933A4C1F, 0x83BA087B, 0x6361B92F), String::from("FRecomputeTangentCustomVersion") ),
-        ( new_guid(0x612FBE52, 0xDA53400B, 0x910D4F91, 0x9FB1857C), String::from("FOverlappingVerticesCustomVersion") ),
-        ( new_guid(0x430C4D19, 0x71544970, 0x87699B69, 0xDF90B0E5), String::from("FFoliageCustomVersion") ),
-        ( new_guid(0xaafe32bd, 0x53954c14, 0xb66a5e25, 0x1032d1dd), String::from("FProceduralFoliageCustomVersion") ),
-        ( new_guid(0xab965196, 0x45d808fc, 0xb7d7228d, 0x78ad569e), String::from("FLiveLinkCustomVersion") ),
+    static ref GUID_TO_VERSION_INFO: HashMap<Guid, (String, Option<&'static [(EngineVersion, i32)]>)> = HashMap::from([
+        ( new_guid(0, 0, 0, 0xF99D40C1),                            (String::from("UnusedCustomVersionKey"), None) ),
+        ( new_guid(0xB0D832E4, 0x1F894F0D, 0xACCF7EB7, 0x36FD4AA2), (String::from("FBlueprintsObjectVersion"), None) ),
+        ( new_guid(0xE1C64328, 0xA22C4D53, 0xA36C8E86, 0x6417BD8C), (String::from("FBuildObjectVersion"), None) ),
+        ( new_guid(0xB02B49B5, 0xBB2044E9, 0xA30432B7, 0x52E40360), (String::from("FMobileObjectVersion"), None) ),
+        ( new_guid(0xA4E4105C, 0x59A149B5, 0xA7C540C4, 0x547EDFEE), (String::from("FNetworkingObjectVersion"), None) ),
+        ( new_guid(0x39C831C9, 0x5AE647DC, 0x9A449C17, 0x3E1C8E7C), (String::from("FOnlineObjectVersion"), None) ),
+        ( new_guid(0x78F01B33, 0xEBEA4F98, 0xB9B484EA, 0xCCB95AA2), (String::from("FPhysicsObjectVersion"), None) ),
+        ( new_guid(0x6631380F, 0x2D4D43E0, 0x8009CF27, 0x6956A95A), (String::from("FPlatformObjectVersion"), None) ),
+        ( new_guid(0x12F88B9F, 0x88754AFC, 0xA67CD90C, 0x383ABD29), (String::from("FRenderingObjectVersion"), None) ),
+        ( new_guid(0x7B5AE74C, 0xD2704C10, 0xA9585798, 0x0B212A5A), (String::from("FSequencerObjectVersion"), None) ),
+        ( new_guid(0xD7296918, 0x1DD64BDD, 0x9DE264A8, 0x3CC13884), (String::from("FVRObjectVersion"), None) ),
+        ( new_guid(0xC2A15278, 0xBFE74AFE, 0x6C1790FF, 0x531DF755), (String::from("FLoadTimesObjectVersion"), None) ),
+        ( new_guid(0x6EACA3D4, 0x40EC4CC1, 0xB7868BED, 0x9428FC5),  (String::from("FGeometryObjectVersion"), None) ),
+        ( new_guid(0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA), (String::from("FAnimPhysObjectVersion"), None) ), //
+        ( new_guid(0xAF43A65D, 0x7FD34947, 0x98733E8E, 0xD9C1BB05), (String::from("FAnimObjectVersion"), None) ),
+        ( new_guid(0x6B266CEC, 0x1EC74B8F, 0xA30BE4D9, 0x0942FC07), (String::from("FReflectionCaptureObjectVersion"), None) ),
+        ( new_guid(0x0DF73D61, 0xA23F47EA, 0xB72789E9, 0x0C41499A), (String::from("FAutomationObjectVersion"), None) ),
+        ( new_guid(0x9DFFBCD6, 0x494F0158, 0xE2211282, 0x3C92A888), (String::from("FEnterpriseObjectVersion"), None) ),
+        ( new_guid(0xF2AED0AC, 0x9AFE416F, 0x8664AA7F, 0xFA26D6FC), (String::from("FNiagaraObjectVersion"), None) ),
+        ( new_guid(0x174F1F0B, 0xB4C645A5, 0xB13F2EE8, 0xD0FB917D), (String::from("FDestructionObjectVersion"), None) ),
+        ( new_guid(0x35F94A83, 0xE258406C, 0xA31809F5, 0x9610247C), (String::from("FExternalPhysicsCustomObjectVersion"), None) ),
+        ( new_guid(0xB68FC16E, 0x8B1B42E2, 0xB453215C, 0x058844FE), (String::from("FExternalPhysicsMaterialCustomObjectVersion"), None) ),
+        ( new_guid(0xB2E18506, 0x4273CFC2, 0xA54EF4BB, 0x758BBA07), (String::from("FCineCameraObjectVersion"), None) ),
+        ( new_guid(0x64F58936, 0xFD1B42BA, 0xBA967289, 0xD5D0FA4E), (String::from("FVirtualProductionObjectVersion"), None) ),
+        ( new_guid(0x6f0ed827, 0xa6094895, 0x9c91998d, 0x90180ea4), (String::from("FMediaFrameworkObjectVersion"), None) ),
+        ( new_guid(0xAFE08691, 0x3A0D4952, 0xB673673B, 0x7CF22D1E), (String::from("FPoseDriverCustomVersion"), None) ),
+        ( new_guid(0xCB8AB0CD, 0xE78C4BDE, 0xA8621393, 0x14E9EF62), (String::from("FTempCustomVersion"), None) ),
+        ( new_guid(0x2EB5FDBD, 0x01AC4D10, 0x8136F38F, 0x3393A5DA), (String::from("FAnimationCustomVersion"), None) ),
+        ( new_guid(0x717F9EE7, 0xE9B0493A, 0x88B39132, 0x1B388107), (String::from("FAssetRegistryVersion"), None) ),
+        ( new_guid(0xFB680AF2, 0x59EF4BA3, 0xBAA819B5, 0x73C8443D), (String::from("FClothingAssetCustomVersion"), None) ),
+        ( new_guid(0x4A56EB40, 0x10F511DC, 0x92D3347E, 0xB2C96AE7), (String::from("FParticleSystemCustomVersion"), None) ),
+        ( new_guid(0xD78A4A00, 0xE8584697, 0xBAA819B5, 0x487D46B4), (String::from("FSkeletalMeshCustomVersion"), None) ),
+        ( new_guid(0x5579F886, 0x933A4C1F, 0x83BA087B, 0x6361B92F), (String::from("FRecomputeTangentCustomVersion"), None) ),
+        ( new_guid(0x612FBE52, 0xDA53400B, 0x910D4F91, 0x9FB1857C), (String::from("FOverlappingVerticesCustomVersion"), None) ),
+        ( new_guid(0x430C4D19, 0x71544970, 0x87699B69, 0xDF90B0E5), (String::from("FFoliageCustomVersion"), None) ),
+        ( new_guid(0xaafe32bd, 0x53954c14, 0xb66a5e25, 0x1032d1dd), (String::from("FProceduralFoliageCustomVersion"), None) ),
+        ( new_guid(0xab965196, 0x45d808fc, 0xb7d7228d, 0x78ad569e), (String::from("FLiveLinkCustomVersion"), None) ),
 
-        ( FCoreObjectVersion::guid(), String::from(FCoreObjectVersion::friendly_name()) ),
-        ( FEditorObjectVersion::guid(), String::from(FEditorObjectVersion::friendly_name()) ),
-        ( FFrameworkObjectVersion::guid(), String::from(FFrameworkObjectVersion::friendly_name()) ),
-        ( FFortniteMainBranchObjectVersion::guid(), String::from(FFortniteMainBranchObjectVersion::friendly_name()) ),
-        ( FReleaseObjectVersion::guid(), String::from(FReleaseObjectVersion::friendly_name()) )
+        ( FCoreObjectVersion::GUID,                                 (String::from(FCoreObjectVersion::FRIENDLY_NAME), Some(FCoreObjectVersion::VERSION_MAPPINGS)) ),
+        ( FEditorObjectVersion::GUID,                               (String::from(FEditorObjectVersion::FRIENDLY_NAME), Some(FEditorObjectVersion::VERSION_MAPPINGS)) ),
+        ( FFrameworkObjectVersion::GUID,                            (String::from(FFrameworkObjectVersion::FRIENDLY_NAME), Some(FFrameworkObjectVersion::VERSION_MAPPINGS)) ),
+        ( FFortniteMainBranchObjectVersion::GUID,                   (String::from(FFortniteMainBranchObjectVersion::FRIENDLY_NAME), Some(FFortniteMainBranchObjectVersion::VERSION_MAPPINGS)) ),
+        ( FReleaseObjectVersion::GUID,                              (String::from(FReleaseObjectVersion::FRIENDLY_NAME), Some(FReleaseObjectVersion::VERSION_MAPPINGS)) )
     ]);
 }
 
 impl CustomVersion {
     pub fn new(guid: Guid, version: i32) -> Self {
-        let friendly_name = GUID_TO_FRIENDLY_NAME.get(&guid).map(|e| e.to_owned());
+        let version_info = GUID_TO_VERSION_INFO.get(&guid).map(|e| e.to_owned());
         CustomVersion {
             guid,
-            friendly_name,
+            friendly_name: version_info.as_ref().map(|e| e.0.clone()),
             version,
+            version_mappings: version_info.map(|e| e.1).flatten().unwrap_or_default(),
         }
     }
 
@@ -83,10 +86,13 @@ impl CustomVersion {
         let mut key = [0u8; 16];
         asset.read_exact(&mut key)?;
         let version = asset.read_i32::<LittleEndian>()?;
+
+        let version_info = GUID_TO_VERSION_INFO.get(&key).map(|e| e.to_owned());
         Ok(Self {
             guid: key,
-            friendly_name: None,
+            friendly_name: version_info.as_ref().map(|e| e.0.clone()),
             version,
+            version_mappings: version_info.map(|e| e.1).flatten().unwrap_or_default(),
         })
     }
 
@@ -101,39 +107,68 @@ impl CustomVersion {
         T: CustomVersionTrait + Into<i32>,
     {
         CustomVersion {
-            guid: T::guid(),
-            friendly_name: Some(String::from(T::friendly_name())),
+            guid: T::GUID,
+            friendly_name: Some(T::FRIENDLY_NAME.to_string()),
             version: version.into(),
+            version_mappings: T::VERSION_MAPPINGS,
         }
+    }
+
+    pub fn get_engine_version_from_version_number(
+        &self,
+        version_number: i32,
+    ) -> Option<EngineVersion> {
+        self.version_mappings
+            .iter()
+            .find(|(_, version)| *version == version_number)
+            .map(|(engine_version, _)| *engine_version)
+    }
+
+    pub fn get_version_number_from_engine_version(
+        &self,
+        engine_version: EngineVersion,
+    ) -> Option<i32> {
+        self.version_mappings
+            .iter()
+            .find(|(version, _)| *version == engine_version)
+            .map(|(_, version)| *version)
+    }
+
+    pub fn get_default_custom_version_container(
+        engine_version: EngineVersion,
+    ) -> Vec<CustomVersion> {
+        let mut container = Vec::new();
+
+        for (guid, _) in GUID_TO_VERSION_INFO.iter() {
+            let mut version = CustomVersion::new(*guid, 0);
+            if let Some(version_number) =
+                version.get_version_number_from_engine_version(engine_version)
+            {
+                version.version = version_number;
+                container.push(version);
+            }
+        }
+
+        container
     }
 }
 
 pub trait CustomVersionTrait {
-    fn from_engine_version(version: i32) -> Self;
-    fn friendly_name() -> &'static str;
-    fn guid() -> Guid;
+    const VERSION_MAPPINGS: &'static [(EngineVersion, i32)];
+    const FRIENDLY_NAME: &'static str;
+    const GUID: Guid;
 }
 
 macro_rules! impl_custom_version_trait {
     ($enum_name:ident, $friendly_name:expr, $guid:expr, $($ver_name:ident : $ver:ident),*) => {
         impl CustomVersionTrait for $enum_name {
-            fn from_engine_version(version: i32) -> Self {
+            const VERSION_MAPPINGS: &'static [(EngineVersion, i32)] = &[
                 $(
-                    if version >= crate::object_version::ObjectVersion::$ver_name {
-                        return $enum_name::$ver;
-                    }
+                    (EngineVersion::$ver_name, Self::$ver as i32),
                 )*
-
-                return $enum_name::BeforeCustomVersionWasAdded;
-            }
-
-            fn friendly_name() -> &'static str {
-                $friendly_name
-            }
-
-            fn guid() -> Guid {
-                $guid
-            }
+            ];
+            const FRIENDLY_NAME: &'static str = $friendly_name;
+            const GUID: Guid = $guid;
         }
     }
 }
@@ -341,13 +376,13 @@ impl_custom_version_trait!(
     new_guid(0x601D1886, 0xAC644F84, 0xAA16D3DE, 0x0DEAC7D6),
     VER_UE4_AUTOMATIC_VERSION: LatestVersion,
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
-    VER_UE4_CORRECT_LICENSEE_FLAG: RemoveLandscapeWaterInfo,
-    VER_UE4_ASSETREGISTRY_DEPENDENCYFLAGS: ChaosSolverPropertiesMoved,
-    VER_UE4_NON_OUTER_PACKAGE_IMPORT: LevelsetSerializationSupportForBodySetup,
-    VER_UE4_SKINWEIGHT_PROFILE_DATA_LAYOUT_CHANGES: SupportMultipleWaterBodiesPerExclusionVolume,
-    VER_UE4_ADDED_PACKAGE_OWNER: AnimLayerGuidConformation,
-    VER_UE4_FIX_WIDE_STRING_CRC: ReplaceLakeCollision,
-    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: FoliageLazyObjPtrToSoftObjPtr,
+    VER_UE4_27: RemoveLandscapeWaterInfo,
+    VER_UE4_26: ChaosSolverPropertiesMoved,
+    VER_UE4_24: AnimLayerGuidConformation,
+    VER_UE4_23: SupportVirtualBoneInRetargeting,
+    VER_UE4_22: FortHUDElementNowRequiresTag,
+    VER_UE4_21: FoliageLazyObjPtrToSoftObjPtr,
+    VER_UE4_20: CachedMaterialQualityNodeUsage,
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
@@ -521,20 +556,18 @@ impl_custom_version_trait!(
     new_guid(0xCFFC743F, 0x43B04480, 0x939114DF, 0x171D2073),
     VER_UE4_AUTOMATIC_VERSION: LatestVersion,
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
-    VER_UE4_ADDED_PACKAGE_OWNER: StoringUCSSerializationIndex,
-    VER_UE4_FIX_WIDE_STRING_CRC: BlueprintGeneratedClassIsAlwaysAuthoritative,
-    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: EditableEventsUseConstRefParameters,
-    VER_UE4_POINTLIGHT_SOURCE_ORIENTATION: UserDefinedStructsStoreDefaultInstance,
-    VER_UE4_ADDED_SOFT_OBJECT_PATH: PinsStoreFName,
-    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: LocalVariablesBlueprintVisible,
-    VER_UE4_64BIT_EXPORTMAP_SERIALSIZES: HardSoundReferences,
-    VER_UE4_ADDED_SEARCHABLE_NAMES: ChangeAudioComponentOverrideSubtitlePriorityDefault,
-    VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS: GeometryCacheMissingMaterials,
-    VER_UE4_COMPRESSED_SHADER_RESOURCES: MoveCurveTypesToSkeleton,
-    VER_UE4_INSTANCED_STEREO_UNIFORM_REFACTOR: WheelOffsetIsFromWheel,
-    VER_UE4_NAME_HASHES_SERIALIZED: AddSourceReferenceSkeletonToRig,
-    VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG: AnimBlueprintSubgraphFix,
-    VER_UE4_STREAMABLE_TEXTURE_AABB: UseBodySetupCollisionProfile,
+    VER_UE4_25: StoringUCSSerializationIndex,
+    VER_UE4_24: EnforceBlueprintFunctionVisibility,
+    VER_UE4_22: BlueprintGeneratedClassIsAlwaysAuthoritative,
+    VER_UE4_20: EditableEventsUseConstRefParameters,
+    VER_UE4_19: FunctionTerminatorNodesUseMemberReference,
+    VER_UE4_18: UserDefinedStructsBlueprintVisible,
+    VER_UE4_17: LocalVariablesBlueprintVisible,
+    VER_UE4_16: HardSoundReferences,
+    VER_UE4_15: ChangeAudioComponentOverrideSubtitlePriorityDefault,
+    VER_UE4_14: GeometryCacheMissingMaterials,
+    VER_UE4_13: RemoveSoundWaveCompressionName,
+    VER_UE4_12: FixNonTransactionalPins,
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
@@ -571,10 +604,10 @@ impl_custom_version_trait!(
     new_guid(0x375EC13C, 0x06E448FB, 0xB50084F0, 0x262A717E),
     VER_UE4_AUTOMATIC_VERSION: LatestVersion,
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
-    VER_UE4_ADDED_PACKAGE_OWNER: FProperties,
-    VER_UE4_FIX_WIDE_STRING_CRC: SkeletalMaterialEditorDataStripping,
-    VER_UE4_ADDED_SEARCHABLE_NAMES: EnumProperties,
-    VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG: MaterialInputNativeSerialize,
+    VER_UE4_25: FProperties,
+    VER_UE4_22: SkeletalMaterialEditorDataStripping,
+    VER_UE4_15: EnumProperties,
+    VER_UE4_12: MaterialInputNativeSerialize,
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
@@ -759,19 +792,20 @@ impl_custom_version_trait!(
     new_guid(0xE4B068ED, 0xF49442E9, 0xA231DA0B, 0x2E46BB41),
     VER_UE4_AUTOMATIC_VERSION: LatestVersion,
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
-    VER_UE4_NON_OUTER_PACKAGE_IMPORT: SkeletalMeshSourceDataSupport16bitOfMaterialNumber,
-    VER_UE4_ADDED_PACKAGE_OWNER: SkeletalMeshMoveEditorSourceDataToPrivateAsset,
-    VER_UE4_FIX_WIDE_STRING_CRC: MeshDescriptionTriangles,
-    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: MeshDescriptionNewAttributeFormat,
-    VER_UE4_ADDED_SOFT_OBJECT_PATH: AddedAlwaysSignNumberFormattingOption,
-    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: GatheredTextEditorOnlyPackageLocId,
-    VER_UE4_64BIT_EXPORTMAP_SERIALSIZES: MaterialThumbnailRenderingChanges,
-    VER_UE4_ADDED_SEARCHABLE_NAMES: UPropertryForMeshSectionSerialize,
-    VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS: AddedFontFaceAssets,
-    VER_UE4_COMPRESSED_SHADER_RESOURCES: RefactorMeshEditorMaterials,
-    VER_UE4_INSTANCED_STEREO_UNIFORM_REFACTOR: SplineComponentCurvesInStruct,
-    VER_UE4_NAME_HASHES_SERIALIZED: GatheredTextPackageCacheFixesV1,
-    VER_UE4_STREAMABLE_TEXTURE_AABB: GatheredTextProcessVersionFlagging,
+    VER_UE4_26: SkeletalMeshSourceDataSupport16bitOfMaterialNumber,
+    VER_UE4_25: SkeletalMeshMoveEditorSourceDataToPrivateAsset,
+    VER_UE4_24: SkeletalMeshBuildRefactor,
+    VER_UE4_23: RemoveLandscapeHoleMaterial,
+    VER_UE4_22: MeshDescriptionRemovedHoles,
+    VER_UE4_21: MeshDescriptionNewAttributeFormat,
+    VER_UE4_20: SerializeInstancedStaticMeshRenderData,
+    VER_UE4_19: AddedMorphTargetSectionIndices,
+    VER_UE4_17: GatheredTextEditorOnlyPackageLocId,
+    VER_UE4_16: MaterialThumbnailRenderingChanges,
+    VER_UE4_15: AddedInlineFontFaceAssets,
+    VER_UE4_14: AddedFontFaceAssets,
+    VER_UE4_13: SplineComponentCurvesInStruct,
+    VER_UE4_12: GatheredTextPackageCacheFixesV1,
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
@@ -863,10 +897,11 @@ impl_custom_version_trait!(
     new_guid(0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA),
     VER_UE4_AUTOMATIC_VERSION: LatestVersion,
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
-    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: GeometryCacheAssetDeprecation,
-    VER_UE4_POINTLIGHT_SOURCE_ORIENTATION: SaveEditorOnlyFullPoseForPoseAsset,
-    VER_UE4_ADDED_SOFT_OBJECT_PATH: AllowMultipleAudioPluginSettings,
-    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: CacheClothMeshInfluences,
+    VER_UE4_20: GeometryCacheAssetDeprecation,
+    VER_UE4_19: SaveEditorOnlyFullPoseForPoseAsset,
+    VER_UE4_18: AddLODToCurveMetaData,
+    VER_UE4_17: TuneSoftLimitStiffnessAndDamping,
+    VER_UE4_16: ThumbnailSceneInfoAndAssetImportDataAreTransactional,
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
@@ -1066,17 +1101,20 @@ impl_custom_version_trait!(
     new_guid(0x9C54D522, 0xA8264FBE, 0x94210746, 0x61B482D0),
     VER_UE4_AUTOMATIC_VERSION: LatestVersion,
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
-    VER_UE4_CORRECT_LICENSEE_FLAG: GeometryCollectionCacheRemovesMassToLocal,
-    VER_UE4_ASSETREGISTRY_DEPENDENCYFLAGS: StructureDataAddedToConvex,
-    VER_UE4_SKINWEIGHT_PROFILE_DATA_LAYOUT_CHANGES: ReleaseObjectVersionFixup,
-    VER_UE4_ADDED_PACKAGE_OWNER: FFieldPathOwnerSerialization,
-    VER_UE4_FIX_WIDE_STRING_CRC: UnusedSoundClass2dreverbSend,
-    VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID: TrailNodeBlendVariableNameChange,
-    VER_UE4_ADDED_SWEEP_WHILE_WALKING_FLAG: RenameNoTwistToAllowTwistInTwoBoneIK,
-    VER_UE4_ADDED_SEARCHABLE_NAMES: SpeedTreeBillboardSectionInfoFixup,
-    VER_UE4_TEMPLATE_INDEX_IN_COOKED_EXPORTS: AddComponentNodeTemplateUniqueNames,
-    VER_UE4_INSTANCED_STEREO_UNIFORM_REFACTOR: LevelTransArrayConvertedToTArray,
-    VER_UE4_NAME_HASHES_SERIALIZED: StaticMeshExtendedBoundsFix,
+    VER_UE4_27: LonglatTextureCubeDefaultMaxResolution,
+    VER_UE4_26: StructureDataAddedToConvex,
+    VER_UE4_25: FFieldPathOwnerSerialization,
+    VER_UE4_24: DeprecateFilmbackSettings,
+    VER_UE4_23: UnusedSoundClass2dreverbSend,
+    VER_UE4_21: TrailNodeBlendVariableNameChange,
+    VER_UE4_20: MeshDescriptionNewSerialization,
+    VER_UE4_19: RemovedMaterialSharedInputCollection,
+    VER_UE4_17: RenameNoTwistToAllowTwistInTwoBoneIK,
+    VER_UE4_16: SkyLightRemoveMobileIrradianceMap,
+    VER_UE4_15: SpeedTreeBillboardSectionInfoFixup,
+    VER_UE4_14: AddComponentNodeTemplateUniqueNames,
+    VER_UE4_13: LevelTransArrayConvertedToTArray,
+    VER_UE4_11: StaticMeshExtendedBoundsFix,
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 

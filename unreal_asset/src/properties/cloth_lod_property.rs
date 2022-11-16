@@ -121,7 +121,8 @@ impl ClothLodDataProperty {
         }
 
         let transition_down_skin_data_len = asset.read_i32::<LittleEndian>()?;
-        let transition_down_skin_data = Vec::with_capacity(transition_down_skin_data_len as usize);
+        let mut transition_down_skin_data =
+            Vec::with_capacity(transition_down_skin_data_len as usize);
         for _ in 0..transition_down_skin_data_len {
             transition_down_skin_data.push(MeshToMeshVertData::new(asset)?);
         }

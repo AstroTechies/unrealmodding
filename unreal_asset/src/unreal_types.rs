@@ -7,7 +7,7 @@ pub type Guid = [u8; 16];
 
 /// Create a Guid from 4 u32 values
 #[rustfmt::skip]
-pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
+pub const fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     [
         (a & 0xff) as u8, ((a >> 8) & 0xff) as u8, ((a >> 16) & 0xff) as u8, ((a >> 24) & 0xff) as u8,
         (b & 0xff) as u8, ((b >> 8) & 0xff) as u8, ((b >> 16) & 0xff) as u8, ((b >> 24) & 0xff) as u8,

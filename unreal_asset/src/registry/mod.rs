@@ -216,7 +216,7 @@ impl AssetRegistryState {
     /// If there is an IO error during write throws ['Io`] error.
     ///
     /// ['RegistryError']: error/enum.RegistryError.html
-    /// ['Io`]: error/enum.ErrorCode.html#variant.Io
+    /// ['Io']: error/enum.ErrorCode.html#variant.Io
     ///
     /// # Examples
     ///

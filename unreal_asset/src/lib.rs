@@ -53,6 +53,7 @@ pub mod bitvec_ext;
 mod crc;
 pub mod cursor_ext;
 pub mod custom_version;
+pub mod engine_version;
 pub mod enums;
 pub mod error;
 pub mod exports;
@@ -69,6 +70,9 @@ pub mod uproperty;
 
 use cursor_ext::CursorExt;
 use custom_version::{CustomVersion, CustomVersionTrait};
+use engine_version::{
+    get_object_versions, get_possible_versions, guess_engine_version, EngineVersion,
+};
 use error::Error;
 use exports::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
@@ -159,7 +163,7 @@ pub struct Asset {
     pub legacy_file_version: i32,
     pub unversioned: bool,
     pub file_license_version: i32,
-    pub custom_version: Vec<CustomVersion>,
+    pub custom_versions: Vec<CustomVersion>,
     // imports
     // exports
     // depends map
@@ -169,8 +173,8 @@ pub struct Asset {
     // preload dependencies
     pub generations: Vec<GenerationInfo>,
     pub package_guid: Guid,
-    pub engine_version_recorded: EngineVersion,
-    pub engine_version_compatible: EngineVersion,
+    pub engine_version_recorded: FEngineVersion,
+    pub engine_version_compatible: FEngineVersion,
     chunk_ids: Vec<i32>,
     pub package_flags: u32,
     pub package_source: u32,
@@ -249,6 +253,11 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
 
     fn get_map_value_override(&self) -> &HashMap<String, String> {
         self.asset.get_map_value_override()
+    }
+
+    #[inline(always)]
+    fn get_engine_version(&self) -> EngineVersion {
+        self.asset.get_engine_version()
     }
 
     #[inline(always)]
@@ -375,6 +384,15 @@ impl AssetTrait for Asset {
 
     fn get_map_value_override(&self) -> &HashMap<String, String> {
         &self.map_value_override
+    }
+
+    #[inline(always)]
+    fn get_engine_version(&self) -> EngineVersion {
+        guess_engine_version(
+            self.object_version,
+            self.object_version_ue5,
+            &self.custom_versions,
+        )
     }
 
     #[inline(always)]
@@ -526,11 +544,11 @@ impl<'a> Asset {
             legacy_file_version: 0,
             unversioned: true,
             file_license_version: 0,
-            custom_version: Vec::new(),
+            custom_versions: Vec::new(),
             generations: Vec::new(),
             package_guid: [0; 16],
-            engine_version_recorded: EngineVersion::unknown(),
-            engine_version_compatible: EngineVersion::unknown(),
+            engine_version_recorded: FEngineVersion::unknown(),
+            engine_version_compatible: FEngineVersion::unknown(),
             chunk_ids: Vec::new(),
             package_flags: 0,
             package_source: 0,
@@ -567,6 +585,18 @@ impl<'a> Asset {
             map_key_override: HashMap::new(), // todo: preinit
             map_value_override: HashMap::new(),
         }
+    }
+
+    pub fn set_engine_version(&mut self, engine_version: EngineVersion) {
+        if engine_version == EngineVersion::UNKNOWN {
+            return;
+        }
+
+        let (object_version, object_version_ue5) = get_object_versions(engine_version);
+
+        self.object_version = object_version;
+        self.object_version_ue5 = object_version_ue5;
+        self.custom_versions = CustomVersion::get_default_custom_version_container(engine_version);
     }
 
     fn parse_header(&mut self) -> Result<(), Error> {
@@ -619,7 +649,7 @@ impl<'a> Asset {
                 // read version
                 let version = self.cursor.read_i32::<LittleEndian>()?;
 
-                self.custom_version.push(CustomVersion::new(guid, version));
+                self.custom_versions.push(CustomVersion::new(guid, version));
             }
         }
 
@@ -675,15 +705,15 @@ impl<'a> Asset {
 
         // read advanced engine version
         if self.object_version >= ObjectVersion::VER_UE4_ENGINE_VERSION_OBJECT {
-            self.engine_version_recorded = EngineVersion::read(&mut self.cursor)?;
+            self.engine_version_recorded = FEngineVersion::read(&mut self.cursor)?;
         } else {
             self.engine_version_recorded =
-                EngineVersion::new(4, 0, 0, self.cursor.read_u32::<LittleEndian>()?, None);
+                FEngineVersion::new(4, 0, 0, self.cursor.read_u32::<LittleEndian>()?, None);
         }
         if self.object_version
             >= ObjectVersion::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
         {
-            self.engine_version_compatible = EngineVersion::read(&mut self.cursor)?;
+            self.engine_version_compatible = FEngineVersion::read(&mut self.cursor)?;
         } else {
             self.engine_version_compatible = self.engine_version_recorded.clone();
         }
@@ -1193,8 +1223,8 @@ impl<'a> Asset {
             match self.unversioned {
                 true => cursor.write_i32::<LittleEndian>(0)?,
                 false => {
-                    cursor.write_i32::<LittleEndian>(self.custom_version.len() as i32)?;
-                    for custom_version in &self.custom_version {
+                    cursor.write_i32::<LittleEndian>(self.custom_versions.len() as i32)?;
+                    for custom_version in &self.custom_versions {
                         cursor.write_all(&custom_version.guid)?;
                         cursor.write_i32::<LittleEndian>(custom_version.version)?;
                     }
@@ -1615,7 +1645,7 @@ impl Debug for Asset {
             .field("legacy_file_version", &self.legacy_file_version)
             .field("unversioned", &self.unversioned)
             .field("file_license_version", &self.file_license_version)
-            .field("custom_version", &self.custom_version)
+            .field("custom_version", &self.custom_versions)
             // imports
             // exports
             // depends map
@@ -1625,6 +1655,7 @@ impl Debug for Asset {
             // preload dependencies
             .field("generations", &self.generations)
             .field("package_guid", &self.package_guid)
+            .field("engine_version", &self.get_engine_version())
             .field("engine_version_recorded", &self.engine_version_recorded)
             .field("engine_version_compatible", &self.engine_version_compatible)
             .field("chunk_ids", &self.chunk_ids)
@@ -1674,14 +1705,14 @@ impl Debug for Asset {
 
 /// EngineVersion for an Asset
 #[derive(Debug, Clone)]
-pub struct EngineVersion {
+pub struct FEngineVersion {
     major: u16,
     minor: u16,
     patch: u16,
     build: u32,
     branch: Option<String>,
 }
-impl EngineVersion {
+impl FEngineVersion {
     fn new(major: u16, minor: u16, patch: u16, build: u32, branch: Option<String>) -> Self {
         Self {
             major,

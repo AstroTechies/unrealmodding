@@ -5,6 +5,7 @@ use byteorder::WriteBytesExt;
 
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, PackageIndex};
@@ -60,6 +61,10 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
 
     fn get_map_value_override(&self) -> &HashMap<String, String> {
         &self.empty_map
+    }
+
+    fn get_engine_version(&self) -> EngineVersion {
+        guess_engine_version(self.object_version, self.object_version_ue5, &[])
     }
 
     fn get_object_version(&self) -> ObjectVersion {
