@@ -132,6 +132,13 @@ impl Import {
     }
 }
 
+/// Parent Class Info
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ParentClassInfo {
+    pub parent_class_path: FName,
+    pub parent_class_export_name: FName,
+}
+
 const UE4_ASSET_MAGIC: u32 = u32::from_be_bytes([0xc1, 0x83, 0x2a, 0x9e]);
 
 struct AssetHeader {
@@ -363,7 +370,16 @@ impl AssetTrait for Asset {
     where
         T: CustomVersionTrait + Into<i32>,
     {
-        todo!("Rework to a custom version container");
+        self.custom_versions
+            .iter()
+            .find(|e| {
+                e.friendly_name
+                    .as_ref()
+                    .map(|name| name == T::FRIENDLY_NAME)
+                    .unwrap_or(false)
+            })
+            .map(|e| e.clone())
+            .unwrap_or_else(|| CustomVersion::new(T::GUID, 0))
     }
 
     fn position(&self) -> u64 {
@@ -832,6 +848,26 @@ impl<'a> Asset {
         let import = import;
         self.imports.push(import);
         PackageIndex::new(index)
+    }
+
+    /// Searches for and returns this asset's CLassExport, if one exists
+    pub fn get_class_export(&self) -> Option<&ClassExport> {
+        self.exports
+            .iter()
+            .find_map(|e| cast!(Export, ClassExport, e))
+    }
+
+    /// Gets parent class info of this asset, if it exists
+    pub fn get_parent_class(&self) -> Option<ParentClassInfo> {
+        let class_export = self.get_class_export()?;
+
+        let parent_class_import = self.get_import(class_export.struct_export.super_struct)?;
+        let outer_parent_import = self.get_import(parent_class_import.outer_index)?;
+
+        Some(ParentClassInfo {
+            parent_class_path: parent_class_import.object_name.clone(),
+            parent_class_export_name: outer_parent_import.object_name.clone(),
+        })
     }
 
     pub fn find_import(

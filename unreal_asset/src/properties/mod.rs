@@ -16,12 +16,15 @@ pub mod color_property;
 pub mod date_property;
 pub mod delegate_property;
 pub mod enum_property;
+pub mod font_character_property;
+pub mod game_framework;
 pub mod gameplay_tag_container_property;
 pub mod guid_property;
 pub mod int_property;
 pub mod map_property;
 pub mod material_input_property;
 pub mod multicast_delegate_property;
+pub mod niagara;
 pub mod object_property;
 pub mod per_platform_property;
 pub mod rich_curve_key_property;
@@ -38,6 +41,11 @@ pub mod world_tile_property;
 
 use self::cloth_lod_property::ClothLodDataProperty;
 use self::delegate_property::DelegateProperty;
+use self::font_character_property::FontCharacterProperty;
+use self::game_framework::unique_net_id_property::UniqueNetIdProperty;
+use self::niagara::niagara_variable_property::{
+    NiagaraVariableProperty, NiagaraVariableWithOffsetProperty,
+};
 use self::soft_path_property::StringAssetReferenceProperty;
 use self::vector_property::Box2DProperty;
 use self::{
@@ -170,6 +178,9 @@ lazy_static! {
         String::from("Vector4"),
         String::from("Vector"),
         String::from("ViewTargetBlendParams"),
+        String::from("FontCharacter"),
+        String::from("UniqueNetIdRepl"),
+        String::from("NiagaraVariable")
     ]);
 }
 
@@ -252,6 +263,11 @@ pub enum Property {
     StructProperty,
     EnumProperty,
     ClothLodDataProperty,
+    FontCharacterProperty,
+    UniqueNetIdProperty,
+    NiagaraVariableProperty,
+    NiagaraVariableWithOffset,
+
     UnknownProperty,
 }
 
@@ -351,6 +367,10 @@ inner_trait!(
     StructProperty,
     EnumProperty,
     ClothLodDataProperty,
+    FontCharacterProperty,
+    UniqueNetIdProperty,
+    NiagaraVariableProperty,
+    NiagaraVariableWithOffsetProperty,
     UnknownProperty
 );
 
@@ -643,6 +663,32 @@ impl Property {
                 ClothLodDataProperty::new(asset, name, include_header, length, duplication_index)?
                     .into()
             }
+
+            "FontCharacter" => {
+                FontCharacterProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
+            "UniqueNetIdRepl" => {
+                UniqueNetIdProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
+            "NiagaraVariable" => NiagaraVariableProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "NiagaraVariableWithOffset" => NiagaraVariableWithOffsetProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+
             _ => UnknownProperty::with_serialized_type(
                 asset,
                 name,
