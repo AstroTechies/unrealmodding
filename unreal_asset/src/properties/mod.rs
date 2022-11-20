@@ -31,6 +31,7 @@ pub mod per_platform_property;
 pub mod rich_curve_key_property;
 pub mod sampler_property;
 pub mod set_property;
+pub mod slate_core;
 pub mod smart_name_property;
 pub mod soft_path_property;
 pub mod str_property;
@@ -47,6 +48,7 @@ use self::game_framework::unique_net_id_property::UniqueNetIdProperty;
 use self::niagara::niagara_variable_property::{
     NiagaraVariableProperty, NiagaraVariableWithOffsetProperty,
 };
+use self::slate_core::font_data_property::FontDataProperty;
 use self::soft_path_property::StringAssetReferenceProperty;
 use self::vector_property::Box2DProperty;
 use self::{
@@ -181,7 +183,8 @@ lazy_static! {
         String::from("ViewTargetBlendParams"),
         String::from("FontCharacter"),
         String::from("UniqueNetIdRepl"),
-        String::from("NiagaraVariable")
+        String::from("NiagaraVariable"),
+        String::from("FontData")
     ]);
 }
 
@@ -268,6 +271,7 @@ pub enum Property {
     UniqueNetIdProperty,
     NiagaraVariableProperty,
     NiagaraVariableWithOffsetProperty,
+    FontDataProperty,
 
     UnknownProperty,
 }
@@ -382,6 +386,7 @@ inner_trait!(
     UniqueNetIdProperty,
     NiagaraVariableProperty,
     NiagaraVariableWithOffsetProperty,
+    FontDataProperty,
     UnknownProperty
 );
 
@@ -699,6 +704,10 @@ impl Property {
                 duplication_index,
             )?
             .into(),
+            "FontData" => {
+                FontDataProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
 
             _ => UnknownProperty::with_serialized_type(
                 asset,
@@ -824,5 +833,6 @@ property_inner_fname! {
     FontCharacterProperty: "FontCharacter",
     UniqueNetIdProperty: "UniqueNetIdRepl",
     NiagaraVariableProperty: "NiagaraVariable",
-    NiagaraVariableWithOffsetProperty: "NiagaraVariableWithOffset"
+    NiagaraVariableWithOffsetProperty: "NiagaraVariableWithOffset",
+    FontDataProperty: "FontData"
 }
