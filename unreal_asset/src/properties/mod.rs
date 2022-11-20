@@ -1,4 +1,5 @@
 //! All UAsset properties
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::io::SeekFrom;
 
@@ -127,8 +128,8 @@ macro_rules! simple_property_write {
 #[macro_export]
 macro_rules! impl_property_data_trait {
     ($property_name:ident) => {
-        impl PropertyDataTrait for $property_name {
-            fn get_name(&self) -> FName {
+        impl crate::properties::PropertyDataTrait for $property_name {
+            fn get_name(&self) -> crate::unreal_types::FName {
                 self.name.clone()
             }
 
@@ -136,7 +137,7 @@ macro_rules! impl_property_data_trait {
                 self.duplication_index
             }
 
-            fn get_property_guid(&self) -> Option<Guid> {
+            fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
                 self.property_guid.clone()
             }
         }
@@ -193,7 +194,7 @@ pub trait PropertyDataTrait {
 
 /// This must be implemented for all Properties
 #[enum_dispatch]
-pub trait PropertyTrait {
+pub trait PropertyTrait: PropertyDataTrait + Debug + Hash + Clone + PartialEq + Eq {
     fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
@@ -266,7 +267,7 @@ pub enum Property {
     FontCharacterProperty,
     UniqueNetIdProperty,
     NiagaraVariableProperty,
-    NiagaraVariableWithOffset,
+    NiagaraVariableWithOffsetProperty,
 
     UnknownProperty,
 }
@@ -299,6 +300,16 @@ macro_rules! inner_trait {
                 match self {
                     $(
                         Self::$inner(arg0) => Self::$inner(arg0.clone()),
+                    )*
+                }
+            }
+        }
+
+        impl Debug for $outer_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(
+                        Self::$inner(arg0) => f.debug_tuple(stringify!($inner)).field(arg0).finish(),
                     )*
                 }
             }
@@ -808,5 +819,10 @@ property_inner_fname! {
     TextProperty: "TextProperty",
     UInt16Property: "UInt16Property",
     UInt32Property: "UInt32Property",
-    UInt64Property: "UInt64Property"
+    UInt64Property: "UInt64Property",
+
+    FontCharacterProperty: "FontCharacter",
+    UniqueNetIdProperty: "UniqueNetIdRepl",
+    NiagaraVariableProperty: "NiagaraVariable",
+    NiagaraVariableWithOffsetProperty: "NiagaraVariableWithOffset"
 }

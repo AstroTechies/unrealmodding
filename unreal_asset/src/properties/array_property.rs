@@ -11,7 +11,7 @@ use crate::properties::{
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{default_guid, FName, Guid, ToFName};
 
-#[derive(Default, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

@@ -37,7 +37,7 @@ macro_rules! impl_int_property {
     };
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int8Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -46,13 +46,13 @@ pub struct Int8Property {
 }
 impl_property_data_trait!(Int8Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum ByteType {
     Byte,
     Long,
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ByteProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -72,7 +72,7 @@ pub struct BoolProperty {
 }
 impl_property_data_trait!(BoolProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct IntProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -81,7 +81,7 @@ pub struct IntProperty {
 }
 impl_property_data_trait!(IntProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int16Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -90,7 +90,7 @@ pub struct Int16Property {
 }
 impl_property_data_trait!(Int16Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int64Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -99,7 +99,7 @@ pub struct Int64Property {
 }
 impl_property_data_trait!(Int64Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt16Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -108,7 +108,7 @@ pub struct UInt16Property {
 }
 impl_property_data_trait!(UInt16Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt32Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -117,7 +117,7 @@ pub struct UInt32Property {
 }
 impl_property_data_trait!(UInt32Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt64Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -126,7 +126,7 @@ pub struct UInt64Property {
 }
 impl_property_data_trait!(UInt64Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FloatProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -135,7 +135,7 @@ pub struct FloatProperty {
 }
 impl_property_data_trait!(FloatProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DoubleProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

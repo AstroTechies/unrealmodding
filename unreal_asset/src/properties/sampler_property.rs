@@ -11,7 +11,7 @@ use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -22,7 +22,7 @@ pub struct WeightedRandomSamplerProperty {
 }
 impl_property_data_trait!(WeightedRandomSamplerProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshAreaWeightedTriangleSampler {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -33,7 +33,7 @@ pub struct SkeletalMeshAreaWeightedTriangleSampler {
 }
 impl_property_data_trait!(SkeletalMeshAreaWeightedTriangleSampler);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

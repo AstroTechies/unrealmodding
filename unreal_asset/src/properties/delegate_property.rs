@@ -11,7 +11,7 @@ use crate::{
 
 use super::{PropertyDataTrait, PropertyTrait};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Delegate {
     pub object: PackageIndex,
     pub delegate: FName,
@@ -23,7 +23,7 @@ impl Delegate {
     }
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DelegateProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

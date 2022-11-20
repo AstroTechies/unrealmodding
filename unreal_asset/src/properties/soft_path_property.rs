@@ -7,7 +7,7 @@ use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -29,7 +29,7 @@ pub struct SoftObjectPathProperty {
 }
 impl_property_data_trait!(SoftObjectPathProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftClassPathProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -40,7 +40,7 @@ pub struct SoftClassPathProperty {
 }
 impl_property_data_trait!(SoftClassPathProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct StringAssetReferenceProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

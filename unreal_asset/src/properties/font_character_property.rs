@@ -2,14 +2,14 @@ use byteorder::LittleEndian;
 
 use crate::{
     error::Error,
-    optional_guid, optional_guid_write,
+    impl_property_data_trait, optional_guid, optional_guid_write,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     unreal_types::{FName, Guid},
 };
 
 use super::PropertyTrait;
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FontCharacter {
     pub start_u: i32,
     pub start_v: i32,
@@ -42,13 +42,14 @@ impl FontCharacter {
     }
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FontCharacterProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
     pub value: FontCharacter,
 }
+impl_property_data_trait!(FontCharacterProperty);
 
 impl FontCharacterProperty {
     pub fn new<Reader: AssetReader>(

@@ -14,7 +14,7 @@ use super::{
     PropertyTrait,
 };
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MeshToMeshVertData {
     pub position_bary_coords_and_dist: Vector4Property,
     pub normal_bary_coords_and_dist: Vector4Property,
@@ -89,7 +89,7 @@ impl MeshToMeshVertData {
     }
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ClothLodDataProperty {
     pub struct_property: StructProperty,
     pub transition_up_skin_data: Vec<MeshToMeshVertData>,

@@ -4,7 +4,7 @@ use crate::properties::{array_property::ArrayProperty, PropertyDataTrait, Proper
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid, ToFName};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

@@ -2,12 +2,13 @@ use byteorder::LittleEndian;
 
 use crate::{
     error::Error,
-    properties::{struct_property::StructProperty, Property, PropertyTrait},
+    impl_property_data_trait,
+    properties::{struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     unreal_types::FName,
 };
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableProperty {
     pub struct_property: StructProperty,
     pub variable_name: FName,
@@ -49,6 +50,20 @@ impl NiagaraVariableProperty {
     }
 }
 
+impl PropertyDataTrait for NiagaraVariableProperty {
+    fn get_name(&self) -> FName {
+        self.struct_property.get_name()
+    }
+
+    fn get_duplication_index(&self) -> i32 {
+        self.struct_property.get_duplication_index()
+    }
+
+    fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
+        self.struct_property.get_property_guid()
+    }
+}
+
 impl PropertyTrait for NiagaraVariableProperty {
     fn write<Writer: AssetWriter>(
         &self,
@@ -70,6 +85,7 @@ impl PropertyTrait for NiagaraVariableProperty {
     }
 }
 
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableWithOffsetProperty {
     pub niagara_variable: NiagaraVariableProperty,
 }
@@ -91,6 +107,20 @@ impl NiagaraVariableWithOffsetProperty {
                 duplication_index,
             )?,
         })
+    }
+}
+
+impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
+    fn get_name(&self) -> FName {
+        self.niagara_variable.get_name()
+    }
+
+    fn get_duplication_index(&self) -> i32 {
+        self.niagara_variable.get_duplication_index()
+    }
+
+    fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
+        self.niagara_variable.get_property_guid()
     }
 }
 

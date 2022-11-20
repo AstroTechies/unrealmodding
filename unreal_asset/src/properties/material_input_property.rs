@@ -15,7 +15,7 @@ use crate::properties::{
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MaterialExpression {
     name: FName,
     extras: Vec<u8>,
@@ -24,7 +24,7 @@ pub struct MaterialExpression {
     expression_name: FName,
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ColorMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -34,7 +34,7 @@ pub struct ColorMaterialInputProperty {
 }
 impl_property_data_trait!(ColorMaterialInputProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ScalarMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -44,7 +44,7 @@ pub struct ScalarMaterialInputProperty {
 }
 impl_property_data_trait!(ScalarMaterialInputProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ShadingModelMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -54,7 +54,7 @@ pub struct ShadingModelMaterialInputProperty {
 }
 impl_property_data_trait!(ShadingModelMaterialInputProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct VectorMaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -64,7 +64,7 @@ pub struct VectorMaterialInputProperty {
 }
 impl_property_data_trait!(VectorMaterialInputProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Vector2MaterialInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -74,7 +74,7 @@ pub struct Vector2MaterialInputProperty {
 }
 impl_property_data_trait!(Vector2MaterialInputProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ExpressionInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -83,7 +83,7 @@ pub struct ExpressionInputProperty {
 }
 impl_property_data_trait!(ExpressionInputProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MaterialAttributesInputProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

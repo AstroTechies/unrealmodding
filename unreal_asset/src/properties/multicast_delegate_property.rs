@@ -10,13 +10,13 @@ use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid, PackageIndex};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MulticastDelegate {
     pub object: PackageIndex,
     pub delegate: FName,
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MulticastDelegateProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

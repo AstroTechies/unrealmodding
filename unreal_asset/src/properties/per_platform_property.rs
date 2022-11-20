@@ -11,7 +11,7 @@ use crate::properties::{PropertyDataTrait, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -20,7 +20,7 @@ pub struct PerPlatformBoolProperty {
 }
 impl_property_data_trait!(PerPlatformBoolProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -29,7 +29,7 @@ pub struct PerPlatformIntProperty {
 }
 impl_property_data_trait!(PerPlatformIntProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

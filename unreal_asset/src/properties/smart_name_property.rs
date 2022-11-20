@@ -10,7 +10,7 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 use crate::Error;
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SmartNameProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

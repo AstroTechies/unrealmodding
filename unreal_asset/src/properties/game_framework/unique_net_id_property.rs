@@ -4,7 +4,7 @@ use byteorder::LittleEndian;
 
 use crate::{
     error::Error,
-    optional_guid, optional_guid_write,
+    impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::asset_reader::AssetReader,
     unreal_types::{FName, Guid},
@@ -23,6 +23,7 @@ pub struct UniqueNetIdProperty {
     pub duplication_index: i32,
     pub value: Option<UniqueNetId>,
 }
+impl_property_data_trait!(UniqueNetIdProperty);
 
 impl UniqueNetIdProperty {
     pub fn new<Reader: AssetReader>(
@@ -62,7 +63,7 @@ impl PropertyTrait for UniqueNetIdProperty {
 
         let begin = asset.position();
 
-        match self.value {
+        match &self.value {
             Some(value) => {
                 let mut length = 3 * size_of::<i32>();
                 asset.write_fname(&value.ty)?;
