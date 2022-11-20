@@ -7,6 +7,7 @@ use crate::{
     unreal_types::FName,
 };
 
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableProperty {
     pub struct_property: StructProperty,
     pub variable_name: FName,

@@ -9,6 +9,7 @@ use crate::{
 
 use super::PropertyTrait;
 
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct FontCharacter {
     pub start_u: i32,
     pub start_v: i32,
@@ -41,6 +42,7 @@ impl FontCharacter {
     }
 }
 
+#[derive(Hash, Clone, PartialEq, Eq)]
 pub struct FontCharacterProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
