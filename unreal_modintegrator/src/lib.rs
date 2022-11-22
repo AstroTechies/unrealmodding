@@ -8,6 +8,7 @@ use log::debug;
 use serde_json::Value;
 
 use unreal_asset::engine_version::EngineVersion;
+use unreal_asset::properties::int_property::BytePropertyValue;
 use unreal_asset::{
     exports::{data_table_export::DataTable, Export, ExportBaseTrait},
     properties::{
@@ -256,9 +257,8 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
                 name: columns[5].clone(),
                 property_guid: None,
                 duplication_index: 0,
-                enum_type: Some(asset.add_name_reference(String::from("SyncMode"), false) as i64),
-                byte_type: unreal_asset::properties::int_property::ByteType::Long,
-                value: asset.add_name_reference(String::from(coded_sync_mode), false) as i64,
+                enum_type: Some(FName::from_slice("SyncMode")),
+                value: BytePropertyValue::FName(FName::from_slice(coded_sync_mode)),
             }
             .into(),
             StrProperty {
