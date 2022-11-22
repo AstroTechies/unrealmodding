@@ -262,7 +262,8 @@ impl AssetRegistryState {
                 .as_ref()
                 .ok_or_else(|| RegistryError::version("Name map".to_string(), self.version))?;
 
-            let mut name_table_writer = NameTableWriter::new(&mut writer, name_map_lookup);
+            let mut name_table_writer =
+                NameTableWriter::new(&mut writer, name_map, name_map_lookup);
 
             self.write_data(&mut name_table_writer)?;
 

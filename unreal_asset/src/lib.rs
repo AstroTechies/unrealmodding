@@ -254,6 +254,14 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
         self.cursor.seek(style)
     }
 
+    fn get_name_map_index_list(&self) -> &[String] {
+        self.asset.get_name_map_index_list()
+    }
+
+    fn get_name_reference(&self, index: i32) -> String {
+        self.asset.get_name_reference(index)
+    }
+
     fn get_map_key_override(&self) -> &HashMap<String, String> {
         self.asset.get_map_key_override()
     }
@@ -392,6 +400,14 @@ impl AssetTrait for Asset {
 
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
         self.cursor.seek(style)
+    }
+
+    fn get_name_map_index_list(&self) -> &[String] {
+        self.get_name_map_index_list()
+    }
+
+    fn get_name_reference(&self, index: i32) -> String {
+        self.get_name_reference(index)
     }
 
     fn get_map_key_override(&self) -> &HashMap<String, String> {
@@ -825,6 +841,10 @@ impl<'a> Asset {
         self.name_map_lookup
             .insert(hash, self.name_map_lookup.len() as i32);
         (self.name_map_lookup.len() - 1) as i32
+    }
+
+    pub fn get_name_map_index_list(&self) -> &[String] {
+        &self.name_map_index_list
     }
 
     pub fn get_name_reference(&self, index: i32) -> String {

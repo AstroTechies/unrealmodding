@@ -87,6 +87,22 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
         self.reader.seek(style)
     }
 
+    fn get_name_map_index_list(&self) -> &[String] {
+        &self.name_map
+    }
+
+    fn get_name_reference(&self, index: i32) -> String {
+        if index < 0 {
+            return (-index).to_string();
+        }
+
+        if index >= self.name_map_lookup.len() as i32 {
+            return index.to_string();
+        }
+
+        self.name_map[index as usize].to_owned()
+    }
+
     fn get_map_key_override(&self) -> &HashMap<String, String> {
         self.reader.get_map_key_override()
     }

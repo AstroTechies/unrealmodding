@@ -18,13 +18,19 @@ use crate::Import;
 pub struct NameTableWriter<'name_map, 'writer, Writer: AssetWriter> {
     writer: &'writer mut Writer,
 
+    name_map: &'name_map [String],
     name_map_lookup: &'name_map HashMap<u64, i32>,
 }
 
 impl<'name_map, 'writer, Writer: AssetWriter> NameTableWriter<'name_map, 'writer, Writer> {
-    pub fn new(writer: &'writer mut Writer, name_map_lookup: &'name_map HashMap<u64, i32>) -> Self {
+    pub fn new(
+        writer: &'writer mut Writer,
+        name_map: &'name_map [String],
+        name_map_lookup: &'name_map HashMap<u64, i32>,
+    ) -> Self {
         NameTableWriter {
             writer,
+            name_map,
             name_map_lookup,
         }
     }
@@ -50,6 +56,22 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
 
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
         self.writer.seek(style)
+    }
+
+    fn get_name_map_index_list(&self) -> &[String] {
+        self.name_map
+    }
+
+    fn get_name_reference(&self, index: i32) -> String {
+        if index < 0 {
+            return (-index).to_string();
+        }
+
+        if index >= self.name_map.len() as i32 {
+            return index.to_string();
+        }
+
+        self.name_map[index as usize].to_owned()
     }
 
     fn get_map_key_override(&self) -> &HashMap<String, String> {

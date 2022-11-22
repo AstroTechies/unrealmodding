@@ -56,6 +56,14 @@ impl AssetTrait for RawReader {
         self.cursor.seek(style)
     }
 
+    fn get_name_map_index_list(&self) -> &[String] {
+        &[]
+    }
+
+    fn get_name_reference(&self, index: i32) -> String {
+        "".to_string()
+    }
+
     fn get_map_key_override(&self) -> &HashMap<String, String> {
         &self.empty_map
     }

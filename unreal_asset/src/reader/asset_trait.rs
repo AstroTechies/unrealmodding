@@ -16,6 +16,9 @@ pub trait AssetTrait {
     fn set_position(&mut self, pos: u64);
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64>;
 
+    fn get_name_map_index_list(&self) -> &[String];
+    fn get_name_reference(&self, index: i32) -> String;
+
     fn get_map_key_override(&self) -> &HashMap<String, String>;
     fn get_map_value_override(&self) -> &HashMap<String, String>;
 
