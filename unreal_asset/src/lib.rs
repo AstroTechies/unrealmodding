@@ -360,7 +360,7 @@ impl AssetTrait for Asset {
         let version_friendly_name = T::friendly_name();
         for i in 0..self.custom_version.len() {
             if let Some(friendly_name) = &self.custom_version[i].friendly_name {
-                if friendly_name.as_str() == version_friendly_name {
+                if friendly_name == version_friendly_name {
                     return self.custom_version[i].clone();
                 }
             }
@@ -796,8 +796,8 @@ impl<'a> Asset {
     }
 
     pub fn add_fname(&mut self, slice: &str) -> FName {
-        let name = FName::from_slice(slice);
-        self.add_name_reference(name.content.clone(), false);
+        let mut name = FName::from_slice(slice);
+        name.index = self.add_name_reference(name.content.clone(), false);
         name
     }
 
