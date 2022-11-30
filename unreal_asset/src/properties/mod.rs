@@ -118,6 +118,10 @@ macro_rules! impl_property_data_trait {
                 self.name.clone()
             }
 
+            fn get_name_mut(&mut self) -> &mut FName {
+                &mut self.name
+            }
+
             fn get_duplication_index(&self) -> i32 {
                 self.duplication_index
             }
@@ -169,6 +173,7 @@ lazy_static! {
 #[enum_dispatch]
 pub trait PropertyDataTrait {
     fn get_name(&self) -> FName;
+    fn get_name_mut(&mut self) -> &mut FName;
     fn get_duplication_index(&self) -> i32;
     fn get_property_guid(&self) -> Option<Guid>;
 }
