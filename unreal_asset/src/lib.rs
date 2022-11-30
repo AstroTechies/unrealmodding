@@ -796,8 +796,8 @@ impl<'a> Asset {
     }
 
     pub fn add_fname(&mut self, slice: &str) -> FName {
-        let mut name = FName::from_slice(slice);
-        name.index = self.add_name_reference(name.content.clone(), false);
+        let name = FName::from_slice(slice);
+        self.add_name_reference(name.content.clone(), false);
         name
     }
 
