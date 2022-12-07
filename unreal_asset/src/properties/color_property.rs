@@ -7,7 +7,7 @@ use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::Color;
 use crate::unreal_types::{FName, Guid};

@@ -10,7 +10,7 @@ use crate::optional_guid_write;
 use crate::properties::{
     color_property::ColorProperty,
     vector_property::{Vector2DProperty, VectorProperty},
-    PropertyDataTrait, PropertyTrait,
+    PropertyTrait,
 };
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};

@@ -60,19 +60,19 @@ pub mod exports;
 pub mod flags;
 pub mod fproperty;
 pub mod kismet;
+pub(crate) mod macros;
 pub mod object_version;
 pub mod properties;
 pub mod reader;
 pub mod registry;
 pub mod types;
 pub mod unreal_types;
+pub mod unversioned;
 pub mod uproperty;
 
 use cursor_ext::CursorExt;
 use custom_version::{CustomVersion, CustomVersionTrait};
-use engine_version::{
-    get_object_versions, get_possible_versions, guess_engine_version, EngineVersion,
-};
+use engine_version::{get_object_versions, guess_engine_version, EngineVersion};
 use error::Error;
 use exports::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,

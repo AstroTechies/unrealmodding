@@ -1,7 +1,7 @@
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
-use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
+use crate::properties::{Property, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 

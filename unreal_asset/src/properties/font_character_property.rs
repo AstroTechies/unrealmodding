@@ -56,7 +56,7 @@ impl FontCharacterProperty {
         asset: &mut Reader,
         name: FName,
         include_header: bool,
-        length: i64,
+        _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);

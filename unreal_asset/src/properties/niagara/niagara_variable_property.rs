@@ -2,7 +2,6 @@ use byteorder::LittleEndian;
 
 use crate::{
     error::Error,
-    impl_property_data_trait,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     unreal_types::FName,
@@ -19,8 +18,8 @@ impl NiagaraVariableProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        include_header: bool,
-        length: i64,
+        _include_header: bool,
+        _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let variable_name = asset.read_fname()?;
@@ -68,7 +67,7 @@ impl PropertyTrait for NiagaraVariableProperty {
     fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
-        include_header: bool,
+        _include_header: bool,
     ) -> Result<usize, Error> {
         let begin = asset.position();
 

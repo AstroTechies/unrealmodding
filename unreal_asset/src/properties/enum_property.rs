@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 

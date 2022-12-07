@@ -100,7 +100,7 @@ impl ClothLodDataProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        include_header: bool,
+        _include_header: bool,
         _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {

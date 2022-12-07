@@ -9,7 +9,7 @@ use crate::{
     unreal_types::{FName, Guid, PackageIndex},
 };
 
-use super::{PropertyDataTrait, PropertyTrait};
+use super::PropertyTrait;
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Delegate {

@@ -59,7 +59,7 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         &[]
     }
 
-    fn get_name_reference(&self, index: i32) -> String {
+    fn get_name_reference(&self, _: i32) -> String {
         "".to_string()
     }
 
