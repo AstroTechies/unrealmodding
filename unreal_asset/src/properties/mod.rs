@@ -38,7 +38,10 @@ use self::{
     array_property::ArrayProperty,
     color_property::{ColorProperty, LinearColorProperty},
     date_property::{DateTimeProperty, TimeSpanProperty},
-    delegate_property::MulticastDelegateProperty,
+    delegate_property::{
+        DelegateProperty, MulticastDelegateProperty, MulticastInlineDelegateProperty,
+        MulticastSparseDelegateProperty,
+    },
     enum_property::EnumProperty,
     gameplay_tag_container_property::GameplayTagContainerProperty,
     guid_property::GuidProperty,
@@ -239,7 +242,10 @@ pub enum Property {
     SoftAssetPathProperty,
     SoftObjectPathProperty,
     SoftClassPathProperty,
+    DelegateProperty,
     MulticastDelegateProperty,
+    MulticastSparseDelegateProperty,
+    MulticastInlineDelegateProperty,
     RichCurveKeyProperty,
     ViewTargetBlendParamsProperty,
     GameplayTagContainerProperty,
@@ -300,7 +306,10 @@ impl Hash for Property {
             Property::SoftAssetPathProperty(prop) => prop.hash(state),
             Property::SoftObjectPathProperty(prop) => prop.hash(state),
             Property::SoftClassPathProperty(prop) => prop.hash(state),
+            Property::DelegateProperty(prop) => prop.hash(state),
             Property::MulticastDelegateProperty(prop) => prop.hash(state),
+            Property::MulticastSparseDelegateProperty(prop) => prop.hash(state),
+            Property::MulticastInlineDelegateProperty(prop) => prop.hash(state),
             Property::RichCurveKeyProperty(prop) => prop.hash(state),
             Property::ViewTargetBlendParamsProperty(prop) => prop.hash(state),
             Property::GameplayTagContainerProperty(prop) => prop.hash(state),
@@ -385,7 +394,16 @@ impl PartialEq for Property {
             (Self::SoftAssetPathProperty(l0), Self::SoftAssetPathProperty(r0)) => l0 == r0,
             (Self::SoftObjectPathProperty(l0), Self::SoftObjectPathProperty(r0)) => l0 == r0,
             (Self::SoftClassPathProperty(l0), Self::SoftClassPathProperty(r0)) => l0 == r0,
+            (Self::DelegateProperty(l0), Self::DelegateProperty(r0)) => l0 == r0,
             (Self::MulticastDelegateProperty(l0), Self::MulticastDelegateProperty(r0)) => l0 == r0,
+            (
+                Self::MulticastSparseDelegateProperty(l0),
+                Self::MulticastSparseDelegateProperty(r0),
+            ) => l0 == r0,
+            (
+                Self::MulticastInlineDelegateProperty(l0),
+                Self::MulticastInlineDelegateProperty(r0),
+            ) => l0 == r0,
             (Self::RichCurveKeyProperty(l0), Self::RichCurveKeyProperty(r0)) => l0 == r0,
             (Self::ViewTargetBlendParamsProperty(l0), Self::ViewTargetBlendParamsProperty(r0)) => {
                 l0 == r0
@@ -473,7 +491,14 @@ impl Clone for Property {
             Self::SoftAssetPathProperty(arg0) => Self::SoftAssetPathProperty(arg0.clone()),
             Self::SoftObjectPathProperty(arg0) => Self::SoftObjectPathProperty(arg0.clone()),
             Self::SoftClassPathProperty(arg0) => Self::SoftClassPathProperty(arg0.clone()),
+            Self::DelegateProperty(arg0) => Self::DelegateProperty(arg0.clone()),
             Self::MulticastDelegateProperty(arg0) => Self::MulticastDelegateProperty(arg0.clone()),
+            Self::MulticastSparseDelegateProperty(arg0) => {
+                Self::MulticastSparseDelegateProperty(arg0.clone())
+            }
+            Self::MulticastInlineDelegateProperty(arg0) => {
+                Self::MulticastInlineDelegateProperty(arg0.clone())
+            }
             Self::RichCurveKeyProperty(arg0) => Self::RichCurveKeyProperty(arg0.clone()),
             Self::ViewTargetBlendParamsProperty(arg0) => {
                 Self::ViewTargetBlendParamsProperty(arg0.clone())
@@ -718,7 +743,6 @@ impl Property {
                 duplication_index,
             )?
             .into(),
-
             "SoftAssetPath" => {
                 SoftAssetPathProperty::new(asset, name, include_header, length, duplication_index)?
                     .into()
@@ -731,8 +755,27 @@ impl Property {
                 SoftClassPathProperty::new(asset, name, include_header, length, duplication_index)?
                     .into()
             }
-
+            "DelegateProperty" => {
+                DelegateProperty::new(asset, name, include_header, length, duplication_index)?
+                    .into()
+            }
             "MulticastDelegateProperty" => MulticastDelegateProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "MulticastSparseDelegateProperty" => MulticastSparseDelegateProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "MulticastInlineDelegateProperty" => MulticastInlineDelegateProperty::new(
                 asset,
                 name,
                 include_header,
@@ -878,8 +921,15 @@ impl ToFName for Property {
             Property::Int8Property(_) => FName::from_slice("Int8Property"),
             Property::IntProperty(_) => FName::from_slice("IntProperty"),
             Property::MapProperty(_) => FName::from_slice("MapProperty"),
+            Property::DelegateProperty(_) => FName::from_slice("DelegateProperty"),
             Property::MulticastDelegateProperty(_) => {
                 FName::from_slice("MulticastDelegateProperty")
+            }
+            Property::MulticastSparseDelegateProperty(_) => {
+                FName::from_slice("MulticastSparseDelegateProperty")
+            }
+            Property::MulticastInlineDelegateProperty(_) => {
+                FName::from_slice("MulticastInlineDelegateProperty")
             }
             Property::NameProperty(_) => FName::from_slice("NameProperty"),
             Property::ObjectProperty(_) => FName::from_slice("ObjectProperty"),
