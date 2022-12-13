@@ -11,27 +11,26 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid, PackageIndex};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
-pub struct MulticastDelegate {
-    object: PackageIndex,
-    delegate: FName,
+pub struct Delegate {
+    pub object: PackageIndex,
+    pub delegate: FName,
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
-pub struct MulticastDelegateProperty {
-    pub name: FName,
-    pub property_guid: Option<Guid>,
-    pub duplication_index: i32,
-    pub value: Vec<MulticastDelegate>,
-}
-impl_property_data_trait!(MulticastDelegateProperty);
-
-impl MulticastDelegate {
+impl Delegate {
     pub fn new(object: PackageIndex, delegate: FName) -> Self {
-        MulticastDelegate { object, delegate }
+        Delegate { object, delegate }
     }
 }
 
-impl MulticastDelegateProperty {
+#[derive(Hash, Clone, PartialEq, Eq)]
+pub struct DelegateProperty {
+    pub name: FName,
+    pub property_guid: Option<Guid>,
+    pub duplication_index: i32,
+    pub value: Delegate,
+}
+impl_property_data_trait!(DelegateProperty);
+impl DelegateProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -41,25 +40,19 @@ impl MulticastDelegateProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let length = asset.read_i32::<LittleEndian>()?;
-        let mut value = Vec::with_capacity(length as usize);
-        for _i in 0..length as usize {
-            value.push(MulticastDelegate::new(
-                PackageIndex::new(asset.read_i32::<LittleEndian>()?),
-                asset.read_fname()?,
-            ));
-        }
-
-        Ok(MulticastDelegateProperty {
+        Ok(DelegateProperty {
             name,
             property_guid,
             duplication_index,
-            value,
+            value: Delegate::new(
+                PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                asset.read_fname()?,
+            ),
         })
     }
 }
 
-impl PropertyTrait for MulticastDelegateProperty {
+impl PropertyTrait for DelegateProperty {
     fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
@@ -67,11 +60,70 @@ impl PropertyTrait for MulticastDelegateProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
 
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
-        for entry in &self.value {
-            asset.write_i32::<LittleEndian>(entry.object.index)?;
-            asset.write_fname(&entry.delegate)?;
-        }
-        Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())
+        asset.write_i32::<LittleEndian>(self.value.object.index)?;
+        asset.write_fname(&self.value.delegate)?;
+        Ok(size_of::<i32>() * 3)
     }
 }
+
+// all multicast delegates serialize the same
+macro_rules! impl_multicast {
+    ($property_name:ident) => {
+        #[derive(Hash, Clone, PartialEq, Eq)]
+        pub struct $property_name {
+            pub name: FName,
+            pub property_guid: Option<Guid>,
+            pub duplication_index: i32,
+            pub value: Vec<Delegate>,
+        }
+        impl_property_data_trait!($property_name);
+        impl $property_name {
+            pub fn new<Reader: AssetReader>(
+                asset: &mut Reader,
+                name: FName,
+                include_header: bool,
+                _length: i64,
+                duplication_index: i32,
+            ) -> Result<Self, Error> {
+                let property_guid = optional_guid!(asset, include_header);
+
+                let length = asset.read_i32::<LittleEndian>()?;
+                let mut value = Vec::with_capacity(length as usize);
+                for _ in 0..length {
+                    value.push(Delegate::new(
+                        PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                        asset.read_fname()?,
+                    ));
+                }
+
+                Ok($property_name {
+                    name,
+                    property_guid,
+                    duplication_index,
+                    value,
+                })
+            }
+        }
+
+        impl PropertyTrait for $property_name {
+            fn write<Writer: AssetWriter>(
+                &self,
+                asset: &mut Writer,
+                include_header: bool,
+            ) -> Result<usize, Error> {
+                optional_guid_write!(self, asset, include_header);
+
+                asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+                for entry in &self.value {
+                    asset.write_i32::<LittleEndian>(entry.object.index)?;
+                    asset.write_fname(&entry.delegate)?;
+                }
+                Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())
+            }
+        }
+    };
+}
+
+impl_multicast!(MulticastDelegateProperty);
+impl_multicast!(MulticastSparseDelegateProperty);
+impl_multicast!(MulticastInlineDelegateProperty);
