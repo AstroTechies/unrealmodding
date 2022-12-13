@@ -12,8 +12,8 @@ use crate::unreal_types::{FName, Guid, PackageIndex};
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub struct MulticastDelegate {
-    object: PackageIndex,
-    delegate: FName,
+    pub object: PackageIndex,
+    pub delegate: FName,
 }
 
 #[derive(Hash, Clone, PartialEq, Eq)]

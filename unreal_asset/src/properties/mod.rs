@@ -732,7 +732,10 @@ impl Property {
                     .into()
             }
 
-            "MulticastDelegateProperty" => MulticastDelegateProperty::new(
+            "MulticastDelegateProperty"
+            | "DelegateProperty"
+            | "MulticastSparseDelegateProperty"
+            | "MulticastInlineDelegateProperty" => MulticastDelegateProperty::new(
                 asset,
                 name,
                 include_header,

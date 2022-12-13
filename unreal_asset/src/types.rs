@@ -13,6 +13,16 @@ impl<T> Vector<T> {
     }
 }
 
+impl<T: Copy> From<[T; 3]> for Vector<T> {
+    fn from(src: [T; 3]) -> Self {
+        Self {
+            x: src[0],
+            y: src[1],
+            z: src[2],
+        }
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector4<T> {
     pub x: T,
@@ -27,12 +37,34 @@ impl<T> Vector4<T> {
     }
 }
 
+impl<T: Copy> From<[T; 4]> for Vector4<T> {
+    fn from(src: [T; 4]) -> Self {
+        Self {
+            x: src[0],
+            y: src[1],
+            z: src[2],
+            w: src[3],
+        }
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Color<T> {
     pub r: T,
     pub g: T,
     pub b: T,
     pub a: T,
+}
+
+impl<T: Copy> From<[T; 4]> for Color<T> {
+    fn from(src: [T; 4]) -> Self {
+        Self {
+            r: src[0],
+            g: src[1],
+            b: src[2],
+            a: src[3],
+        }
+    }
 }
 
 impl<T> Color<T> {

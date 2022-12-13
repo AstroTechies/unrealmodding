@@ -208,6 +208,6 @@ mod tests {
             }
         "#;
 
-        assert_eq!(true, from_slice(src.as_bytes()).is_err());
+        assert!(from_slice(src.as_bytes()).is_err());
     }
 }
