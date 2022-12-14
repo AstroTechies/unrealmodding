@@ -26,7 +26,7 @@ eframe = "0.19.0"
 egui_extras = "0.19.0"
 lazy_static.workspace = true
 log.workspace = true
-open = "3.0.2"
+open = "3.2.0"
 parking_lot = "0.12.1"
 petgraph = "0.6.2"
 regex.workspace = true
@@ -34,7 +34,7 @@ reqwest.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-steamlocate = "1.0.1"
+steamlocate = "1.1.0"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.10.1"
