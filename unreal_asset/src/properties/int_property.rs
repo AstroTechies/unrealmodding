@@ -48,8 +48,8 @@ impl_property_data_trait!(Int8Property);
 
 #[derive(Hash, Clone, PartialEq, Eq)]
 pub enum ByteType {
-    Byte,
-    Long,
+    Byte(i8),
+    Enum(FName),
 }
 
 #[derive(Hash, Clone, PartialEq, Eq)]
@@ -57,9 +57,8 @@ pub struct ByteProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub enum_type: Option<i64>,
-    pub byte_type: ByteType,
-    pub value: i64,
+    pub enum_type: Option<FName>,
+    pub value: ByteType,
 }
 impl_property_data_trait!(ByteProperty);
 
@@ -207,13 +206,10 @@ impl PropertyTrait for Int8Property {
 }
 
 impl ByteProperty {
-    fn read_byte<Reader: AssetReader>(
-        asset: &mut Reader,
-        length: i64,
-    ) -> Result<(ByteType, i64), Error> {
+    fn read_byte<Reader: AssetReader>(asset: &mut Reader, length: i64) -> Result<ByteType, Error> {
         let value = match length {
-            1 => Some((ByteType::Byte, asset.read_i8()? as i64)),
-            0 | 8 => Some((ByteType::Long, asset.read_i64::<LittleEndian>()?)),
+            1 => Some(ByteType::Byte(asset.read_i8()?)),
+            0 | 8 => Some(ByteType::Enum(asset.read_fname()?)),
             _ => None,
         };
 
@@ -231,14 +227,11 @@ impl ByteProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let (enum_type, property_guid) = match include_header {
-            true => (
-                Some(asset.read_i64::<LittleEndian>()?),
-                asset.read_property_guid()?,
-            ),
+            true => (Some(asset.read_fname()?), asset.read_property_guid()?),
             false => (None, None),
         };
 
-        let (byte_type, value) = ByteProperty::read_byte(asset, length)
+        let value = ByteProperty::read_byte(asset, length)
             .or_else(|_| ByteProperty::read_byte(asset, fallback_length))?;
 
         Ok(ByteProperty {
@@ -246,7 +239,6 @@ impl ByteProperty {
             property_guid,
             duplication_index,
             enum_type,
-            byte_type,
             value,
         })
     }
@@ -259,18 +251,21 @@ impl PropertyTrait for ByteProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         if include_header {
-            asset
-                .write_i64::<LittleEndian>(self.enum_type.ok_or_else(PropertyError::headerless)?)?;
+            asset.write_fname(
+                self.enum_type
+                    .as_ref()
+                    .ok_or_else(PropertyError::headerless)?,
+            )?;
             asset.write_property_guid(&self.property_guid)?;
         }
 
-        match self.byte_type {
-            ByteType::Byte => {
-                asset.write_u8(self.value as u8)?;
+        match &self.value {
+            ByteType::Byte(byte) => {
+                asset.write_i8(*byte)?;
                 Ok(1)
             }
-            ByteType::Long => {
-                asset.write_i64::<LittleEndian>(self.value)?;
+            ByteType::Enum(name) => {
+                asset.write_fname(name)?;
                 Ok(8)
             }
         }
