@@ -23,14 +23,14 @@ impl Delegate {
 }
 
 #[derive(Hash, Clone, PartialEq, Eq)]
-pub struct MulticastDelegateProperty {
+pub struct DelegateProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub value: Vec<Delegate>,
+    pub value: Delegate,
 }
-impl_property_data_trait!(MulticastDelegateProperty);
-impl MulticastDelegateProperty {
+impl_property_data_trait!(DelegateProperty);
+impl DelegateProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -40,25 +40,19 @@ impl MulticastDelegateProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let length = asset.read_i32::<LittleEndian>()?;
-        let mut value = Vec::with_capacity(length as usize);
-        for _ in 0..length {
-            value.push(Delegate::new(
-                PackageIndex::new(asset.read_i32::<LittleEndian>()?),
-                asset.read_fname()?,
-            ));
-        }
-
-        Ok(MulticastDelegateProperty {
+        Ok(DelegateProperty {
             name,
             property_guid,
             duplication_index,
-            value,
+            value: Delegate::new(
+                PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                asset.read_fname()?,
+            ),
         })
     }
 }
 
-impl PropertyTrait for MulticastDelegateProperty {
+impl PropertyTrait for DelegateProperty {
     fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
@@ -66,24 +60,21 @@ impl PropertyTrait for MulticastDelegateProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
 
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
-        for entry in &self.value {
-            asset.write_i32::<LittleEndian>(entry.object.index)?;
-            asset.write_fname(&entry.delegate)?;
-        }
-        Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())
+        asset.write_i32::<LittleEndian>(self.value.object.index)?;
+        asset.write_fname(&self.value.delegate)?;
+        Ok(size_of::<i32>() * 3)
     }
 }
 
-// they all write and read the same so this reduces code duplication
-macro_rules! impl_delegate_property {
+// all multicast delegates serialize the same
+macro_rules! impl_multicast {
     ($property_name:ident) => {
         #[derive(Hash, Clone, PartialEq, Eq)]
         pub struct $property_name {
             pub name: FName,
             pub property_guid: Option<Guid>,
             pub duplication_index: i32,
-            pub value: Delegate,
+            pub value: Vec<Delegate>,
         }
         impl_property_data_trait!($property_name);
         impl $property_name {
@@ -96,14 +87,20 @@ macro_rules! impl_delegate_property {
             ) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
 
+                let length = asset.read_i32::<LittleEndian>()?;
+                let mut value = Vec::with_capacity(length as usize);
+                for _ in 0..length {
+                    value.push(Delegate::new(
+                        PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                        asset.read_fname()?,
+                    ));
+                }
+
                 Ok($property_name {
                     name,
                     property_guid,
                     duplication_index,
-                    value: Delegate::new(
-                        PackageIndex::new(asset.read_i32::<LittleEndian>()?),
-                        asset.read_fname()?,
-                    ),
+                    value,
                 })
             }
         }
@@ -116,14 +113,17 @@ macro_rules! impl_delegate_property {
             ) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, include_header);
 
-                asset.write_i32::<LittleEndian>(self.value.object.index)?;
-                asset.write_fname(&self.value.delegate)?;
-                Ok(size_of::<i32>() * 3)
+                asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+                for entry in &self.value {
+                    asset.write_i32::<LittleEndian>(entry.object.index)?;
+                    asset.write_fname(&entry.delegate)?;
+                }
+                Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())
             }
         }
     };
 }
 
-impl_delegate_property!(DelegateProperty);
-impl_delegate_property!(MulticastSparseDelegateProperty);
-impl_delegate_property!(MulticastInlineDelegateProperty);
+impl_multicast!(MulticastDelegateProperty);
+impl_multicast!(MulticastSparseDelegateProperty);
+impl_multicast!(MulticastInlineDelegateProperty);
