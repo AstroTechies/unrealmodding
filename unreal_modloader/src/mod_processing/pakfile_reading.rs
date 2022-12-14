@@ -40,7 +40,7 @@ pub(crate) fn read_pak_files(
                     if matches!(err.kind, PakErrorKind::EntryNotFound(_)) {
                         ModLoaderWarning::missing_metadata(file_name.clone())
                     } else {
-                        err.into()
+                        ModLoaderWarning::from(err).with_mod_id(file_name.clone())
                     }
                 })?;
 
@@ -104,17 +104,17 @@ pub(crate) fn read_pak_files(
                     file_path.file_name().unwrap().to_str().unwrap()
                 );
             }
-            Err(e) => {
+            Err(err) => {
                 warn!(
                     "Failed to read pak file {:?}, error: {}, deleting...",
                     file_path.file_name().unwrap().to_str().unwrap(),
-                    e
+                    err
                 );
 
                 if file.newly_added {
                     let _ = fs::remove_file(file_path);
                 }
-                warnings.push(e);
+                warnings.push(err);
             }
         }
     }

@@ -129,7 +129,6 @@ where
     let icon_data = config.get_icon();
 
     let ready_exit = Arc::new(AtomicBool::new(false));
-    let should_integrate = Arc::new(AtomicBool::new(true));
     let last_integration_time = Arc::new(Mutex::new(Instant::now()));
     let working = Arc::new(AtomicBool::new(true));
 
@@ -159,7 +158,6 @@ where
     let background_thread_data = BackgroundThreadData {
         data,
         ready_exit,
-        should_integrate,
         last_integration_time,
         working,
         newer_update,

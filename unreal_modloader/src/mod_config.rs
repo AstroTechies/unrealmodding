@@ -31,56 +31,62 @@ struct ModConfigData {
 }
 
 pub(crate) fn load_config(data: &mut ModLoaderAppData) {
-    let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
-    let mut selected_game_platform = None;
-    if config_path.is_file() {
-        let config_str = fs::read_to_string(&config_path).unwrap();
-        let config: Option<ModConfig> = serde_json::from_str(&config_str).ok();
-
-        if config.is_none() {
-            error!("Failed to parse modconfig.json");
-            let _ = fs::remove_file(&config_path);
-
+    macro_rules! bail {
+        () => {{
+            warn!("Error reading config file!");
             if !data.set_game_platform("Steam") {
                 let first_platform = data.install_managers.keys().next().unwrap();
                 data.set_game_platform(first_platform);
             }
             return;
+        }};
+    }
+
+    let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
+
+    if !config_path.is_file() {
+        bail!()
+    }
+
+    let config: ModConfig = match serde_json::from_str(&fs::read_to_string(&config_path).unwrap()) {
+        Ok(config) => config,
+        Err(err) => {
+            error!("{}", err);
+            let _ = fs::remove_file(&config_path);
+            bail!();
         }
+    };
 
-        let config = config.unwrap();
-        data.refuse_mismatched_connections = config.refuse_mismatched_connections;
+    data.refuse_mismatched_connections = config.refuse_mismatched_connections;
 
-        for (mod_id, mod_config) in config.current.mods.iter() {
-            let game_mod = data.game_mods.get_mut(mod_id);
-            if game_mod.is_none() {
+    for (mod_id, mod_config) in config.current.mods.iter() {
+        let game_mod = data.game_mods.get_mut(mod_id);
+        if game_mod.is_none() {
+            warn!(
+                "Mod {} referenced in modconfig.json is not installed",
+                mod_id
+            );
+            continue;
+        }
+        let game_mod = game_mod.unwrap();
+
+        game_mod.enabled = mod_config.enabled;
+
+        if !mod_config.force_latest.unwrap_or(true) {
+            let config_version = Version::parse(&mod_config.version);
+            if config_version.is_err() {
                 warn!(
-                    "Mod {} referenced in modconfig.json is not installed",
-                    mod_id
+                    "Failed to parse version {} for mod {}",
+                    mod_config.version, mod_id
                 );
                 continue;
             }
-            let game_mod = game_mod.unwrap();
 
-            game_mod.enabled = mod_config.enabled;
-
-            if !mod_config.force_latest.unwrap_or(true) {
-                let config_version = Version::parse(&mod_config.version);
-                if config_version.is_err() {
-                    warn!(
-                        "Failed to parse version {} for mod {}",
-                        mod_config.version, mod_id
-                    );
-                    continue;
-                }
-
-                game_mod.selected_version = SelectedVersion::Specific(config_version.unwrap());
-            }
+            game_mod.selected_version = SelectedVersion::Specific(config_version.unwrap());
         }
-        selected_game_platform = config.selected_game_platform;
     }
 
-    if let Some(selected_game_platform) = selected_game_platform.as_ref() {
+    if let Some(ref selected_game_platform) = config.selected_game_platform {
         data.set_game_platform(selected_game_platform);
     } else if !data.set_game_platform("Steam") {
         let first_platform = data.install_managers.keys().next().unwrap();

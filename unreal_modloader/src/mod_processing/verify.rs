@@ -13,7 +13,7 @@ lazy_static! {
     /// Match 1: 000
     /// Match 2: ModName69.author
     /// Match 3: 1.1.1
-    // regex explanation                                              000  - Mod69().author) - 1.1.1      _P.pak
+    // regex explanation                                           (  000 )-(Mod69<.author>)-( 1 . 1 . 1 )_P.pak
     pub(crate) static ref MOD_FILENAME_REGEX: Regex = Regex::new(r"(^\d{3})-([a-zA-Z0-9\.]+)-(\d+.\d+.\d+)_P.pak$").unwrap();
 }
 

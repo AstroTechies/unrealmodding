@@ -639,7 +639,7 @@ impl ModLoaderApp {
                         egui::Align::Center,
                     );
                     ui.with_layout(layout, |ui| {
-                        let button = match data.failed {
+                        let button = match data.failed || self.working.load(Ordering::Acquire) {
                             true => Button::new("Play").sense(Sense::hover()),
                             false => Button::new("Play"),
                         };
@@ -655,17 +655,6 @@ impl ModLoaderApp {
                     });
                 });
             });
-
-        // if ui
-        //     .button(if !self.should_exit.load(Ordering::Acquire) {
-        //         "Quit"
-        //     } else {
-        //         "Exiting..."
-        //     })
-        //     .clicked()
-        // {
-        //     frame.quit();
-        // }
     }
 
     fn darken_background(&mut self, ctx: &egui::Context) {

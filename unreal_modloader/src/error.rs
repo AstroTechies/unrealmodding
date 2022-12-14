@@ -228,10 +228,9 @@ impl ModLoaderWarning {
 
 impl fmt::Display for ModLoaderWarning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mod_name = if self.mod_id.is_some() {
-            format!("mod: {:?}, ", self.mod_id.as_ref().unwrap())
-        } else {
-            "".to_owned()
+        let mod_name = match &self.mod_id {
+            Some(mod_id) => format!("mod: {:?}, ", mod_id),
+            None => "".to_owned(),
         };
 
         let err_msg = match self.kind {
