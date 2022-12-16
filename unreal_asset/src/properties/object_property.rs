@@ -29,12 +29,36 @@ pub struct AssetObjectProperty {
 impl_property_data_trait!(AssetObjectProperty);
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct SoftObjectPath {
+    pub asset_path_name: FName,
+    pub sub_path_string: Option<String>,
+}
+
+impl SoftObjectPath {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let asset_path_name = asset.read_fname()?;
+        let sub_path_string = asset.read_string()?;
+
+        Ok(SoftObjectPath {
+            asset_path_name,
+            sub_path_string,
+        })
+    }
+
+    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        asset.write_fname(&self.asset_path_name)?;
+        asset.write_string(&self.sub_path_string)?;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub value: FName,
-    pub id: u32,
+    pub value: SoftObjectPath,
 }
 impl_property_data_trait!(SoftObjectProperty);
 
@@ -105,14 +129,13 @@ impl SoftObjectProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let value = asset.read_fname()?;
-        let id = asset.read_u32::<LittleEndian>()?;
+        let value = SoftObjectPath::new(asset)?;
+
         Ok(SoftObjectProperty {
             name,
             property_guid,
             duplication_index,
             value,
-            id,
         })
     }
 }
@@ -124,8 +147,11 @@ impl PropertyTrait for SoftObjectProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_fname(&self.value)?;
-        asset.write_u32::<LittleEndian>(self.id)?;
-        Ok(size_of::<i32>() * 3)
+
+        let begin = asset.position();
+
+        self.value.write(asset)?;
+
+        Ok((asset.position() - begin) as usize)
     }
 }

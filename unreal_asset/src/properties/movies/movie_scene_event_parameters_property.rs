@@ -1,47 +1,53 @@
+use byteorder::LittleEndian;
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::PropertyTrait,
+    properties::{object_property::SoftObjectPath, PropertyTrait},
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     unreal_types::{FName, Guid},
 };
 
-use super::{movie_scene_evaluation::TMovieSceneEvaluationTree, MovieSceneTrackIdentifier};
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MovieSceneTrackFieldData {
-    pub field: TMovieSceneEvaluationTree<MovieSceneTrackIdentifier>,
+pub struct MovieSceneEventParameters {
+    pub struct_type: SoftObjectPath,
+    pub struct_bytes: Vec<u8>,
 }
 
-impl MovieSceneTrackFieldData {
+impl MovieSceneEventParameters {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let field = TMovieSceneEvaluationTree::read(asset, |reader| {
-            MovieSceneTrackIdentifier::new(reader)
-        })?;
+        let struct_type = SoftObjectPath::new(asset)?;
 
-        Ok(MovieSceneTrackFieldData { field })
+        let struct_bytes_length = asset.read_i32::<LittleEndian>()?;
+        let mut struct_bytes = vec![0u8; struct_bytes_length as usize];
+        asset.read_exact(&mut struct_bytes)?;
+
+        Ok(MovieSceneEventParameters {
+            struct_type,
+            struct_bytes,
+        })
     }
 
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        self.field.write(asset, |writer, node| {
-            node.write(writer)?;
-            Ok(())
-        })?;
+        self.struct_type.write(asset)?;
+
+        asset.write_i32::<LittleEndian>(self.struct_bytes.len() as i32)?;
+        asset.write_all(&self.struct_bytes)?;
 
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MovieSceneTrackFieldDataProperty {
+pub struct MovieSceneEventParametersProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub value: MovieSceneTrackFieldData,
+    pub value: MovieSceneEventParameters,
 }
-impl_property_data_trait!(MovieSceneTrackFieldDataProperty);
+impl_property_data_trait!(MovieSceneEventParametersProperty);
 
-impl MovieSceneTrackFieldDataProperty {
+impl MovieSceneEventParametersProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -49,10 +55,9 @@ impl MovieSceneTrackFieldDataProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
+        let value = MovieSceneEventParameters::new(asset)?;
 
-        let value = MovieSceneTrackFieldData::new(asset)?;
-
-        Ok(MovieSceneTrackFieldDataProperty {
+        Ok(MovieSceneEventParametersProperty {
             name,
             property_guid,
             duplication_index,
@@ -61,12 +66,12 @@ impl MovieSceneTrackFieldDataProperty {
     }
 }
 
-impl PropertyTrait for MovieSceneTrackFieldDataProperty {
+impl PropertyTrait for MovieSceneEventParametersProperty {
     fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
-    ) -> Result<usize, crate::error::Error> {
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
 
         let begin = asset.position();

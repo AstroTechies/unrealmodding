@@ -1,3 +1,5 @@
+use byteorder::LittleEndian;
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
@@ -6,42 +8,34 @@ use crate::{
     unreal_types::{FName, Guid},
 };
 
-use super::{movie_scene_evaluation::TMovieSceneEvaluationTree, MovieSceneTrackIdentifier};
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MovieSceneTrackFieldData {
-    pub field: TMovieSceneEvaluationTree<MovieSceneTrackIdentifier>,
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct MovieSceneTrackIdentifier {
+    pub value: u32,
 }
 
-impl MovieSceneTrackFieldData {
+impl MovieSceneTrackIdentifier {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let field = TMovieSceneEvaluationTree::read(asset, |reader| {
-            MovieSceneTrackIdentifier::new(reader)
-        })?;
+        let value = asset.read_u32::<LittleEndian>()?;
 
-        Ok(MovieSceneTrackFieldData { field })
+        Ok(MovieSceneTrackIdentifier { value })
     }
 
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        self.field.write(asset, |writer, node| {
-            node.write(writer)?;
-            Ok(())
-        })?;
-
+        asset.write_u32::<LittleEndian>(self.value)?;
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MovieSceneTrackFieldDataProperty {
+pub struct MovieSceneTrackIdentifierProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub value: MovieSceneTrackFieldData,
+    pub value: MovieSceneTrackIdentifier,
 }
-impl_property_data_trait!(MovieSceneTrackFieldDataProperty);
+impl_property_data_trait!(MovieSceneTrackIdentifierProperty);
 
-impl MovieSceneTrackFieldDataProperty {
+impl MovieSceneTrackIdentifierProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -50,9 +44,9 @@ impl MovieSceneTrackFieldDataProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let value = MovieSceneTrackFieldData::new(asset)?;
+        let value = MovieSceneTrackIdentifier::new(asset)?;
 
-        Ok(MovieSceneTrackFieldDataProperty {
+        Ok(MovieSceneTrackIdentifierProperty {
             name,
             property_guid,
             duplication_index,
@@ -61,12 +55,12 @@ impl MovieSceneTrackFieldDataProperty {
     }
 }
 
-impl PropertyTrait for MovieSceneTrackFieldDataProperty {
+impl PropertyTrait for MovieSceneTrackIdentifierProperty {
     fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
-    ) -> Result<usize, crate::error::Error> {
+    ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
 
         let begin = asset.position();

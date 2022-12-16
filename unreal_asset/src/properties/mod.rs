@@ -195,7 +195,16 @@ lazy_static! {
         String::from("MovieSceneSubSequenceTree"),
         String::from("MovieSceneSequenceInstanceDataPtr"),
         String::from("SectionEvaluationDataTree"),
-        String::from("MovieSceneTrackFieldData")
+        String::from("MovieSceneTrackFieldData"),
+        String::from("MovieSceneEventParameters"),
+        String::from("MovieSceneFloatChannel"),
+        String::from("MovieSceneFloatValue"),
+        String::from("MovieSceneFrameRange"),
+        String::from("MovieSceneSegment"),
+        String::from("MovieSceneSegmentIdentifier"),
+        String::from("MovieSceneTrackIdentifier"),
+        String::from("MovieSceneSequenceId"),
+        String::from("MovieSceneEvaluationKey")
     ]);
 }
 
@@ -808,5 +817,14 @@ property_inner_fname! {
     MovieSceneSubSequenceTreeProperty: "MovieSceneSubSequenceTree",
     MovieSceneSequenceInstanceDataPtrProperty: "MovieSceneSequenceInstanceDataPtr"
     SectionEvaluationDataTreeProperty: "SectionEvaluationDataTree",
-    MovieSceneTrackFieldDataProperty: "MovieSceneTrackFieldData"
+    MovieSceneTrackFieldDataProperty: "MovieSceneTrackFieldData",
+    MovieSceneEventParametersProperty: "MovieSceneEventParameters",
+    MovieSceneFloatChannelProperty: "MovieSceneFloatChannel",
+    MovieSceneFloatValueProperty: "MovieSceneFloatValue",
+    MovieSceneFrameRangeProperty: "MovieSceneFrameRange",
+    MovieSceneSegmentProperty: "MovieSceneSegment",
+    MovieSceneSegmentIdentifierProperty: "MovieSceneSegmentIdentifier",
+    MovieSceneTrackIdentifierProperty: "MovieSceneTrackIdentifier",
+    MovieSceneSequenceIdProperty: "MovieSceneSequenceId",
+    MovieSceneEvaluationKeyProperty: "MovieSceneEvaluationKey"
 }
