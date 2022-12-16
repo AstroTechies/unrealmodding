@@ -90,6 +90,14 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
     fn get_export_class_type(&self, _index: PackageIndex) -> Option<FName> {
         None
     }
+
+    fn add_fname(&mut self, value: &str) -> FName {
+        FName::new(value.to_string(), 0)
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        FName::new(value.to_string(), number)
+    }
 }
 
 impl<'cursor> AssetWriter for RawWriter<'cursor> {

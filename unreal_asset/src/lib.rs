@@ -402,6 +402,18 @@ impl AssetTrait for Asset {
         self.cursor.seek(style)
     }
 
+    fn add_fname(&mut self, value: &str) -> FName {
+        let name = FName::new(value.to_string(), 0);
+        self.add_name_reference(value.to_string(), false);
+        name
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        let name = FName::new(value.to_string(), number);
+        self.add_name_reference(value.to_string(), false);
+        name
+    }
+
     fn get_name_map_index_list(&self) -> &[String] {
         self.get_name_map_index_list()
     }

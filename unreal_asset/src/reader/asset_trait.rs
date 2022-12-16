@@ -16,6 +16,9 @@ pub trait AssetTrait {
     fn set_position(&mut self, pos: u64);
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64>;
 
+    fn add_fname(&mut self, value: &str) -> FName;
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName;
+
     fn get_name_map_index_list(&self) -> &[String];
     fn get_name_reference(&self, index: i32) -> String;
 

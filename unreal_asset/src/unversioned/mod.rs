@@ -216,7 +216,7 @@ impl UsmapReader for Usmap {
     fn read_name(&mut self) -> Result<String, std::io::Error> {
         let index = self.read_i32()?;
         if index < 0 {
-            panic!("test");
+            Ok("".to_string())
         }
         Ok(self.name_map[index as usize].clone())
     }

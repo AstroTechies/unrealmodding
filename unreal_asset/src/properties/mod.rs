@@ -15,6 +15,7 @@ use crate::unreal_types::{FName, Guid, ToFName};
 pub mod array_property;
 pub mod cloth_lod_property;
 pub mod color_property;
+pub mod core_uobject;
 pub mod date_property;
 pub mod delegate_property;
 pub mod enum_property;
@@ -25,6 +26,7 @@ pub mod guid_property;
 pub mod int_property;
 pub mod map_property;
 pub mod material_input_property;
+pub mod movies;
 pub mod multicast_delegate_property;
 pub mod niagara;
 pub mod object_property;
@@ -185,7 +187,15 @@ lazy_static! {
         String::from("FontCharacter"),
         String::from("UniqueNetIdRepl"),
         String::from("NiagaraVariable"),
-        String::from("FontData")
+        String::from("FontData"),
+        //
+        String::from("MovieSceneEvalTemplatePtr"),
+        String::from("MovieSceneTrackImplementationPtr"),
+        String::from("MovieSceneEvaluationFieldEntityTree"),
+        String::from("MovieSceneSubSequenceTree"),
+        String::from("MovieSceneSequenceInstanceDataPtr"),
+        String::from("SectionEvaluationDataTree"),
+        String::from("MovieSceneTrackFieldData")
     ]);
 }
 
@@ -790,5 +800,13 @@ property_inner_fname! {
     UniqueNetIdProperty: "UniqueNetIdRepl",
     NiagaraVariableProperty: "NiagaraVariable",
     NiagaraVariableWithOffsetProperty: "NiagaraVariableWithOffset",
-    FontDataProperty: "FontData"
+    FontDataProperty: "FontData",
+
+    MovieSceneEvalTemplatePtrProperty: "MovieSceneEvalTemplatePtr",
+    MovieSceneTrackImplementationPtrProperty: "MovieSceneTrackImplementationPtr",
+    MovieSceneEvaluationFieldEntityTreeProperty: "MovieSceneEvaluationFieldEntityTree",
+    MovieSceneSubSequenceTreeProperty: "MovieSceneSubSequenceTree",
+    MovieSceneSequenceInstanceDataPtrProperty: "MovieSceneSequenceInstanceDataPtr"
+    SectionEvaluationDataTreeProperty: "SectionEvaluationDataTree",
+    MovieSceneTrackFieldDataProperty: "MovieSceneTrackFieldData"
 }
