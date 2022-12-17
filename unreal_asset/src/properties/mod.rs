@@ -48,6 +48,23 @@ use self::cloth_lod_property::ClothLodDataProperty;
 use self::delegate_property::DelegateProperty;
 use self::font_character_property::FontCharacterProperty;
 use self::game_framework::unique_net_id_property::UniqueNetIdProperty;
+use self::movies::movie_scene_eval_template_ptr_property::MovieSceneEvalTemplatePtrProperty;
+use self::movies::movie_scene_evaluation_field_entity_tree_property::MovieSceneEvaluationFieldEntityTreeProperty;
+use self::movies::movie_scene_evaluation_key_property::MovieSceneEvaluationKeyProperty;
+use self::movies::movie_scene_event_parameters_property::MovieSceneEventParametersProperty;
+use self::movies::movie_scene_float_channel_property::MovieSceneFloatChannelProperty;
+use self::movies::movie_scene_float_value_property::MovieSceneFloatValueProperty;
+use self::movies::movie_scene_frame_range_property::MovieSceneFrameRangeProperty;
+use self::movies::movie_scene_segment_property::{
+    MovieSceneSegmentIdentifierProperty, MovieSceneSegmentProperty,
+};
+use self::movies::movie_scene_sequence_id_property::MovieSceneSequenceIdProperty;
+use self::movies::movie_scene_sequence_instance_data_ptr_property::MovieSceneSequenceInstanceDataPtrProperty;
+use self::movies::movie_scene_sub_sequence_tree_property::MovieSceneSubSequenceTreeProperty;
+use self::movies::movie_scene_track_field_data_property::MovieSceneTrackFieldDataProperty;
+use self::movies::movie_scene_track_identifier_property::MovieSceneTrackIdentifierProperty;
+use self::movies::movie_scene_track_implementation_ptr_property::MovieSceneTrackImplementationPtrProperty;
+use self::movies::section_evaluation_data_tree_property::SectionEvaluationDataTreeProperty;
 use self::niagara::niagara_variable_property::{
     NiagaraVariableProperty, NiagaraVariableWithOffsetProperty,
 };
@@ -133,8 +150,8 @@ macro_rules! simple_property_write {
 #[macro_export]
 macro_rules! impl_property_data_trait {
     ($property_name:ident) => {
-        impl crate::properties::PropertyDataTrait for $property_name {
-            fn get_name(&self) -> crate::unreal_types::FName {
+        impl $crate::properties::PropertyDataTrait for $property_name {
+            fn get_name(&self) -> $crate::unreal_types::FName {
                 self.name.clone()
             }
 
@@ -142,7 +159,7 @@ macro_rules! impl_property_data_trait {
                 self.duplication_index
             }
 
-            fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
+            fn get_property_guid(&self) -> Option<$crate::unreal_types::Guid> {
                 self.property_guid.clone()
             }
         }
@@ -292,7 +309,25 @@ pub enum Property {
     NiagaraVariableProperty,
     NiagaraVariableWithOffsetProperty,
     FontDataProperty,
+    //
+    MovieSceneEvalTemplatePtrProperty,
+    MovieSceneTrackImplementationPtrProperty,
+    MovieSceneEvaluationFieldEntityTreeProperty,
+    MovieSceneSubSequenceTreeProperty,
+    MovieSceneSequenceInstanceDataPtrProperty,
+    SectionEvaluationDataTreeProperty,
+    MovieSceneTrackFieldDataProperty,
+    MovieSceneEventParametersProperty,
+    MovieSceneFloatChannelProperty,
+    MovieSceneFloatValueProperty,
+    MovieSceneFrameRangeProperty,
+    MovieSceneSegmentProperty,
+    MovieSceneSegmentIdentifierProperty,
+    MovieSceneTrackIdentifierProperty,
+    MovieSceneSequenceIdProperty,
+    MovieSceneEvaluationKeyProperty,
 
+    //
     UnknownProperty,
 }
 
@@ -362,6 +397,22 @@ inner_trait!(
     NiagaraVariableProperty,
     NiagaraVariableWithOffsetProperty,
     FontDataProperty,
+    MovieSceneEvalTemplatePtrProperty,
+    MovieSceneTrackImplementationPtrProperty,
+    MovieSceneEvaluationFieldEntityTreeProperty,
+    MovieSceneSubSequenceTreeProperty,
+    MovieSceneSequenceInstanceDataPtrProperty,
+    SectionEvaluationDataTreeProperty,
+    MovieSceneTrackFieldDataProperty,
+    MovieSceneEventParametersProperty,
+    MovieSceneFloatChannelProperty,
+    MovieSceneFloatValueProperty,
+    MovieSceneFrameRangeProperty,
+    MovieSceneSegmentProperty,
+    MovieSceneSegmentIdentifierProperty,
+    MovieSceneTrackIdentifierProperty,
+    MovieSceneSequenceIdProperty,
+    MovieSceneEvaluationKeyProperty,
     UnknownProperty
 );
 
@@ -684,6 +735,106 @@ impl Property {
                     .into()
             }
 
+            "MovieSceneEvalTemplatePtr" => MovieSceneEvalTemplatePtrProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneTrackImplementationPtr" => MovieSceneTrackImplementationPtrProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneEvaluationFieldEntityTree" => {
+                MovieSceneEvaluationFieldEntityTreeProperty::new(
+                    asset,
+                    name,
+                    include_header,
+                    duplication_index,
+                )?
+                .into()
+            }
+            "MovieSceneSubSequenceTree" => MovieSceneSubSequenceTreeProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneSequenceInstanceDataPtr" => MovieSceneSequenceInstanceDataPtrProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "SectionEvaluationDataTree" => SectionEvaluationDataTreeProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneTrackFieldData" => MovieSceneTrackFieldDataProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneEventParameters" => MovieSceneEventParametersProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneFloatChannel" => {
+                MovieSceneFloatChannelProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "MovieSceneFloatValue" => {
+                MovieSceneFloatValueProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "MovieSceneFrameRange" => {
+                MovieSceneFrameRangeProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "MovieSceneSegment" => {
+                MovieSceneSegmentProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "MovieSceneSegmentIdentifier" => MovieSceneSegmentIdentifierProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneTrackIdentifier" => MovieSceneTrackIdentifierProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+            "MovieSceneSequenceId" => {
+                MovieSceneSequenceIdProperty::new(asset, name, include_header, duplication_index)?
+                    .into()
+            }
+            "MovieSceneEvaluationKey" => MovieSceneEvaluationKeyProperty::new(
+                asset,
+                name,
+                include_header,
+                duplication_index,
+            )?
+            .into(),
+
             _ => UnknownProperty::with_serialized_type(
                 asset,
                 name,
@@ -815,7 +966,7 @@ property_inner_fname! {
     MovieSceneTrackImplementationPtrProperty: "MovieSceneTrackImplementationPtr",
     MovieSceneEvaluationFieldEntityTreeProperty: "MovieSceneEvaluationFieldEntityTree",
     MovieSceneSubSequenceTreeProperty: "MovieSceneSubSequenceTree",
-    MovieSceneSequenceInstanceDataPtrProperty: "MovieSceneSequenceInstanceDataPtr"
+    MovieSceneSequenceInstanceDataPtrProperty: "MovieSceneSequenceInstanceDataPtr",
     SectionEvaluationDataTreeProperty: "SectionEvaluationDataTree",
     MovieSceneTrackFieldDataProperty: "MovieSceneTrackFieldData",
     MovieSceneEventParametersProperty: "MovieSceneEventParameters",

@@ -83,6 +83,6 @@ impl PropertyTrait for MovieSceneEvaluationKeyProperty {
 
         self.value.write(asset)?;
 
-        Ok((asset.position() - begin))
+        Ok((asset.position() - begin) as usize)
     }
 }

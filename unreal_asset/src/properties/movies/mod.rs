@@ -4,12 +4,9 @@ use ordered_float::OrderedFloat;
 use crate::{
     error::Error,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::{FrameNumber, FrameRate},
 };
 
-use super::rich_curve_key_property::{
-    RichCurveExtrapolation, RichCurveInterpMode, RichCurveTangentMode, RichCurveTangentWeightMode,
-};
+use super::rich_curve_key_property::RichCurveTangentWeightMode;
 
 pub mod enums;
 pub mod movie_scene_eval_template_ptr_property;
@@ -49,7 +46,7 @@ impl MovieSceneTangentData {
         let leave_tangent_weight = asset.read_f32::<LittleEndian>()?;
         let tangent_weight_mode: RichCurveTangentWeightMode =
             RichCurveTangentWeightMode::try_from(asset.read_i8()?)?;
-        let padding = match clang_win64 {
+        let mut padding = match clang_win64 {
             true => vec![0u8; 3],
             false => vec![0u8; 0],
         };

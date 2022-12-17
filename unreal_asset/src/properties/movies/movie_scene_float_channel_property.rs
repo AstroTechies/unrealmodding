@@ -1,5 +1,3 @@
-use std::default;
-
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
@@ -11,7 +9,7 @@ use crate::{
     unreal_types::{FName, FrameNumber, FrameRate, Guid},
 };
 
-use super::MovieSceneFloatValue;
+use super::movie_scene_float_value_property::MovieSceneFloatValue;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatChannel {

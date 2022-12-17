@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     enums::ESectionEvaluationFlags, movie_scene_evaluation::TMovieSceneEvaluationTree,
-    MovieSceneSequenceId,
+    movie_scene_sequence_id_property::MovieSceneSequenceId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -292,6 +292,16 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         self.asset.get_export_class_type(index)
     }
+
+    fn add_fname(&mut self, _value: &str) -> FName {
+        // todo: assetserializer should never add fname?
+        panic!("AssetSerializer added fname");
+    }
+
+    fn add_fname_with_number(&mut self, _value: &str, _number: i32) -> FName {
+        // todo: assetserializer should never add fname?
+        panic!("AssetSerializer added fname");
+    }
 }
 
 impl<'asset, 'cursor> AssetWriter for AssetSerializer<'asset, 'cursor> {
@@ -386,7 +396,7 @@ impl AssetTrait for Asset {
                     .map(|name| name == T::FRIENDLY_NAME)
                     .unwrap_or(false)
             })
-            .map(|e| e.clone())
+            .cloned()
             .unwrap_or_else(|| CustomVersion::new(T::GUID, 0))
     }
 

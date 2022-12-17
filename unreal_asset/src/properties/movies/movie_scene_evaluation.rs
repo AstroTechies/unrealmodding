@@ -107,7 +107,7 @@ where
             entries.push(FEntry::new(asset)?);
         }
 
-        let mut items_amount = asset.read_i32::<LittleEndian>()?;
+        let items_amount = asset.read_i32::<LittleEndian>()?;
         let mut items = Vec::with_capacity(items_amount as usize);
 
         for _ in 0..entries_amount {

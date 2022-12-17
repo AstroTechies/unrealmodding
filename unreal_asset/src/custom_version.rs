@@ -22,9 +22,11 @@ pub struct CustomVersion {
     pub version_mappings: &'static [(EngineVersion, i32)],
 }
 
+type VersionInfo = (String, Option<&'static [(EngineVersion, i32)]>);
+
 #[rustfmt::skip]
 lazy_static! {
-    static ref GUID_TO_VERSION_INFO: HashMap<Guid, (String, Option<&'static [(EngineVersion, i32)]>)> = HashMap::from([
+    static ref GUID_TO_VERSION_INFO: HashMap<Guid, VersionInfo> = HashMap::from([
         ( new_guid(0, 0, 0, 0xF99D40C1),                            (String::from("UnusedCustomVersionKey"), None) ),
         ( new_guid(0xB0D832E4, 0x1F894F0D, 0xACCF7EB7, 0x36FD4AA2), (String::from("FBlueprintsObjectVersion"), None) ),
         ( new_guid(0xE1C64328, 0xA22C4D53, 0xA36C8E86, 0x6417BD8C), (String::from("FBuildObjectVersion"), None) ),
@@ -78,7 +80,7 @@ impl CustomVersion {
             guid,
             friendly_name: version_info.as_ref().map(|e| e.0.clone()),
             version,
-            version_mappings: version_info.map(|e| e.1).flatten().unwrap_or_default(),
+            version_mappings: version_info.and_then(|e| e.1).unwrap_or_default(),
         }
     }
 
@@ -92,7 +94,7 @@ impl CustomVersion {
             guid: key,
             friendly_name: version_info.as_ref().map(|e| e.0.clone()),
             version,
-            version_mappings: version_info.map(|e| e.1).flatten().unwrap_or_default(),
+            version_mappings: version_info.and_then(|e| e.1).unwrap_or_default(),
         })
     }
 

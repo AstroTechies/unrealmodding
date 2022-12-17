@@ -97,7 +97,7 @@ impl AssetTrait for RawReader {
     }
 
     fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
-        FName::new(value.to_string(), index)
+        FName::new(value.to_string(), number)
     }
 }
 

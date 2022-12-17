@@ -35,11 +35,11 @@ impl NiagaraVariableProperty {
 
         Ok(NiagaraVariableProperty {
             struct_property: StructProperty {
-                name: name.clone(),
+                name,
                 struct_type: None,
                 struct_guid: None,
                 property_guid: None,
-                duplication_index: duplication_index,
+                duplication_index,
                 serialize_none: false,
                 value: properties,
             },

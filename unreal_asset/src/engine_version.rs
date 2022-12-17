@@ -295,7 +295,7 @@ pub fn guess_engine_version(
     let mut final_possible_versions = possible_versions
         .iter()
         .filter(|e| **e >= min_introduced && **e < max_introduced)
-        .map(|e| *e)
+        .copied()
         .collect::<Vec<_>>();
 
     final_possible_versions.sort();
@@ -307,6 +307,6 @@ pub fn guess_engine_version(
 
     final_possible_versions
         .first()
-        .map(|e| *e)
+        .copied()
         .unwrap_or(EngineVersion::UNKNOWN)
 }

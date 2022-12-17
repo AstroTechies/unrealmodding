@@ -11,6 +11,6 @@ pub trait UsmapWriter {
     fn write_u64(&mut self, value: u64) -> Result<(), io::Error>;
     fn write_f32(&mut self, value: f32) -> Result<(), io::Error>;
     fn write_f64(&mut self, value: f64) -> Result<(), io::Error>;
-    fn write_string(&mut self, value: &String) -> Result<usize, io::Error>;
-    fn write_name(&mut self, name: &String) -> Result<(), io::Error>;
+    fn write_string(&mut self, value: &str) -> Result<usize, io::Error>;
+    fn write_name(&mut self, name: &str) -> Result<(), io::Error>;
 }

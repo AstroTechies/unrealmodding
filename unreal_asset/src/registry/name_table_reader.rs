@@ -130,6 +130,14 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         self.reader.get_export_class_type(index)
     }
+
+    fn add_fname(&mut self, value: &str) -> FName {
+        self.reader.add_fname(value)
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        self.reader.add_fname_with_number(value, number)
+    }
 }
 
 impl<'reader, Reader: AssetReader> AssetReader for NameTableReader<'reader, Reader> {

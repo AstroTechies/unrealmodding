@@ -6,7 +6,10 @@ use crate::{
     unreal_types::{FName, Guid},
 };
 
-use super::{movie_scene_evaluation::TMovieSceneEvaluationTree, MovieSceneTrackIdentifier};
+use super::{
+    movie_scene_evaluation::TMovieSceneEvaluationTree,
+    movie_scene_track_identifier_property::MovieSceneTrackIdentifier,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackFieldData {

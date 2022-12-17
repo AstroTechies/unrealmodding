@@ -8,7 +8,7 @@ use crate::{
     unreal_types::{FName, Guid},
 };
 
-#[derive(Debug, Cope, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Int32RangeBound {
     pub ty: ERangeBoundTypes,
     pub value: i32,

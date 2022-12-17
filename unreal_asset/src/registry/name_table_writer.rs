@@ -101,6 +101,14 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         self.writer.get_export_class_type(index)
     }
+
+    fn add_fname(&mut self, value: &str) -> FName {
+        self.writer.add_fname(value)
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        self.writer.add_fname_with_number(value, number)
+    }
 }
 
 impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter

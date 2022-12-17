@@ -2,8 +2,9 @@ use byteorder::LittleEndian;
 
 use crate::{
     error::Error,
-    impl_property_data_trait, optional_guid,
-    reader::asset_reader::AssetReader,
+    impl_property_data_trait, optional_guid, optional_guid_write,
+    properties::PropertyTrait,
+    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     unreal_types::{FName, Guid, PackageIndex},
 };
 
@@ -33,5 +34,20 @@ impl MovieSceneSequenceInstanceDataPtrProperty {
             duplication_index,
             value,
         })
+    }
+}
+
+impl PropertyTrait for MovieSceneSequenceInstanceDataPtrProperty {
+    fn write<Writer: AssetWriter>(
+        &self,
+        asset: &mut Writer,
+        include_header: bool,
+    ) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, include_header);
+
+        let begin = asset.position();
+        asset.write_i32::<LittleEndian>(self.value.index)?;
+
+        Ok((asset.position() - begin) as usize)
     }
 }

@@ -2,10 +2,7 @@ use crate::{
     cast,
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::{
-        str_property::StrProperty, struct_property::StructProperty, Property, PropertyDataTrait,
-        PropertyTrait,
-    },
+    properties::{str_property::StrProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::asset_reader::AssetReader,
     unreal_types::{FName, Guid},
 };
@@ -32,9 +29,9 @@ impl MovieSceneEvalTemplatePtrProperty {
 
         let type_name_fname = asset.add_fname("TypeName");
         let type_name = StrProperty::new(asset, type_name_fname, include_header, 0)?;
-        value.push(type_name.into());
 
         if type_name.value.is_some() {
+            value.push(type_name.into());
             while let Some(data) = Property::new(asset, true)? {
                 value.push(data);
             }

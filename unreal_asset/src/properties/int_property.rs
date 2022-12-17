@@ -220,17 +220,15 @@ impl ByteProperty {
 
                 asset.seek(SeekFrom::Current(-(size_of::<i32>() as i64 * 2)))?;
 
-                let byte_value;
-
-                if name_map_pointer >= 0
+                let byte_value = if name_map_pointer >= 0
                     && name_map_pointer < asset.get_name_map_index_list().len() as i32
                     && name_map_index == 0
                     && !asset.get_name_reference(name_map_index).contains('/')
                 {
-                    byte_value = BytePropertyValue::FName(asset.read_fname()?);
+                    BytePropertyValue::FName(asset.read_fname()?)
                 } else {
-                    byte_value = BytePropertyValue::Byte(asset.read_u8()?);
-                }
+                    BytePropertyValue::Byte(asset.read_u8()?)
+                };
 
                 Some(byte_value)
             }

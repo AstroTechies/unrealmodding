@@ -2,6 +2,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 /// Enum MovieScene.EMovieSceneKeyInterpolation
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EMovieSceneKeyInterpolation {
     Auto = 0,
@@ -14,6 +15,7 @@ pub enum EMovieSceneKeyInterpolation {
 
 /// Enum MovieScene.EMovieSceneBlendType
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EMovieSceneBlendType {
     Invalid = 0,
@@ -25,6 +27,7 @@ pub enum EMovieSceneBlendType {
 
 /// Enum MovieScene.EMovieSceneBuiltInEasing
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EMovieSceneBuiltInEasing {
     Linear = 0,
@@ -54,6 +57,7 @@ pub enum EMovieSceneBuiltInEasing {
 
 /// Enum MovieScene.EEvaluationMethod
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EEvaluationMethod {
     Static = 0,
@@ -63,6 +67,7 @@ pub enum EEvaluationMethod {
 
 /// Enum MovieScene.EUpdateClockSource
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EUpdateClockSource {
     Tick = 0,
@@ -76,6 +81,7 @@ pub enum EUpdateClockSource {
 
 /// Enum MovieScene.EMovieSceneEvaluationType
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EMovieSceneEvaluationType {
     FrameLocked = 0,
@@ -85,6 +91,7 @@ pub enum EMovieSceneEvaluationType {
 
 /// Enum MovieScene.EMovieScenePlayerStatus
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EMovieScenePlayerStatus {
     Stopped = 0,
@@ -99,6 +106,7 @@ pub enum EMovieScenePlayerStatus {
 
 /// Enum MovieScene.EMovieSceneObjectBindingSpace
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EMovieSceneObjectBindingSpace {
     Local = 0,
@@ -108,6 +116,7 @@ pub enum EMovieSceneObjectBindingSpace {
 
 /// Enum MovieScene.EMovieSceneCompletionMode
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EMovieSceneCompletionMode {
     KeepState = 0,
@@ -118,6 +127,7 @@ pub enum EMovieSceneCompletionMode {
 
 /// Enum MovieScene.ESectionEvaluationFlags
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum ESectionEvaluationFlags {
     None = 0,
@@ -128,6 +138,7 @@ pub enum ESectionEvaluationFlags {
 
 /// Enum MovieScene.EUpdatePositionMethod
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum EUpdatePositionMethod {
     Play = 0,
@@ -138,6 +149,7 @@ pub enum EUpdatePositionMethod {
 
 /// Enum MovieScene.ESpawnOwnership
 #[repr(u8)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum ESpawnOwnership {
     InnerSequence = 0,

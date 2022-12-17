@@ -360,7 +360,7 @@ impl Box2DProperty {
             property_guid,
             duplication_index,
             v1: Vector2DProperty::new(asset, name.clone(), false, 0)?,
-            v2: Vector2DProperty::new(asset, name.clone(), false, 0)?,
+            v2: Vector2DProperty::new(asset, name, false, 0)?,
             is_valid: asset.read_bool()?,
         })
     }
