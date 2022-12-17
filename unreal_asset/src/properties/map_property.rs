@@ -43,7 +43,7 @@ impl MapProperty {
     ) -> Result<Property, Error> {
         match type_name.content.as_str() {
             "StructProperty" => {
-                let _struct_type = match is_key {
+                let struct_type = match is_key {
                     true => asset
                         .get_map_key_override()
                         .get(&name.content)
@@ -54,7 +54,16 @@ impl MapProperty {
                         .map(|s| s.to_owned()),
                 }
                 .unwrap_or_else(|| String::from("Generic"));
-                Ok(StructProperty::new(asset, name, false, 1, 0)?.into())
+                Ok(StructProperty::custom_header(
+                    asset,
+                    name,
+                    1,
+                    0,
+                    Some(FName::from_slice(&struct_type)),
+                    None,
+                    None,
+                )?
+                .into())
             }
             _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
         }

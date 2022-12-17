@@ -1168,10 +1168,12 @@ impl<'a> Asset {
                 };
 
                 if let Some(base_export) = base_export {
+                    println!("Parsing export {}", i);
                     let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
-                        Err(_e) => {
+                        Err(e) => {
                             //todo: warning?
+                            println!("{:?}", e);
                             self.cursor
                                 .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
                             Ok(RawExport::from_base(base_export.clone(), self)?.into())
@@ -1209,6 +1211,8 @@ impl<'a> Asset {
             _ => {
                 if export_class_type.content.ends_with("DataTable") {
                     DataTableExport::from_base(base_export, self)?.into()
+                } else if export_class_type.content.ends_with("StringTable") {
+                    StringTableExport::from_base(base_export, self)?.into()
                 } else if export_class_type
                     .content
                     .ends_with("BlueprintGeneratedClass")
@@ -1233,7 +1237,7 @@ impl<'a> Asset {
                                     .insert(map.generic_property.name.content.to_owned(), key);
                             }
 
-                            let value_override = match &*map.key_prop {
+                            let value_override = match &*map.value_prop {
                                 FProperty::FStructProperty(struct_property) => {
                                     match struct_property.struct_value.is_import() {
                                         true => self

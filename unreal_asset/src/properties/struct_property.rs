@@ -76,6 +76,7 @@ impl StructProperty {
             None => false,
         };
 
+        // todo: more customser checks
         if let Some(ref e) = struct_type {
             if e.content.as_str() == "RichCurveKey"
                 && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
