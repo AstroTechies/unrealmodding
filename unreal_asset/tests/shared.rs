@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use unreal_asset::{error::Error, reader::asset_trait::AssetTrait, Asset};
+use unreal_asset::{cast, error::Error, exports::Export, reader::asset_trait::AssetTrait, Asset};
 
 #[allow(dead_code)]
 pub(crate) fn verify_reparse(asset: &mut Asset) -> Result<(), Error> {
@@ -16,4 +16,15 @@ pub(crate) fn verify_reparse(asset: &mut Asset) -> Result<(), Error> {
     asset.parse_data()?;
 
     Ok(())
+}
+
+#[allow(dead_code)]
+pub(crate) fn verify_all_exports_parsed(asset: &Asset) -> bool {
+    for export in &asset.exports {
+        if cast!(Export, RawExport, export).is_some() {
+            return false;
+        }
+    }
+
+    true
 }
