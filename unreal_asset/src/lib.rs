@@ -1168,7 +1168,6 @@ impl<'a> Asset {
                 };
 
                 if let Some(base_export) = base_export {
-                    println!("Parsing export {}", i);
                     let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
                         Err(e) => {
