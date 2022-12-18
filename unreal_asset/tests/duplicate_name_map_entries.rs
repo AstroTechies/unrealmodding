@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use unreal_asset::{
-    engine_version::EngineVersion, error::Error, reader::asset_trait::AssetTrait, Asset,
+    engine_version::EngineVersion, error::Error, Asset,
 };
 
 mod shared;

@@ -19,6 +19,7 @@ pub mod core_uobject;
 pub mod date_property;
 pub mod delegate_property;
 pub mod enum_property;
+pub mod float_range_property;
 pub mod font_character_property;
 pub mod game_framework;
 pub mod gameplay_tag_container_property;
@@ -46,6 +47,7 @@ pub mod world_tile_property;
 
 use self::cloth_lod_property::ClothLodDataProperty;
 use self::delegate_property::DelegateProperty;
+use self::float_range_property::FloatRangeProperty;
 use self::font_character_property::FontCharacterProperty;
 use self::game_framework::unique_net_id_property::UniqueNetIdProperty;
 use self::movies::movie_scene_eval_template_ptr_property::MovieSceneEvalTemplatePtrProperty;
@@ -205,6 +207,8 @@ lazy_static! {
         String::from("UniqueNetIdRepl"),
         String::from("NiagaraVariable"),
         String::from("FontData"),
+        String::from("ClothLODData"),
+        String::from("FloatRange"),
         //
         String::from("MovieSceneEvalTemplatePtr"),
         String::from("MovieSceneTrackImplementationPtr"),
@@ -309,6 +313,7 @@ pub enum Property {
     NiagaraVariableProperty,
     NiagaraVariableWithOffsetProperty,
     FontDataProperty,
+    FloatRangeProperty,
     //
     MovieSceneEvalTemplatePtrProperty,
     MovieSceneTrackImplementationPtrProperty,
@@ -397,6 +402,7 @@ inner_trait!(
     NiagaraVariableProperty,
     NiagaraVariableWithOffsetProperty,
     FontDataProperty,
+    FloatRangeProperty,
     MovieSceneEvalTemplatePtrProperty,
     MovieSceneTrackImplementationPtrProperty,
     MovieSceneEvaluationFieldEntityTreeProperty,
@@ -734,6 +740,9 @@ impl Property {
                 FontDataProperty::new(asset, name, include_header, length, duplication_index)?
                     .into()
             }
+            "FloatRange" => {
+                FloatRangeProperty::new(asset, name, include_header, duplication_index)?.into()
+            }
 
             "MovieSceneEvalTemplatePtr" => MovieSceneEvalTemplatePtrProperty::new(
                 asset,
@@ -961,6 +970,7 @@ property_inner_fname! {
     NiagaraVariableProperty: "NiagaraVariable",
     NiagaraVariableWithOffsetProperty: "NiagaraVariableWithOffset",
     FontDataProperty: "FontData",
+    FloatRangeProperty: "FloatRange",
 
     MovieSceneEvalTemplatePtrProperty: "MovieSceneEvalTemplatePtr",
     MovieSceneTrackImplementationPtrProperty: "MovieSceneTrackImplementationPtr",

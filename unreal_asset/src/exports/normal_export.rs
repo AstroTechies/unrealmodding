@@ -38,6 +38,7 @@ impl NormalExport {
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let mut properties = Vec::new();
+
         while let Some(e) = Property::new(asset, true)? {
             properties.push(e);
         }

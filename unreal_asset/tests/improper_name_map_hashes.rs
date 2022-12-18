@@ -31,7 +31,6 @@ fn improper_name_map_hashes() -> Result<(), Error> {
     ]);
 
     for (name, hash) in &asset.override_name_map_hashes {
-        println!("Checking: {}", name);
         if let Some(entry) = testing_entries.get_mut(name) {
             assert_eq!(*hash, 0);
             *entry = true;

@@ -7,10 +7,14 @@ pub(crate) fn verify_reparse(asset: &mut Asset) -> Result<(), Error> {
     let engine_version = asset.get_engine_version();
 
     let mut cursor = Cursor::new(Vec::new());
-    let mut bulk_cursor = Cursor::new(Vec::new());
-    asset.write_data(&mut cursor, Some(&mut bulk_cursor))?;
 
-    let mut reparse = Asset::new(cursor.into_inner(), Some(bulk_cursor.into_inner()));
+    let mut bulk_cursor = None;
+    if asset.use_separate_bulk_data_files {
+        bulk_cursor = Some(Cursor::new(Vec::new()));
+    }
+    asset.write_data(&mut cursor, bulk_cursor.as_mut())?;
+
+    let mut reparse = Asset::new(cursor.into_inner(), bulk_cursor.map(|e| e.into_inner()));
     reparse.set_engine_version(engine_version);
 
     asset.parse_data()?;

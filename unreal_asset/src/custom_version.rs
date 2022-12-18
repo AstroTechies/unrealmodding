@@ -36,7 +36,6 @@ lazy_static! {
         ( new_guid(0x78F01B33, 0xEBEA4F98, 0xB9B484EA, 0xCCB95AA2), (String::from("FPhysicsObjectVersion"), None) ),
         ( new_guid(0x6631380F, 0x2D4D43E0, 0x8009CF27, 0x6956A95A), (String::from("FPlatformObjectVersion"), None) ),
         ( new_guid(0x12F88B9F, 0x88754AFC, 0xA67CD90C, 0x383ABD29), (String::from("FRenderingObjectVersion"), None) ),
-        ( new_guid(0x7B5AE74C, 0xD2704C10, 0xA9585798, 0x0B212A5A), (String::from("FSequencerObjectVersion"), None) ),
         ( new_guid(0xD7296918, 0x1DD64BDD, 0x9DE264A8, 0x3CC13884), (String::from("FVRObjectVersion"), None) ),
         ( new_guid(0xC2A15278, 0xBFE74AFE, 0x6C1790FF, 0x531DF755), (String::from("FLoadTimesObjectVersion"), None) ),
         ( new_guid(0x6EACA3D4, 0x40EC4CC1, 0xB7868BED, 0x9428FC5),  (String::from("FGeometryObjectVersion"), None) ),
@@ -69,7 +68,8 @@ lazy_static! {
         ( FEditorObjectVersion::GUID,                               (String::from(FEditorObjectVersion::FRIENDLY_NAME), Some(FEditorObjectVersion::VERSION_MAPPINGS)) ),
         ( FFrameworkObjectVersion::GUID,                            (String::from(FFrameworkObjectVersion::FRIENDLY_NAME), Some(FFrameworkObjectVersion::VERSION_MAPPINGS)) ),
         ( FFortniteMainBranchObjectVersion::GUID,                   (String::from(FFortniteMainBranchObjectVersion::FRIENDLY_NAME), Some(FFortniteMainBranchObjectVersion::VERSION_MAPPINGS)) ),
-        ( FReleaseObjectVersion::GUID,                              (String::from(FReleaseObjectVersion::FRIENDLY_NAME), Some(FReleaseObjectVersion::VERSION_MAPPINGS)) )
+        ( FReleaseObjectVersion::GUID,                              (String::from(FReleaseObjectVersion::FRIENDLY_NAME), Some(FReleaseObjectVersion::VERSION_MAPPINGS)) ),
+        ( FSequencerObjectVersion::GUID,                            (String::from(FSequencerObjectVersion::FRIENDLY_NAME), Some(FSequencerObjectVersion::VERSION_MAPPINGS)) ),
     ]);
 }
 
@@ -132,7 +132,7 @@ impl CustomVersion {
     ) -> Option<i32> {
         self.version_mappings
             .iter()
-            .find(|(version, _)| *version == engine_version)
+            .find(|(version, _)| *version <= engine_version)
             .map(|(_, version)| *version)
     }
 
@@ -365,6 +365,56 @@ pub enum FFortniteMainBranchObjectVersion {
     /// Remove the WaterVelocityHeightTexture dependency on MPC_Landscape and LandscapeWaterIndo
     /// Introduced: ObjectVersion.VER_UE4_CORRECT_LICENSEE_FLAG
     RemoveLandscapeWaterInfo,
+
+    // CHANGES BEYOND HERE ARE UE5 ONLY //
+    /// Added the weighted value property type to store the cloths weight maps' low/high ranges
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    ChaosClothAddWeightedValue,
+
+    /// Added the Long Range Attachment stiffness weight map
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    ChaosClothAddTetherStiffnessWeightMap,
+
+    /// Fix corrupted LOD transition maps
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    ChaosClothFixLODTransitionMaps,
+
+    /// Enable a few more weight maps to better art direct the cloth simulation
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    ChaosClothAddTetherScaleAndDragLiftWeightMaps,
+
+    /// Enable material (edge, bending, and area stiffness) weight maps
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    ChaosClothAddMaterialWeightMaps,
+
+    /// Added bShowCurve for movie scene float channel serialization
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    SerializeFloatChannelShowCurve,
+
+    /// Minimize slack waste by using a single array for grass data
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    LandscapeGrassSingleArray,
+
+    /// Add loop counters to sequencer's compiled sub-sequence data
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    AddedSubSequenceEntryWarpCounter,
+
+    /// Water plugin is now component-based rather than actor based
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    WaterBodyComponentRefactor,
+
+    /// Cooked BPGC storing editor-only asset tags
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    BPGCCookedEditorTags,
+
+    /// Terrain layer weights are no longer considered material parameters
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    TerrainLayerWeightsAreNotParameters,
+
+    /// Anim Dynamics Node Gravity Override vector is now defined in world space, not simulation space.
+    /// Legacy behavior can be maintained with a flag, which is set false by default for new nodes,
+    /// true for nodes predating this change.
+    GravityOverrideDefinedInWorldSpace,
 
     /// Introduced: ObjectVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
@@ -1117,6 +1167,88 @@ impl_custom_version_trait!(
     VER_UE4_14: AddComponentNodeTemplateUniqueNames,
     VER_UE4_13: LevelTransArrayConvertedToTArray,
     VER_UE4_11: StaticMeshExtendedBoundsFix,
+    VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
+);
+
+#[derive(IntoPrimitive)]
+#[repr(i32)]
+pub enum FSequencerObjectVersion {
+    /// Before any version changes were made
+    /// Introduced: EngineVersion.VER_UE4_OLDEST_LOADABLE_PACKAGE
+    BeforeCustomVersionWasAdded = 0,
+
+    /// Per-platform overrides player overrides for media sources changed name and type
+    /// Introduced: EngineVersion.VER_UE4_14
+    RenameMediaSourcePlatformPlayers,
+
+    /// Enable root motion isn't the right flag to use, but force root lock
+    /// Introduced: EngineVersion.VER_UE4_15
+    ConvertEnableRootMotionToForceRootLock,
+
+    /// Convert multiple rows to tracks
+    /// Introduced: EngineVersion.VER_UE4_15
+    ConvertMultipleRowsToTracks,
+
+    /// When finished now defaults to restore state
+    /// Introduced: EngineVersion.VER_UE4_16
+    WhenFinishedDefaultsToRestoreState,
+
+    /// EvaluationTree added
+    /// Introduced: EngineVersion.VER_UE4_19
+    EvaluationTree,
+
+    /// When finished now defaults to project default
+    /// Introduced: EngineVersion.VER_UE4_19
+    WhenFinishedDefaultsToProjectDefault,
+
+    /// Use int range rather than float range in FMovieSceneSegment
+    /// Introduced: EngineVersion.VER_UE4_20
+    FloatToIntConversion,
+
+    /// Purged old spawnable blueprint classes from level sequence assets
+    /// Introduced: EngineVersion.VER_UE4_20
+    PurgeSpawnableBlueprints,
+
+    /// Finish UMG evaluation on end
+    /// Introduced: EngineVersion.VER_UE4_20
+    FinishUMGEvaluation,
+
+    /// Manual serialization of float channel
+    /// Introduced: EngineVersion.VER_UE4_22
+    SerializeFloatChannel,
+
+    /// Change the linear keys so they act the old way and interpolate always
+    /// Introduced: EngineVersion.VER_UE4_22
+    ModifyLinearKeysForOldInterp,
+
+    /// Full Manual serialization of float channel
+    /// Introduced: EngineVersion.VER_UE4_25
+    SerializeFloatChannelCompletely,
+
+    /// Set ContinuouslyRespawn to false by default, added FMovieSceneSpawnable::bNetAddressableName
+    /// Introduced: EngineVersion.VER_UE4_27
+    SpawnableImprovements,
+
+    // Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION
+    LatestVersion,
+    // Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    VersionPlusOne,
+}
+
+impl_custom_version_trait!(
+    FSequencerObjectVersion,
+    "FSequencerObjectVersion",
+    new_guid(0x7B5AE74C, 0xD2704C10, 0xA9585798, 0x0B212A5A),
+    VER_UE4_AUTOMATIC_VERSION: LatestVersion,
+    VER_UE4_AUTOMATIC_VERSION_PLUS_ONE: VersionPlusOne,
+    VER_UE4_27: SpawnableImprovements,
+    VER_UE4_25: SerializeFloatChannelCompletely,
+    VER_UE4_22: ModifyLinearKeysForOldInterp,
+    VER_UE4_20: FinishUMGEvaluation,
+    VER_UE4_19: WhenFinishedDefaultsToProjectDefault,
+    VER_UE4_16: WhenFinishedDefaultsToRestoreState,
+    VER_UE4_15: ConvertMultipleRowsToTracks,
+    VER_UE4_14: RenameMediaSourcePlatformPlayers,
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 

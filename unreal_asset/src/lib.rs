@@ -636,8 +636,48 @@ impl<'a> Asset {
             depends_map: None,
             soft_package_reference_list: None,
             world_tile_info: None,
-            map_key_override: HashMap::new(), // todo: preinit
-            map_value_override: HashMap::new(),
+            map_key_override: HashMap::from([
+                ("PlayerCharacterIDs".to_string(), "Guid".to_string()),
+                (
+                    "m_PerConditionValueToNodeMap".to_string(),
+                    "Guid".to_string(),
+                ),
+                ("BindingIdToReferences".to_string(), "Guid".to_string()),
+                (
+                    "UserParameterRedirects".to_string(),
+                    "NiagaraVariable".to_string(),
+                ),
+                (
+                    "Tracks".to_string(),
+                    "MovieSceneTrackIdentifier".to_string(),
+                ),
+                (
+                    "SubSequences".to_string(),
+                    "MovieSceneSequenceID".to_string(),
+                ),
+                ("Hierarchy".to_string(), "MovieSceneSequenceID".to_string()),
+                (
+                    "TrackSignatureToTrackIdentifier".to_string(),
+                    "Guid".to_string(),
+                ),
+                ("ItemsToRefund".to_string(), "Guid".to_string()),
+                ("PlayerCharacterIDMap".to_string(), "Guid".to_string()),
+            ]),
+            map_value_override: HashMap::from([
+                ("ColorDatabase".to_string(), "LinearColor".to_string()),
+                (
+                    "UserParameterRedirects".to_string(),
+                    "NiagaraVariable".to_string(),
+                ),
+                (
+                    "TrackSignatureToTrackIdentifier".to_string(),
+                    "MovieSceneTrackIdentifier".to_string(),
+                ),
+                (
+                    "RainChanceMinMaxPerWeatherState".to_string(),
+                    "FloatRange".to_string(),
+                ),
+            ]),
         }
     }
 
