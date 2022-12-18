@@ -109,6 +109,10 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
     fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
         self.writer.add_fname_with_number(value, number)
     }
+
+    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
+        self.writer.get_mappings()
+    }
 }
 
 impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter

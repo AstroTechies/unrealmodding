@@ -86,6 +86,7 @@ use object_version::{ObjectVersion, ObjectVersionUE5};
 use properties::world_tile_property::FWorldTileInfo;
 use reader::{asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter};
 use unreal_types::{FName, GenerationInfo, Guid, PackageIndex};
+use unversioned::Usmap;
 
 /// Cast a Property/Export to a more specific type
 ///
@@ -218,9 +219,9 @@ pub struct Asset {
     soft_package_reference_list: Option<Vec<String>>,
     pub world_tile_info: Option<FWorldTileInfo>,
 
-    //todo: fill out with defaults
     pub map_key_override: HashMap<String, String>,
     pub map_value_override: HashMap<String, String>,
+    pub mappings: Option<Usmap>,
 }
 
 struct AssetSerializer<'asset, 'cursor> {
@@ -301,6 +302,10 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
     fn add_fname_with_number(&mut self, _value: &str, _number: i32) -> FName {
         // todo: assetserializer should never add fname?
         panic!("AssetSerializer added fname");
+    }
+
+    fn get_mappings(&self) -> Option<&Usmap> {
+        self.asset.get_mappings()
     }
 }
 
@@ -477,6 +482,10 @@ impl AssetTrait for Asset {
             true => self.get_import(index).map(|e| e.object_name.clone()),
             false => Some(FName::new(index.index.to_string(), 0)),
         }
+    }
+
+    fn get_mappings(&self) -> Option<&Usmap> {
+        self.mappings.as_ref()
     }
 }
 
@@ -678,6 +687,7 @@ impl<'a> Asset {
                     "FloatRange".to_string(),
                 ),
             ]),
+            mappings: None,
         }
     }
 
@@ -1615,6 +1625,7 @@ impl<'a> Asset {
         }
 
         // todo: asset registry data support
+        // we can support it now I think?
         let asset_registry_data_offset = match self.asset_registry_data_offset != 0 {
             true => serializer.position() as i32,
             false => 0,

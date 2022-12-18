@@ -84,8 +84,6 @@ impl StructProperty {
             None => false,
         };
 
-        // todo: more customser checks
-
         if let Some(ref e) = struct_type {
             if e.content == "FloatRange" {
                 // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
@@ -204,8 +202,8 @@ impl StructProperty {
 
         if let Some(ref struct_type) = struct_type {
             if struct_type.content == "FloatRange" {
-                has_custom_serialization =
-                    self.value.len() == 1 && cast!(Property, FloatRangeProperty, &self.value[0]).is_some();
+                has_custom_serialization = self.value.len() == 1
+                    && cast!(Property, FloatRangeProperty, &self.value[0]).is_some();
             }
 
             if struct_type.content == "RichCurveKey"

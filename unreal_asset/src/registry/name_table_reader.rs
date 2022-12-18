@@ -138,6 +138,10 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
     fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
         self.reader.add_fname_with_number(value, number)
     }
+
+    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
+        self.reader.get_mappings()
+    }
 }
 
 impl<'reader, Reader: AssetReader> AssetReader for NameTableReader<'reader, Reader> {

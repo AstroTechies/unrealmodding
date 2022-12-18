@@ -98,6 +98,10 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
     fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
         FName::new(value.to_string(), number)
     }
+
+    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
+        None
+    }
 }
 
 impl<'cursor> AssetWriter for RawWriter<'cursor> {

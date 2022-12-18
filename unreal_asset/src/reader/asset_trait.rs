@@ -5,6 +5,7 @@ use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::unreal_types::{FName, PackageIndex};
+use crate::unversioned::Usmap;
 use crate::Import;
 
 /// A trait that allows accessing data about the archive that is currently being read
@@ -28,6 +29,8 @@ pub trait AssetTrait {
     fn get_engine_version(&self) -> EngineVersion;
     fn get_object_version(&self) -> ObjectVersion;
     fn get_object_version_ue5(&self) -> ObjectVersionUE5;
+
+    fn get_mappings(&self) -> Option<&Usmap>;
 
     fn get_import(&self, index: PackageIndex) -> Option<&Import>;
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName>;
