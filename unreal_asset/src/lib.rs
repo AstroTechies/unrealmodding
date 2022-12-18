@@ -209,7 +209,7 @@ pub struct Asset {
     preload_dependency_count: i32,
     preload_dependency_offset: i32,
 
-    override_name_map_hashes: HashMap<String, u32>,
+    pub override_name_map_hashes: HashMap<String, u32>,
     name_map_index_list: Vec<String>,
     name_map_lookup: HashMap<u64, i32>,
     pub imports: Vec<Import>,
@@ -986,9 +986,7 @@ impl<'a> Asset {
         for _i in 0..self.name_count {
             let name_map = self.read_name_map_string()?;
             if name_map.0 == 0 {
-                if let Some(entry) = self.override_name_map_hashes.get_mut(&name_map.1) {
-                    *entry = 0u32;
-                }
+                self.override_name_map_hashes.insert(name_map.1.clone(), 0);
             }
             self.add_name_reference(name_map.1, true);
         }
