@@ -844,13 +844,13 @@ impl Property {
             )?
             .into(),
 
-            _ => UnknownProperty::with_serialized_type(
+            _ => UnknownProperty::new(
                 asset,
                 name,
                 include_header,
                 length,
                 duplication_index,
-                Some(type_name.clone()),
+                type_name.clone(),
             )?
             .into(),
         };
@@ -894,10 +894,7 @@ macro_rules! property_inner_fname {
                         Self::$inner(_) => FName::from_slice($name),
                     )*
                     Self::UnknownProperty(unk) => unk
-                        .serialized_type
-                        .as_ref()
-                        .cloned()
-                        .unwrap_or_else(|| FName::from_slice("Generic")),
+                        .serialized_type.clone(),
                 }
             }
         }
