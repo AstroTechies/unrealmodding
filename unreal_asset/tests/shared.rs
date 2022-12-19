@@ -17,14 +17,17 @@ pub(crate) fn verify_reparse(asset: &mut Asset) -> Result<(), Error> {
     let mut reparse = Asset::new(cursor.into_inner(), bulk_cursor.map(|e| e.into_inner()));
     reparse.set_engine_version(engine_version);
 
-    asset.parse_data()?;
+    reparse.parse_data()?;
 
     Ok(())
 }
 
 #[allow(dead_code)]
 pub(crate) fn verify_all_exports_parsed(asset: &Asset) -> bool {
+    let mut index = 0;
     for export in &asset.exports {
+        index += 1;
+        println!("Index: {}", index);
         if cast!(Export, RawExport, export).is_some() {
             return false;
         }
