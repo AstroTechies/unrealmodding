@@ -3,7 +3,7 @@
 //! Asset Registry is used for storing information about assets
 //! The information from Asset Registry is primarily used in Content Browser,
 //! but some games might require modifying it before your assets will get loaded
-use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::{Cursor, SeekFrom};
 
@@ -84,7 +84,7 @@ impl AssetRegistryState {
                 }
             }
 
-            asset.set_position(dependency_section_end as u64);
+            asset.set_position(dependency_section_end);
         }
 
         *package_data =

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io::{self, Cursor, Read, Seek};
 
 use byteorder::{LittleEndian, ReadBytesExt};

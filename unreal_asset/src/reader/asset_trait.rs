@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io::{self, SeekFrom};
 
 use crate::containers::indexed_map::IndexedMap;

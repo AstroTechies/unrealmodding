@@ -213,11 +213,11 @@ fn generate_crc32(string: &str, crc: u32) -> u32 {
 
     for mut ch in string.encode_utf16() {
         crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
-        ch = ch >> 8;
+        ch >>= 8;
         crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
-        ch = ch >> 8;
+        ch >>= 8;
         crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
-        ch = ch >> 8;
+        ch >>= 8;
         crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
     }
     !crc

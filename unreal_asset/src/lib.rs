@@ -1035,7 +1035,7 @@ impl<'a> Asset {
         self.parse_header()?;
         self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
 
-        for i in 0..self.name_count {
+        for _ in 0..self.name_count {
             let name_map = self.read_name_map_string()?;
             if name_map.0 == 0 {
                 self.override_name_map_hashes.insert(name_map.1.clone(), 0);

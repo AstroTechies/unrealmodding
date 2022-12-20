@@ -1,5 +1,5 @@
 //! Asset registry NameTableWriter
-use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::collections::{hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
 use std::io::{self, SeekFrom};
 

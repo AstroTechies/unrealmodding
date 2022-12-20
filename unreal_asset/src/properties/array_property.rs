@@ -244,7 +244,7 @@ impl ArrayProperty {
                     };
 
                 asset.write_i32::<LittleEndian>(length as i32)?;
-                asset.seek(SeekFrom::Start(new_loc as u64))?;
+                asset.seek(SeekFrom::Start(new_loc))?;
             }
         } else {
             for entry in &self.value {

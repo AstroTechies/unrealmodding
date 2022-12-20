@@ -283,7 +283,7 @@ impl PropertyTrait for ByteProperty {
 
         match self.value {
             BytePropertyValue::Byte(value) => {
-                asset.write_u8(value as u8)?;
+                asset.write_u8(value)?;
                 Ok(1)
             }
             BytePropertyValue::FName(ref name) => {

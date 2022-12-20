@@ -326,7 +326,7 @@ impl BoxProperty {
         let is_valid = asset.read_bool()?;
 
         Ok(BoxProperty {
-            name: name,
+            name,
             property_guid,
             duplication_index,
             v1,

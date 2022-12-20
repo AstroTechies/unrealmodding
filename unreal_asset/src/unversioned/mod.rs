@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash, io::Cursor};
+use std::{hash::Hash, io::Cursor};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};

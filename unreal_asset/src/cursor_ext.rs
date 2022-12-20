@@ -82,7 +82,7 @@ impl CursorExt for Cursor<Vec<u8>> {
         if is_unicode {
             // this is safe because we know that string is utf16 and therefore can easily be aligned to u8
             // this is also faster than alternatives without unsafe block
-            let mut length;
+            let length;
             unsafe {
                 let utf16 = string.encode_utf16().collect::<Vec<_>>();
                 let aligned = utf16.align_to::<u8>();

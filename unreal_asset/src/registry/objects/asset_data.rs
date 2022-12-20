@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use byteorder::LittleEndian;
 
 use crate::containers::indexed_map::IndexedMap;

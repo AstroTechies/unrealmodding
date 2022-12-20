@@ -1,17 +1,10 @@
 use std::{
-    borrow::Borrow,
-    collections::BTreeMap,
-    fmt::Debug,
-    hash::{self, Hash},
-    iter::FusedIterator,
-    rc::Rc,
+    borrow::Borrow, collections::BTreeMap, fmt::Debug, hash::Hash, iter::FusedIterator, rc::Rc,
 };
 
 use self::entry::{Entry, OccupiedEntry, VacantEntry};
 
 pub mod entry;
-
-// todo: more docs
 
 /// Used for storing a key reference inside IndexedMap
 #[derive(PartialEq, Eq, Hash)]
@@ -77,8 +70,8 @@ where
         Self {
             value: self.value.clone(),
             key_map_index: self.key_map_index.clone(),
-            index_map_index: self.index_map_index.clone(),
-            index_iter_map_index: self.index_iter_map_index.clone(),
+            index_map_index: self.index_map_index,
+            index_iter_map_index: self.index_iter_map_index,
         }
     }
 }
@@ -123,6 +116,7 @@ where
 ///
 /// Insertion time is O(1)
 /// Deletion time is O(n) worst-case
+#[derive(Default)]
 pub struct IndexedMap<K, V>
 where
     K: Eq + Hash,
@@ -376,10 +370,10 @@ where
         };
         let store_place = self.store.insert(indexed_value);
 
-        self.key_map.insert(key_rc.clone(), store_place);
+        self.key_map.insert(key_rc, store_place);
         self.index_map.insert(self.key_map.len() - 1, store_place);
         self.index_iter_map.push(store_place);
-        return &mut self.store[store_place];
+        &mut self.store[store_place]
     }
 
     /// Inserts a value at a given key, if the key already exists
@@ -457,6 +451,11 @@ where
     pub fn len(&self) -> usize {
         self.index_map.len()
     }
+
+    /// Returns if the map is empty
+    pub fn is_empty(&self) -> bool {
+        self.index_map.is_empty()
+    } 
 
     /// Returns an iterator over the values of the map.
     pub fn values(&'map self) -> Values<'map, K, V> {
