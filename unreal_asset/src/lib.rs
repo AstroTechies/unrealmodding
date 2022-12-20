@@ -49,6 +49,7 @@ use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
+pub mod ac7;
 pub mod bitvec_ext;
 pub mod containers;
 mod crc;
