@@ -321,13 +321,17 @@ impl BoxProperty {
             false => None,
         };
 
+        let v1 = VectorProperty::new(asset, name.clone(), false, 0)?;
+        let v2 = VectorProperty::new(asset, name.clone(), false, 0)?;
+        let is_valid = asset.read_bool()?;
+
         Ok(BoxProperty {
-            name: name.clone(),
+            name: name,
             property_guid,
             duplication_index,
-            v1: VectorProperty::new(asset, name.clone(), false, 0)?,
-            v2: VectorProperty::new(asset, name, false, 0)?,
-            is_valid: asset.read_bool()?,
+            v1,
+            v2,
+            is_valid,
         })
     }
 }

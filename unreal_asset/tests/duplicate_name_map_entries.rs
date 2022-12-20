@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use unreal_asset::{
-    engine_version::EngineVersion, error::Error, Asset,
-};
+use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 
 mod shared;
 

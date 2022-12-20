@@ -26,8 +26,6 @@ pub(crate) fn verify_reparse(asset: &mut Asset) -> Result<(), Error> {
 pub(crate) fn verify_all_exports_parsed(asset: &Asset) -> bool {
     let mut index = 0;
     for export in &asset.exports {
-        index += 1;
-        println!("Index: {}", index);
         if cast!(Export, RawExport, export).is_some() {
             return false;
         }

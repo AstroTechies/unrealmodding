@@ -1216,6 +1216,9 @@ impl<'a> Asset {
                 };
 
                 if let Some(base_export) = base_export {
+                    if i == 1080 {
+                        println!("Here1");
+                    }
                     let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
                         Err(e) => {
