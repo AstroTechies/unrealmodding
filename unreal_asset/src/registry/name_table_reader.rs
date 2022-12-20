@@ -104,6 +104,10 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
         self.name_map[index as usize].to_owned()
     }
 
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
+        self.reader.get_array_struct_type_override()
+    }
+
     fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         self.reader.get_map_key_override()
     }

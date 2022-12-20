@@ -221,6 +221,7 @@ pub struct Asset {
     soft_package_reference_list: Option<Vec<String>>,
     pub world_tile_info: Option<FWorldTileInfo>,
 
+    pub array_struct_type_override: IndexedMap<String, String>,
     pub map_key_override: IndexedMap<String, String>,
     pub map_value_override: IndexedMap<String, String>,
     pub mappings: Option<Usmap>,
@@ -263,6 +264,10 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
 
     fn get_name_reference(&self, index: i32) -> String {
         self.asset.get_name_reference(index)
+    }
+
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
+        self.asset.get_array_struct_type_override()
     }
 
     fn get_map_key_override(&self) -> &IndexedMap<String, String> {
@@ -437,6 +442,10 @@ impl AssetTrait for Asset {
 
     fn get_name_reference(&self, index: i32) -> String {
         self.get_name_reference(index)
+    }
+
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
+        &self.array_struct_type_override
     }
 
     fn get_map_key_override(&self) -> &IndexedMap<String, String> {
@@ -647,6 +656,12 @@ impl<'a> Asset {
             depends_map: None,
             soft_package_reference_list: None,
             world_tile_info: None,
+
+            array_struct_type_override: IndexedMap::from([(
+                "Keys".to_string(),
+                "RichCurveKey".to_string(),
+            )]),
+
             map_key_override: IndexedMap::from([
                 ("PlayerCharacterIDs".to_string(), "Guid".to_string()),
                 (

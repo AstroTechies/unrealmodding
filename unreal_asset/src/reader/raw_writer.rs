@@ -63,6 +63,10 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         "".to_string()
     }
 
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
+        &self.empty_map
+    }
+
     fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }

@@ -107,8 +107,15 @@ impl ArrayProperty {
                 asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
                 asset.read_property_guid()?;
+            } else {
+                if let Some(type_override) = asset
+                    .get_array_struct_type_override()
+                    .get_by_key(&name.content)
+                    .cloned()
+                {
+                    full_type = asset.add_fname(&type_override);
+                }
             }
-            // todo: override using array_struct_type_override
 
             if num_entries == 0 {
                 dummy_struct = Some(StructProperty::dummy(

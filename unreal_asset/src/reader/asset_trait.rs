@@ -23,6 +23,7 @@ pub trait AssetTrait {
     fn get_name_map_index_list(&self) -> &[String];
     fn get_name_reference(&self, index: i32) -> String;
 
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String>;
     fn get_map_key_override(&self) -> &IndexedMap<String, String>;
     fn get_map_value_override(&self) -> &IndexedMap<String, String>;
 

@@ -1,5 +1,5 @@
 //! Asset registry NameTableWriter
-use std::collections::{hash_map::DefaultHasher};
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::{self, SeekFrom};
 
@@ -73,6 +73,10 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
         }
 
         self.name_map[index as usize].to_owned()
+    }
+
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
+        self.writer.get_array_struct_type_override()
     }
 
     fn get_map_key_override(&self) -> &IndexedMap<String, String> {
