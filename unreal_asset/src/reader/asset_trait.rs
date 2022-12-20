@@ -6,7 +6,7 @@ use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::unreal_types::{FName, PackageIndex};
 use crate::unversioned::Usmap;
-use crate::Import;
+use crate::{Import, ParentClassInfo};
 
 /// A trait that allows accessing data about the archive that is currently being read
 pub trait AssetTrait {
@@ -26,6 +26,9 @@ pub trait AssetTrait {
     fn get_array_struct_type_override(&self) -> &IndexedMap<String, String>;
     fn get_map_key_override(&self) -> &IndexedMap<String, String>;
     fn get_map_value_override(&self) -> &IndexedMap<String, String>;
+
+    fn get_parent_class(&self) -> Option<ParentClassInfo>;
+    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo>;
 
     fn get_engine_version(&self) -> EngineVersion;
     fn get_object_version(&self) -> ObjectVersion;

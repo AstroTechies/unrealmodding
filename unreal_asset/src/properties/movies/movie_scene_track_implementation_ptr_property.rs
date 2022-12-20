@@ -19,6 +19,7 @@ impl MovieSceneTrackImplementationPtrProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -31,7 +32,7 @@ impl MovieSceneTrackImplementationPtrProperty {
 
         if type_name.value.is_some() {
             value.push(type_name.into());
-            while let Some(data) = Property::new(asset, true)? {
+            while let Some(data) = Property::new(asset, parent_name, true)? {
                 value.push(data);
             }
         }

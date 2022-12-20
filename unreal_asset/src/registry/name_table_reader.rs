@@ -116,6 +116,14 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
         self.reader.get_map_value_override()
     }
 
+    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
+        self.reader.get_parent_class()
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
+        self.reader.get_parent_class_cached()
+    }
+
     fn get_engine_version(&self) -> EngineVersion {
         self.reader.get_engine_version()
     }

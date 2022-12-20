@@ -19,6 +19,7 @@ impl SetProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -31,6 +32,7 @@ impl SetProperty {
         let removed_items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
+            parent_name,
             false,
             length,
             0,
@@ -42,6 +44,7 @@ impl SetProperty {
         let items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
+            parent_name,
             false,
             length,
             0,

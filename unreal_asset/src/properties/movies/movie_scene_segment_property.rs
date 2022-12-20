@@ -35,7 +35,10 @@ pub struct MovieSceneSegment {
 }
 
 impl MovieSceneSegment {
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: AssetReader>(
+        asset: &mut Reader,
+        parent_name: Option<&FName>,
+    ) -> Result<Self, Error> {
         let range = FFrameNumberRange::new(asset)?;
         let id = MovieSceneSegmentIdentifier::new(asset)?;
         let allow_empty = asset.read_i32::<LittleEndian>()? != 0;
@@ -45,7 +48,7 @@ impl MovieSceneSegment {
 
         for _ in 0..impls_length {
             let mut properties_list = Vec::new();
-            while let Some(property) = Property::new(asset, true)? {
+            while let Some(property) = Property::new(asset, parent_name, true)? {
                 properties_list.push(property);
             }
 
@@ -103,7 +106,7 @@ impl MovieSceneSegmentProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let value = MovieSceneSegment::new(asset)?;
+        let value = MovieSceneSegment::new(asset, Some(&name))?;
 
         Ok(MovieSceneSegmentProperty {
             name,

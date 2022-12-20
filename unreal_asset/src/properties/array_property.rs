@@ -25,6 +25,7 @@ impl ArrayProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -37,6 +38,7 @@ impl ArrayProperty {
         ArrayProperty::new_no_header(
             asset,
             name,
+            parent_name,
             include_header,
             length,
             duplication_index,
@@ -61,6 +63,7 @@ impl ArrayProperty {
     pub fn new_no_header<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         _include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -107,14 +110,12 @@ impl ArrayProperty {
                 asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
                 asset.read_property_guid()?;
-            } else {
-                if let Some(type_override) = asset
-                    .get_array_struct_type_override()
-                    .get_by_key(&name.content)
-                    .cloned()
-                {
-                    full_type = asset.add_fname(&type_override);
-                }
+            } else if let Some(type_override) = asset
+                .get_array_struct_type_override()
+                .get_by_key(&name.content)
+                .cloned()
+            {
+                full_type = asset.add_fname(&type_override);
             }
 
             if num_entries == 0 {
@@ -128,6 +129,7 @@ impl ArrayProperty {
                 let data = StructProperty::custom_header(
                     asset,
                     name.clone(),
+                    parent_name,
                     struct_length,
                     0,
                     Some(full_type.clone()),
@@ -147,6 +149,7 @@ impl ArrayProperty {
                     asset,
                     array_type,
                     FName::new(i.to_string(), i32::MIN),
+                    parent_name,
                     false,
                     size_est_1,
                     size_est_2,

@@ -104,10 +104,10 @@ impl Eq for UsmapPropertyData {}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapProperty {
-    name: String,
-    schema_index: u16,
-    array_size: u8,
-    property_data: UsmapPropertyData,
+    pub name: String,
+    pub schema_index: u16,
+    pub array_size: u8,
+    pub property_data: UsmapPropertyData,
 }
 
 impl UsmapProperty {

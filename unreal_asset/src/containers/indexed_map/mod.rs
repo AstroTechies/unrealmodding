@@ -455,7 +455,7 @@ where
     /// Returns if the map is empty
     pub fn is_empty(&self) -> bool {
         self.index_map.is_empty()
-    } 
+    }
 
     /// Returns an iterator over the values of the map.
     pub fn values(&'map self) -> Values<'map, K, V> {

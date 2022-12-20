@@ -15,7 +15,7 @@ impl SectionEvaluationTree {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let tree = TMovieSceneEvaluationTree::read(asset, |reader| {
             let mut resulting_list = Vec::new();
-            while let Some(property) = Property::new(reader, true)? {
+            while let Some(property) = Property::new(reader, None, true)? {
                 resulting_list.push(property);
             }
 

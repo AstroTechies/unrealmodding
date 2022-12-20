@@ -75,6 +75,14 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         &self.empty_map
     }
 
+    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
+        None
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
+        None
+    }
+
     fn get_engine_version(&self) -> EngineVersion {
         guess_engine_version(self.object_version, self.object_version_ue5, &[])
     }

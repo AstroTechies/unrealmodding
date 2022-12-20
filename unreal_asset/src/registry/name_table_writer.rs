@@ -87,6 +87,14 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
         self.writer.get_map_value_override()
     }
 
+    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
+        self.writer.get_parent_class()
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
+        self.writer.get_parent_class_cached()
+    }
+
     fn get_engine_version(&self) -> EngineVersion {
         self.writer.get_engine_version()
     }

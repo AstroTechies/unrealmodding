@@ -428,6 +428,7 @@ impl Property {
     /// Tries to read a property from an AssetReader
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
+        parent_name: Option<&FName>,
         include_header: bool,
     ) -> Result<Option<Self>, Error> {
         let name = asset.read_fname()?;
@@ -443,6 +444,7 @@ impl Property {
             asset,
             &property_type,
             name,
+            parent_name,
             include_header,
             length as i64,
             0,
@@ -452,10 +454,12 @@ impl Property {
     }
 
     /// Tries to read a property from an AssetReader while specified a type and length
+    #[allow(clippy::too_many_arguments)]
     pub fn from_type<Reader: AssetReader>(
         asset: &mut Reader,
         type_name: &FName,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         length: i64,
         fallback_length: i64,
@@ -550,15 +554,28 @@ impl Property {
             }
             "Guid" => GuidProperty::new(asset, name, include_header, duplication_index)?.into(),
 
-            "SetProperty" => {
-                SetProperty::new(asset, name, include_header, length, duplication_index)?.into()
-            }
-            "ArrayProperty" => {
-                ArrayProperty::new(asset, name, include_header, length, duplication_index, true)?
-                    .into()
-            }
+            "SetProperty" => SetProperty::new(
+                asset,
+                name,
+                parent_name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "ArrayProperty" => ArrayProperty::new(
+                asset,
+                name,
+                parent_name,
+                include_header,
+                length,
+                duplication_index,
+                true,
+            )?
+            .into(),
             "MapProperty" => {
-                MapProperty::new(asset, name, include_header, duplication_index)?.into()
+                MapProperty::new(asset, name, parent_name, include_header, duplication_index)?
+                    .into()
             }
 
             "PerPlatformBool" => PerPlatformBoolProperty::new(
@@ -701,16 +718,27 @@ impl Property {
                     .into()
             }
 
-            "StructProperty" => {
-                StructProperty::new(asset, name, include_header, length, duplication_index)?.into()
-            }
+            "StructProperty" => StructProperty::new(
+                asset,
+                name,
+                parent_name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
             "EnumProperty" => {
                 EnumProperty::new(asset, name, include_header, length, duplication_index)?.into()
             }
-            "ClothLODData" => {
-                ClothLodDataProperty::new(asset, name, include_header, length, duplication_index)?
-                    .into()
-            }
+            "ClothLODData" => ClothLodDataProperty::new(
+                asset,
+                name,
+                parent_name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
 
             "FontCharacter" => {
                 FontCharacterProperty::new(asset, name, include_header, length, duplication_index)?
@@ -754,6 +782,7 @@ impl Property {
             "MovieSceneTrackImplementationPtr" => MovieSceneTrackImplementationPtrProperty::new(
                 asset,
                 name,
+                parent_name,
                 include_header,
                 duplication_index,
             )?

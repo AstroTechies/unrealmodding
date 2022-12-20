@@ -39,7 +39,11 @@ impl NormalExport {
     ) -> Result<Self, Error> {
         let mut properties = Vec::new();
 
-        while let Some(e) = Property::new(asset, true)? {
+        let parent_name = asset
+            .get_parent_class_cached()
+            .map(|e| e.parent_class_export_name.clone());
+
+        while let Some(e) = Property::new(asset, parent_name.as_ref(), true)? {
             properties.push(e);
         }
 

@@ -4,11 +4,13 @@ use byteorder::LittleEndian;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
-use crate::impl_property_data_trait;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::ToFName;
 use crate::unreal_types::{FName, Guid};
+use crate::unversioned::properties::map_property::UsmapMapPropertyData;
+use crate::unversioned::properties::UsmapPropertyData;
+use crate::{cast, impl_property_data_trait};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapProperty {
@@ -38,26 +40,61 @@ impl MapProperty {
         asset: &mut Reader,
         type_name: FName,
         name: FName,
+        parent_name: Option<&FName>,
         length: i64,
         include_header: bool,
         is_key: bool,
     ) -> Result<Property, Error> {
         match type_name.content.as_str() {
             "StructProperty" => {
-                let struct_type = match is_key {
-                    true => asset
-                        .get_map_key_override()
-                        .get_by_key(&name.content)
-                        .map(|s| s.to_owned()),
-                    false => asset
-                        .get_map_value_override()
-                        .get_by_key(&name.content)
-                        .map(|s| s.to_owned()),
+                let mut struct_type = None;
+
+                if let Some(mappings) = asset.get_mappings() {
+                    if let Some(parent_name) = parent_name {
+                        if let Some(schema) = mappings.schemas.get_by_key(&parent_name.content) {
+                            let property_data: Option<&UsmapMapPropertyData> = schema
+                                .properties
+                                .iter()
+                                .filter(|e| e.name == name.content)
+                                .find_map(|e| {
+                                    cast!(UsmapPropertyData, UsmapMapPropertyData, &e.property_data)
+                                });
+
+                            if let Some(property_data) = property_data {
+                                let struct_property = match is_key {
+                                    true => &*property_data.inner_type,
+                                    false => &*property_data.value_type,
+                                };
+
+                                if let Some(struct_property) = cast!(
+                                    UsmapPropertyData,
+                                    UsmapStructPropertyData,
+                                    struct_property
+                                ) {
+                                    struct_type = Some(struct_property.struct_type.clone());
+                                }
+                            }
+                        }
+                    }
                 }
-                .unwrap_or_else(|| String::from("Generic"));
+
+                let struct_type = struct_type
+                    .or_else(|| match is_key {
+                        true => asset
+                            .get_map_key_override()
+                            .get_by_key(&name.content)
+                            .map(|s| s.to_owned()),
+                        false => asset
+                            .get_map_value_override()
+                            .get_by_key(&name.content)
+                            .map(|s| s.to_owned()),
+                    })
+                    .unwrap_or_else(|| String::from("Generic"));
+
                 Ok(StructProperty::custom_header(
                     asset,
                     name,
+                    parent_name,
                     1,
                     0,
                     Some(FName::from_slice(&struct_type)),
@@ -66,13 +103,23 @@ impl MapProperty {
                 )?
                 .into())
             }
-            _ => Property::from_type(asset, &type_name, name, include_header, length, 0, 0),
+            _ => Property::from_type(
+                asset,
+                &type_name,
+                name,
+                parent_name,
+                include_header,
+                length,
+                0,
+                0,
+            ),
         }
     }
 
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -98,6 +145,7 @@ impl MapProperty {
                 asset,
                 type_1.clone(),
                 name.clone(),
+                parent_name,
                 0,
                 false,
                 true,
@@ -113,6 +161,7 @@ impl MapProperty {
                 asset,
                 type_1.clone(),
                 name.clone(),
+                parent_name,
                 0,
                 false,
                 true,
@@ -121,6 +170,7 @@ impl MapProperty {
                 asset,
                 type_2.clone(),
                 name.clone(),
+                parent_name,
                 0,
                 false,
                 false,

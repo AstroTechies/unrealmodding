@@ -32,7 +32,7 @@ impl MovieSceneEvalTemplatePtrProperty {
 
         if type_name.value.is_some() {
             value.push(type_name.into());
-            while let Some(data) = Property::new(asset, true)? {
+            while let Some(data) = Property::new(asset, Some(&name), true)? {
                 value.push(data);
             }
         }

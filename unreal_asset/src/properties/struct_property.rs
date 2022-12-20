@@ -41,6 +41,7 @@ impl StructProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -62,6 +63,7 @@ impl StructProperty {
         StructProperty::custom_header(
             asset,
             name,
+            parent_name,
             length,
             duplication_index,
             struct_type,
@@ -70,9 +72,11 @@ impl StructProperty {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn custom_header<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        _parent_name: Option<&FName>,
         length: i64,
         duplication_index: i32,
         struct_type: Option<FName>,
@@ -145,6 +149,7 @@ impl StructProperty {
                 asset,
                 struct_type.as_ref().unwrap(),
                 name.clone(),
+                struct_type.as_ref(),
                 false,
                 0,
                 0,
@@ -163,10 +168,8 @@ impl StructProperty {
             })
         } else {
             let mut values = Vec::new();
-            let mut property = Property::new(asset, true)?;
-            while property.is_some() {
-                values.push(property.unwrap());
-                property = Property::new(asset, true)?;
+            while let Some(property) = Property::new(asset, struct_type.as_ref(), true)? {
+                values.push(property);
             }
 
             Ok(StructProperty {

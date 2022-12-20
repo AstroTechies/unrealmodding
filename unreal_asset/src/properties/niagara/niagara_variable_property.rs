@@ -25,10 +25,8 @@ impl NiagaraVariableProperty {
         let variable_name = asset.read_fname()?;
 
         let mut properties = Vec::new();
-        let mut property = Property::new(asset, true)?;
-        while property.is_some() {
-            properties.push(property.unwrap());
-            property = Property::new(asset, true)?;
+        while let Some(property) = Property::new(asset, Some(&name), true)? {
+            properties.push(property);
         }
 
         let variable_offset = asset.read_i32::<LittleEndian>()?;

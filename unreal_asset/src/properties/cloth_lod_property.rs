@@ -100,6 +100,7 @@ impl ClothLodDataProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         _include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -107,6 +108,7 @@ impl ClothLodDataProperty {
         let struct_property = StructProperty::custom_header(
             asset,
             name,
+            parent_name,
             1,
             duplication_index,
             Some(FName::from_slice("Generic")),

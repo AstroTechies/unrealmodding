@@ -225,16 +225,23 @@ pub struct Asset {
     pub map_key_override: IndexedMap<String, String>,
     pub map_value_override: IndexedMap<String, String>,
     pub mappings: Option<Usmap>,
+
+    parent_class: Option<ParentClassInfo>,
 }
 
 struct AssetSerializer<'asset, 'cursor> {
     asset: &'asset Asset,
     cursor: &'cursor mut Cursor<Vec<u8>>,
+    cached_parent_info: Option<ParentClassInfo>,
 }
 
 impl<'asset, 'cursor> AssetSerializer<'asset, 'cursor> {
     pub fn new(asset: &'asset Asset, cursor: &'cursor mut Cursor<Vec<u8>>) -> Self {
-        AssetSerializer { asset, cursor }
+        AssetSerializer {
+            asset,
+            cursor,
+            cached_parent_info: None,
+        }
     }
 }
 
@@ -276,6 +283,19 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
 
     fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         self.asset.get_map_value_override()
+    }
+
+    fn get_parent_class(&self) -> Option<ParentClassInfo> {
+        self.asset.get_parent_class()
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
+        if let Some(ref cached_info) = self.cached_parent_info {
+            return Some(cached_info);
+        }
+
+        self.cached_parent_info = self.get_parent_class();
+        self.cached_parent_info.as_ref()
     }
 
     #[inline(always)]
@@ -454,6 +474,14 @@ impl AssetTrait for Asset {
 
     fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         &self.map_value_override
+    }
+
+    fn get_parent_class(&self) -> Option<ParentClassInfo> {
+        self.get_parent_class()
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
+        self.get_parent_class_cached()
     }
 
     #[inline(always)]
@@ -705,6 +733,7 @@ impl<'a> Asset {
                 ),
             ]),
             mappings: None,
+            parent_class: None,
         }
     }
 
@@ -977,6 +1006,17 @@ impl<'a> Asset {
             parent_class_path: parent_class_import.object_name.clone(),
             parent_class_export_name: outer_parent_import.object_name.clone(),
         })
+    }
+
+    /// Gets parent class info of this asset from cache if it exists,
+    /// if it doesn't exist in cache, tries to compute it.
+    pub fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
+        if let Some(ref parent_class) = self.parent_class {
+            return Some(parent_class);
+        }
+
+        self.parent_class = self.get_parent_class();
+        self.parent_class.as_ref()
     }
 
     pub fn find_import(
