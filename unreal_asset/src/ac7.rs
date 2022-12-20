@@ -57,14 +57,14 @@ impl AC7XorKey {
             num = num2 | num3;
         }
 
-        num as i32
+        num
     }
 
     fn calc_pkey_from_nkey(nkey: u32, data_offset: u32) -> (u32, u32) {
         let mut num = nkey as u128 * 7;
         let big_int = 5440514381186227205u128;
         num += data_offset as u128;
-        let big_int_2 = big_int * num as u128;
+        let big_int_2 = big_int * num;
 
         let mut num_2 = big_int_2 >> 70;
         let mut num_3 = num_2 >> 63;
