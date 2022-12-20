@@ -1,6 +1,5 @@
 //! Various Unreal Engine types
-use std::collections::HashMap;
-
+use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
 
 pub type Guid = [u8; 16];
@@ -79,14 +78,14 @@ impl NamespacedString {
 #[derive(Debug, Clone)]
 pub struct StringTable {
     pub namespace: Option<String>,
-    pub value: HashMap<String, String>,
+    pub value: IndexedMap<String, String>,
 }
 
 impl StringTable {
     pub fn new(namespace: Option<String>) -> Self {
         StringTable {
             namespace,
-            value: HashMap::new(),
+            value: IndexedMap::new(),
         }
     }
 }

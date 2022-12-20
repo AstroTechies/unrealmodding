@@ -3,6 +3,7 @@ use std::io::{self, Cursor, Seek, Write};
 
 use byteorder::WriteBytesExt;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
@@ -17,7 +18,7 @@ pub struct RawWriter<'cursor> {
     object_version: ObjectVersion,
     object_version_ue5: ObjectVersionUE5,
 
-    empty_map: HashMap<String, String>,
+    empty_map: IndexedMap<String, String>,
 }
 
 impl<'cursor> RawWriter<'cursor> {
@@ -30,7 +31,7 @@ impl<'cursor> RawWriter<'cursor> {
             cursor,
             object_version,
             object_version_ue5,
-            empty_map: HashMap::new(),
+            empty_map: IndexedMap::new(),
         }
     }
 }
@@ -63,11 +64,11 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         "".to_string()
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 

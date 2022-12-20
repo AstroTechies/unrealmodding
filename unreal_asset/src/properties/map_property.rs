@@ -2,6 +2,7 @@ use std::{collections::HashMap, hash::Hash};
 
 use byteorder::LittleEndian;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
@@ -16,7 +17,7 @@ pub struct MapProperty {
     pub duplication_index: i32,
     pub key_type: FName,
     pub value_type: FName,
-    pub value: HashMap<Property, Property>,
+    pub value: IndexedMap<Property, Property>,
     pub keys_to_remove: Option<Vec<Property>>,
 }
 impl_property_data_trait!(MapProperty);
@@ -46,11 +47,11 @@ impl MapProperty {
                 let struct_type = match is_key {
                     true => asset
                         .get_map_key_override()
-                        .get(&name.content)
+                        .get_by_key(&name.content)
                         .map(|s| s.to_owned()),
                     false => asset
                         .get_map_value_override()
-                        .get(&name.content)
+                        .get_by_key(&name.content)
                         .map(|s| s.to_owned()),
                 }
                 .unwrap_or_else(|| String::from("Generic"));
@@ -105,7 +106,7 @@ impl MapProperty {
         }
 
         let num_entries = asset.read_i32::<LittleEndian>()?;
-        let mut values: HashMap<Property, Property> = HashMap::new();
+        let mut values: IndexedMap<Property, Property> = IndexedMap::new();
 
         for _ in 0..num_entries {
             let key = MapProperty::map_type_to_class(
@@ -171,7 +172,7 @@ impl PropertyTrait for MapProperty {
 
         asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
 
-        for (key, value) in &self.value {
+        for (_, key, value) in &self.value {
             key.write(asset, false)?;
             value.write(asset, false)?;
         }

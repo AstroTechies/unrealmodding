@@ -30,7 +30,7 @@ fn starlit_season() -> Result<(), Error> {
         asset.set_engine_version(EngineVersion::VER_UE4_24);
 
         asset.parse_data()?;
-        shared::verify_reparse(&mut asset)?;
+        shared::verify_binary_equality(test_asset, Some(asset_bulk), &mut asset)?;
         assert!(shared::verify_all_exports_parsed(&asset));
     }
     Ok(())

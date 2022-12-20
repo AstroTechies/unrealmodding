@@ -5,6 +5,7 @@ use std::io::{self, SeekFrom};
 
 use byteorder::LittleEndian;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::error::Error;
@@ -18,7 +19,7 @@ use crate::Import;
 pub struct NameTableReader<'reader, Reader: AssetReader> {
     reader: &'reader mut Reader,
     pub(crate) name_map: Vec<String>,
-    pub(crate) name_map_lookup: HashMap<u64, i32>,
+    pub(crate) name_map_lookup: IndexedMap<u64, i32>,
 }
 
 impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
@@ -27,7 +28,7 @@ impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
         // todo: length checking
 
         let mut name_map = Vec::new();
-        let mut name_map_lookup = HashMap::new();
+        let mut name_map_lookup = IndexedMap::new();
         if name_offset > 0 {
             let original_offset = reader.position();
             reader.seek(SeekFrom::Start(name_offset as u64))?;
@@ -103,11 +104,11 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
         self.name_map[index as usize].to_owned()
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         self.reader.get_map_key_override()
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         self.reader.get_map_value_override()
     }
 

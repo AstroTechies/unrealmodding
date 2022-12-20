@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
+    containers::indexed_map::IndexedMap,
     cursor_ext::CursorExt,
     error::{Error, UsmapError},
 };
@@ -48,8 +49,8 @@ pub struct UsmapSchema {
 pub struct Usmap {
     pub version: UsmapVersion,
     pub name_map: Vec<String>,
-    pub enum_map: HashMap<String, Vec<String>>,
-    pub schemas: HashMap<String, UsmapSchema>,
+    pub enum_map: IndexedMap<String, Vec<String>>,
+    pub schemas: IndexedMap<String, UsmapSchema>,
 
     cursor: Cursor<Vec<u8>>,
 }
@@ -161,8 +162,8 @@ impl Usmap {
         Ok(Usmap {
             version: UsmapVersion::INITIAL,
             name_map: Vec::new(),
-            enum_map: HashMap::new(),
-            schemas: HashMap::new(),
+            enum_map: IndexedMap::new(),
+            schemas: IndexedMap::new(),
             cursor,
         })
     }

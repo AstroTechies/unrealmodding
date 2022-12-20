@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
 use crate::exports::{
     base_export::BaseExport, struct_export::StructExport, ExportBaseTrait, ExportNormalTrait,
@@ -35,7 +36,7 @@ impl SerializedInterfaceReference {
 pub struct ClassExport {
     pub struct_export: StructExport,
 
-    pub func_map: HashMap<FName, PackageIndex>,
+    pub func_map: IndexedMap<FName, PackageIndex>,
     pub class_flags: EClassFlags,
     pub class_within: PackageIndex,
     pub class_config_name: FName,
@@ -54,7 +55,7 @@ impl ClassExport {
         let struct_export = StructExport::from_base(base, asset)?;
 
         let num_func_index_entries = asset.read_i32::<LittleEndian>()? as usize;
-        let mut func_map = HashMap::with_capacity(num_func_index_entries);
+        let mut func_map = IndexedMap::with_capacity(num_func_index_entries);
         for _i in 0..num_func_index_entries {
             let name = asset.read_fname()?;
             let function_export = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
@@ -173,7 +174,7 @@ impl ExportTrait for ClassExport {
         self.struct_export.write(asset)?;
 
         asset.write_i32::<LittleEndian>(self.func_map.len() as i32)?;
-        for (name, index) in &self.func_map {
+        for (_, name, index) in &self.func_map {
             asset.write_fname(name)?;
             asset.write_i32::<LittleEndian>(index.index)?;
         }

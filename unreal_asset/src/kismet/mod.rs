@@ -549,7 +549,9 @@ impl KismetPropertyPointer {
     }
 
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        if asset.get_object_version() >= ObjectVersion::VER_UE4_ADDED_PACKAGE_OWNER {
+        if asset.get_object_version()
+            >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
+        {
             let new = self.new.as_ref().ok_or_else(|| {
                 Error::no_data(
                     "engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string(),

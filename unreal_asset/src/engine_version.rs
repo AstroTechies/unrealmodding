@@ -258,6 +258,7 @@ pub fn guess_engine_version(
     object_version_ue5: ObjectVersionUE5,
     custom_versions: &[CustomVersion],
 ) -> EngineVersion {
+    // todo: this doesn't always reflect the version that was set from the set_engine_version
     let possible_versions = get_possible_versions(object_version, object_version_ue5);
 
     if possible_versions.is_empty() {

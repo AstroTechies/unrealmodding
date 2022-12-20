@@ -5,6 +5,7 @@ use std::io::{self, SeekFrom};
 
 use byteorder::LittleEndian;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::error::Error;
@@ -19,14 +20,14 @@ pub struct NameTableWriter<'name_map, 'writer, Writer: AssetWriter> {
     writer: &'writer mut Writer,
 
     name_map: &'name_map [String],
-    name_map_lookup: &'name_map HashMap<u64, i32>,
+    name_map_lookup: &'name_map IndexedMap<u64, i32>,
 }
 
 impl<'name_map, 'writer, Writer: AssetWriter> NameTableWriter<'name_map, 'writer, Writer> {
     pub fn new(
         writer: &'writer mut Writer,
         name_map: &'name_map [String],
-        name_map_lookup: &'name_map HashMap<u64, i32>,
+        name_map_lookup: &'name_map IndexedMap<u64, i32>,
     ) -> Self {
         NameTableWriter {
             writer,
@@ -74,11 +75,11 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
         self.name_map[index as usize].to_owned()
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         self.writer.get_map_key_override()
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         self.writer.get_map_value_override()
     }
 
@@ -132,7 +133,7 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
         let hash = hasher.finish();
         let index = self
             .name_map_lookup
-            .get(&hash)
+            .get_by_key(&hash)
             .ok_or_else(|| Error::no_data(format!("No name reference for {}", fname.content)))?;
 
         self.writer.write_i32::<LittleEndian>(*index)?;

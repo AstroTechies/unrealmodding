@@ -25,7 +25,7 @@ fn unknown_properties() -> Result<(), Error> {
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;
-    shared::verify_reparse(&mut asset)?;
+    shared::verify_binary_equality(TEST_ASSET, Some(TEST_BULK), &mut asset)?;
     assert!(shared::verify_all_exports_parsed(&asset));
 
     let mut new_unknown_properties = HashMap::from([

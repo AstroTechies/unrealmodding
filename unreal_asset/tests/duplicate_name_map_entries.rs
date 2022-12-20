@@ -22,7 +22,6 @@ fn duplicate_name_map_entries() -> Result<(), Error> {
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;
-    shared::verify_reparse(&mut asset)?;
 
     let mut has_duplicates = false;
 

@@ -12,11 +12,11 @@ macro_rules! assets_folder {
     };
 }
 
-const TEST_ASSETS: [(&[u8], &[u8]); 1] = [
-    // (
-    //     include_bytes!(concat!(assets_folder!(), "MainChar_BellySlice_BR.uasset")),
-    //     include_bytes!(concat!(assets_folder!(), "MainChar_BellySlice_BR.uexp")),
-    // ),
+const TEST_ASSETS: [(&[u8], &[u8]); 2] = [
+    (
+        include_bytes!(concat!(assets_folder!(), "MainChar_BellySlice_BR.uasset")),
+        include_bytes!(concat!(assets_folder!(), "MainChar_BellySlice_BR.uexp")),
+    ),
     (
         include_bytes!(concat!(assets_folder!(), "RaceSimDataAsset.uasset")),
         include_bytes!(concat!(assets_folder!(), "RaceSimDataAsset.uexp")),
@@ -30,7 +30,7 @@ fn misc426() -> Result<(), Error> {
         asset.set_engine_version(EngineVersion::VER_UE4_26);
 
         asset.parse_data()?;
-        shared::verify_reparse(&mut asset)?;
+        shared::verify_binary_equality(test_asset, Some(asset_bulk), &mut asset)?;
         assert!(shared::verify_all_exports_parsed(&asset));
     }
 

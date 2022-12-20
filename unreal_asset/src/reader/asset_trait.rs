@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io::{self, SeekFrom};
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
@@ -23,8 +24,8 @@ pub trait AssetTrait {
     fn get_name_map_index_list(&self) -> &[String];
     fn get_name_reference(&self, index: i32) -> String;
 
-    fn get_map_key_override(&self) -> &HashMap<String, String>;
-    fn get_map_value_override(&self) -> &HashMap<String, String>;
+    fn get_map_key_override(&self) -> &IndexedMap<String, String>;
+    fn get_map_value_override(&self) -> &IndexedMap<String, String>;
 
     fn get_engine_version(&self) -> EngineVersion;
     fn get_object_version(&self) -> ObjectVersion;

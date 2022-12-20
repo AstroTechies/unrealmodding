@@ -43,7 +43,7 @@ impl StructProperty {
         name: FName,
         include_header: bool,
         length: i64,
-        _duplication_index: i32,
+        duplication_index: i32,
     ) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
@@ -63,7 +63,7 @@ impl StructProperty {
             asset,
             name,
             length,
-            0,
+            duplication_index,
             struct_type,
             struct_guid,
             property_guid,

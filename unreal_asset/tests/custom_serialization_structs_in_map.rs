@@ -30,7 +30,7 @@ fn custom_serialization_structs_in_map() -> Result<(), Error> {
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;
-    shared::verify_reparse(&mut asset)?;
+    shared::verify_binary_equality(ASSET_FILE, Some(ASSET_BULK_FILE), &mut asset)?;
 
     let export_two = asset
         .get_export(PackageIndex::new(2))
@@ -49,7 +49,7 @@ fn custom_serialization_structs_in_map() -> Result<(), Error> {
     let test_map: &MapProperty = cast!(Property, MapProperty, test_map)
         .ok_or_else(|| Error::invalid_file("KekWait property is not MapProperty".to_string()))?;
 
-    let (entry_key, entry_value) = test_map.value.iter().next().ok_or_else(|| {
+    let (_, entry_key, entry_value) = test_map.value.iter().next().ok_or_else(|| {
         Error::invalid_file("KekWait MapProperty doesn't have any entries".to_string())
     })?;
 

@@ -54,7 +54,7 @@ impl ExportTrait for StringTableExport {
 
         asset.write_string(&self.table.namespace)?;
         asset.write_i32::<LittleEndian>(self.table.value.len() as i32)?;
-        for (key, value) in &self.table.value {
+        for (_, key, value) in &self.table.value {
             asset.write_string(&Some(key.clone()))?;
             asset.write_string(&Some(value.clone()))?;
         }

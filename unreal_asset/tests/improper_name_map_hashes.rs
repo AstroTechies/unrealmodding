@@ -23,14 +23,14 @@ fn improper_name_map_hashes() -> Result<(), Error> {
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;
-    shared::verify_reparse(&mut asset)?;
+    shared::verify_binary_equality(ASSET_FILE, Some(ASSET_BULK_FILE), &mut asset)?;
 
     let mut testing_entries = HashMap::from([
         ("/Game/WeaponsNTools/GatlingGun/Overclocks/OC_BonusesAndPenalties/OC_Bonus_MovmentBonus_150p".to_string(), false),
         ("/Game/WeaponsNTools/GatlingGun/Overclocks/OC_BonusesAndPenalties/OC_Bonus_MovmentBonus_150p.OC_Bonus_MovmentBonus_150p".to_string(), false)
     ]);
 
-    for (name, hash) in &asset.override_name_map_hashes {
+    for (_, name, hash) in &asset.override_name_map_hashes {
         if let Some(entry) = testing_entries.get_mut(name) {
             assert_eq!(*hash, 0);
             *entry = true;

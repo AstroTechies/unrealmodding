@@ -28,7 +28,8 @@ fn cdo_modification() -> Result<(), Error> {
     asset.set_engine_version(EngineVersion::VER_UE4_23);
 
     asset.parse_data()?;
-    shared::verify_reparse(&mut asset)?;
+    println!("Exports: {}", asset.exports.len());
+    shared::verify_binary_equality(TEST_ASSET, None, &mut asset)?;
 
     let cdo_export: &mut NormalExport = asset
         .exports
@@ -54,8 +55,6 @@ fn cdo_modification() -> Result<(), Error> {
         value: PackageIndex::new(0),
     }
     .into();
-
-    shared::verify_reparse(&mut asset)?;
 
     Ok(())
 }

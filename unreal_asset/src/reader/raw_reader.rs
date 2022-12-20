@@ -3,6 +3,7 @@ use std::io::{self, Cursor, Read, Seek};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
@@ -18,7 +19,7 @@ pub struct RawReader {
     object_version: ObjectVersion,
     object_version_ue5: ObjectVersionUE5,
 
-    empty_map: HashMap<String, String>,
+    empty_map: IndexedMap<String, String>,
 }
 
 impl RawReader {
@@ -31,7 +32,7 @@ impl RawReader {
             cursor,
             object_version,
             object_version_ue5,
-            empty_map: HashMap::new(),
+            empty_map: IndexedMap::new(),
         }
     }
 }
@@ -64,11 +65,11 @@ impl AssetTrait for RawReader {
         "".to_string()
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 

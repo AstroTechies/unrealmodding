@@ -41,7 +41,7 @@
 //!
 //! println!("{:#?}", asset.engine_version);
 //! ```
-use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
@@ -50,6 +50,7 @@ use std::mem::size_of;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
 pub mod bitvec_ext;
+pub mod containers;
 mod crc;
 pub mod cursor_ext;
 pub mod custom_version;
@@ -70,6 +71,7 @@ pub mod unreal_types;
 pub mod unversioned;
 pub mod uproperty;
 
+use containers::indexed_map::IndexedMap;
 use cursor_ext::CursorExt;
 use custom_version::{CustomVersion, CustomVersionTrait};
 use engine_version::{get_object_versions, guess_engine_version, EngineVersion};
@@ -210,17 +212,17 @@ pub struct Asset {
     preload_dependency_count: i32,
     preload_dependency_offset: i32,
 
-    pub override_name_map_hashes: HashMap<String, u32>,
+    pub override_name_map_hashes: IndexedMap<String, u32>,
     name_map_index_list: Vec<String>,
-    name_map_lookup: HashMap<u64, i32>,
+    name_map_lookup: IndexedMap<u64, i32>,
     pub imports: Vec<Import>,
     pub exports: Vec<Export>,
     depends_map: Option<Vec<Vec<i32>>>,
     soft_package_reference_list: Option<Vec<String>>,
     pub world_tile_info: Option<FWorldTileInfo>,
 
-    pub map_key_override: HashMap<String, String>,
-    pub map_value_override: HashMap<String, String>,
+    pub map_key_override: IndexedMap<String, String>,
+    pub map_value_override: IndexedMap<String, String>,
     pub mappings: Option<Usmap>,
 }
 
@@ -263,11 +265,11 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
         self.asset.get_name_reference(index)
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         self.asset.get_map_key_override()
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         self.asset.get_map_value_override()
     }
 
@@ -437,11 +439,11 @@ impl AssetTrait for Asset {
         self.get_name_reference(index)
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         &self.map_key_override
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         &self.map_value_override
     }
 
@@ -637,15 +639,15 @@ impl<'a> Asset {
             preload_dependency_count: 0,
             preload_dependency_offset: 0,
 
-            override_name_map_hashes: HashMap::new(),
+            override_name_map_hashes: IndexedMap::new(),
             name_map_index_list: Vec::new(),
-            name_map_lookup: HashMap::new(),
+            name_map_lookup: IndexedMap::new(),
             imports: Vec::new(),
             exports: Vec::new(),
             depends_map: None,
             soft_package_reference_list: None,
             world_tile_info: None,
-            map_key_override: HashMap::from([
+            map_key_override: IndexedMap::from([
                 ("PlayerCharacterIDs".to_string(), "Guid".to_string()),
                 (
                     "m_PerConditionValueToNodeMap".to_string(),
@@ -672,7 +674,7 @@ impl<'a> Asset {
                 ("ItemsToRefund".to_string(), "Guid".to_string()),
                 ("PlayerCharacterIDMap".to_string(), "Guid".to_string()),
             ]),
-            map_value_override: HashMap::from([
+            map_value_override: IndexedMap::from([
                 ("ColorDatabase".to_string(), "LinearColor".to_string()),
                 (
                     "UserParameterRedirects".to_string(),
@@ -894,7 +896,7 @@ impl<'a> Asset {
         let mut s = DefaultHasher::new();
         name.hash(&mut s);
 
-        self.name_map_lookup.get(&s.finish()).copied()
+        self.name_map_lookup.get_by_key(&s.finish()).copied()
     }
 
     pub fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
@@ -1033,7 +1035,7 @@ impl<'a> Asset {
         self.parse_header()?;
         self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
 
-        for _i in 0..self.name_count {
+        for i in 0..self.name_count {
             let name_map = self.read_name_map_string()?;
             if name_map.0 == 0 {
                 self.override_name_map_hashes.insert(name_map.1.clone(), 0);
@@ -1216,9 +1218,6 @@ impl<'a> Asset {
                 };
 
                 if let Some(base_export) = base_export {
-                    if i == 1080 {
-                        println!("Here1");
-                    }
                     let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
                         Err(e) => {
@@ -1562,7 +1561,7 @@ impl<'a> Asset {
             serializer.write_string(&Some(name.clone()))?;
 
             if self.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
-                match self.override_name_map_hashes.get(name) {
+                match self.override_name_map_hashes.get_by_key(name) {
                     Some(e) => serializer.write_u32::<LittleEndian>(*e)?,
                     None => serializer.write_u32::<LittleEndian>(crc::generate_hash(name))?,
                 };
@@ -1647,10 +1646,7 @@ impl<'a> Asset {
         }
 
         let mut preload_dependency_count = 0;
-        let preload_dependency_offset = match self.use_separate_bulk_data_files {
-            true => serializer.position() as i32,
-            false => 0,
-        };
+        let preload_dependency_offset = serializer.position() as i32;
 
         if self.use_separate_bulk_data_files {
             for export in &self.exports {
@@ -1679,6 +1675,8 @@ impl<'a> Asset {
                     + unk_export.serialization_before_create_dependencies.len() as i32
                     + unk_export.create_before_create_dependencies.len() as i32;
             }
+        } else {
+            preload_dependency_count = -1;
         }
 
         let header_offset = match !self.exports.is_empty() {
@@ -1731,7 +1729,10 @@ impl<'a> Asset {
                     &mut serializer,
                     next_loc - category_starts[i] as i64,
                     category_starts[i] as i64,
-                    first_export_dependency_offset,
+                    match self.use_separate_bulk_data_files {
+                        true => first_export_dependency_offset,
+                        false => -1,
+                    },
                 )?;
                 first_export_dependency_offset +=
                     (unk.serialization_before_serialization_dependencies.len()

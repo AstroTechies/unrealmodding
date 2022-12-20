@@ -9,6 +9,7 @@ use std::io::{Cursor, SeekFrom};
 
 use byteorder::LittleEndian;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::crc;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
@@ -38,7 +39,7 @@ pub struct AssetRegistryState {
     name_map: Option<Vec<String>>,
     object_version: ObjectVersion,
     object_version_ue5: ObjectVersionUE5,
-    name_map_lookup: Option<HashMap<u64, i32>>,
+    name_map_lookup: Option<IndexedMap<u64, i32>>,
     version: FAssetRegistryVersionType,
 }
 
@@ -302,7 +303,7 @@ impl AssetRegistryState {
 
         if let Some(lookup) = self.name_map_lookup.as_mut() {
             if !add_duplicates {
-                if let Some(index) = lookup.get(&hash) {
+                if let Some(index) = lookup.get_by_key(&hash) {
                     return *index;
                 }
             }

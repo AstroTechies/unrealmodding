@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use byteorder::LittleEndian;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::Error;
 use crate::flags::EPackageFlags;
@@ -43,7 +44,7 @@ pub struct AssetData {
     pub asset_class: Option<FName>,
     pub asset_path: Option<TopLevelAssetPath>,
 
-    pub tags_and_values: HashMap<FName, Option<String>>,
+    pub tags_and_values: IndexedMap<FName, Option<String>>,
     pub tagged_asset_bundles: AssetBundleData,
     pub chunk_ids: Vec<i32>,
     pub package_flags: EPackageFlags,
@@ -54,9 +55,9 @@ pub struct AssetData {
 impl AssetData {
     fn read_tags<Reader: AssetReader>(
         asset: &mut Reader,
-    ) -> Result<HashMap<FName, Option<String>>, Error> {
+    ) -> Result<IndexedMap<FName, Option<String>>, Error> {
         let size = asset.read_i32::<LittleEndian>()?;
-        let mut tags_and_values = HashMap::new();
+        let mut tags_and_values = IndexedMap::new();
 
         for _ in 0..size {
             tags_and_values.insert(asset.read_fname()?, asset.read_string()?);
@@ -66,10 +67,10 @@ impl AssetData {
 
     fn write_tags<Writer: AssetWriter>(
         asset: &mut Writer,
-        tags_and_values: &HashMap<FName, Option<String>>,
+        tags_and_values: &IndexedMap<FName, Option<String>>,
     ) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(tags_and_values.len() as i32)?;
-        for (key, value) in tags_and_values {
+        for (_, key, value) in tags_and_values {
             asset.write_fname(key)?;
             asset.write_string(value)?;
         }
@@ -120,7 +121,7 @@ impl AssetData {
         asset_name: FName,
         asset_class: Option<FName>,
         asset_path: Option<TopLevelAssetPath>,
-        tags_and_values: HashMap<FName, Option<String>>,
+        tags_and_values: IndexedMap<FName, Option<String>>,
         tagged_asset_bundles: AssetBundleData,
         chunk_ids: Vec<i32>,
         package_flags: EPackageFlags,

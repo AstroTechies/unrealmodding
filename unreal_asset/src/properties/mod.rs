@@ -707,7 +707,7 @@ impl Property {
             "EnumProperty" => {
                 EnumProperty::new(asset, name, include_header, length, duplication_index)?.into()
             }
-            "ClothLodDataProperty" => {
+            "ClothLODData" => {
                 ClothLodDataProperty::new(asset, name, include_header, length, duplication_index)?
                     .into()
             }
@@ -943,7 +943,7 @@ property_inner_fname! {
     BoolProperty: "BoolProperty",
     ByteProperty: "ByteProperty",
     EnumProperty: "EnumProperty",
-    ClothLodDataProperty: "ClothLodData",
+    ClothLodDataProperty: "ClothLODData",
     FloatProperty: "FloatProperty",
     Int16Property: "Int16Property",
     Int64Property: "Int64Property",

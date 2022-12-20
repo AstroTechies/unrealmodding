@@ -24,7 +24,7 @@ fn versioned() -> Result<(), Error> {
         asset.set_engine_version(EngineVersion::UNKNOWN);
 
         asset.parse_data()?;
-        shared::verify_reparse(&mut asset)?;
+        shared::verify_binary_equality(test_asset, None, &mut asset)?;
         assert!(shared::verify_all_exports_parsed(&asset));
     }
     Ok(())

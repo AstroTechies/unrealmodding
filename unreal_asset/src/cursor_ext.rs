@@ -82,27 +82,26 @@ impl CursorExt for Cursor<Vec<u8>> {
         if is_unicode {
             // this is safe because we know that string is utf16 and therefore can easily be aligned to u8
             // this is also faster than alternatives without unsafe block
+            let mut length;
             unsafe {
                 let utf16 = string.encode_utf16().collect::<Vec<_>>();
                 let aligned = utf16.align_to::<u8>();
                 self.write_i32::<LittleEndian>(-(aligned.1.len() as i32 / 2) - 1)?;
                 self.write_all(aligned.1)?;
+
+                length = aligned.1.len()
             }
 
             self.write_all(&[0u8; 2])?;
+            Ok(length + 4)
         } else {
             self.write_i32::<LittleEndian>(string.len() as i32 + 1)?;
             let bytes = string.as_bytes();
             self.write_all(bytes)?;
             self.write_all(&[0u8; 1])?;
+
+            Ok(bytes.len() + 4 + 1)
         }
-
-        let written = match is_unicode {
-            true => string.len() * 2 + 2,
-            false => string.len() + 1,
-        };
-
-        Ok(written)
     }
 
     fn write_bool(&mut self, value: bool) -> Result<(), Error> {

@@ -108,6 +108,7 @@ impl ArrayProperty {
                 struct_guid = Some(guid);
                 asset.read_property_guid()?;
             }
+            // todo: override using array_struct_type_override
 
             if num_entries == 0 {
                 dummy_struct = Some(StructProperty::dummy(
@@ -197,11 +198,11 @@ impl ArrayProperty {
                 },
             }?;
 
-            let mut length_loc = -1;
+            let mut length_loc = None;
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 asset.write_fname(&property.name)?;
                 asset.write_fname(&FName::from_slice("StructProperty"))?;
-                length_loc = asset.position() as i32;
+                length_loc = Some(asset.position());
                 asset.write_i64::<LittleEndian>(0)?;
                 asset.write_fname(
                     property.struct_type.as_ref().ok_or_else(|| {
@@ -231,9 +232,10 @@ impl ArrayProperty {
             }
 
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
-                let full_len = asset.position() as i32 - length_loc;
-                let new_loc = asset.position() as i32;
-                asset.seek(SeekFrom::Start(length_loc as u64))?;
+                let length_loc = length_loc.expect("Corrupted memory");
+                let full_len = asset.position() - length_loc;
+                let new_loc = asset.position();
+                asset.seek(SeekFrom::Start(length_loc))?;
                 let length = full_len
                     - 32
                     - match include_header {
@@ -241,7 +243,7 @@ impl ArrayProperty {
                         false => 0,
                     };
 
-                asset.write_i32::<LittleEndian>(length)?;
+                asset.write_i32::<LittleEndian>(length as i32)?;
                 asset.seek(SeekFrom::Start(new_loc as u64))?;
             }
         } else {
