@@ -32,6 +32,7 @@ pub mod multicast_delegate_property;
 pub mod niagara;
 pub mod object_property;
 pub mod per_platform_property;
+pub mod raw_struct_property;
 pub mod rich_curve_key_property;
 pub mod sampler_property;
 pub mod set_property;
@@ -70,6 +71,7 @@ use self::movies::section_evaluation_data_tree_property::SectionEvaluationDataTr
 use self::niagara::niagara_variable_property::{
     NiagaraVariableProperty, NiagaraVariableWithOffsetProperty,
 };
+use self::raw_struct_property::RawStructProperty;
 use self::slate_core::font_data_property::FontDataProperty;
 use self::soft_path_property::StringAssetReferenceProperty;
 use self::vector_property::Box2DProperty;
@@ -209,6 +211,7 @@ lazy_static! {
         String::from("FontData"),
         String::from("ClothLODData"),
         String::from("FloatRange"),
+        String::from("RawStructProperty"),
         //
         String::from("MovieSceneEvalTemplatePtr"),
         String::from("MovieSceneTrackImplementationPtr"),
@@ -314,6 +317,7 @@ pub enum Property {
     NiagaraVariableWithOffsetProperty,
     FontDataProperty,
     FloatRangeProperty,
+    RawStructProperty,
     //
     MovieSceneEvalTemplatePtrProperty,
     MovieSceneTrackImplementationPtrProperty,
@@ -403,6 +407,7 @@ inner_trait!(
     NiagaraVariableWithOffsetProperty,
     FontDataProperty,
     FloatRangeProperty,
+    RawStructProperty,
     MovieSceneEvalTemplatePtrProperty,
     MovieSceneTrackImplementationPtrProperty,
     MovieSceneEvaluationFieldEntityTreeProperty,
@@ -771,6 +776,10 @@ impl Property {
             "FloatRange" => {
                 FloatRangeProperty::new(asset, name, include_header, duplication_index)?.into()
             }
+            "RawStructProperty" => {
+                RawStructProperty::new(asset, name, include_header, duplication_index, length)?
+                    .into()
+            }
 
             "MovieSceneEvalTemplatePtr" => MovieSceneEvalTemplatePtrProperty::new(
                 asset,
@@ -997,6 +1006,7 @@ property_inner_fname! {
     NiagaraVariableWithOffsetProperty: "NiagaraVariableWithOffset",
     FontDataProperty: "FontData",
     FloatRangeProperty: "FloatRange",
+    RawStructProperty: "RawStructProperty",
 
     MovieSceneEvalTemplatePtrProperty: "MovieSceneEvalTemplatePtr",
     MovieSceneTrackImplementationPtrProperty: "MovieSceneTrackImplementationPtr",
