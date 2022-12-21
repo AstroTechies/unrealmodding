@@ -384,7 +384,7 @@ pub fn integrate_mods<
     let game_files: Vec<File> = game_dir
         .filter_map(|e| e.ok())
         .filter(|e| e.path().extension().map(|e| e == "pak").unwrap_or(false))
-        .filter_map(|e| File::open(&e.path()).ok())
+        .filter_map(|e| File::open(e.path()).ok())
         .collect();
     if game_files.is_empty() {
         return Err(IntegrationError::game_not_found().into());
@@ -536,7 +536,7 @@ pub fn integrate_mods<
             .create(true)
             .write(true)
             .truncate(true)
-            .open(&path)?;
+            .open(path)?;
 
         generated_pak.write(&mut file)?;
         file.sync_data()?;

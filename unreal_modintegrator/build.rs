@@ -24,7 +24,7 @@ fn main() {
     let out_dir = PathBuf::from(&env::var_os("OUT_DIR").expect("Failed to read OUT_DIR"));
 
     let project_dir = out_dir.join("ModIntegrator");
-    fs::remove_dir_all(&project_dir).unwrap_or(());
+    fs::remove_dir_all(project_dir).unwrap_or(());
 
     let use_prebuilt = env::var_os("USE_PREBUILT_ASSETS").is_some();
 
