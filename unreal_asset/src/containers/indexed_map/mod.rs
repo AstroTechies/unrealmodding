@@ -312,6 +312,9 @@ where
 
         let value = &mut self.store[*value];
 
+        // SAFETY:
+        // This is safe because a mutable reference to the same field is never returned twice,
+        // e.g. we never visit the same element twice.
         let insertion_index = value.index_map_index;
         let key = value.key_map_index.0.as_ref() as *const K;
         let value = &mut value.value as *mut V;
