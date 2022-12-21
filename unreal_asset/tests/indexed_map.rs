@@ -81,3 +81,23 @@ fn removal() {
         assert_eq!(&hash_map[key], value)
     }
 }
+
+#[test]
+fn mutable_iterator() {
+    let mut indexed_map = IndexedMap::new();
+
+    indexed_map.insert("Test1".to_string(), 1);
+    indexed_map.insert("Test2".to_string(), 2);
+    indexed_map.insert("Test3".to_string(), 3);
+    indexed_map.insert("Test4".to_string(), 4);
+
+    for (_, _, value) in indexed_map.iter_mut() {
+        *value += 1;
+    }
+
+    let mut index = 2;
+    for (_, _, value) in indexed_map.iter() {
+        assert_eq!(*value, index);
+        index += 1;
+    }
+}

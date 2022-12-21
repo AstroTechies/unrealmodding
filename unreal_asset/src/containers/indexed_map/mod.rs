@@ -6,6 +6,8 @@ use self::entry::{Entry, OccupiedEntry, VacantEntry};
 
 pub mod entry;
 
+// todo: more docs
+
 /// Used for storing a key reference inside IndexedMap
 #[derive(PartialEq, Eq, Hash)]
 pub struct KeyItem<K: Eq + Hash>(Rc<K>);
@@ -53,11 +55,8 @@ where
     K: Eq + Hash,
 {
     value: V,
-    /// A reference to an index inside key_map
     key_map_index: KeyItem<K>,
-    /// An index inside the index_map
     index_map_index: usize,
-    /// An index inside the index_iter_map, index_iter_map is used for faster iteration when iterating by index.
     index_iter_map_index: usize,
 }
 
@@ -121,18 +120,12 @@ pub struct IndexedMap<K, V>
 where
     K: Eq + Hash,
 {
-    /// Stores all the values
     pub store: slab::Slab<IndexedValue<K, V>>,
-    /// Key reference -> store reference
     pub key_map: rustc_hash::FxHashMap<KeyItem<K>, usize>,
-    /// Insertion index -> store reference
     pub index_map: BTreeMap<usize, usize>,
-    /// Faster iteration over store, because iterating over a vector is much faster
-    /// than iterating over a [`std::collections::btree_map::Iter`]
     pub index_iter_map: Vec<usize>,
 }
 
-/// Iterates in the insertion index order on an [`IndexedMap`]
 pub struct IndexedMapIndexIterator<'map, K, V>
 where
     K: Eq + Hash,
@@ -189,7 +182,68 @@ where
     }
 }
 
-/// Iterates in the internal key map iterator order over an [`IndexedMap`]
+pub struct IndexedMapIndexIteratorMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    store: &'map mut slab::Slab<IndexedValue<K, V>>,
+    index_iter: std::slice::Iter<'map, usize>,
+}
+
+impl<'map, K, V> Iterator for IndexedMapIndexIteratorMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    type Item = (usize, &'map K, &'map mut V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index = self.index_iter.next()?;
+        let value = &mut self.store[*index];
+
+        // SAFETY:
+        // This is safe because a mutable reference to the same field is never returned twice,
+        // e.g. we never visit the same element twice.
+        let key = value.key_map_index.0.as_ref() as *const K;
+        let value = &mut value.value as *mut V;
+
+        Some((*index, unsafe { key.as_ref().unwrap() }, unsafe {
+            value.as_mut().unwrap()
+        }))
+    }
+}
+
+impl<'map, K, V> DoubleEndedIterator for IndexedMapIndexIteratorMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let index = self.index_iter.next_back()?;
+        let value = &mut self.store[*index];
+
+        // SAFETY:
+        // This is safe because a mutable reference to the same field is never returned twice,
+        // e.g. we never visit the same element twice.
+        let key = value.key_map_index.0.as_ref() as *const K;
+        let value = &mut value.value as *mut V;
+
+        Some((*index, unsafe { key.as_ref().unwrap() }, unsafe {
+            value.as_mut().unwrap()
+        }))
+    }
+}
+
+impl<K, V> ExactSizeIterator for IndexedMapIndexIteratorMut<'_, K, V>
+where
+    K: Eq + Hash,
+{
+    #[inline]
+    fn len(&self) -> usize {
+        self.index_iter.len()
+    }
+}
+
+impl<K, V> FusedIterator for IndexedMapIndexIteratorMut<'_, K, V> where K: Eq + Hash {}
+
 pub struct IndexedMapKeyIterator<'map, K, V>
 where
     K: Eq + Hash,
@@ -239,7 +293,47 @@ where
     }
 }
 
-/// Iterates over [`IndexedMap`] values
+pub struct IndexedMapKeyIteratorMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    store: &'map mut slab::Slab<IndexedValue<K, V>>,
+    key_map_iter: std::collections::hash_map::Iter<'map, KeyItem<K>, usize>,
+}
+
+impl<'map, K, V> Iterator for IndexedMapKeyIteratorMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    type Item = (usize, &'map K, &'map mut V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (_, value) = self.key_map_iter.next()?;
+
+        let value = &mut self.store[*value];
+
+        let insertion_index = value.index_map_index;
+        let key = value.key_map_index.0.as_ref() as *const K;
+        let value = &mut value.value as *mut V;
+
+        Some((insertion_index, unsafe { key.as_ref().unwrap() }, unsafe {
+            value.as_mut().unwrap()
+        }))
+    }
+}
+
+impl<K, V> ExactSizeIterator for IndexedMapKeyIteratorMut<'_, K, V>
+where
+    K: Eq + Hash,
+{
+    #[inline]
+    fn len(&self) -> usize {
+        self.key_map_iter.len()
+    }
+}
+
+impl<K, V> FusedIterator for IndexedMapKeyIteratorMut<'_, K, V> where K: Eq + Hash {}
+
 #[derive(Clone)]
 pub struct Values<'map, K, V>
 where
@@ -286,7 +380,50 @@ where
 
 impl<K, V> FusedIterator for Values<'_, K, V> where K: Eq + Hash {}
 
-/// Iterates over [`IndexedMap`] keys
+pub struct ValuesMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    inner: IndexedMapIndexIteratorMut<'map, K, V>,
+}
+
+impl<'map, K, V> Iterator for ValuesMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    type Item = &'map mut V;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|(_, _, v)| v)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<'map, K, V> DoubleEndedIterator for ValuesMut<'map, K, V>
+where
+    K: Eq + Hash,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back().map(|(_, _, v)| v)
+    }
+}
+
+impl<K, V> ExactSizeIterator for ValuesMut<'_, K, V>
+where
+    K: Eq + Hash,
+{
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
+
+impl<K, V> FusedIterator for ValuesMut<'_, K, V> where K: Eq + Hash {}
+
 #[derive(Clone)]
 pub struct Keys<'map, K, V>
 where
@@ -331,7 +468,6 @@ impl<'map, K, V> IndexedMap<K, V>
 where
     K: Eq + Hash,
 {
-    /// Create a new instance of [`IndexedMap`]
     pub fn new() -> Self {
         IndexedMap {
             store: slab::Slab::new(),
@@ -341,7 +477,6 @@ where
         }
     }
 
-    /// Create a new instance of [`IndexedMap`] with a preallocated capacity
     pub fn with_capacity(capacity: usize) -> Self {
         IndexedMap {
             store: slab::Slab::with_capacity(capacity),
@@ -351,10 +486,6 @@ where
         }
     }
 
-    /// Inserts a value at a given key, if the key already exists
-    /// replaces existing value.
-    ///
-    /// Returns a mutable reference to the inserted value
     fn internal_insert(&'map mut self, key: K, value: V) -> &'map mut IndexedValue<K, V> {
         if let Some(storage_place) = self.key_map.get(&key) {
             self.store[*storage_place].value = value;
@@ -382,7 +513,6 @@ where
         self.internal_insert(key, value);
     }
 
-    /// Creates an [`Entry`] for a given key
     pub fn entry(&'map mut self, key: K) -> Entry<'map, K, V> {
         if let Some(store_place) = self.key_map.get(&key) {
             let place = *store_place;
@@ -395,9 +525,6 @@ where
         return Entry::Vacant(VacantEntry { key, map: self });
     }
 
-    /// Gets a reference for a value associated with the given key
-    ///
-    /// If there is no value associated with a given key, `None` is returned
     pub fn get_by_key<Q>(&self, key: &Q) -> Option<&V>
     where
         KeyItem<K>: Borrow<Q>,
@@ -410,9 +537,6 @@ where
         None
     }
 
-    /// Gets a mutable reference for a value associated with the given key
-    ///
-    /// If there is no value associated with a given key, `None` is returned.
     pub fn get_by_key_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
     where
         KeyItem<K>: Borrow<Q>,
@@ -425,9 +549,6 @@ where
         None
     }
 
-    /// Gets a reference for a value associated with the given insertion index
-    ///
-    /// If there is no value associated with a given insertion index, `None` is returned.
     pub fn get_by_index(&self, index: usize) -> Option<&V> {
         if let Some(store_place) = self.index_map.get(&index) {
             return self.store.get(*store_place).map(|e| &e.value);
@@ -436,9 +557,6 @@ where
         None
     }
 
-    /// Gets a mutable reference for a value associated with the given insertion index
-    ///
-    /// If there is no value associated with a given insertion index, 'None' is returned.
     pub fn get_by_index_mut(&mut self, index: usize) -> Option<&mut V> {
         if let Some(store_place) = self.index_map.get(&index) {
             return self.store.get_mut(*store_place).map(|e| &mut e.value);
@@ -447,7 +565,7 @@ where
         None
     }
 
-    /// Returns the number of elements in a map
+    /// Returns the length of the map
     pub fn len(&self) -> usize {
         self.index_map.len()
     }
@@ -457,12 +575,19 @@ where
         self.index_map.is_empty()
     }
 
-    /// Returns an iterator over the values of the map.
+    /// Returns an iterator over values in insertion index order
     pub fn values(&'map self) -> Values<'map, K, V> {
         Values { inner: self.iter() }
     }
 
-    /// Returns an iterator over the keys of the map.
+    /// Returns a mutable iterator over values in insertion index order
+    pub fn values_mut(&'map mut self) -> ValuesMut<'map, K, V> {
+        ValuesMut {
+            inner: self.iter_mut(),
+        }
+    }
+
+    /// Returns an iterator over keys in insertion index order
     pub fn keys(&'map self) -> Keys<'map, K, V> {
         Keys { inner: self.iter() }
     }
@@ -517,17 +642,15 @@ where
         self.remove_by_store_place(*store_place)
     }
 
-    /// Checks if a given key exists in a map
     pub fn contains_key(&self, key: &K) -> bool {
         self.key_map.contains_key(key)
     }
 
-    /// Checks if a given insertion index exists in a map
     pub fn contains_index(&self, index: usize) -> bool {
         self.index_map.contains_key(&index)
     }
 
-    /// Returns an iterator in the insertion index order
+    /// Returns an iterator over entries in insertion order
     pub fn iter(&'map self) -> IndexedMapIndexIterator<'map, K, V> {
         IndexedMapIndexIterator {
             store: &self.store,
@@ -535,10 +658,26 @@ where
         }
     }
 
-    /// Returns an iterator in the key order
+    /// Returns a mutable iterator over values in insertion order
+    pub fn iter_mut(&'map mut self) -> IndexedMapIndexIteratorMut<'map, K, V> {
+        IndexedMapIndexIteratorMut {
+            store: &mut self.store,
+            index_iter: self.index_iter_map.iter(),
+        }
+    }
+
+    /// Returns an iterator over entries in key order
     pub fn iter_key(&'map self) -> IndexedMapKeyIterator<'map, K, V> {
         IndexedMapKeyIterator {
             store: &self.store,
+            key_map_iter: self.key_map.iter(),
+        }
+    }
+
+    /// Returns a mutable iterator over values in key order
+    pub fn iter_key_mut(&'map mut self) -> IndexedMapKeyIteratorMut<'map, K, V> {
+        IndexedMapKeyIteratorMut {
+            store: &mut self.store,
             key_map_iter: self.key_map.iter(),
         }
     }
