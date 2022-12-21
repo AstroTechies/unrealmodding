@@ -9,7 +9,7 @@ use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::StringTable;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StringTableExport {
     normal_export: NormalExport,
 
@@ -54,7 +54,7 @@ impl ExportTrait for StringTableExport {
 
         asset.write_string(&self.table.namespace)?;
         asset.write_i32::<LittleEndian>(self.table.value.len() as i32)?;
-        for (key, value) in &self.table.value {
+        for (_, key, value) in &self.table.value {
             asset.write_string(&Some(key.clone()))?;
             asset.write_string(&Some(value.clone()))?;
         }

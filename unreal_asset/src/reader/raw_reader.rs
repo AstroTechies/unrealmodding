@@ -1,11 +1,13 @@
-use std::collections::HashMap;
 use std::io::{self, Cursor, Read, Seek};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
 use crate::unreal_types::{FName, Guid, PackageIndex};
 use crate::Import;
@@ -13,17 +15,23 @@ use crate::Import;
 /// A binary reader
 pub struct RawReader {
     cursor: Cursor<Vec<u8>>,
-    engine_version: i32,
+    object_version: ObjectVersion,
+    object_version_ue5: ObjectVersionUE5,
 
-    empty_map: HashMap<String, String>,
+    empty_map: IndexedMap<String, String>,
 }
 
 impl RawReader {
-    pub fn new(cursor: Cursor<Vec<u8>>, engine_version: i32) -> Self {
+    pub fn new(
+        cursor: Cursor<Vec<u8>>,
+        object_version: ObjectVersion,
+        object_version_ue5: ObjectVersionUE5,
+    ) -> Self {
         RawReader {
             cursor,
-            engine_version,
-            empty_map: HashMap::new(),
+            object_version,
+            object_version_ue5,
+            empty_map: IndexedMap::new(),
         }
     }
 }
@@ -48,16 +56,44 @@ impl AssetTrait for RawReader {
         self.cursor.seek(style)
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_name_map_index_list(&self) -> &[String] {
+        &[]
+    }
+
+    fn get_name_reference(&self, _: i32) -> String {
+        "".to_string()
+    }
+
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 
-    fn get_engine_version(&self) -> i32 {
-        self.engine_version
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
+        &self.empty_map
+    }
+
+    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
+        None
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
+        None
+    }
+
+    fn get_engine_version(&self) -> EngineVersion {
+        guess_engine_version(self.object_version, self.object_version_ue5, &[])
+    }
+
+    fn get_object_version(&self) -> ObjectVersion {
+        self.object_version
+    }
+
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.object_version_ue5
     }
 
     fn get_import(&self, _index: PackageIndex) -> Option<&Import> {
@@ -65,6 +101,18 @@ impl AssetTrait for RawReader {
     }
 
     fn get_export_class_type(&self, _index: PackageIndex) -> Option<FName> {
+        None
+    }
+
+    fn add_fname(&mut self, value: &str) -> FName {
+        FName::new(value.to_string(), 0)
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        FName::new(value.to_string(), number)
+    }
+
+    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
         None
     }
 }

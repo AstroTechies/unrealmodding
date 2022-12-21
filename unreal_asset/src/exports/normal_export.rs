@@ -4,7 +4,7 @@ use crate::properties::Property;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::FName;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NormalExport {
     pub base_export: BaseExport,
     pub extras: Vec<u8>,
@@ -38,7 +38,12 @@ impl NormalExport {
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let mut properties = Vec::new();
-        while let Some(e) = Property::new(asset, true)? {
+
+        let parent_name = asset
+            .get_parent_class_cached()
+            .map(|e| e.parent_class_export_name.clone());
+
+        while let Some(e) = Property::new(asset, parent_name.as_ref(), true)? {
             properties.push(e);
         }
 

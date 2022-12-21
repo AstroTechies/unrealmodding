@@ -5,6 +5,9 @@ authors.workspace = true
 description.workspace = true
 edition = "2021"
 
+[lib]
+doctest = false
+
 [dependencies]
 bitflags = "1.3.2"
 bitvec = "1.0.1"
@@ -13,3 +16,9 @@ enum_dispatch = "0.3.8"
 lazy_static.workspace = true
 num_enum.workspace = true
 ordered-float = "3.4.0"
+# containers/indexed_map
+slab = "0.4.7"
+rustc-hash = "1.1.0"
+
+[features]
+oodle = []

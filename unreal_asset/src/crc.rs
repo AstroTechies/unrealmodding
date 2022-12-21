@@ -178,18 +178,30 @@ pub fn generate_hash(string: &str) -> u32 {
     (algo1 & 0xffff) | ((algo2 & 0xffff) << 16)
 }
 
+fn to_upper(character: u16) -> u16 {
+    if character.saturating_sub('a' as u16) < 26u16 {
+        (character as u8 as char).to_uppercase().next().unwrap() as u16
+    } else {
+        character
+    }
+}
+
 fn generate_hash_deprecated(string: &str) -> u32 {
     let mut hash = 0u32;
 
-    for c in string.chars() {
-        let mut data = [0; 8];
-        let upper: Vec<char> = c.to_uppercase().collect();
-        upper[0].encode_utf8(&mut data);
-        for byte in data {
-            if byte != 0 {
-                hash = ((hash >> 8) & 0xffffff)
-                    ^ CRCTABLE_DEPRECATED[((hash ^ byte as u32) & 0xff) as usize];
-            }
+    for c in string.encode_utf16() {
+        let c = to_upper(c);
+        let (byte0, byte1) = match c >= 255 {
+            true => ((c & 0xff) as u8, (c >> 8) as u8),
+            false => (c as u8, 0),
+        };
+
+        hash =
+            ((hash >> 8) & 0xffffff) ^ CRCTABLE_DEPRECATED[((hash ^ byte0 as u32) & 0xff) as usize];
+
+        if !string.is_ascii() {
+            hash = ((hash >> 8) & 0xffffff)
+                ^ CRCTABLE_DEPRECATED[((hash ^ byte1 as u32) & 0xff) as usize];
         }
     }
 
@@ -199,12 +211,14 @@ fn generate_hash_deprecated(string: &str) -> u32 {
 fn generate_crc32(string: &str, crc: u32) -> u32 {
     let mut crc = !crc;
 
-    for c in string.chars() {
-        let ch = c as u8;
+    for mut ch in string.encode_utf16() {
         crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
-        crc = (crc >> 8) ^ CRCTABLES_SB8[0][(crc & 0xff) as usize];
-        crc = (crc >> 8) ^ CRCTABLES_SB8[0][(crc & 0xff) as usize];
-        crc = (crc >> 8) ^ CRCTABLES_SB8[0][(crc & 0xff) as usize];
+        ch >>= 8;
+        crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
+        ch >>= 8;
+        crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
+        ch >>= 8;
+        crc = (crc >> 8) ^ CRCTABLES_SB8[0][((crc ^ ch as u32) & 0xff) as usize];
     }
     !crc
 }

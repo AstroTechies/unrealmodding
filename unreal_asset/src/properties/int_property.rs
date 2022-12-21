@@ -1,3 +1,4 @@
+use std::io::SeekFrom;
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -7,7 +8,7 @@ use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::simple_property_write;
 use crate::unreal_types::{FName, Guid};
@@ -37,7 +38,7 @@ macro_rules! impl_int_property {
     };
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int8Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -46,20 +47,19 @@ pub struct Int8Property {
 }
 impl_property_data_trait!(Int8Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
-pub enum ByteType {
-    Byte,
-    Long,
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+pub enum BytePropertyValue {
+    Byte(u8),
+    FName(FName),
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ByteProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
     pub duplication_index: i32,
-    pub enum_type: Option<i64>,
-    pub byte_type: ByteType,
-    pub value: i64,
+    pub enum_type: Option<FName>,
+    pub value: BytePropertyValue,
 }
 impl_property_data_trait!(ByteProperty);
 
@@ -72,7 +72,7 @@ pub struct BoolProperty {
 }
 impl_property_data_trait!(BoolProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct IntProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -81,7 +81,7 @@ pub struct IntProperty {
 }
 impl_property_data_trait!(IntProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int16Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -90,7 +90,7 @@ pub struct Int16Property {
 }
 impl_property_data_trait!(Int16Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int64Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -99,7 +99,7 @@ pub struct Int64Property {
 }
 impl_property_data_trait!(Int64Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt16Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -108,7 +108,7 @@ pub struct UInt16Property {
 }
 impl_property_data_trait!(UInt16Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt32Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -117,7 +117,7 @@ pub struct UInt32Property {
 }
 impl_property_data_trait!(UInt32Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt64Property {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -126,7 +126,7 @@ pub struct UInt64Property {
 }
 impl_property_data_trait!(UInt64Property);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FloatProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -135,7 +135,7 @@ pub struct FloatProperty {
 }
 impl_property_data_trait!(FloatProperty);
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DoubleProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -207,13 +207,31 @@ impl PropertyTrait for Int8Property {
 }
 
 impl ByteProperty {
-    fn read_byte<Reader: AssetReader>(
+    fn read_value<Reader: AssetReader>(
         asset: &mut Reader,
         length: i64,
-    ) -> Result<(ByteType, i64), Error> {
+    ) -> Result<BytePropertyValue, Error> {
         let value = match length {
-            1 => Some((ByteType::Byte, asset.read_i8()? as i64)),
-            0 | 8 => Some((ByteType::Long, asset.read_i64::<LittleEndian>()?)),
+            1 => Some(BytePropertyValue::Byte(asset.read_u8()?)),
+            8 => Some(BytePropertyValue::FName(asset.read_fname()?)),
+            0 => {
+                let name_map_pointer = asset.read_i32::<LittleEndian>()?;
+                let name_map_index = asset.read_i32::<LittleEndian>()?;
+
+                asset.seek(SeekFrom::Current(-(size_of::<i32>() as i64 * 2)))?;
+
+                let byte_value = if name_map_pointer >= 0
+                    && name_map_pointer < asset.get_name_map_index_list().len() as i32
+                    && name_map_index == 0
+                    && !asset.get_name_reference(name_map_index).contains('/')
+                {
+                    BytePropertyValue::FName(asset.read_fname()?)
+                } else {
+                    BytePropertyValue::Byte(asset.read_u8()?)
+                };
+
+                Some(byte_value)
+            }
             _ => None,
         };
 
@@ -231,22 +249,18 @@ impl ByteProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let (enum_type, property_guid) = match include_header {
-            true => (
-                Some(asset.read_i64::<LittleEndian>()?),
-                asset.read_property_guid()?,
-            ),
+            true => (Some(asset.read_fname()?), asset.read_property_guid()?),
             false => (None, None),
         };
 
-        let (byte_type, value) = ByteProperty::read_byte(asset, length)
-            .or_else(|_| ByteProperty::read_byte(asset, fallback_length))?;
+        let value = ByteProperty::read_value(asset, length)
+            .or_else(|_| ByteProperty::read_value(asset, fallback_length))?;
 
         Ok(ByteProperty {
             name,
             property_guid,
             duplication_index,
             enum_type,
-            byte_type,
             value,
         })
     }
@@ -259,18 +273,21 @@ impl PropertyTrait for ByteProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         if include_header {
-            asset
-                .write_i64::<LittleEndian>(self.enum_type.ok_or_else(PropertyError::headerless)?)?;
+            asset.write_fname(
+                self.enum_type
+                    .as_ref()
+                    .ok_or_else(PropertyError::headerless)?,
+            )?;
             asset.write_property_guid(&self.property_guid)?;
         }
 
-        match self.byte_type {
-            ByteType::Byte => {
-                asset.write_u8(self.value as u8)?;
+        match self.value {
+            BytePropertyValue::Byte(value) => {
+                asset.write_u8(value)?;
                 Ok(1)
             }
-            ByteType::Long => {
-                asset.write_i64::<LittleEndian>(self.value)?;
+            BytePropertyValue::FName(ref name) => {
+                asset.write_fname(name)?;
                 Ok(8)
             }
         }

@@ -4,17 +4,12 @@ use byteorder::LittleEndian;
 
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
-use crate::properties::{
-    struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait,
-};
+use crate::object_version::ObjectVersion;
+use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::{
-    VER_UE4_INNER_ARRAY_TAG_INFO, VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG,
-    VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG,
-};
 use crate::unreal_types::{default_guid, FName, Guid, ToFName};
 
-#[derive(Default, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -30,10 +25,10 @@ impl ArrayProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         length: i64,
         duplication_index: i32,
-        engine_version: i32,
         serialize_struct_differently: bool,
     ) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
@@ -43,10 +38,10 @@ impl ArrayProperty {
         ArrayProperty::new_no_header(
             asset,
             name,
+            parent_name,
             include_header,
             length,
             duplication_index,
-            engine_version,
             serialize_struct_differently,
             array_type,
             property_guid,
@@ -68,10 +63,10 @@ impl ArrayProperty {
     pub fn new_no_header<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         _include_header: bool,
         length: i64,
         duplication_index: i32,
-        engine_version: i32,
         serialize_struct_differently: bool,
         array_type: Option<FName>,
         property_guid: Option<Guid>,
@@ -89,7 +84,7 @@ impl ArrayProperty {
             && serialize_struct_differently
         {
             let mut full_type = FName::new(String::from("Generic"), 0);
-            if engine_version >= VER_UE4_INNER_ARRAY_TAG_INFO {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 name = asset.read_fname()?;
                 if &name.content == "None" {
                     return Ok(ArrayProperty::default());
@@ -115,6 +110,12 @@ impl ArrayProperty {
                 asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
                 asset.read_property_guid()?;
+            } else if let Some(type_override) = asset
+                .get_array_struct_type_override()
+                .get_by_key(&name.content)
+                .cloned()
+            {
+                full_type = asset.add_fname(&type_override);
             }
 
             if num_entries == 0 {
@@ -128,6 +129,7 @@ impl ArrayProperty {
                 let data = StructProperty::custom_header(
                     asset,
                     name.clone(),
+                    parent_name,
                     struct_length,
                     0,
                     Some(full_type.clone()),
@@ -147,6 +149,7 @@ impl ArrayProperty {
                     asset,
                     array_type,
                     FName::new(i.to_string(), i32::MIN),
+                    parent_name,
                     false,
                     size_est_1,
                     size_est_2,
@@ -205,21 +208,24 @@ impl ArrayProperty {
                 },
             }?;
 
-            let mut length_loc = -1;
-            if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
+            let mut length_loc = None;
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 asset.write_fname(&property.name)?;
                 asset.write_fname(&FName::from_slice("StructProperty"))?;
-                length_loc = asset.position() as i32;
+                length_loc = Some(asset.position());
                 asset.write_i64::<LittleEndian>(0)?;
                 asset.write_fname(
                     property.struct_type.as_ref().ok_or_else(|| {
                         PropertyError::property_field_none("struct_type", "FName")
                     })?,
                 )?;
-                if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+                if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG
+                {
                     asset.write_all(&property.property_guid.unwrap_or_else(default_guid))?;
                 }
-                if asset.get_engine_version() >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+                if asset.get_object_version()
+                    >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG
+                {
                     asset.write_u8(0)?;
                 }
             }
@@ -235,10 +241,11 @@ impl ArrayProperty {
                 struct_property.write(asset, false)?;
             }
 
-            if asset.get_engine_version() >= VER_UE4_INNER_ARRAY_TAG_INFO {
-                let full_len = asset.position() as i32 - length_loc;
-                let new_loc = asset.position() as i32;
-                asset.seek(SeekFrom::Start(length_loc as u64))?;
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
+                let length_loc = length_loc.expect("Corrupted memory");
+                let full_len = asset.position() - length_loc;
+                let new_loc = asset.position();
+                asset.seek(SeekFrom::Start(length_loc))?;
                 let length = full_len
                     - 32
                     - match include_header {
@@ -246,8 +253,8 @@ impl ArrayProperty {
                         false => 0,
                     };
 
-                asset.write_i32::<LittleEndian>(length)?;
-                asset.seek(SeekFrom::Start(new_loc as u64))?;
+                asset.write_i32::<LittleEndian>(length as i32)?;
+                asset.seek(SeekFrom::Start(new_loc))?;
             }
         } else {
             for entry in &self.value {

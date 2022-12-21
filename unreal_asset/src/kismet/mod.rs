@@ -1,19 +1,23 @@
 //! Kismet bytecode
 use std::mem::size_of;
+use std::hash::Hash;
+use std::fmt::Debug;
 
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use ordered_float::OrderedFloat;
 
+use crate::inner_trait;
 use crate::enums::EBlueprintTextLiteralType;
 use crate::error::KismetError;
+use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{Transform, Vector, Vector4};
-use crate::ue4version::{VER_UE4_ADDED_PACKAGE_OWNER, VER_UE4_CHANGE_SETARRAY_BYTECODE};
 use crate::unreal_types::{FName, FieldPath, PackageIndex};
 use crate::Error;
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EExprToken {
     /// A local variable.
@@ -188,13 +192,35 @@ pub enum EExprToken {
     ExMax = 0xff,
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum ECastToken {
     ObjectToInterface = 0x46,
     ObjectToBool = 0x47,
     InterfaceToBool = 0x49,
     Max = 0xFF,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
+pub enum EScriptInstrumentationType {
+    Class = 0,
+    ClassScope,
+    Instance,
+    Event,
+    InlineEvent,
+    ResumeEvent,
+    PureNodeEntry,
+    NodeDebugSite,
+    NodeEntry,
+    NodeExit,
+    PushState,
+    RestoreState,
+    ResetState,
+    SuspendState,
+    PopState,
+    TunnelEndOfThread,
+    Stop,
 }
 
 fn read_kismet_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String, Error> {
@@ -234,7 +260,7 @@ fn write_kismet_string<Writer: AssetWriter>(
 
 macro_rules! declare_expression {
     ($name:ident, $($v:ident: $t:ty),*) => {
-        #[derive(Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $name {
             pub token: EExprToken,
             $(
@@ -255,7 +281,7 @@ macro_rules! declare_expression {
 macro_rules! implement_expression {
     ($($name:ident),*) => {
         $(
-            #[derive(Clone)]
+            #[derive(Debug, Clone, PartialEq, Eq, Hash)]
             pub struct $name { pub token: EExprToken }
 
             impl KismetExpressionTrait for $name {
@@ -329,7 +355,7 @@ macro_rules! implement_value_expression {
     };
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FScriptText {
     text_literal_type: EBlueprintTextLiteralType,
     localized_source: Option<KismetExpression>,
@@ -479,13 +505,19 @@ impl FScriptText {
     }
 }
 
-#[derive(Default, Clone)]
+/// Represents a Kismet bytecode pointer to an FProperty or FField.
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct KismetPropertyPointer {
+    /// Pointer serialized as PackageIndex. Used in versions older than [`KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`]
     pub old: Option<PackageIndex>,
+    /// Pointer serialized as an FFieldPath. Used in versions newer than [`KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`]
     pub new: Option<FieldPath>,
 }
 
 impl KismetPropertyPointer {
+    const XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION: ObjectVersion =
+        ObjectVersion::VER_UE4_ADDED_PACKAGE_OWNER;
+
     pub fn from_old(old: PackageIndex) -> Self {
         KismetPropertyPointer {
             old: Some(old),
@@ -501,7 +533,9 @@ impl KismetPropertyPointer {
     }
 
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        if asset.get_engine_version() >= VER_UE4_ADDED_PACKAGE_OWNER {
+        if asset.get_object_version()
+            >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
+        {
             let num_entries = asset.read_i32::<LittleEndian>()?;
             let mut names = Vec::with_capacity(num_entries as usize);
             for _i in 0..num_entries as usize {
@@ -519,7 +553,9 @@ impl KismetPropertyPointer {
     }
 
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        if asset.get_engine_version() >= VER_UE4_ADDED_PACKAGE_OWNER {
+        if asset.get_object_version()
+            >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
+        {
             let new = self.new.as_ref().ok_or_else(|| {
                 Error::no_data(
                     "engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string(),
@@ -541,7 +577,7 @@ impl KismetPropertyPointer {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KismetSwitchCase {
     case_index_value_term: KismetExpression,
     next_offset: u32,
@@ -564,7 +600,7 @@ impl KismetSwitchCase {
 
 /// This must be implemented for all KismetExpressions
 #[enum_dispatch]
-pub trait KismetExpressionTrait {
+pub trait KismetExpressionTrait: Debug + Clone + PartialEq + Eq + Hash {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error>;
 }
 
@@ -580,7 +616,6 @@ pub trait KismetExpressionEnumEqTrait {
     fn enum_eq(&self, token: &EExprToken) -> bool;
 }
 
-#[derive(PartialEq, Eq)]
 #[enum_dispatch(
     KismetExpressionTrait,
     KismetExpressionEnumEqTrait,
@@ -682,107 +717,104 @@ pub enum KismetExpression {
     ExFieldPathConst,
 }
 
-impl Clone for KismetExpression {
-    fn clone(&self) -> Self {
-        match self {
-            Self::ExLocalVariable(arg0) => Self::ExLocalVariable(arg0.clone()),
-            Self::ExInstanceVariable(arg0) => Self::ExInstanceVariable(arg0.clone()),
-            Self::ExDefaultVariable(arg0) => Self::ExDefaultVariable(arg0.clone()),
-            Self::ExReturn(arg0) => Self::ExReturn(arg0.clone()),
-            Self::ExJump(arg0) => Self::ExJump(arg0.clone()),
-            Self::ExJumpIfNot(arg0) => Self::ExJumpIfNot(arg0.clone()),
-            Self::ExAssert(arg0) => Self::ExAssert(arg0.clone()),
-            Self::ExNothing(arg0) => Self::ExNothing(arg0.clone()),
-            Self::ExLet(arg0) => Self::ExLet(arg0.clone()),
-            Self::ExClassContext(arg0) => Self::ExClassContext(arg0.clone()),
-            Self::ExMetaCast(arg0) => Self::ExMetaCast(arg0.clone()),
-            Self::ExLetBool(arg0) => Self::ExLetBool(arg0.clone()),
-            Self::ExEndParmValue(arg0) => Self::ExEndParmValue(arg0.clone()),
-            Self::ExEndFunctionParms(arg0) => Self::ExEndFunctionParms(arg0.clone()),
-            Self::ExSelf(arg0) => Self::ExSelf(arg0.clone()),
-            Self::ExSkip(arg0) => Self::ExSkip(arg0.clone()),
-            Self::ExContext(arg0) => Self::ExContext(arg0.clone()),
-            Self::ExContextFailSilent(arg0) => Self::ExContextFailSilent(arg0.clone()),
-            Self::ExVirtualFunction(arg0) => Self::ExVirtualFunction(arg0.clone()),
-            Self::ExFinalFunction(arg0) => Self::ExFinalFunction(arg0.clone()),
-            Self::ExIntConst(arg0) => Self::ExIntConst(arg0.clone()),
-            Self::ExFloatConst(arg0) => Self::ExFloatConst(arg0.clone()),
-            Self::ExStringConst(arg0) => Self::ExStringConst(arg0.clone()),
-            Self::ExObjectConst(arg0) => Self::ExObjectConst(arg0.clone()),
-            Self::ExNameConst(arg0) => Self::ExNameConst(arg0.clone()),
-            Self::ExRotationConst(arg0) => Self::ExRotationConst(arg0.clone()),
-            Self::ExVectorConst(arg0) => Self::ExVectorConst(arg0.clone()),
-            Self::ExByteConst(arg0) => Self::ExByteConst(arg0.clone()),
-            Self::ExIntZero(arg0) => Self::ExIntZero(arg0.clone()),
-            Self::ExIntOne(arg0) => Self::ExIntOne(arg0.clone()),
-            Self::ExTrue(arg0) => Self::ExTrue(arg0.clone()),
-            Self::ExFalse(arg0) => Self::ExFalse(arg0.clone()),
-            Self::ExTextConst(arg0) => Self::ExTextConst(arg0.clone()),
-            Self::ExNoObject(arg0) => Self::ExNoObject(arg0.clone()),
-            Self::ExTransformConst(arg0) => Self::ExTransformConst(arg0.clone()),
-            Self::ExIntConstByte(arg0) => Self::ExIntConstByte(arg0.clone()),
-            Self::ExNoInterface(arg0) => Self::ExNoInterface(arg0.clone()),
-            Self::ExDynamicCast(arg0) => Self::ExDynamicCast(arg0.clone()),
-            Self::ExStructConst(arg0) => Self::ExStructConst(arg0.clone()),
-            Self::ExEndStructConst(arg0) => Self::ExEndStructConst(arg0.clone()),
-            Self::ExSetArray(arg0) => Self::ExSetArray(arg0.clone()),
-            Self::ExEndArray(arg0) => Self::ExEndArray(arg0.clone()),
-            Self::ExPropertyConst(arg0) => Self::ExPropertyConst(arg0.clone()),
-            Self::ExUnicodeStringConst(arg0) => Self::ExUnicodeStringConst(arg0.clone()),
-            Self::ExInt64Const(arg0) => Self::ExInt64Const(arg0.clone()),
-            Self::ExUInt64Const(arg0) => Self::ExUInt64Const(arg0.clone()),
-            Self::ExPrimitiveCast(arg0) => Self::ExPrimitiveCast(arg0.clone()),
-            Self::ExSetSet(arg0) => Self::ExSetSet(arg0.clone()),
-            Self::ExEndSet(arg0) => Self::ExEndSet(arg0.clone()),
-            Self::ExSetMap(arg0) => Self::ExSetMap(arg0.clone()),
-            Self::ExEndMap(arg0) => Self::ExEndMap(arg0.clone()),
-            Self::ExSetConst(arg0) => Self::ExSetConst(arg0.clone()),
-            Self::ExEndSetConst(arg0) => Self::ExEndSetConst(arg0.clone()),
-            Self::ExMapConst(arg0) => Self::ExMapConst(arg0.clone()),
-            Self::ExEndMapConst(arg0) => Self::ExEndMapConst(arg0.clone()),
-            Self::ExStructMemberContext(arg0) => Self::ExStructMemberContext(arg0.clone()),
-            Self::ExLetMulticastDelegate(arg0) => Self::ExLetMulticastDelegate(arg0.clone()),
-            Self::ExLetDelegate(arg0) => Self::ExLetDelegate(arg0.clone()),
-            Self::ExLocalVirtualFunction(arg0) => Self::ExLocalVirtualFunction(arg0.clone()),
-            Self::ExLocalFinalFunction(arg0) => Self::ExLocalFinalFunction(arg0.clone()),
-            Self::ExLocalOutVariable(arg0) => Self::ExLocalOutVariable(arg0.clone()),
-            Self::ExDeprecatedOp4A(arg0) => Self::ExDeprecatedOp4A(arg0.clone()),
-            Self::ExInstanceDelegate(arg0) => Self::ExInstanceDelegate(arg0.clone()),
-            Self::ExPushExecutionFlow(arg0) => Self::ExPushExecutionFlow(arg0.clone()),
-            Self::ExPopExecutionFlow(arg0) => Self::ExPopExecutionFlow(arg0.clone()),
-            Self::ExComputedJump(arg0) => Self::ExComputedJump(arg0.clone()),
-            Self::ExPopExecutionFlowIfNot(arg0) => Self::ExPopExecutionFlowIfNot(arg0.clone()),
-            Self::ExBreakpoint(arg0) => Self::ExBreakpoint(arg0.clone()),
-            Self::ExInterfaceContext(arg0) => Self::ExInterfaceContext(arg0.clone()),
-            Self::ExObjToInterfaceCast(arg0) => Self::ExObjToInterfaceCast(arg0.clone()),
-            Self::ExEndOfScript(arg0) => Self::ExEndOfScript(arg0.clone()),
-            Self::ExCrossInterfaceCast(arg0) => Self::ExCrossInterfaceCast(arg0.clone()),
-            Self::ExInterfaceToObjCast(arg0) => Self::ExInterfaceToObjCast(arg0.clone()),
-            Self::ExWireTracepoint(arg0) => Self::ExWireTracepoint(arg0.clone()),
-            Self::ExSkipOffsetConst(arg0) => Self::ExSkipOffsetConst(arg0.clone()),
-            Self::ExAddMulticastDelegate(arg0) => Self::ExAddMulticastDelegate(arg0.clone()),
-            Self::ExClearMulticastDelegate(arg0) => Self::ExClearMulticastDelegate(arg0.clone()),
-            Self::ExTracepoint(arg0) => Self::ExTracepoint(arg0.clone()),
-            Self::ExLetObj(arg0) => Self::ExLetObj(arg0.clone()),
-            Self::ExLetWeakObjPtr(arg0) => Self::ExLetWeakObjPtr(arg0.clone()),
-            Self::ExBindDelegate(arg0) => Self::ExBindDelegate(arg0.clone()),
-            Self::ExRemoveMulticastDelegate(arg0) => Self::ExRemoveMulticastDelegate(arg0.clone()),
-            Self::ExCallMulticastDelegate(arg0) => Self::ExCallMulticastDelegate(arg0.clone()),
-            Self::ExLetValueOnPersistentFrame(arg0) => {
-                Self::ExLetValueOnPersistentFrame(arg0.clone())
-            }
-            Self::ExArrayConst(arg0) => Self::ExArrayConst(arg0.clone()),
-            Self::ExEndArrayConst(arg0) => Self::ExEndArrayConst(arg0.clone()),
-            Self::ExSoftObjectConst(arg0) => Self::ExSoftObjectConst(arg0.clone()),
-            Self::ExCallMath(arg0) => Self::ExCallMath(arg0.clone()),
-            Self::ExSwitchValue(arg0) => Self::ExSwitchValue(arg0.clone()),
-            Self::ExInstrumentationEvent(arg0) => Self::ExInstrumentationEvent(arg0.clone()),
-            Self::ExArrayGetByRef(arg0) => Self::ExArrayGetByRef(arg0.clone()),
-            Self::ExClassSparseDataVariable(arg0) => Self::ExClassSparseDataVariable(arg0.clone()),
-            Self::ExFieldPathConst(arg0) => Self::ExFieldPathConst(arg0.clone()),
-        }
-    }
-}
+inner_trait!(
+    KismetExpression,
+    ExLocalVariable,
+    ExInstanceVariable,
+    ExDefaultVariable,
+    ExReturn,
+    ExJump,
+    ExJumpIfNot,
+    ExAssert,
+    ExNothing,
+    ExLet,
+    ExClassContext,
+    ExMetaCast,
+    ExLetBool,
+    ExEndParmValue,
+    ExEndFunctionParms,
+    ExSelf,
+    ExSkip,
+    ExContext,
+    ExContextFailSilent,
+    ExVirtualFunction,
+    ExFinalFunction,
+    ExIntConst,
+    ExFloatConst,
+    ExStringConst,
+    ExObjectConst,
+    ExNameConst,
+    ExRotationConst,
+    ExVectorConst,
+    ExByteConst,
+    ExIntZero,
+    ExIntOne,
+    ExTrue,
+    ExFalse,
+    ExTextConst,
+    ExNoObject,
+    ExTransformConst,
+    ExIntConstByte,
+    ExNoInterface,
+    ExDynamicCast,
+    ExStructConst,
+    ExEndStructConst,
+    ExSetArray,
+    ExEndArray,
+    ExPropertyConst,
+    ExUnicodeStringConst,
+    ExInt64Const,
+    ExUInt64Const,
+    ExPrimitiveCast,
+    ExSetSet,
+    ExEndSet,
+    ExSetMap,
+    ExEndMap,
+    ExSetConst,
+    ExEndSetConst,
+    ExMapConst,
+    ExEndMapConst,
+    ExStructMemberContext,
+    ExLetMulticastDelegate,
+    ExLetDelegate,
+    ExLocalVirtualFunction,
+    ExLocalFinalFunction,
+    ExLocalOutVariable,
+    ExDeprecatedOp4A,
+    ExInstanceDelegate,
+    ExPushExecutionFlow,
+    ExPopExecutionFlow,
+    ExComputedJump,
+    ExPopExecutionFlowIfNot,
+    ExBreakpoint,
+    ExInterfaceContext,
+    ExObjToInterfaceCast,
+    ExEndOfScript,
+    ExCrossInterfaceCast,
+    ExInterfaceToObjCast,
+    ExWireTracepoint,
+    ExSkipOffsetConst,
+    ExAddMulticastDelegate,
+    ExClearMulticastDelegate,
+    ExTracepoint,
+    ExLetObj,
+    ExLetWeakObjPtr,
+    ExBindDelegate,
+    ExRemoveMulticastDelegate,
+    ExCallMulticastDelegate,
+    ExLetValueOnPersistentFrame,
+    ExArrayConst,
+    ExEndArrayConst,
+    ExSoftObjectConst,
+    ExCallMath,
+    ExSwitchValue,
+    ExInstrumentationEvent,
+    ExArrayGetByRef,
+    ExClassSparseDataVariable,
+    ExFieldPathConst
+);
+
+impl Eq for KismetExpression {}
 
 impl KismetExpression {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
@@ -980,24 +1012,24 @@ impl KismetExpressionTrait for ExSoftObjectConst {
         KismetExpression::write(self.value.as_ref(), asset)
     }
 }
-declare_expression!(ExTransformConst, value: Transform<f32>);
+declare_expression!(ExTransformConst, value: Transform<OrderedFloat<f32>>);
 impl ExTransformConst {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let rotation = Vector4::new(
-            asset.read_f32::<LittleEndian>()?,
-            asset.read_f32::<LittleEndian>()?,
-            asset.read_f32::<LittleEndian>()?,
-            asset.read_f32::<LittleEndian>()?,
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
         );
         let translation = Vector::new(
-            asset.read_f32::<LittleEndian>()?,
-            asset.read_f32::<LittleEndian>()?,
-            asset.read_f32::<LittleEndian>()?,
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
         );
         let scale = Vector::new(
-            asset.read_f32::<LittleEndian>()?,
-            asset.read_f32::<LittleEndian>()?,
-            asset.read_f32::<LittleEndian>()?,
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LittleEndian>()?),
         );
         Ok(ExTransformConst {
             token: EExprToken::ExTransformConst,
@@ -1007,37 +1039,37 @@ impl ExTransformConst {
 }
 impl KismetExpressionTrait for ExTransformConst {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.rotation.x)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.y)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.z)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.w)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.x)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.y)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.z)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.x)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.y)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.z)?;
+        asset.write_f32::<LittleEndian>(self.value.rotation.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.rotation.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.rotation.z.0)?;
+        asset.write_f32::<LittleEndian>(self.value.rotation.w.0)?;
+        asset.write_f32::<LittleEndian>(self.value.translation.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.translation.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.translation.z.0)?;
+        asset.write_f32::<LittleEndian>(self.value.scale.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.scale.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.scale.z.0)?;
         Ok(size_of::<f32>() * 10)
     }
 }
-declare_expression!(ExVectorConst, value: Vector<f32>);
+declare_expression!(ExVectorConst, value: Vector<OrderedFloat<f32>>);
 impl ExVectorConst {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExVectorConst {
             token: EExprToken::ExVectorConst,
             value: Vector::new(
-                asset.read_f32::<LittleEndian>()?,
-                asset.read_f32::<LittleEndian>()?,
-                asset.read_f32::<LittleEndian>()?,
+                OrderedFloat(asset.read_f32::<LittleEndian>()?),
+                OrderedFloat(asset.read_f32::<LittleEndian>()?),
+                OrderedFloat(asset.read_f32::<LittleEndian>()?),
             ),
         })
     }
 }
 impl KismetExpressionTrait for ExVectorConst {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.x)?;
-        asset.write_f32::<LittleEndian>(self.value.y)?;
-        asset.write_f32::<LittleEndian>(self.value.z)?;
+        asset.write_f32::<LittleEndian>(self.value.x.0)?;
+        asset.write_f32::<LittleEndian>(self.value.y.0)?;
+        asset.write_f32::<LittleEndian>(self.value.z.0)?;
         Ok(size_of::<f32>() * 3)
     }
 }
@@ -1078,12 +1110,12 @@ impl KismetExpressionTrait for ExAddMulticastDelegate {
 }
 declare_expression!(
     ExArrayConst,
-    inner_property: PackageIndex,
+    inner_property: KismetPropertyPointer,
     elements: Vec<KismetExpression>
 );
 impl ExArrayConst {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let inner_property = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let inner_property = KismetPropertyPointer::new(asset)?;
         asset.read_i32::<LittleEndian>()?; // num_entries
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndArrayConst)?;
         Ok(ExArrayConst {
@@ -1095,8 +1127,8 @@ impl ExArrayConst {
 }
 impl KismetExpressionTrait for ExArrayConst {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        let mut offset = size_of::<u64>() + size_of::<i32>();
-        asset.write_i32::<LittleEndian>(self.inner_property.index)?;
+        let mut offset = size_of::<i32>();
+        offset += self.inner_property.write(asset)?;
         asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
@@ -1205,14 +1237,19 @@ impl KismetExpressionTrait for ExCallMath {
 declare_expression!(
     ExCallMulticastDelegate,
     stack_node: PackageIndex,
-    parameters: Vec<KismetExpression>
+    parameters: Vec<KismetExpression>,
+    delegate: Box<KismetExpression>
 );
 impl ExCallMulticastDelegate {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let stack_node = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let delegate = KismetExpression::new(asset)?;
+        let parameters = KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?;
         Ok(ExCallMulticastDelegate {
             token: EExprToken::ExCallMulticastDelegate,
-            stack_node: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
-            parameters: KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?,
+            stack_node,
+            parameters,
+            delegate: Box::new(delegate),
         })
     }
 }
@@ -1774,14 +1811,14 @@ impl KismetExpressionTrait for ExLocalVirtualFunction {
 }
 declare_expression!(
     ExMapConst,
-    key_property: PackageIndex,
-    value_property: PackageIndex,
+    key_property: KismetPropertyPointer,
+    value_property: KismetPropertyPointer,
     elements: Vec<KismetExpression>
 );
 impl ExMapConst {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let key_property = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
-        let value_property = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let key_property = KismetPropertyPointer::new(asset)?;
+        let value_property = KismetPropertyPointer::new(asset)?;
         let _num_entries = asset.read_i32::<LittleEndian>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndMapConst)?;
         Ok(ExMapConst {
@@ -1794,9 +1831,9 @@ impl ExMapConst {
 }
 impl KismetExpressionTrait for ExMapConst {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        let mut offset = size_of::<u64>() * 2 + size_of::<i32>();
-        asset.write_i32::<LittleEndian>(self.key_property.index)?;
-        asset.write_i32::<LittleEndian>(self.value_property.index)?;
+        let mut offset = size_of::<i32>();
+        offset += self.key_property.write(asset)?;
+        offset += self.value_property.write(asset)?;
         asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
@@ -1980,7 +2017,7 @@ declare_expression!(
 impl ExSetArray {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let (assigning_property, array_inner_prop) =
-            match asset.get_engine_version() >= VER_UE4_CHANGE_SETARRAY_BYTECODE {
+            match asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
                 true => (Some(Box::new(KismetExpression::new(asset)?)), None),
                 false => (
                     None,
@@ -1998,7 +2035,7 @@ impl ExSetArray {
 impl KismetExpressionTrait for ExSetArray {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = 0;
-        if asset.get_engine_version() >= VER_UE4_CHANGE_SETARRAY_BYTECODE {
+        if asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
             offset += KismetExpression::write(
                 self.assigning_property.as_ref().ok_or_else(|| {
                     Error::no_data(
@@ -2029,12 +2066,12 @@ impl KismetExpressionTrait for ExSetArray {
 }
 declare_expression!(
     ExSetConst,
-    inner_property: PackageIndex,
+    inner_property: KismetPropertyPointer,
     elements: Vec<KismetExpression>
 );
 impl ExSetConst {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let inner_property = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let inner_property = KismetPropertyPointer::new(asset)?;
         let _num_entries = asset.read_i32::<LittleEndian>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndSetConst)?;
         Ok(ExSetConst {
@@ -2046,8 +2083,8 @@ impl ExSetConst {
 }
 impl KismetExpressionTrait for ExSetConst {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        let mut offset = size_of::<u64>() + size_of::<i32>();
-        asset.write_i32::<LittleEndian>(self.inner_property.index)?;
+        let mut offset = size_of::<i32>();
+        offset += self.inner_property.write(asset)?;
         asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
@@ -2166,22 +2203,24 @@ impl KismetExpressionTrait for ExStructConst {
 }
 declare_expression!(
     ExStructMemberContext,
-    struct_member_expression: PackageIndex,
+    struct_member_expression: KismetPropertyPointer,
     struct_expression: Box<KismetExpression>
 );
 impl ExStructMemberContext {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let struct_member_expression = KismetPropertyPointer::new(asset)?;
+        let struct_expression = KismetExpression::new(asset)?;
         Ok(ExStructMemberContext {
             token: EExprToken::ExStructMemberContext,
-            struct_member_expression: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
-            struct_expression: Box::new(KismetExpression::new(asset)?),
+            struct_member_expression,
+            struct_expression: Box::new(struct_expression),
         })
     }
 }
 impl KismetExpressionTrait for ExStructMemberContext {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.struct_member_expression.index)?;
+        let mut offset = 0;
+        offset += self.struct_member_expression.write(asset)?;
         offset += KismetExpression::write(self.struct_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2286,6 +2325,62 @@ impl KismetExpressionTrait for ExUnicodeStringConst {
     }
 }
 
+declare_expression!(
+    ExInstrumentationEvent,
+    event_type: EScriptInstrumentationType,
+    event_name: Option<FName>
+);
+impl ExInstrumentationEvent {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let event_type: EScriptInstrumentationType =
+            EScriptInstrumentationType::try_from(asset.read_u8()?)?;
+
+        let mut event_name = None;
+        if event_type == EScriptInstrumentationType::InlineEvent {
+            event_name = Some(asset.read_fname()?);
+        }
+
+        Ok(ExInstrumentationEvent {
+            token: EExprToken::ExInstrumentationEvent,
+            event_type,
+            event_name,
+        })
+    }
+}
+impl KismetExpressionTrait for ExInstrumentationEvent {
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_u8(self.event_type as u8)?;
+
+        if self.event_type == EScriptInstrumentationType::InlineEvent {
+            asset.write_fname(self.event_name.as_ref().ok_or_else(|| {
+                Error::no_data("event_type is InlineEvent but event_name is None".to_string())
+            })?)?;
+            return Ok(1 + 2 * size_of::<i32>());
+        }
+
+        Ok(1)
+    }
+}
+
+declare_expression!(
+    ExFloatConst,
+    value: OrderedFloat<f32>
+);
+impl ExFloatConst {
+    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+        Ok(ExFloatConst {
+            token: EExprToken::ExFloatConst,
+            value: OrderedFloat(asset.read_f32::<LittleEndian>()?)
+        })
+    }
+}
+impl KismetExpressionTrait for ExFloatConst {
+    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_f32::<LittleEndian>(self.value.0)?;
+        Ok(size_of::<f32>())
+    }
+}
+
 implement_expression!(
     ExBreakpoint,
     ExDeprecatedOp4A,
@@ -2300,7 +2395,6 @@ implement_expression!(
     ExEndSetConst,
     ExEndStructConst,
     ExFalse,
-    ExInstrumentationEvent,
     ExIntOne,
     ExIntZero,
     ExNoInterface,
@@ -2319,4 +2413,3 @@ implement_value_expression!(ExIntConst, i32, read_i32, write_i32, LittleEndian);
 implement_value_expression!(ExIntConstByte, u8, read_u8, write_u8);
 implement_value_expression!(ExSkipOffsetConst, u32, read_u32, write_u32, LittleEndian);
 implement_value_expression!(ExUInt64Const, u64, read_u64, write_u64, LittleEndian);
-implement_value_expression!(ExFloatConst, f32, read_f32, write_f32, LittleEndian);

@@ -8,11 +8,23 @@ use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 
-#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[repr(u8)]
+pub enum RichCurveExtrapolation {
+    Cycle = 0,
+    CycleWithOffset = 1,
+    Oscillate = 2,
+    Linear = 3,
+    Constant = 4,
+    None = 5,
+    MAX = 6,
+}
+
+#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveInterpMode {
     Linear,
@@ -21,7 +33,7 @@ pub enum RichCurveInterpMode {
     None,
 }
 
-#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveTangentMode {
     Auto,
@@ -30,7 +42,7 @@ pub enum RichCurveTangentMode {
     None,
 }
 
-#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveTangentWeightMode {
     WeightedNone,
@@ -39,7 +51,7 @@ pub enum RichCurveTangentWeightMode {
     WeightedBoth,
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct RichCurveKeyProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

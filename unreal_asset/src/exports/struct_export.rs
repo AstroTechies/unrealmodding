@@ -3,6 +3,7 @@ use std::io::SeekFrom;
 use byteorder::LittleEndian;
 
 use crate::custom_version::FCoreObjectVersion;
+use crate::engine_version::EngineVersion;
 use crate::error::Error;
 use crate::exports::{
     base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
@@ -12,11 +13,10 @@ use crate::fproperty::FProperty;
 use crate::implement_get;
 use crate::kismet::KismetExpression;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::VER_UE4_16;
 use crate::unreal_types::PackageIndex;
 use crate::uproperty::UField;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct StructExport {
     pub normal_export: NormalExport,
 
@@ -66,7 +66,7 @@ impl StructExport {
         let start_offset = asset.position();
 
         let mut script_bytecode = None;
-        if asset.get_engine_version() >= VER_UE4_16 {
+        if asset.get_engine_version() >= EngineVersion::VER_UE4_16 {
             script_bytecode =
                 StructExport::read_bytecode(asset, start_offset, script_storage_size).ok();
         }

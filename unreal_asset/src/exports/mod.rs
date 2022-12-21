@@ -16,6 +16,8 @@ pub mod struct_export;
 use crate::error::Error;
 use crate::reader::asset_writer::AssetWriter;
 
+use std::fmt::Debug;
+
 use self::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
     enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
@@ -66,7 +68,7 @@ macro_rules! implement_get {
 
 /// This must be implemented for all Exports
 #[enum_dispatch]
-pub trait ExportTrait {
+pub trait ExportTrait: Debug + Clone + PartialEq + Eq {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
@@ -87,6 +89,25 @@ pub enum Export {
 
 impl Export {}
 
+// todo: impl hash for export
+impl PartialEq for Export {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::BaseExport(l0), Self::BaseExport(r0)) => l0 == r0,
+            (Self::ClassExport(l0), Self::ClassExport(r0)) => l0 == r0,
+            (Self::EnumExport(l0), Self::EnumExport(r0)) => l0 == r0,
+            (Self::LevelExport(l0), Self::LevelExport(r0)) => l0 == r0,
+            (Self::NormalExport(l0), Self::NormalExport(r0)) => l0 == r0,
+            (Self::PropertyExport(l0), Self::PropertyExport(r0)) => l0 == r0,
+            (Self::RawExport(l0), Self::RawExport(r0)) => l0 == r0,
+            (Self::StringTableExport(l0), Self::StringTableExport(r0)) => l0 == r0,
+            (Self::StructExport(l0), Self::StructExport(r0)) => l0 == r0,
+            (Self::FunctionExport(l0), Self::FunctionExport(r0)) => l0 == r0,
+            (Self::DataTableExport(l0), Self::DataTableExport(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
+}
 impl Clone for Export {
     fn clone(&self) -> Self {
         match self {
@@ -104,3 +125,24 @@ impl Clone for Export {
         }
     }
 }
+impl Debug for Export {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BaseExport(arg0) => f.debug_tuple("BaseExport").field(arg0).finish(),
+            Self::ClassExport(arg0) => f.debug_tuple("ClassExport").field(arg0).finish(),
+            Self::EnumExport(arg0) => f.debug_tuple("EnumExport").field(arg0).finish(),
+            Self::LevelExport(arg0) => f.debug_tuple("LevelExport").field(arg0).finish(),
+            Self::NormalExport(arg0) => f.debug_tuple("NormalExport").field(arg0).finish(),
+            Self::PropertyExport(arg0) => f.debug_tuple("PropertyExport").field(arg0).finish(),
+            Self::RawExport(arg0) => f.debug_tuple("RawExport").field(arg0).finish(),
+            Self::StringTableExport(arg0) => {
+                f.debug_tuple("StringTableExport").field(arg0).finish()
+            }
+            Self::StructExport(arg0) => f.debug_tuple("StructExport").field(arg0).finish(),
+            Self::FunctionExport(arg0) => f.debug_tuple("FunctionExport").field(arg0).finish(),
+            Self::DataTableExport(arg0) => f.debug_tuple("DataTableExport").field(arg0).finish(),
+        }
+    }
+}
+
+impl Eq for Export {}

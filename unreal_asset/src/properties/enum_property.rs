@@ -2,11 +2,11 @@ use std::mem::size_of;
 
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct EnumProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

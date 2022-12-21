@@ -5,7 +5,7 @@ use std::path::Path;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use unreal_asset::Asset;
+use unreal_asset::{engine_version::EngineVersion, Asset};
 use unreal_pak::{PakMemory, PakReader};
 
 use crate::{error::IntegrationError, Error};
@@ -37,7 +37,7 @@ pub fn get_asset(
     game_paks: &mut [PakReader<File>],
     mod_paks: &mut [PakReader<File>],
     name: &String,
-    version: i32,
+    version: EngineVersion,
 ) -> Result<Asset, Error> {
     if let Ok(asset) = read_asset(
         |name| Ok(integrated_pak.get_entry(name).cloned()),
@@ -96,7 +96,11 @@ pub fn find_asset(paks: &mut [PakReader<File>], name: &String) -> Option<usize> 
     None
 }
 
-pub fn read_asset<F>(mut read_fn: F, engine_version: i32, name: &String) -> Result<Asset, Error>
+pub fn read_asset<F>(
+    mut read_fn: F,
+    engine_version: EngineVersion,
+    name: &String,
+) -> Result<Asset, Error>
 where
     F: FnMut(&String) -> Result<Option<Vec<u8>>, Error>,
 {
@@ -110,7 +114,7 @@ where
     let uasset = read_fn(name)?.ok_or_else(|| IntegrationError::asset_not_found(name.clone()))?;
 
     let mut asset = Asset::new(uasset, uexp);
-    asset.engine_version = engine_version;
+    asset.set_engine_version(engine_version);
     asset.parse_data()?;
     Ok(asset)
 }

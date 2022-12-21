@@ -1,12 +1,15 @@
 //! Asset registry NameTableWriter
-use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::{self, SeekFrom};
 
 use byteorder::LittleEndian;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::engine_version::EngineVersion;
 use crate::error::Error;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
@@ -16,13 +19,19 @@ use crate::Import;
 pub struct NameTableWriter<'name_map, 'writer, Writer: AssetWriter> {
     writer: &'writer mut Writer,
 
-    name_map_lookup: &'name_map HashMap<u64, i32>,
+    name_map: &'name_map [String],
+    name_map_lookup: &'name_map IndexedMap<u64, i32>,
 }
 
 impl<'name_map, 'writer, Writer: AssetWriter> NameTableWriter<'name_map, 'writer, Writer> {
-    pub fn new(writer: &'writer mut Writer, name_map_lookup: &'name_map HashMap<u64, i32>) -> Self {
+    pub fn new(
+        writer: &'writer mut Writer,
+        name_map: &'name_map [String],
+        name_map_lookup: &'name_map IndexedMap<u64, i32>,
+    ) -> Self {
         NameTableWriter {
             writer,
+            name_map,
             name_map_lookup,
         }
     }
@@ -50,16 +59,52 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
         self.writer.seek(style)
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_name_map_index_list(&self) -> &[String] {
+        self.name_map
+    }
+
+    fn get_name_reference(&self, index: i32) -> String {
+        if index < 0 {
+            return (-index).to_string();
+        }
+
+        if index >= self.name_map.len() as i32 {
+            return index.to_string();
+        }
+
+        self.name_map[index as usize].to_owned()
+    }
+
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
+        self.writer.get_array_struct_type_override()
+    }
+
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         self.writer.get_map_key_override()
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
         self.writer.get_map_value_override()
     }
 
-    fn get_engine_version(&self) -> i32 {
+    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
+        self.writer.get_parent_class()
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
+        self.writer.get_parent_class_cached()
+    }
+
+    fn get_engine_version(&self) -> EngineVersion {
         self.writer.get_engine_version()
+    }
+
+    fn get_object_version(&self) -> ObjectVersion {
+        self.writer.get_object_version()
+    }
+
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.writer.get_object_version_ue5()
     }
 
     fn get_import(&self, index: PackageIndex) -> Option<&Import> {
@@ -68,6 +113,18 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
 
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         self.writer.get_export_class_type(index)
+    }
+
+    fn add_fname(&mut self, value: &str) -> FName {
+        self.writer.add_fname(value)
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        self.writer.add_fname_with_number(value, number)
+    }
+
+    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
+        self.writer.get_mappings()
     }
 }
 
@@ -88,7 +145,7 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
         let hash = hasher.finish();
         let index = self
             .name_map_lookup
-            .get(&hash)
+            .get_by_key(&hash)
             .ok_or_else(|| Error::no_data(format!("No name reference for {}", fname.content)))?;
 
         self.writer.write_i32::<LittleEndian>(*index)?;

@@ -4,7 +4,7 @@ use crate::reader::asset_writer::AssetWriter;
 use crate::unreal_types::{FName, Guid, PackageIndex};
 
 /// Minimal information about an export
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct BaseExport {
     pub class_index: PackageIndex,
     pub super_index: PackageIndex,

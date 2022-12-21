@@ -8,27 +8,27 @@ use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
+use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid};
 
-#[derive(IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(u8)]
 pub enum ViewTargetBlendFunction {
-    /** Camera does a simple linear interpolation. */
+    /// Camera does a simple linear interpolation.
     VtBlendLinear,
-    /** Camera has a slight ease in and ease out, but amount of ease cannot be tweaked. */
+    /// Camera has a slight ease in and ease out, but amount of ease cannot be tweaked.
     VtBlendCubic,
-    /** Camera immediately accelerates, but smoothly decelerates into the target.  Ease amount controlled by BlendExp. */
+    /// Camera immediately accelerates, but smoothly decelerates into the target.  Ease amount controlled by BlendExp.
     VtBlendEaseIn,
-    /** Camera smoothly accelerates, but does not decelerate into the target.  Ease amount controlled by BlendExp. */
+    /// Camera smoothly accelerates, but does not decelerate into the target.  Ease amount controlled by BlendExp.
     VtBlendEaseOut,
-    /** Camera smoothly accelerates and decelerates.  Ease amount controlled by BlendExp. */
+    /// Camera smoothly accelerates and decelerates.  Ease amount controlled by BlendExp.
     VtBlendEaseInOut,
     VtBlendMax,
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ViewTargetBlendParamsProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,

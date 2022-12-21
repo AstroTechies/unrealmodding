@@ -1,8 +1,11 @@
 //! All of Unreal Engine UProperties
 
+use std::hash::Hash;
+use std::fmt::Debug;
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 
+use crate::inner_trait;
 use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::flags::EPropertyFlags;
@@ -12,7 +15,7 @@ use crate::Error;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
-        #[derive(Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             pub generic_property: UGenericProperty
         }
@@ -34,7 +37,7 @@ macro_rules! parse_simple_property {
     };
 
     ($prop_name:ident, $($field_name:ident),*) => {
-        #[derive(Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             pub generic_property: UGenericProperty,
             $(
@@ -67,7 +70,7 @@ macro_rules! parse_simple_property {
 
 /// This must be implemented for all UProperties
 #[enum_dispatch]
-pub trait UPropertyTrait {
+pub trait UPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
@@ -103,44 +106,39 @@ pub enum UProperty {
     UStrProperty,
 }
 
-impl Clone for UProperty {
-    fn clone(&self) -> Self {
-        match self {
-            Self::UGenericProperty(arg0) => Self::UGenericProperty(arg0.clone()),
-            Self::UEnumProperty(arg0) => Self::UEnumProperty(arg0.clone()),
-            Self::UArrayProperty(arg0) => Self::UArrayProperty(arg0.clone()),
-            Self::USetProperty(arg0) => Self::USetProperty(arg0.clone()),
-            Self::UObjectProperty(arg0) => Self::UObjectProperty(arg0.clone()),
-            Self::USoftObjectProperty(arg0) => Self::USoftObjectProperty(arg0.clone()),
-            Self::ULazyObjectProperty(arg0) => Self::ULazyObjectProperty(arg0.clone()),
-            Self::UClassProperty(arg0) => Self::UClassProperty(arg0.clone()),
-            Self::USoftClassProperty(arg0) => Self::USoftClassProperty(arg0.clone()),
-            Self::UDelegateProperty(arg0) => Self::UDelegateProperty(arg0.clone()),
-            Self::UMulticastDelegateProperty(arg0) => {
-                Self::UMulticastDelegateProperty(arg0.clone())
-            }
-            Self::UMulticastInlineDelegateProperty(arg0) => {
-                Self::UMulticastInlineDelegateProperty(arg0.clone())
-            }
-            Self::UInterfaceProperty(arg0) => Self::UInterfaceProperty(arg0.clone()),
-            Self::UMapProperty(arg0) => Self::UMapProperty(arg0.clone()),
-            Self::UBoolProperty(arg0) => Self::UBoolProperty(arg0.clone()),
-            Self::UByteProperty(arg0) => Self::UByteProperty(arg0.clone()),
-            Self::UStructProperty(arg0) => Self::UStructProperty(arg0.clone()),
-            Self::UDoubleProperty(arg0) => Self::UDoubleProperty(arg0.clone()),
-            Self::UFloatProperty(arg0) => Self::UFloatProperty(arg0.clone()),
-            Self::UIntProperty(arg0) => Self::UIntProperty(arg0.clone()),
-            Self::UInt8Property(arg0) => Self::UInt8Property(arg0.clone()),
-            Self::UInt16Property(arg0) => Self::UInt16Property(arg0.clone()),
-            Self::UInt64Property(arg0) => Self::UInt64Property(arg0.clone()),
-            Self::UUInt8Property(arg0) => Self::UUInt8Property(arg0.clone()),
-            Self::UUInt16Property(arg0) => Self::UUInt16Property(arg0.clone()),
-            Self::UUInt64Property(arg0) => Self::UUInt64Property(arg0.clone()),
-            Self::UNameProperty(arg0) => Self::UNameProperty(arg0.clone()),
-            Self::UStrProperty(arg0) => Self::UStrProperty(arg0.clone()),
-        }
-    }
-}
+inner_trait!(
+    UProperty,
+    UGenericProperty,
+    UEnumProperty,
+    UArrayProperty,
+    USetProperty,
+    UObjectProperty,
+    USoftObjectProperty,
+    ULazyObjectProperty,
+    UClassProperty,
+    USoftClassProperty,
+    UDelegateProperty,
+    UMulticastDelegateProperty,
+    UMulticastInlineDelegateProperty,
+    UInterfaceProperty,
+    UMapProperty,
+    UBoolProperty,
+    UByteProperty,
+    UStructProperty,
+    UDoubleProperty,
+    UFloatProperty,
+    UIntProperty,
+    UInt8Property,
+    UInt16Property,
+    UInt64Property,
+    UUInt8Property,
+    UUInt16Property,
+    UUInt64Property,
+    UNameProperty,
+    UStrProperty
+);
+
+impl Eq for UProperty {}
 
 impl UProperty {
     pub fn new<Reader: AssetReader>(
@@ -183,12 +181,12 @@ impl UProperty {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UField {
     pub next: Option<PackageIndex>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UGenericProperty {
     pub u_field: UField,
     pub array_dim: EArrayDim,
@@ -197,7 +195,7 @@ pub struct UGenericProperty {
     pub blueprint_replication_condition: Option<ELifetimeCondition>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UBoolProperty {
     pub generic_property: UGenericProperty,
     pub element_size: u8,

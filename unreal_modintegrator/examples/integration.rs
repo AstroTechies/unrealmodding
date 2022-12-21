@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io;
 use std::path::PathBuf;
 
-use unreal_asset::ue4version::VER_UE4_23;
+use unreal_asset::engine_version::EngineVersion;
 use unreal_modintegrator::{HandlerFn, IntegratorConfig};
 use unreal_pak::{PakMemory, PakReader};
 
@@ -51,7 +51,7 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
     // fn get_engine_version(&self) -> i32 {
     //     VER_UE4_23
     // }
-    const ENGINE_VERSION: i32 = VER_UE4_23;
+    const ENGINE_VERSION: EngineVersion = EngineVersion::VER_UE4_23;
 
     fn get_baked_mods(&self) -> Vec<unreal_modintegrator::IntegratorMod<io::Error>> {
         Vec::new()

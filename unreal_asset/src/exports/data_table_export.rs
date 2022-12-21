@@ -10,7 +10,7 @@ use crate::properties::{struct_property::StructProperty, Property, PropertyDataT
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::FName;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTable {
     pub data: Vec<StructProperty>,
 }
@@ -21,7 +21,7 @@ impl DataTable {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTableExport {
     pub normal_export: NormalExport,
     pub table: DataTable,
@@ -48,19 +48,27 @@ impl DataTableExport {
         }
 
         asset.read_i32::<LittleEndian>()?;
-        let num_entires = asset.read_i32::<LittleEndian>()? as usize;
-        let mut data = Vec::with_capacity(num_entires);
-        for _i in 0..num_entires {
+        let num_entries = asset.read_i32::<LittleEndian>()? as usize;
+        let mut data = Vec::with_capacity(num_entries);
+
+        let parent_name = asset
+            .get_parent_class_cached()
+            .map(|e| e.parent_class_export_name.clone());
+
+        for _i in 0..num_entries {
             let row_name = asset.read_fname()?;
+
             let next_struct = StructProperty::custom_header(
                 asset,
                 row_name,
+                parent_name.as_ref(),
                 1,
                 0,
                 Some(decided_struct_type.clone()),
                 None,
                 None,
             )?;
+
             data.push(next_struct);
         }
 

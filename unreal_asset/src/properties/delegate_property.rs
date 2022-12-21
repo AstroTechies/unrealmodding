@@ -2,15 +2,17 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 
-use crate::error::Error;
-use crate::impl_property_data_trait;
-use crate::optional_guid;
-use crate::optional_guid_write;
-use crate::properties::{PropertyDataTrait, PropertyTrait};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, Guid, PackageIndex};
+use crate::{
+    error::Error,
+    impl_property_data_trait, optional_guid, optional_guid_write,
+    reader::asset_reader::AssetReader,
+    reader::asset_writer::AssetWriter,
+    unreal_types::{FName, Guid, PackageIndex},
+};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+use super::PropertyTrait;
+
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Delegate {
     pub object: PackageIndex,
     pub delegate: FName,
@@ -22,7 +24,7 @@ impl Delegate {
     }
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DelegateProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -30,6 +32,7 @@ pub struct DelegateProperty {
     pub value: Delegate,
 }
 impl_property_data_trait!(DelegateProperty);
+
 impl DelegateProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
@@ -62,6 +65,7 @@ impl PropertyTrait for DelegateProperty {
 
         asset.write_i32::<LittleEndian>(self.value.object.index)?;
         asset.write_fname(&self.value.delegate)?;
+
         Ok(size_of::<i32>() * 3)
     }
 }
@@ -69,7 +73,7 @@ impl PropertyTrait for DelegateProperty {
 // all multicast delegates serialize the same
 macro_rules! impl_multicast {
     ($property_name:ident) => {
-        #[derive(Hash, Clone, PartialEq, Eq)]
+        #[derive(Debug, Hash, Clone, PartialEq, Eq)]
         pub struct $property_name {
             pub name: FName,
             pub property_guid: Option<Guid>,

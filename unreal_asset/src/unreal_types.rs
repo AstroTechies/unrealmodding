@@ -1,13 +1,12 @@
 //! Various Unreal Engine types
-use std::collections::HashMap;
-
+use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
 
 pub type Guid = [u8; 16];
 
 /// Create a Guid from 4 u32 values
 #[rustfmt::skip]
-pub fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
+pub const fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     [
         (a & 0xff) as u8, ((a >> 8) & 0xff) as u8, ((a >> 16) & 0xff) as u8, ((a >> 24) & 0xff) as u8,
         (b & 0xff) as u8, ((b >> 8) & 0xff) as u8, ((b >> 16) & 0xff) as u8, ((b >> 24) & 0xff) as u8,
@@ -64,7 +63,7 @@ impl FName {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct NamespacedString {
     pub namespace: Option<String>,
     pub value: Option<String>,
@@ -76,17 +75,17 @@ impl NamespacedString {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StringTable {
     pub namespace: Option<String>,
-    pub value: HashMap<String, String>,
+    pub value: IndexedMap<String, String>,
 }
 
 impl StringTable {
     pub fn new(namespace: Option<String>) -> Self {
         StringTable {
             namespace,
-            value: HashMap::new(),
+            value: IndexedMap::new(),
         }
     }
 }
@@ -137,7 +136,7 @@ impl PackageIndex {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FieldPath {
     pub path: Vec<FName>,
     pub resolved_owner: PackageIndex,
@@ -148,6 +147,32 @@ impl FieldPath {
         FieldPath {
             path,
             resolved_owner,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct FrameNumber {
+    pub value: i32,
+}
+
+impl FrameNumber {
+    pub fn new(value: i32) -> Self {
+        FrameNumber { value }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct FrameRate {
+    pub numerator: i32,
+    pub denominator: i32,
+}
+
+impl FrameRate {
+    pub fn new(numerator: i32, denominator: i32) -> Self {
+        FrameRate {
+            numerator,
+            denominator,
         }
     }
 }

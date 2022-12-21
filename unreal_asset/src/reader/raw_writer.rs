@@ -1,29 +1,36 @@
-use std::collections::HashMap;
 use std::io::{self, Cursor, Seek, Write};
 
 use byteorder::WriteBytesExt;
 
+use crate::containers::indexed_map::IndexedMap;
 use crate::cursor_ext::CursorExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
+use crate::engine_version::{guess_engine_version, EngineVersion};
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
-use crate::ue4version::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG;
 use crate::unreal_types::{FName, PackageIndex};
 use crate::Import;
 
 /// A binary writer
 pub struct RawWriter<'cursor> {
     cursor: &'cursor mut Cursor<Vec<u8>>,
-    engine_version: i32,
+    object_version: ObjectVersion,
+    object_version_ue5: ObjectVersionUE5,
 
-    empty_map: HashMap<String, String>,
+    empty_map: IndexedMap<String, String>,
 }
 
 impl<'cursor> RawWriter<'cursor> {
-    pub fn new(cursor: &'cursor mut Cursor<Vec<u8>>, engine_version: i32) -> Self {
+    pub fn new(
+        cursor: &'cursor mut Cursor<Vec<u8>>,
+        object_version: ObjectVersion,
+        object_version_ue5: ObjectVersionUE5,
+    ) -> Self {
         RawWriter {
             cursor,
-            engine_version,
-            empty_map: HashMap::new(),
+            object_version,
+            object_version_ue5,
+            empty_map: IndexedMap::new(),
         }
     }
 }
@@ -48,16 +55,44 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         self.cursor.seek(style)
     }
 
-    fn get_map_key_override(&self) -> &HashMap<String, String> {
+    fn get_name_map_index_list(&self) -> &[String] {
+        &[]
+    }
+
+    fn get_name_reference(&self, _: i32) -> String {
+        "".to_string()
+    }
+
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 
-    fn get_map_value_override(&self) -> &HashMap<String, String> {
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
         &self.empty_map
     }
 
-    fn get_engine_version(&self) -> i32 {
-        self.engine_version
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
+        &self.empty_map
+    }
+
+    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
+        None
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
+        None
+    }
+
+    fn get_engine_version(&self) -> EngineVersion {
+        guess_engine_version(self.object_version, self.object_version_ue5, &[])
+    }
+
+    fn get_object_version(&self) -> ObjectVersion {
+        self.object_version
+    }
+
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.object_version_ue5
     }
 
     fn get_import(&self, _index: PackageIndex) -> Option<&Import> {
@@ -67,6 +102,18 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
     fn get_export_class_type(&self, _index: PackageIndex) -> Option<FName> {
         None
     }
+
+    fn add_fname(&mut self, value: &str) -> FName {
+        FName::new(value.to_string(), 0)
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        FName::new(value.to_string(), number)
+    }
+
+    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
+        None
+    }
 }
 
 impl<'cursor> AssetWriter for RawWriter<'cursor> {
@@ -74,7 +121,7 @@ impl<'cursor> AssetWriter for RawWriter<'cursor> {
         &mut self,
         guid: &Option<crate::unreal_types::Guid>,
     ) -> Result<(), crate::error::Error> {
-        if self.engine_version >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+        if self.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.cursor.write_bool(guid.is_some())?;
             if let Some(ref data) = guid {
                 self.cursor.write_all(data)?;

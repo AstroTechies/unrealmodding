@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{self, ErrorKind};
 use std::path::Path;
 
+use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::{
     cast,
     exports::{normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},
@@ -11,7 +12,6 @@ use unreal_asset::{
         object_property::ObjectProperty, Property, PropertyDataTrait,
     },
     reader::asset_trait::AssetTrait,
-    ue4version::VER_UE4_23,
     unreal_types::{FName, PackageIndex},
     Asset, Import,
 };
@@ -40,7 +40,7 @@ pub fn handle_persistent_actors(
     persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), Error> {
     let mut level_asset = Asset::new(LEVEL_TEMPLATE_ASSET.to_vec(), None);
-    level_asset.engine_version = VER_UE4_23;
+    level_asset.set_engine_version(EngineVersion::VER_UE4_23);
     level_asset
         .parse_data()
         .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
@@ -72,7 +72,7 @@ pub fn handle_persistent_actors(
             game_paks,
             mod_paks,
             &map_path.to_string(),
-            VER_UE4_23,
+            EngineVersion::VER_UE4_23,
         )?;
 
         let mut level_export_index = None;
@@ -152,7 +152,7 @@ pub fn handle_persistent_actors(
                 game_paks,
                 mod_paks,
                 &actor_asset_path,
-                VER_UE4_23,
+                EngineVersion::VER_UE4_23,
             )?;
 
             let mut scs_location = None;
@@ -493,7 +493,7 @@ pub fn handle_persistent_actors(
             let exports_len = asset.exports.len();
             let level_export = cast!(Export, LevelExport, &mut asset.exports[level_export_index])
                 .expect("Corrupted memory");
-            level_export.index_data.push(exports_len as i32);
+            level_export.actors.push(exports_len as i32);
             level_export
                 .get_base_export_mut()
                 .create_before_serialization_dependencies

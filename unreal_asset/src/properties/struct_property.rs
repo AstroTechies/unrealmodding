@@ -1,11 +1,19 @@
-use crate::error::{Error, PropertyError};
-use crate::impl_property_data_trait;
-use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::ue4version::{VER_UE4_SERIALIZE_RICH_CURVE_KEY, VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG};
-use crate::unreal_types::{FName, Guid};
+use std::io::SeekFrom;
+use std::mem::size_of;
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+use byteorder::LittleEndian;
+
+use crate::custom_version::{
+    FEditorObjectVersion, FFortniteMainBranchObjectVersion, FSequencerObjectVersion,
+};
+use crate::error::{Error, PropertyError};
+use crate::object_version::ObjectVersion;
+use crate::properties::{Property, PropertyTrait};
+use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::{FName, Guid};
+use crate::{cast, impl_property_data_trait};
+
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct StructProperty {
     pub name: FName,
     pub struct_type: Option<FName>,
@@ -33,10 +41,10 @@ impl StructProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         length: i64,
-        _duplication_index: i32,
-        engine_version: i32,
+        duplication_index: i32,
     ) -> Result<Self, Error> {
         let mut struct_type = None;
         let mut struct_guid = None;
@@ -44,7 +52,7 @@ impl StructProperty {
 
         if include_header {
             struct_type = Some(asset.read_fname()?);
-            if engine_version >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 let mut guid = [0u8; 16];
                 asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
@@ -55,17 +63,20 @@ impl StructProperty {
         StructProperty::custom_header(
             asset,
             name,
+            parent_name,
             length,
-            0,
+            duplication_index,
             struct_type,
             struct_guid,
             property_guid,
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn custom_header<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        _parent_name: Option<&FName>,
         length: i64,
         duplication_index: i32,
         struct_type: Option<FName>,
@@ -78,8 +89,44 @@ impl StructProperty {
         };
 
         if let Some(ref e) = struct_type {
-            if e.content.as_str() == "RichCurveKey"
-                && asset.get_engine_version() < VER_UE4_SERIALIZE_RICH_CURVE_KEY
+            if e.content == "FloatRange" {
+                // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
+                // The best solution is to just check and see if the next bit is an FName or not
+
+                let name_map_index = asset.read_i32::<LittleEndian>()?;
+                asset.seek(SeekFrom::Current(-(size_of::<u32>() as i64)))?;
+
+                if name_map_index >= 0
+                    && name_map_index < asset.get_name_map_index_list().len() as i32
+                {
+                    custom_serialization = asset.get_name_reference(name_map_index) != "LowerBound";
+                } else {
+                    custom_serialization = true;
+                }
+            }
+
+            if e.content == "RichCurveKey"
+                && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
+            {
+                custom_serialization = false;
+            }
+
+            if e.content == "MovieSceneTrackIdentifier"
+                && asset.get_custom_version::<FEditorObjectVersion>().version
+                    < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32
+            {
+                custom_serialization = false;
+            }
+
+            if e.content == "MovieSceneFloatChannel"
+                && asset
+                    .get_custom_version::<FSequencerObjectVersion>()
+                    .version
+                    < FSequencerObjectVersion::SerializeFloatChannelCompletely as i32
+                && asset
+                    .get_custom_version::<FFortniteMainBranchObjectVersion>()
+                    .version
+                    < FFortniteMainBranchObjectVersion::SerializeFloatChannelShowCurve as i32
             {
                 custom_serialization = false;
             }
@@ -102,6 +149,7 @@ impl StructProperty {
                 asset,
                 struct_type.as_ref().unwrap(),
                 name.clone(),
+                struct_type.as_ref(),
                 false,
                 0,
                 0,
@@ -120,10 +168,8 @@ impl StructProperty {
             })
         } else {
             let mut values = Vec::new();
-            let mut property = Property::new(asset, true)?;
-            while property.is_some() {
-                values.push(property.unwrap());
-                property = Property::new(asset, true)?;
+            while let Some(property) = Property::new(asset, struct_type.as_ref(), true)? {
+                values.push(property);
             }
 
             Ok(StructProperty {
@@ -146,7 +192,7 @@ impl StructProperty {
     ) -> Result<usize, Error> {
         if include_header {
             asset.write_fname(struct_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
-            if asset.get_engine_version() >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+            if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 asset.write_all(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
             }
             asset.write_property_guid(&self.property_guid)?;
@@ -157,11 +203,37 @@ impl StructProperty {
             None => false,
         };
 
-        if (struct_type.is_some()
-            && struct_type.as_ref().unwrap().content.as_str() == "RichCurveKey")
-            && asset.get_engine_version() < VER_UE4_SERIALIZE_RICH_CURVE_KEY
-        {
-            has_custom_serialization = false;
+        if let Some(ref struct_type) = struct_type {
+            if struct_type.content == "FloatRange" {
+                has_custom_serialization = self.value.len() == 1
+                    && cast!(Property, FloatRangeProperty, &self.value[0]).is_some();
+            }
+
+            if struct_type.content == "RichCurveKey"
+                && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
+            {
+                has_custom_serialization = false;
+            }
+
+            if struct_type.content == "MovieSceneTrackIdentifier"
+                && asset.get_custom_version::<FEditorObjectVersion>().version
+                    < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32
+            {
+                has_custom_serialization = false;
+            }
+
+            if struct_type.content == "MovieSceneFloatChannel"
+                && asset
+                    .get_custom_version::<FSequencerObjectVersion>()
+                    .version
+                    < FSequencerObjectVersion::SerializeFloatChannelCompletely as i32
+                && asset
+                    .get_custom_version::<FFortniteMainBranchObjectVersion>()
+                    .version
+                    < FFortniteMainBranchObjectVersion::SerializeFloatChannelShowCurve as i32
+            {
+                has_custom_serialization = false;
+            }
         }
 
         if has_custom_serialization {

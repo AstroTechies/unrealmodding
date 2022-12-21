@@ -57,7 +57,7 @@ pub(crate) fn set_mod_data_from_version(data: &mut ModLoaderAppData, filter: &[S
                 .as_ref()
                 .unwrap()
                 .join(version_data.file_name.clone());
-            game_mod.size = fs::metadata(&path).unwrap().len();
+            game_mod.size = fs::metadata(path).unwrap().len();
         }
     }
 }

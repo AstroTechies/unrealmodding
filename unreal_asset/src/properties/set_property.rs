@@ -1,10 +1,10 @@
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
-use crate::properties::{array_property::ArrayProperty, PropertyDataTrait, PropertyTrait};
+use crate::properties::{array_property::ArrayProperty, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, Guid, ToFName};
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {
     pub name: FName,
     pub property_guid: Option<Guid>,
@@ -19,10 +19,10 @@ impl SetProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        parent_name: Option<&FName>,
         include_header: bool,
         length: i64,
         duplication_index: i32,
-        engine_version: i32,
     ) -> Result<Self, Error> {
         let (array_type, property_guid) = match include_header {
             true => (Some(asset.read_fname()?), asset.read_property_guid()?),
@@ -32,10 +32,10 @@ impl SetProperty {
         let removed_items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
+            parent_name,
             false,
             length,
             0,
-            engine_version,
             false,
             array_type.clone(),
             property_guid,
@@ -44,10 +44,10 @@ impl SetProperty {
         let items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
+            parent_name,
             false,
             length,
             0,
-            engine_version,
             false,
             array_type.clone(),
             property_guid,

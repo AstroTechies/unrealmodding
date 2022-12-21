@@ -9,7 +9,7 @@ use num_enum::{TryFromPrimitive, TryFromPrimitiveError};
 
 use crate::custom_version::FAssetRegistryVersionType;
 
-// Thrown when kismet bytecode failed to deserialize
+/// Thrown when kismet bytecode failed to deserialize
 #[derive(Debug)]
 pub enum KismetError {
     InvalidToken(Box<str>),
@@ -31,6 +31,34 @@ impl Display for KismetError {
         match *self {
             KismetError::InvalidToken(ref err) => f.write_str(err),
             KismetError::UnknownExpression(ref err) => f.write_str(err),
+        }
+    }
+}
+
+/// Thrown when a usmap file failed to deserialize
+#[derive(Debug)]
+pub enum UsmapError {
+    UnsupportedCompression(u8),
+    InvalidCompressionData,
+}
+
+impl UsmapError {
+    pub fn unsupported_compression(compression: u8) -> Self {
+        UsmapError::UnsupportedCompression(compression)
+    }
+
+    pub fn invalid_compression_data() -> Self {
+        UsmapError::InvalidCompressionData
+    }
+}
+
+impl Display for UsmapError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            UsmapError::UnsupportedCompression(compression) => {
+                write!(f, "Unsupported compression: {}", compression)
+            }
+            UsmapError::InvalidCompressionData => write!(f, "Invalid compression data"),
         }
     }
 }
@@ -135,6 +163,7 @@ pub enum ErrorCode {
     Kismet(KismetError),
     Property(PropertyError),
     Registry(RegistryError),
+    Usmap(UsmapError),
 }
 
 #[derive(Debug)]
@@ -224,6 +253,14 @@ impl From<RegistryError> for Error {
     }
 }
 
+impl From<UsmapError> for Error {
+    fn from(e: UsmapError) -> Self {
+        Error {
+            code: ErrorCode::Usmap(e),
+        }
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.code, f)
@@ -246,6 +283,7 @@ impl Display for ErrorCode {
             ErrorCode::Kismet(ref err) => Display::fmt(err, f),
             ErrorCode::Property(ref err) => Display::fmt(err, f),
             ErrorCode::Registry(ref err) => Display::fmt(err, f),
+            ErrorCode::Usmap(ref err) => Display::fmt(err, f),
         }
     }
 }

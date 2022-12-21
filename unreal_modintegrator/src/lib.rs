@@ -7,6 +7,8 @@ use error::IntegrationError;
 use log::debug;
 use serde_json::Value;
 
+use unreal_asset::engine_version::EngineVersion;
+use unreal_asset::properties::int_property::BytePropertyValue;
 use unreal_asset::{
     exports::{data_table_export::DataTable, Export, ExportBaseTrait},
     properties::{
@@ -167,16 +169,16 @@ pub trait IntegratorConfig<'data, D, E: std::error::Error + 'static> {
 
     const GAME_NAME: &'static str;
     const INTEGRATOR_VERSION: &'static str;
-    const ENGINE_VERSION: i32;
+    const ENGINE_VERSION: EngineVersion;
 }
 
 fn read_in_memory(
     uasset: Vec<u8>,
     uexp: Option<Vec<u8>>,
-    engine_version: i32,
+    engine_version: EngineVersion,
 ) -> Result<Asset, Error> {
     let mut asset = Asset::new(uasset, uexp);
-    asset.engine_version = engine_version;
+    asset.set_engine_version(engine_version);
     asset.parse_data()?;
     Ok(asset)
 }
@@ -255,9 +257,8 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
                 name: columns[5].clone(),
                 property_guid: None,
                 duplication_index: 0,
-                enum_type: Some(asset.add_name_reference(String::from("SyncMode"), false) as i64),
-                byte_type: unreal_asset::properties::int_property::ByteType::Long,
-                value: asset.add_name_reference(String::from(coded_sync_mode), false) as i64,
+                enum_type: Some(FName::from_slice("SyncMode")),
+                value: BytePropertyValue::FName(FName::from_slice(coded_sync_mode)),
             }
             .into(),
             StrProperty {
@@ -383,7 +384,7 @@ pub fn integrate_mods<
     let game_files: Vec<File> = game_dir
         .filter_map(|e| e.ok())
         .filter(|e| e.path().extension().map(|e| e == "pak").unwrap_or(false))
-        .filter_map(|e| File::open(&e.path()).ok())
+        .filter_map(|e| File::open(e.path()).ok())
         .collect();
     if game_files.is_empty() {
         return Err(IntegrationError::game_not_found().into());
@@ -535,7 +536,7 @@ pub fn integrate_mods<
             .create(true)
             .write(true)
             .truncate(true)
-            .open(&path)?;
+            .open(path)?;
 
         generated_pak.write(&mut file)?;
         file.sync_data()?;
