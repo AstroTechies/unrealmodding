@@ -51,6 +51,10 @@ impl PropertyDataTrait for NiagaraVariableProperty {
     fn get_name(&self) -> FName {
         self.struct_property.get_name()
     }
+    
+    fn get_name_mut(&mut self) -> &mut FName {
+        self.struct_property.get_name_mut()
+    }
 
     fn get_duplication_index(&self) -> i32 {
         self.struct_property.get_duplication_index()
@@ -110,6 +114,10 @@ impl NiagaraVariableWithOffsetProperty {
 impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
     fn get_name(&self) -> FName {
         self.niagara_variable.get_name()
+    }
+    
+    fn get_name_mut(&mut self) -> &mut FName {
+        self.niagara_variable.get_name_mut()
     }
 
     fn get_duplication_index(&self) -> i32 {

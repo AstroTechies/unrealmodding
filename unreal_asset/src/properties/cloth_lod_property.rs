@@ -141,6 +141,10 @@ impl PropertyDataTrait for ClothLodDataProperty {
     fn get_name(&self) -> FName {
         self.struct_property.get_name()
     }
+    
+    fn get_name_mut(&mut self) -> &mut FName {
+        self.struct_property.get_name_mut()
+    }
 
     fn get_duplication_index(&self) -> i32 {
         self.struct_property.get_duplication_index()

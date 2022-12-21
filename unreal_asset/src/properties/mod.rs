@@ -28,7 +28,6 @@ pub mod int_property;
 pub mod map_property;
 pub mod material_input_property;
 pub mod movies;
-pub mod multicast_delegate_property;
 pub mod niagara;
 pub mod object_property;
 pub mod per_platform_property;
@@ -47,7 +46,6 @@ pub mod view_target_blend_property;
 pub mod world_tile_property;
 
 use self::cloth_lod_property::ClothLodDataProperty;
-use self::delegate_property::DelegateProperty;
 use self::float_range_property::FloatRangeProperty;
 use self::font_character_property::FontCharacterProperty;
 use self::game_framework::unique_net_id_property::UniqueNetIdProperty;
@@ -79,6 +77,10 @@ use self::{
     array_property::ArrayProperty,
     color_property::{ColorProperty, LinearColorProperty},
     date_property::{DateTimeProperty, TimeSpanProperty},
+    delegate_property::{
+        DelegateProperty, MulticastDelegateProperty, MulticastInlineDelegateProperty,
+        MulticastSparseDelegateProperty,
+    },
     enum_property::EnumProperty,
     gameplay_tag_container_property::GameplayTagContainerProperty,
     guid_property::GuidProperty,
@@ -92,7 +94,6 @@ use self::{
         ScalarMaterialInputProperty, ShadingModelMaterialInputProperty,
         Vector2MaterialInputProperty, VectorMaterialInputProperty,
     },
-    multicast_delegate_property::MulticastDelegateProperty,
     object_property::{AssetObjectProperty, ObjectProperty, SoftObjectProperty},
     per_platform_property::{
         PerPlatformBoolProperty, PerPlatformFloatProperty, PerPlatformIntProperty,
@@ -157,6 +158,10 @@ macro_rules! impl_property_data_trait {
         impl $crate::properties::PropertyDataTrait for $property_name {
             fn get_name(&self) -> $crate::unreal_types::FName {
                 self.name.clone()
+            }
+
+            fn get_name_mut(&mut self) -> &mut FName {
+                &mut self.name
             }
 
             fn get_duplication_index(&self) -> i32 {
@@ -235,6 +240,7 @@ lazy_static! {
 #[enum_dispatch]
 pub trait PropertyDataTrait {
     fn get_name(&self) -> FName;
+    fn get_name_mut(&mut self) -> &mut FName;
     fn get_duplication_index(&self) -> i32;
     fn get_property_guid(&self) -> Option<Guid>;
 }
@@ -304,6 +310,8 @@ pub enum Property {
     StringAssetReferenceProperty,
     DelegateProperty,
     MulticastDelegateProperty,
+    MulticastSparseDelegateProperty,
+    MulticastInlineDelegateProperty,
     RichCurveKeyProperty,
     ViewTargetBlendParamsProperty,
     GameplayTagContainerProperty,
@@ -394,6 +402,8 @@ inner_trait!(
     StringAssetReferenceProperty,
     DelegateProperty,
     MulticastDelegateProperty,
+    MulticastSparseDelegateProperty,
+    MulticastInlineDelegateProperty,
     RichCurveKeyProperty,
     ViewTargetBlendParamsProperty,
     GameplayTagContainerProperty,
@@ -664,7 +674,6 @@ impl Property {
                 duplication_index,
             )?
             .into(),
-
             "SoftAssetPath" => {
                 SoftAssetPathProperty::new(asset, name, include_header, length, duplication_index)?
                     .into()
@@ -691,6 +700,22 @@ impl Property {
                     .into()
             }
             "MulticastDelegateProperty" => MulticastDelegateProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "MulticastSparseDelegateProperty" => MulticastSparseDelegateProperty::new(
+                asset,
+                name,
+                include_header,
+                length,
+                duplication_index,
+            )?
+            .into(),
+            "MulticastInlineDelegateProperty" => MulticastInlineDelegateProperty::new(
                 asset,
                 name,
                 include_header,
@@ -989,6 +1014,8 @@ property_inner_fname! {
     IntProperty: "IntProperty",
     MapProperty: "MapProperty",
     MulticastDelegateProperty: "MulticastDelegateProperty",
+    MulticastSparseDelegateProperty: "MulticastSparseDelegateProperty",
+    MulticastInlineDelegateProperty: "MulticastInlineDelegateProperty",
     DelegateProperty: "DelegateProperty",
     NameProperty: "NameProperty",
     ObjectProperty: "ObjectProperty",

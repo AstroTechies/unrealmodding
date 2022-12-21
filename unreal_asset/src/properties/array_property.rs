@@ -95,7 +95,7 @@ impl ArrayProperty {
                     return Ok(ArrayProperty::default());
                 }
 
-                if this_array_type.content != array_type.as_ref().unwrap().content.as_str() {
+                if this_array_type.content != array_type.as_ref().unwrap().content {
                     return Err(Error::invalid_file(format!(
                         "Invalid array type {} vs {}",
                         this_array_type.content,

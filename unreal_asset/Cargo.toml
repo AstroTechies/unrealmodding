@@ -15,7 +15,7 @@ byteorder.workspace = true
 enum_dispatch = "0.3.8"
 lazy_static.workspace = true
 num_enum.workspace = true
-ordered-float = "3.2.0"
+ordered-float = "3.4.0"
 # containers/indexed_map
 slab = "0.4.7"
 rustc-hash = "1.1.0"

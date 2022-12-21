@@ -10,7 +10,7 @@ use eframe::{
     emath::Align,
     App,
 };
-use egui_extras::{Size, StripBuilder, TableBuilder};
+use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use log::{debug, info};
 use parking_lot::Mutex;
 use semver::Version;
@@ -395,12 +395,12 @@ impl ModLoaderApp {
         TableBuilder::new(ui)
             .striped(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .column(Size::initial(42.0).at_least(42.0))
-            .column(Size::initial(170.0).at_least(20.0))
-            .column(Size::initial(120.0).at_least(120.0))
-            .column(Size::initial(70.0).at_least(20.0))
-            .column(Size::initial(80.0).at_least(20.0))
-            .column(Size::remainder().at_least(20.0))
+            .column(Column::initial(42.0).at_least(42.0))
+            .column(Column::initial(170.0).at_least(20.0))
+            .column(Column::initial(120.0).at_least(120.0))
+            .column(Column::initial(70.0).at_least(20.0))
+            .column(Column::initial(80.0).at_least(20.0))
+            .column(Column::remainder().at_least(20.0))
             .resizable(true)
             .header(20.0, |mut header| {
                 header.col(|ui| {
@@ -639,7 +639,7 @@ impl ModLoaderApp {
                         egui::Align::Center,
                     );
                     ui.with_layout(layout, |ui| {
-                        let button = match data.failed {
+                        let button = match data.failed || self.working.load(Ordering::Acquire) {
                             true => Button::new("Play").sense(Sense::hover()),
                             false => Button::new("Play"),
                         };
@@ -655,17 +655,6 @@ impl ModLoaderApp {
                     });
                 });
             });
-
-        // if ui
-        //     .button(if !self.should_exit.load(Ordering::Acquire) {
-        //         "Quit"
-        //     } else {
-        //         "Exiting..."
-        //     })
-        //     .clicked()
-        // {
-        //     frame.quit();
-        // }
     }
 
     fn darken_background(&mut self, ctx: &egui::Context) {

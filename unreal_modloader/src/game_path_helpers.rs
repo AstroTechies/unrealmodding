@@ -83,17 +83,14 @@ pub fn determine_installed_mods_path_winstore(
 }
 
 pub fn determine_install_path_steam(app_id: u32) -> Result<PathBuf, ModLoaderWarning> {
-    let steamdir = SteamDir::locate();
-    if steamdir.is_none() {
-        return Err(ModLoaderWarning::steam_error());
+    if let Some(mut steam_dir) = SteamDir::locate() {
+        match steam_dir.app(&app_id) {
+            Some(app) => Ok(app.path.clone()),
+            None => Err(ModLoaderWarning::steam_error()),
+        }
+    } else {
+        Err(ModLoaderWarning::steam_error())
     }
-
-    let mut steamdir = steamdir.unwrap();
-    let a = match steamdir.app(&app_id) {
-        Some(app) => Ok(app.path.clone()),
-        None => Err(ModLoaderWarning::steam_error()),
-    };
-    a
 }
 
 #[cfg(windows)]

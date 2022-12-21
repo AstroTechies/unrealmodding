@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 byteorder.workspace = true
-flate2 = { version = "1.0.24", features = ["zlib"], default-features = false }
+flate2 = { version = "1.0.25", features = ["zlib"], default-features = false }
 num_enum.workspace = true
-sha-1 = "0.10.0"
+sha-1 = "0.10.1"

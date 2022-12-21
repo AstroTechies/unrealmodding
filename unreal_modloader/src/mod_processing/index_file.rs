@@ -87,16 +87,18 @@ pub(crate) fn gather_index_files(
     data: &mut ModLoaderAppData,
     filter: &[String],
 ) -> HashMap<String, DownloadInfo> {
-    let mut index_files: HashMap<String, DownloadInfo> = HashMap::new();
+    //let mut index_files: HashMap<String, DownloadInfo> = HashMap::new();
 
-    for (mod_id, game_mod) in data.game_mods.iter() {
-        if game_mod.download.is_some() && filter.contains(mod_id) {
-            let download_info = game_mod.download.as_ref().unwrap();
-            index_files.insert(mod_id.clone(), download_info.clone());
-        }
-    }
-
-    index_files
+    data.game_mods
+        .iter()
+        .filter(|(mod_id, _)| filter.contains(mod_id))
+        .filter_map(|(mod_id, game_mod)| {
+            game_mod
+                .download
+                .as_ref()
+                .map(|download_info| (mod_id.clone(), download_info.clone()))
+        })
+        .collect()
 }
 
 pub(crate) fn download_index_file(
@@ -125,28 +127,19 @@ pub(crate) fn download_index_file(
         ));
     }
 
-    let index_file = serde_json::from_str::<IndexFile>(response.text().unwrap().as_str());
+    let index_file =
+        serde_json::from_str::<IndexFile>(response.text().unwrap().as_str()).map_err(|err| {
+            warn!("Failed to parse index file for {}: {}", mod_id.clone(), err);
+            ModLoaderWarning::invalid_index_file(mod_id.clone())
+        })?;
 
-    if index_file.is_err() {
-        warn!(
-            "Failed to parse index file for {}: {}",
-            mod_id,
-            index_file.unwrap_err()
-        );
-
-        return Err(ModLoaderWarning::invalid_index_file(mod_id));
+    match index_file.mods.get(&mod_id) {
+        Some(index_file_mod) => Ok((mod_id, index_file_mod.clone())),
+        None => {
+            warn!("Index file for {} does not contain that mod", mod_id);
+            Err(ModLoaderWarning::index_file_missing_mod(mod_id))
+        }
     }
-    let index_file = index_file.unwrap();
-
-    let index_file_mod = index_file.mods.get(&mod_id);
-
-    if index_file_mod.is_none() {
-        warn!("Index file for {} does not contain that mod", mod_id);
-
-        return Err(ModLoaderWarning::index_file_missing_mod(mod_id));
-    }
-
-    Ok((mod_id, index_file_mod.unwrap().clone()))
 }
 
 pub(crate) fn download_index_files<I>(
@@ -166,34 +159,30 @@ where
 
     let mut warnings = Vec::new();
 
-    let index_file_data = handles
-        .into_iter()
-        // for general thread errors
-        .filter_map(|handle| {
-            handle
-                .join()
-                .map_err(|err| {
-                    warn!("error joining thread: {:?}", err);
-                })
-                .ok()
-        })
-        // for download errors
-        .filter_map(|download_result| {
-            download_result
-                .map_err(|err| {
-                    warn!("error downloading index file: {:?}", err);
-                    warnings.push(err);
-                })
-                .ok()
-        })
-        .collect::<Vec<_>>();
-
-    let mut index_files: HashMap<String, IndexFileMod> = HashMap::new();
-    for (mod_id, download_info) in index_file_data.iter() {
-        index_files.insert(mod_id.to_owned(), download_info.to_owned());
-    }
-
-    (index_files, warnings)
+    (
+        handles
+            .into_iter()
+            // for general thread errors
+            .filter_map(|handle| {
+                handle
+                    .join()
+                    .map_err(|err| {
+                        warn!("error joining thread: {:?}", err);
+                    })
+                    .ok()
+            })
+            // for download errors
+            .filter_map(|download_result| {
+                download_result
+                    .map_err(|err| {
+                        warn!("error downloading index file: {:?}", err);
+                        warnings.push(err);
+                    })
+                    .ok()
+            })
+            .collect(),
+        warnings,
+    )
 }
 
 pub(crate) fn insert_index_file_data(
