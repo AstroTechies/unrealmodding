@@ -9,7 +9,7 @@ use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::StringTable;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StringTableExport {
     normal_export: NormalExport,
 

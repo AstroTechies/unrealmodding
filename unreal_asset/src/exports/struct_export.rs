@@ -16,7 +16,7 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::PackageIndex;
 use crate::uproperty::UField;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct StructExport {
     pub normal_export: NormalExport,
 

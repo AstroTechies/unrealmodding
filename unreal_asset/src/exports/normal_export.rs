@@ -4,7 +4,7 @@ use crate::properties::Property;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::FName;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NormalExport {
     pub base_export: BaseExport,
     pub extras: Vec<u8>,

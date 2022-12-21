@@ -9,7 +9,7 @@ use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::NamespacedString;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
     pub normal_export: NormalExport,
 

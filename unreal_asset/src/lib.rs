@@ -1889,6 +1889,7 @@ impl Debug for Asset {
             .field("world_tile_info_data_offset", &self.world_tile_info_offset)
             .field("preload_dependency_count", &self.preload_dependency_count)
             .field("preload_dependency_offset", &self.preload_dependency_offset)
+            .field("exports", &self.exports)
             .finish()
     }
 }

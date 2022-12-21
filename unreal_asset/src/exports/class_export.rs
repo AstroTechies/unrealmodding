@@ -14,7 +14,7 @@ use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::{FName, PackageIndex};
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SerializedInterfaceReference {
     pub class: i32,
     pub pointer_offset: i32,
@@ -31,7 +31,7 @@ impl SerializedInterfaceReference {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClassExport {
     pub struct_export: StructExport,
 

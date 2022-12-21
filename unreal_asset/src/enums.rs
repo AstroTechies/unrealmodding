@@ -2,7 +2,7 @@
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum EArrayDim {
     NotAnArray = 0,
@@ -10,7 +10,7 @@ pub enum EArrayDim {
     CArray = 2,
 }
 
-#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ELifetimeCondition {
     /// This property has no condition, and will send anytime it changes
@@ -46,7 +46,7 @@ pub enum ELifetimeCondition {
     CondMax = 16,
 }
 
-#[derive(Debug, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EBlueprintTextLiteralType {
     /// Text is an empty string. The bytecode contains no strings, and you should use FText::GetEmpty() to initialize the FText instance.

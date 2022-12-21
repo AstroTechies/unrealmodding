@@ -8,7 +8,7 @@ use crate::exports::{
 use crate::flags::EFunctionFlags;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionExport {
     pub struct_export: StructExport,
     pub function_flags: EFunctionFlags,

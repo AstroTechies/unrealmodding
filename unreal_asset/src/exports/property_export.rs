@@ -9,7 +9,7 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::uproperty::{UProperty, UPropertyTrait};
 use crate::Error;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PropertyExport {
     pub normal_export: NormalExport,
 

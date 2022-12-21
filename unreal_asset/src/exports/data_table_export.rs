@@ -10,7 +10,7 @@ use crate::properties::{struct_property::StructProperty, Property, PropertyDataT
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::FName;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTable {
     pub data: Vec<StructProperty>,
 }
@@ -21,7 +21,7 @@ impl DataTable {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTableExport {
     pub normal_export: NormalExport,
     pub table: DataTable,

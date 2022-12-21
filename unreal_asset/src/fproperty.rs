@@ -1,8 +1,12 @@
 //! All of Unreal Engine FProperties
 
+use std::hash::Hash;
+use std::fmt::Debug;
+
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 
+use crate::inner_trait;
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
@@ -11,7 +15,7 @@ use crate::unreal_types::{FName, PackageIndex, ToFName};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
-        #[derive(Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             pub generic_property: FGenericProperty,
         }
@@ -35,7 +39,7 @@ macro_rules! parse_simple_property {
 
 macro_rules! parse_simple_property_index {
     ($prop_name:ident, $($index_name:ident),*) => {
-        #[derive(Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             pub generic_property: FGenericProperty,
             $(
@@ -68,7 +72,7 @@ macro_rules! parse_simple_property_index {
 
 macro_rules! parse_simple_property_prop {
     ($prop_name:ident, $($prop:ident),*) => {
-        #[derive(Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             pub generic_property: FGenericProperty,
             $(
@@ -101,7 +105,7 @@ macro_rules! parse_simple_property_prop {
 
 /// This must be implemented for all FProperties
 #[enum_dispatch]
-pub trait FPropertyTrait {
+pub trait FPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
@@ -126,33 +130,28 @@ pub enum FProperty {
     FNumericProperty,
 }
 
-impl Clone for FProperty {
-    fn clone(&self) -> Self {
-        match self {
-            Self::FGenericProperty(arg0) => Self::FGenericProperty(arg0.clone()),
-            Self::FEnumProperty(arg0) => Self::FEnumProperty(arg0.clone()),
-            Self::FArrayProperty(arg0) => Self::FArrayProperty(arg0.clone()),
-            Self::FSetProperty(arg0) => Self::FSetProperty(arg0.clone()),
-            Self::FObjectProperty(arg0) => Self::FObjectProperty(arg0.clone()),
-            Self::FSoftObjectProperty(arg0) => Self::FSoftObjectProperty(arg0.clone()),
-            Self::FClassProperty(arg0) => Self::FClassProperty(arg0.clone()),
-            Self::FSoftClassProperty(arg0) => Self::FSoftClassProperty(arg0.clone()),
-            Self::FDelegateProperty(arg0) => Self::FDelegateProperty(arg0.clone()),
-            Self::FMulticastDelegateProperty(arg0) => {
-                Self::FMulticastDelegateProperty(arg0.clone())
-            }
-            Self::FMulticastInlineDelegateProperty(arg0) => {
-                Self::FMulticastInlineDelegateProperty(arg0.clone())
-            }
-            Self::FInterfaceProperty(arg0) => Self::FInterfaceProperty(arg0.clone()),
-            Self::FMapProperty(arg0) => Self::FMapProperty(arg0.clone()),
-            Self::FBoolProperty(arg0) => Self::FBoolProperty(arg0.clone()),
-            Self::FByteProperty(arg0) => Self::FByteProperty(arg0.clone()),
-            Self::FStructProperty(arg0) => Self::FStructProperty(arg0.clone()),
-            Self::FNumericProperty(arg0) => Self::FNumericProperty(arg0.clone()),
-        }
-    }
-}
+inner_trait!(
+    FProperty,
+    FGenericProperty,
+    FEnumProperty,
+    FArrayProperty,
+    FSetProperty,
+    FObjectProperty,
+    FSoftObjectProperty,
+    FClassProperty,
+    FSoftClassProperty,
+    FDelegateProperty,
+    FMulticastDelegateProperty,
+    FMulticastInlineDelegateProperty,
+    FInterfaceProperty,
+    FMapProperty,
+    FBoolProperty,
+    FByteProperty,
+    FStructProperty,
+    FNumericProperty
+);
+
+impl Eq for FProperty {}
 
 impl FProperty {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
@@ -225,7 +224,7 @@ impl ToFName for FProperty {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FGenericProperty {
     pub name: FName,
     pub flags: EObjectFlags,
@@ -238,14 +237,14 @@ pub struct FGenericProperty {
     pub serialized_type: Option<FName>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FEnumProperty {
     generic_property: FGenericProperty,
     enum_value: PackageIndex,
     underlying_prop: Box<FProperty>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FBoolProperty {
     generic_property: FGenericProperty,
 

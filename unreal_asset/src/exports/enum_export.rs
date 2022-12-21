@@ -14,7 +14,7 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::unreal_types::FName;
 use crate::Error;
 
-#[derive(Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ECppForm {
     Regular,
@@ -22,7 +22,7 @@ pub enum ECppForm {
     EnumClass,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UEnum {
     pub names: Vec<(FName, i64)>,
     pub cpp_form: ECppForm,
@@ -111,7 +111,7 @@ impl UEnum {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EnumExport {
     pub normal_export: NormalExport,
 

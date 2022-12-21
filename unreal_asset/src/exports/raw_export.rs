@@ -3,7 +3,7 @@ use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
 /// An export that failed to deserialize is storead as `Vec<u8>`
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawExport {
     pub base_export: BaseExport,
 
