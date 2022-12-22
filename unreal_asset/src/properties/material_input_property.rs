@@ -17,11 +17,11 @@ use crate::unreal_types::{FName, Guid};
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MaterialExpression {
-    name: FName,
-    extras: Vec<u8>,
-    output_index: i32,
-    input_name: FName,
-    expression_name: FName,
+    pub name: FName,
+    pub extras: Vec<u8>,
+    pub output_index: i32,
+    pub input_name: FName,
+    pub expression_name: FName,
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
