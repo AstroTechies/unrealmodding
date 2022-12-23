@@ -4,8 +4,8 @@ use byteorder::LittleEndian;
 
 use crate::{
     error::Error,
-    properties::core_uobject::FFrameNumberRange,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    types::movie::FFrameNumberRange,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]

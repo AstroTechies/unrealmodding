@@ -15,7 +15,6 @@ use crate::types::{FName, Guid, ToFName};
 pub mod array_property;
 pub mod cloth_lod_property;
 pub mod color_property;
-pub mod core_uobject;
 pub mod date_property;
 pub mod delegate_property;
 pub mod enum_property;
