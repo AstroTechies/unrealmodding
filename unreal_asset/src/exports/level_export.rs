@@ -7,7 +7,7 @@ use crate::exports::{
 };
 use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::PackageIndex;
+use crate::types::PackageIndex;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
