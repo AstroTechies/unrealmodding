@@ -8,8 +8,8 @@ use crate::properties::{
     PropertyTrait,
 };
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::Vector;
-use crate::unreal_types::FName;
+use crate::types::vector::Vector;
+use crate::types::FName;
 
 //todo: what is this file even doing in properties?
 #[derive(Clone)]

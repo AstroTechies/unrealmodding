@@ -3,7 +3,7 @@ use byteorder::LittleEndian;
 use crate::error::Error;
 use crate::properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::FName;
+use crate::types::FName;
 
 #[derive(Debug, Clone)]
 pub struct AssetBundleEntry {

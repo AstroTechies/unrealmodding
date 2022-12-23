@@ -6,7 +6,7 @@ use ordered_float::OrderedFloat;
 use crate::{
     error::Error,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::FName,
+    types::FName,
 };
 
 use super::{
@@ -141,7 +141,7 @@ impl PropertyDataTrait for ClothLodDataProperty {
     fn get_name(&self) -> FName {
         self.struct_property.get_name()
     }
-    
+
     fn get_name_mut(&mut self) -> &mut FName {
         self.struct_property.get_name_mut()
     }
@@ -150,7 +150,7 @@ impl PropertyDataTrait for ClothLodDataProperty {
         self.struct_property.get_duplication_index()
     }
 
-    fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
+    fn get_property_guid(&self) -> Option<crate::types::Guid> {
         self.struct_property.get_property_guid()
     }
 }

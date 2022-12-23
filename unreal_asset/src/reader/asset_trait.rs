@@ -4,7 +4,7 @@ use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::unreal_types::{FName, PackageIndex};
+use crate::types::{FName, PackageIndex};
 use crate::unversioned::Usmap;
 use crate::{Import, ParentClassInfo};
 

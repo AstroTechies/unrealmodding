@@ -9,8 +9,8 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::Color;
-use crate::unreal_types::{FName, Guid};
+use crate::types::vector::Color;
+use crate::types::{FName, Guid};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ColorProperty {

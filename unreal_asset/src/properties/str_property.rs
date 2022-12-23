@@ -1,9 +1,9 @@
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::custom_version::{CustomVersion, FEditorObjectVersion};
-use crate::enums::TextHistoryType;
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
@@ -11,7 +11,33 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, Guid};
+use crate::types::{FName, Guid};
+
+#[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[repr(i8)]
+pub enum TextHistoryType {
+    None = -1,
+    Base = 0,
+    NamedFormat,
+    OrderedFormat,
+    ArgumentFormat,
+    AsNumber,
+    AsPercent,
+    AsCurrency,
+    AsDate,
+    AsTime,
+    AsDateTime,
+    Transform,
+    StringTableEntry,
+    TextGenerator,
+    RawText, // Uncertain, Back 4 Blood specific serialization
+}
+
+impl Default for TextHistoryType {
+    fn default() -> Self {
+        Self::None
+    }
+}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct StrProperty {

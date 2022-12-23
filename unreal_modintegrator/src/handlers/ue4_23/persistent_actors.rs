@@ -12,7 +12,7 @@ use unreal_asset::{
         object_property::ObjectProperty, Property, PropertyDataTrait,
     },
     reader::asset_trait::AssetTrait,
-    unreal_types::{FName, PackageIndex},
+    types::{FName, PackageIndex},
     Asset, Import,
 };
 use unreal_pak::{PakMemory, PakReader};

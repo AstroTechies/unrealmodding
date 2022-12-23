@@ -7,7 +7,7 @@ use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{default_guid, FName, Guid, ToFName};
+use crate::types::{default_guid, FName, Guid, ToFName};
 
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {

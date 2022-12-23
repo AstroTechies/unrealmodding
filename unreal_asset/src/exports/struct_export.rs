@@ -13,7 +13,7 @@ use crate::fproperty::FProperty;
 use crate::implement_get;
 use crate::kismet::KismetExpression;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::PackageIndex;
+use crate::types::PackageIndex;
 use crate::uproperty::UField;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

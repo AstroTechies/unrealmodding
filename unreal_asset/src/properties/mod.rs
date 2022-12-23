@@ -10,12 +10,11 @@ use lazy_static::lazy_static;
 use crate::error::Error;
 use crate::inner_trait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, Guid, ToFName};
+use crate::types::{FName, Guid, ToFName};
 
 pub mod array_property;
 pub mod cloth_lod_property;
 pub mod color_property;
-pub mod core_uobject;
 pub mod date_property;
 pub mod delegate_property;
 pub mod enum_property;
@@ -156,7 +155,7 @@ macro_rules! simple_property_write {
 macro_rules! impl_property_data_trait {
     ($property_name:ident) => {
         impl $crate::properties::PropertyDataTrait for $property_name {
-            fn get_name(&self) -> $crate::unreal_types::FName {
+            fn get_name(&self) -> $crate::types::FName {
                 self.name.clone()
             }
 
@@ -168,7 +167,7 @@ macro_rules! impl_property_data_trait {
                 self.duplication_index
             }
 
-            fn get_property_guid(&self) -> Option<$crate::unreal_types::Guid> {
+            fn get_property_guid(&self) -> Option<$crate::types::Guid> {
                 self.property_guid.clone()
             }
         }

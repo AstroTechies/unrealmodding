@@ -8,7 +8,7 @@ use crate::exports::{
 use crate::implement_get;
 use crate::properties::{struct_property::StructProperty, Property, PropertyDataTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::FName;
+use crate::types::FName;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTable {

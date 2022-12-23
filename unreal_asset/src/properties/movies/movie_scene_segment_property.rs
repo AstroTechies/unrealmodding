@@ -3,9 +3,10 @@ use byteorder::LittleEndian;
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::{core_uobject::FFrameNumberRange, Property, PropertyTrait},
+    properties::{Property, PropertyTrait},
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::{FName, Guid},
+    types::movie::FFrameNumberRange,
+    types::{FName, Guid},
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]

@@ -1,20 +1,19 @@
 //! Kismet bytecode
-use std::mem::size_of;
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
+use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
-use crate::inner_trait;
-use crate::enums::EBlueprintTextLiteralType;
 use crate::error::KismetError;
+use crate::inner_trait;
 use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{Transform, Vector, Vector4};
-use crate::unreal_types::{FName, FieldPath, PackageIndex};
+use crate::types::vector::{Transform, Vector, Vector4};
+use crate::types::{FName, PackageIndex};
 use crate::Error;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
@@ -221,6 +220,36 @@ pub enum EScriptInstrumentationType {
     PopState,
     TunnelEndOfThread,
     Stop,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
+pub enum EBlueprintTextLiteralType {
+    /// Text is an empty string. The bytecode contains no strings, and you should use FText::GetEmpty() to initialize the FText instance.
+    Empty,
+    /// Text is localized. The bytecode will contain three strings - source, key, and namespace - and should be loaded via FInternationalization
+    LocalizedText,
+    /// Text is culture invariant. The bytecode will contain one string, and you should use FText::AsCultureInvariant to initialize the FText instance.
+    InvariantText,
+    /// Text is a literal FString. The bytecode will contain one string, and you should use FText::FromString to initialize the FText instance.
+    LiteralString,
+    /// Text is from a string table. The bytecode will contain an object pointer (not used) and two strings - the table ID, and key - and should be found via FText::FromStringTable
+    StringTableEntry,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+pub struct FieldPath {
+    pub path: Vec<FName>,
+    pub resolved_owner: PackageIndex,
+}
+
+impl FieldPath {
+    pub fn new(path: Vec<FName>, resolved_owner: PackageIndex) -> Self {
+        FieldPath {
+            path,
+            resolved_owner,
+        }
+    }
 }
 
 fn read_kismet_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String, Error> {
@@ -2362,15 +2391,12 @@ impl KismetExpressionTrait for ExInstrumentationEvent {
     }
 }
 
-declare_expression!(
-    ExFloatConst,
-    value: OrderedFloat<f32>
-);
+declare_expression!(ExFloatConst, value: OrderedFloat<f32>);
 impl ExFloatConst {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFloatConst {
             token: EExprToken::ExFloatConst,
-            value: OrderedFloat(asset.read_f32::<LittleEndian>()?)
+            value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
         })
     }
 }

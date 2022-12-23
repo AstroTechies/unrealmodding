@@ -4,7 +4,7 @@ use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
 use crate::error::{Error, RegistryError};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::registry::objects::md5_hash::FMD5Hash;
-use crate::unreal_types::{FName, Guid};
+use crate::types::{FName, Guid};
 
 #[derive(Debug)]
 pub struct AssetPackageData {

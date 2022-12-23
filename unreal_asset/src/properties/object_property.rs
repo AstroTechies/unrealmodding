@@ -8,7 +8,7 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, Guid, PackageIndex};
+use crate::types::{FName, Guid, PackageIndex};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {

@@ -8,7 +8,7 @@ use unreal_asset::{
     properties::{
         map_property::MapProperty, struct_property::StructProperty, Property, PropertyDataTrait,
     },
-    unreal_types::PackageIndex,
+    types::PackageIndex,
     Asset,
 };
 

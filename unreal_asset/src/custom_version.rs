@@ -10,7 +10,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::engine_version::EngineVersion;
 use crate::error::Error;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{new_guid, Guid};
+use crate::types::{new_guid, Guid};
 
 /// CustomVersions are engine "sub-versions"
 /// They are used to parse some propeties differently

@@ -68,7 +68,6 @@ pub mod properties;
 pub mod reader;
 pub mod registry;
 pub mod types;
-pub mod unreal_types;
 pub mod unversioned;
 pub mod uproperty;
 
@@ -88,7 +87,7 @@ use fproperty::FProperty;
 use object_version::{ObjectVersion, ObjectVersionUE5};
 use properties::world_tile_property::FWorldTileInfo;
 use reader::{asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter};
-use unreal_types::{FName, GenerationInfo, Guid, PackageIndex};
+use types::{FName, GenerationInfo, Guid, PackageIndex};
 use unversioned::Usmap;
 
 /// Cast a Property/Export to a more specific type

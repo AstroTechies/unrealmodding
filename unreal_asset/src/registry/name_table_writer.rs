@@ -11,7 +11,7 @@ use crate::engine_version::EngineVersion;
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, PackageIndex};
+use crate::types::{FName, PackageIndex};
 use crate::Import;
 
 /// Used to write NameTable entries by modifying the behavior
@@ -133,7 +133,7 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
 {
     fn write_property_guid(
         &mut self,
-        guid: &Option<crate::unreal_types::Guid>,
+        guid: &Option<crate::types::Guid>,
     ) -> Result<(), crate::error::Error> {
         self.writer.write_property_guid(guid)
     }
