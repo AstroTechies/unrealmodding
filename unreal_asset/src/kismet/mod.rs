@@ -8,12 +8,10 @@ use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
-use crate::enums::EBlueprintTextLiteralType;
 use crate::error::KismetError;
 use crate::inner_trait;
 use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::kismet::FieldPath;
 use crate::types::vector::{Transform, Vector, Vector4};
 use crate::types::{FName, PackageIndex};
 use crate::Error;
@@ -222,6 +220,21 @@ pub enum EScriptInstrumentationType {
     PopState,
     TunnelEndOfThread,
     Stop,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
+pub enum EBlueprintTextLiteralType {
+    /// Text is an empty string. The bytecode contains no strings, and you should use FText::GetEmpty() to initialize the FText instance.
+    Empty,
+    /// Text is localized. The bytecode will contain three strings - source, key, and namespace - and should be loaded via FInternationalization
+    LocalizedText,
+    /// Text is culture invariant. The bytecode will contain one string, and you should use FText::AsCultureInvariant to initialize the FText instance.
+    InvariantText,
+    /// Text is a literal FString. The bytecode will contain one string, and you should use FText::FromString to initialize the FText instance.
+    LiteralString,
+    /// Text is from a string table. The bytecode will contain an object pointer (not used) and two strings - the table ID, and key - and should be found via FText::FromStringTable
+    StringTableEntry,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
