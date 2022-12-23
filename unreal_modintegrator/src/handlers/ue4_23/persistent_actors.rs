@@ -490,14 +490,14 @@ pub fn handle_persistent_actors(
             actor_template.properties = determined_prop_data;
             asset.exports.push(actor_template.into());
 
-            let exports_len = asset.exports.len();
+            let exports_len = PackageIndex::new(asset.exports.len());
             let level_export = cast!(Export, LevelExport, &mut asset.exports[level_export_index])
                 .expect("Corrupted memory");
-            level_export.actors.push(exports_len as i32);
+            level_export.actors.push(exports_len);
             level_export
                 .get_base_export_mut()
                 .create_before_serialization_dependencies
-                .push(PackageIndex::new(exports_len as i32));
+                .push(exports_len);
         }
 
         write_asset(integrated_pak, &asset, &map_path.to_string())
