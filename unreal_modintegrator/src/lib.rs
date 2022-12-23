@@ -17,7 +17,7 @@ use unreal_asset::{
         struct_property::StructProperty,
         Property, PropertyDataTrait,
     },
-    unreal_types::FName,
+    types::FName,
     Asset,
 };
 use unreal_modmetadata::{Metadata, SyncMode};
