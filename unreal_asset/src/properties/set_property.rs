@@ -2,7 +2,7 @@ use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::properties::{array_property::ArrayProperty, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, Guid, ToFName};
+use crate::types::{FName, Guid, ToFName};
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {

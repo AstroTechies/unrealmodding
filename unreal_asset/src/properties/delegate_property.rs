@@ -7,7 +7,7 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     reader::asset_reader::AssetReader,
     reader::asset_writer::AssetWriter,
-    unreal_types::{FName, Guid, PackageIndex},
+    types::{FName, Guid, PackageIndex},
 };
 
 use super::PropertyTrait;

@@ -11,7 +11,7 @@ use crate::exports::{
 use crate::implement_get;
 use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::FName;
+use crate::types::FName;
 use crate::Error;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]

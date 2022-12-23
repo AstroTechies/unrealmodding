@@ -5,7 +5,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::error::Error;
 use crate::reader::asset_reader::AssetReader;
-use crate::unreal_types::FName;
+use crate::types::FName;
 
 #[repr(u32)]
 #[derive(IntoPrimitive, TryFromPrimitive)]

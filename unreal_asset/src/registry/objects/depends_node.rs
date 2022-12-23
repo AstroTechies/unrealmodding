@@ -7,7 +7,7 @@ use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::flags::EDependencyProperty;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::FName;
+use crate::types::FName;
 
 #[derive(Debug, Clone, Default)]
 pub struct AssetIdentifier {

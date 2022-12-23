@@ -6,7 +6,10 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{rich_curve_key_property::RichCurveExtrapolation, PropertyTrait},
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::{FName, FrameNumber, FrameRate, Guid},
+    types::{
+        movie::{FrameNumber, FrameRate},
+        FName, Guid,
+    },
 };
 
 use super::movie_scene_float_value_property::MovieSceneFloatValue;

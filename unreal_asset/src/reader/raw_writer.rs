@@ -8,7 +8,7 @@ use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, PackageIndex};
+use crate::types::{FName, PackageIndex};
 use crate::Import;
 
 /// A binary writer
@@ -119,7 +119,7 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
 impl<'cursor> AssetWriter for RawWriter<'cursor> {
     fn write_property_guid(
         &mut self,
-        guid: &Option<crate::unreal_types::Guid>,
+        guid: &Option<crate::types::Guid>,
     ) -> Result<(), crate::error::Error> {
         if self.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.cursor.write_bool(guid.is_some())?;

@@ -5,7 +5,7 @@ use unreal_asset::{
     exports::{normal_export::NormalExport, Export, ExportBaseTrait},
     flags::EObjectFlags,
     properties::{object_property::ObjectProperty, PropertyDataTrait},
-    unreal_types::{FName, PackageIndex},
+    types::{FName, PackageIndex},
     Asset,
 };
 

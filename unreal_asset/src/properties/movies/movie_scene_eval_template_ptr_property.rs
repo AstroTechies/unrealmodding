@@ -4,7 +4,7 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{str_property::StrProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::asset_reader::AssetReader,
-    unreal_types::{FName, Guid},
+    types::{FName, Guid},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

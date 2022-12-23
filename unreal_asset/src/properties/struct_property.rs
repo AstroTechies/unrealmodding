@@ -10,7 +10,7 @@ use crate::error::{Error, PropertyError};
 use crate::object_version::ObjectVersion;
 use crate::properties::{Property, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, Guid};
+use crate::types::{FName, Guid};
 use crate::{cast, impl_property_data_trait};
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]

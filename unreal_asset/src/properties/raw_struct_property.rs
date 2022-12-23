@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::{FName, Guid},
+    types::{FName, Guid},
 };
 
 use super::PropertyTrait;

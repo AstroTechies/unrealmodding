@@ -11,7 +11,7 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::simple_property_write;
-use crate::unreal_types::{FName, Guid};
+use crate::types::{FName, Guid};
 
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {

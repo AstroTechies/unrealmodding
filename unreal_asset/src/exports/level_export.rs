@@ -7,14 +7,14 @@ use crate::exports::{
 };
 use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::NamespacedString;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
     pub normal_export: NormalExport,
 
     pub actors: Vec<i32>,
-    pub level_type: NamespacedString,
+    pub namespace: Option<String>,
+    pub value: Option<String>,
     pub flags_probably: u64,
     pub misc_category_data: Vec<i32>,
 }
@@ -37,10 +37,9 @@ impl LevelExport {
             actors.push(asset.read_i32::<LittleEndian>()?);
         }
 
-        let nms = asset.read_string()?;
+        let namespace = asset.read_string()?;
         asset.read_i32::<LittleEndian>()?; // null
-        let val = asset.read_string()?;
-        let level_type = NamespacedString::new(nms, val);
+        let value = asset.read_string()?;
 
         asset.read_i64::<LittleEndian>()?; // null
         let flags_probably = asset.read_u64::<LittleEndian>()?;
@@ -53,7 +52,8 @@ impl LevelExport {
         Ok(LevelExport {
             normal_export,
             actors,
-            level_type,
+            namespace,
+            value,
             flags_probably,
             misc_category_data,
         })
@@ -70,9 +70,9 @@ impl ExportTrait for LevelExport {
             asset.write_i32::<LittleEndian>(*actor)?;
         }
 
-        asset.write_string(&self.level_type.namespace)?;
+        asset.write_string(&self.namespace)?;
         asset.write_i32::<LittleEndian>(0)?;
-        asset.write_string(&self.level_type.value)?;
+        asset.write_string(&self.value)?;
 
         asset.write_u64::<LittleEndian>(0)?;
         asset.write_u64::<LittleEndian>(self.flags_probably)?;

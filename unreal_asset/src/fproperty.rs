@@ -1,17 +1,17 @@
 //! All of Unreal Engine FProperties
 
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 
-use crate::inner_trait;
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
+use crate::inner_trait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::{FName, PackageIndex, ToFName};
+use crate::types::{FName, PackageIndex, ToFName};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {

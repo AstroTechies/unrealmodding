@@ -4,7 +4,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::{
     error::Error,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::FrameNumber,
+    types::movie::FrameNumber,
 };
 
 /// Enum CoreUObject.ERangeBoundTypes

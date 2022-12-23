@@ -3,7 +3,7 @@ use crate::properties::str_property::StrProperty;
 use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
 use crate::reader::asset_reader::AssetReader;
 use crate::reader::asset_writer::AssetWriter;
-use crate::unreal_types::{FName, Guid};
+use crate::types::{FName, Guid};
 use crate::{cast, impl_property_data_trait, optional_guid, optional_guid_write};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

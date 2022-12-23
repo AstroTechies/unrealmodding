@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::FName,
+    types::FName,
 };
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -51,7 +51,7 @@ impl PropertyDataTrait for NiagaraVariableProperty {
     fn get_name(&self) -> FName {
         self.struct_property.get_name()
     }
-    
+
     fn get_name_mut(&mut self) -> &mut FName {
         self.struct_property.get_name_mut()
     }
@@ -60,7 +60,7 @@ impl PropertyDataTrait for NiagaraVariableProperty {
         self.struct_property.get_duplication_index()
     }
 
-    fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
+    fn get_property_guid(&self) -> Option<crate::types::Guid> {
         self.struct_property.get_property_guid()
     }
 }
@@ -115,7 +115,7 @@ impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
     fn get_name(&self) -> FName {
         self.niagara_variable.get_name()
     }
-    
+
     fn get_name_mut(&mut self) -> &mut FName {
         self.niagara_variable.get_name_mut()
     }
@@ -124,7 +124,7 @@ impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
         self.niagara_variable.get_duplication_index()
     }
 
-    fn get_property_guid(&self) -> Option<crate::unreal_types::Guid> {
+    fn get_property_guid(&self) -> Option<crate::types::Guid> {
         self.niagara_variable.get_property_guid()
     }
 }

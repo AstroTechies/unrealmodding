@@ -9,7 +9,7 @@ use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
-use crate::unreal_types::{FName, Guid, PackageIndex};
+use crate::types::{FName, Guid, PackageIndex};
 use crate::Import;
 
 /// A binary reader

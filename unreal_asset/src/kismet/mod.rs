@@ -1,20 +1,21 @@
 //! Kismet bytecode
-use std::mem::size_of;
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
+use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
-use crate::inner_trait;
 use crate::enums::EBlueprintTextLiteralType;
 use crate::error::KismetError;
+use crate::inner_trait;
 use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{Transform, Vector, Vector4};
-use crate::unreal_types::{FName, FieldPath, PackageIndex};
+use crate::types::kismet::FieldPath;
+use crate::types::vector::{Transform, Vector, Vector4};
+use crate::types::{FName, PackageIndex};
 use crate::Error;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
@@ -2362,15 +2363,12 @@ impl KismetExpressionTrait for ExInstrumentationEvent {
     }
 }
 
-declare_expression!(
-    ExFloatConst,
-    value: OrderedFloat<f32>
-);
+declare_expression!(ExFloatConst, value: OrderedFloat<f32>);
 impl ExFloatConst {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFloatConst {
             token: EExprToken::ExFloatConst,
-            value: OrderedFloat(asset.read_f32::<LittleEndian>()?)
+            value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
         })
     }
 }

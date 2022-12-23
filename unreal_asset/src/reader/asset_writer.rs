@@ -4,7 +4,7 @@ use byteorder::ByteOrder;
 
 use crate::error::Error;
 use crate::reader::asset_trait::AssetTrait;
-use crate::unreal_types::{FName, Guid};
+use crate::types::{FName, Guid};
 
 /// A trait that allows for writing to an archive in an asset-specific way
 pub trait AssetWriter: AssetTrait {

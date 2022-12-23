@@ -6,7 +6,7 @@ use crate::error::Error;
 use crate::flags::EPackageFlags;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::registry::objects::asset_bundle_data::AssetBundleData;
-use crate::unreal_types::FName;
+use crate::types::FName;
 
 #[derive(Clone, Debug)]
 pub struct TopLevelAssetPath {

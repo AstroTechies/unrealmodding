@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::properties::Property;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::unreal_types::FName;
+use crate::types::FName;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NormalExport {

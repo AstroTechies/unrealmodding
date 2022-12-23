@@ -9,7 +9,7 @@ use crate::{
         PropertyTrait,
     },
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    unreal_types::{FName, Guid},
+    types::{FName, Guid},
 };
 
 use super::MovieSceneTangentData;
