@@ -7,16 +7,17 @@ use crate::exports::{
 };
 use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::unreal_types::PackageIndex;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
     pub normal_export: NormalExport,
-
-    pub actors: Vec<i32>,
+    
+    pub actors: Vec<PackageIndex>,
     pub namespace: Option<String>,
     pub value: Option<String>,
     pub flags_probably: u64,
-    pub misc_category_data: Vec<i32>,
+    pub misc_category_data: Vec<PackageIndex>,
 }
 
 implement_get!(LevelExport);
@@ -34,7 +35,7 @@ impl LevelExport {
         let num_actors = asset.read_i32::<LittleEndian>()?;
         let mut actors = Vec::with_capacity(num_actors as usize);
         for _i in 0..num_actors as usize {
-            actors.push(asset.read_i32::<LittleEndian>()?);
+            actors.push(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
         }
 
         let namespace = asset.read_string()?;
@@ -45,7 +46,7 @@ impl LevelExport {
         let flags_probably = asset.read_u64::<LittleEndian>()?;
         let mut misc_category_data = Vec::new();
         while asset.position() < next_starting - 1 {
-            misc_category_data.push(asset.read_i32::<LittleEndian>()?);
+            misc_category_data.push(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
         }
         asset.read_exact(&mut [0u8; 1])?;
 
@@ -67,7 +68,7 @@ impl ExportTrait for LevelExport {
         asset.write_i32::<LittleEndian>(0)?;
         asset.write_i32::<LittleEndian>(self.actors.len() as i32)?;
         for actor in &self.actors {
-            asset.write_i32::<LittleEndian>(*actor)?;
+            asset.write_i32::<LittleEndian>(actor.index)?;
         }
 
         asset.write_string(&self.namespace)?;
@@ -78,7 +79,7 @@ impl ExportTrait for LevelExport {
         asset.write_u64::<LittleEndian>(self.flags_probably)?;
 
         for data in &self.misc_category_data {
-            asset.write_i32::<LittleEndian>(*data)?;
+            asset.write_i32::<LittleEndian>(data.index)?;
         }
         asset.write_u8(0)?;
         Ok(())
