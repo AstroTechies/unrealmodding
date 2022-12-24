@@ -36,3 +36,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --features "ue4_23" -- -D warnings
+
+      - uses: actions-rs/cargo@v1
+        name: Unit test
+        env:
+          USE_PREBUILT_ASSETS: 1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: test
