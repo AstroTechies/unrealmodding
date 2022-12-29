@@ -176,9 +176,13 @@ fn main() {
             let pakfile = match pakfile {
                 Some(pakfile) => Path::new(&pakfile).absolutize().unwrap().to_path_buf(),
                 None => {
-                    let mut path = Path::new(&indir).absolutize().unwrap().to_path_buf();
-                    path.set_extension("pak");
-                    path
+                    let mut path = Path::new(&indir)
+                        .absolutize()
+                        .unwrap()
+                        .to_path_buf()
+                        .into_os_string();
+                    path.push(".pak");
+                    PathBuf::from(path)
                 }
             };
             let indir = Path::new(&indir).absolutize().unwrap().to_path_buf();
