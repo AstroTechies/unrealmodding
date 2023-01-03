@@ -1,4 +1,4 @@
-//! Cursor extensions for easier deserialization
+//! Read and Seek extensions for easier deserialization
 
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;

@@ -44,7 +44,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
-use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -160,10 +160,9 @@ struct AssetHeader {
 
 //#[derive(Debug)]
 /// Unreal Engine uasset
-pub struct Asset {
+pub struct Asset<C: Read + Seek> {
     // raw data
-    cursor: Cursor<Vec<u8>>,
-    data_length: u64,
+    cursor: C,
 
     // parsed data
     pub info: String,
@@ -229,14 +228,16 @@ pub struct Asset {
     parent_class: Option<ParentClassInfo>,
 }
 
-struct AssetSerializer<'asset, 'cursor> {
-    asset: &'asset Asset,
-    cursor: &'cursor mut Cursor<Vec<u8>>,
+struct AssetSerializer<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek> {
+    asset: &'asset Asset<C>,
+    cursor: &'cursor mut W,
     cached_parent_info: Option<ParentClassInfo>,
 }
 
-impl<'asset, 'cursor> AssetSerializer<'asset, 'cursor> {
-    pub fn new(asset: &'asset Asset, cursor: &'cursor mut Cursor<Vec<u8>>) -> Self {
+impl<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek>
+    AssetSerializer<'asset, 'cursor, W, C>
+{
+    pub fn new(asset: &'asset Asset<C>, cursor: &'cursor mut W) -> Self {
         AssetSerializer {
             asset,
             cursor,
@@ -245,7 +246,9 @@ impl<'asset, 'cursor> AssetSerializer<'asset, 'cursor> {
     }
 }
 
-impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
+impl<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek> AssetTrait
+    for AssetSerializer<'asset, 'cursor, W, C>
+{
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -253,12 +256,12 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
         self.asset.get_custom_version::<T>()
     }
 
-    fn position(&self) -> u64 {
-        self.cursor.position()
+    fn position(&mut self) -> u64 {
+        self.cursor.stream_position().unwrap_or_default()
     }
 
     fn set_position(&mut self, pos: u64) {
-        self.cursor.set_position(pos)
+        self.cursor.seek(SeekFrom::Start(pos)).unwrap_or_default();
     }
 
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
@@ -336,7 +339,9 @@ impl<'asset, 'cursor> AssetTrait for AssetSerializer<'asset, 'cursor> {
     }
 }
 
-impl<'asset, 'cursor> AssetWriter for AssetSerializer<'asset, 'cursor> {
+impl<'asset, 'cursor, W: Seek + Read + Write, C: Seek + Read> AssetWriter
+    for AssetSerializer<'asset, 'cursor, W, C>
+{
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
         if self.asset.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.cursor.write_bool(guid.is_some())?;
@@ -415,7 +420,7 @@ impl<'asset, 'cursor> AssetWriter for AssetSerializer<'asset, 'cursor> {
     }
 }
 
-impl AssetTrait for Asset {
+impl<C: Read + Seek> AssetTrait for Asset<C> {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -432,12 +437,12 @@ impl AssetTrait for Asset {
             .unwrap_or_else(|| CustomVersion::new(T::GUID, 0))
     }
 
-    fn position(&self) -> u64 {
-        self.cursor.position()
+    fn position(&mut self) -> u64 {
+        self.cursor.stream_position().unwrap_or_default()
     }
 
     fn set_position(&mut self, pos: u64) {
-        self.cursor.set_position(pos)
+        self.cursor.seek(SeekFrom::Start(pos)).unwrap_or_default();
     }
 
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
@@ -528,7 +533,7 @@ impl AssetTrait for Asset {
     }
 }
 
-impl AssetReader for Asset {
+impl<C: Read + Seek> AssetReader for Asset<C> {
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
         if self.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             let has_property_guid = self.cursor.read_bool()?;
@@ -631,23 +636,16 @@ impl AssetReader for Asset {
     }
 }
 
-impl<'a> Asset {
+impl<'a, C: Read + Seek> Asset<C> {
     /// Create an asset from a binary file
-    pub fn new(asset_data: Vec<u8>, bulk_data: Option<Vec<u8>>) -> Self {
-        let raw_data = match &bulk_data {
-            Some(e) => {
-                let mut data = asset_data;
-                data.extend(e);
-                data
-            }
-            None => asset_data,
-        };
-
+    pub fn new(asset_data: C, bulk_data: Option<C>) -> Self {
         Asset {
-            data_length: raw_data.len() as u64,
-            cursor: Cursor::new(raw_data),
-            info: String::from("Serialized with unrealmodding/uasset"),
             use_separate_bulk_data_files: bulk_data.is_some(),
+            cursor: match bulk_data {
+                Some(bulk) => todo!("create custom chain type"),
+                None => asset_data,
+            },
+            info: String::from("Serialized with unrealmodding/uasset"),
             object_version: ObjectVersion::UNKNOWN,
             object_version_ue5: ObjectVersionUE5::UNKNOWN,
             legacy_file_version: 0,
@@ -929,6 +927,13 @@ impl<'a> Asset {
             self.preload_dependency_offset = self.cursor.read_i32::<LittleEndian>()?;
         }
         Ok(())
+    }
+
+    pub fn data_length(&mut self) -> u64 {
+        let pos = self.cursor.stream_position().unwrap_or_default();
+        let len = self.cursor.seek(SeekFrom::End(0)).unwrap_or_default();
+        self.cursor.seek(SeekFrom::Start(pos)).unwrap_or_default();
+        len
     }
 
     fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
@@ -1301,9 +1306,9 @@ impl<'a> Asset {
         let next_starting = match i < (self.exports.len() - 1) {
             true => match &self.exports[i + 1] {
                 Export::BaseExport(next_export) => next_export.serial_offset as u64,
-                _ => self.data_length - 4,
+                _ => self.data_length() - 4,
             },
-            false => self.data_length - 4,
+            false => self.data_length() - 4,
         };
 
         self.cursor
@@ -1374,7 +1379,8 @@ impl<'a> Asset {
             }
         };
 
-        let extras_len = next_starting as i64 - self.cursor.position() as i64;
+        let extras_len =
+            next_starting as i64 - self.cursor.stream_position().unwrap_or_default() as i64;
         if extras_len < 0 {
             // todo: warning?
 
@@ -1579,10 +1585,10 @@ impl<'a> Asset {
         Ok(())
     }
 
-    pub fn write_data(
+    pub fn write_data<W: Read + Seek + Write>(
         &self,
-        cursor: &mut Cursor<Vec<u8>>,
-        uexp_cursor: Option<&mut Cursor<Vec<u8>>>,
+        cursor: &mut W,
+        uexp_cursor: Option<&mut W>,
     ) -> Result<(), Error> {
         if self.use_separate_bulk_data_files != uexp_cursor.is_some() {
             return Err(Error::no_data(format!(
@@ -1826,10 +1832,9 @@ impl<'a> Asset {
 }
 
 // custom debug implementation to not print the whole data buffer
-impl Debug for Asset {
+impl<C: Read + Seek> Debug for Asset<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.debug_struct("Asset")
-            .field("data_len", &self.cursor.get_ref().len())
             .field("info", &self.info)
             .field(
                 "use_separate_bulk_data_files",
@@ -1919,7 +1924,7 @@ impl FEngineVersion {
         }
     }
 
-    fn read(cursor: &mut Cursor<Vec<u8>>) -> Result<Self, Error> {
+    fn read<C: Read + Seek>(cursor: &mut C) -> Result<Self, Error> {
         let major = cursor.read_u16::<LittleEndian>()?;
         let minor = cursor.read_u16::<LittleEndian>()?;
         let patch = cursor.read_u16::<LittleEndian>()?;

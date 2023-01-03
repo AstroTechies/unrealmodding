@@ -43,7 +43,7 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         CustomVersion::new([0u8; 16], 0)
     }
 
-    fn position(&self) -> u64 {
+    fn position(&mut self) -> u64 {
         self.cursor.position()
     }
 
