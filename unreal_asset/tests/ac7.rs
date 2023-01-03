@@ -34,7 +34,10 @@ fn ac7() -> Result<(), Error> {
         let key = AC7XorKey::new(name);
         let (decrypted_data, decrypted_bulk) = ac7::decrypt(asset_data, bulk_data, key);
 
-        let mut parsed = Asset::new(decrypted_data.clone(), Some(decrypted_bulk.clone()));
+        let mut parsed = Asset::new(
+            Cursor::new(decrypted_data.clone()),
+            Some(Cursor::new(decrypted_bulk.clone())),
+        );
         parsed.set_engine_version(EngineVersion::VER_UE4_18);
 
         parsed.parse_data()?;

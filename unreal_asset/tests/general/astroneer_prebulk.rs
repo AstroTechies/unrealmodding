@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 
 #[allow(clippy::duplicate_mod)]
@@ -24,7 +26,7 @@ const TEST_ASSETS: [&[u8]; 5] = [
 #[test]
 fn astroneer_prebulk() -> Result<(), Error> {
     for test_asset in TEST_ASSETS {
-        let mut asset = Asset::new(test_asset.to_vec(), None);
+        let mut asset = Asset::new(Cursor::new(test_asset.to_vec()), None);
         asset.set_engine_version(EngineVersion::VER_UE4_23);
 
         asset.parse_data()?;

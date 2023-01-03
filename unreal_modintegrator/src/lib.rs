@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
-use std::io::Write;
+use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 
 use error::IntegrationError;
@@ -176,14 +176,14 @@ fn read_in_memory(
     uasset: Vec<u8>,
     uexp: Option<Vec<u8>>,
     engine_version: EngineVersion,
-) -> Result<Asset, Error> {
-    let mut asset = Asset::new(uasset, uexp);
+) -> Result<Asset<Cursor<Vec<u8>>>, Error> {
+    let mut asset = Asset::new(Cursor::new(uasset), uexp.map(Cursor::new));
     asset.set_engine_version(engine_version);
     asset.parse_data()?;
     Ok(asset)
 }
 
-fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
+fn bake_mod_data(asset: &mut Asset<Cursor<Vec<u8>>>, mods: &Vec<Metadata>) -> Result<(), Error> {
     let data_table_export = asset
         .exports
         .iter()
@@ -312,7 +312,7 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
 }
 
 fn bake_integrator_data(
-    asset: &mut Asset,
+    asset: &mut Asset<Cursor<Vec<u8>>>,
     integrator_version: String,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {

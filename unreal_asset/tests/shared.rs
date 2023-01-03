@@ -4,7 +4,7 @@ use unreal_asset::{cast, engine_version::EngineVersion, error::Error, exports::E
 
 #[allow(dead_code)]
 pub(crate) fn verify_reparse(
-    asset: &mut Asset,
+    asset: &mut Asset<Cursor<Vec<u8>>>,
     engine_version: EngineVersion,
 ) -> Result<(), Error> {
     let mut cursor = Cursor::new(Vec::new());
@@ -27,7 +27,7 @@ pub(crate) fn verify_reparse(
 pub(crate) fn verify_binary_equality(
     data: &[u8],
     bulk: Option<&[u8]>,
-    asset: &mut Asset,
+    asset: &mut Asset<Cursor<Vec<u8>>>,
 ) -> Result<(), Error> {
     let mut cursor = Cursor::new(Vec::new());
 
@@ -55,7 +55,7 @@ pub(crate) fn verify_binary_equality(
 }
 
 #[allow(dead_code)]
-pub(crate) fn verify_all_exports_parsed(asset: &Asset) -> bool {
+pub(crate) fn verify_all_exports_parsed(asset: &Asset<Cursor<Vec<u8>>>) -> bool {
     for export in &asset.exports {
         if cast!(Export, RawExport, export).is_some() {
             return false;
