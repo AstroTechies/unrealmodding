@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, ErrorKind};
+use std::io::{self, Cursor, ErrorKind};
 use std::path::Path;
 
 use unreal_asset::engine_version::EngineVersion;
@@ -39,7 +39,7 @@ pub fn handle_persistent_actors(
     mod_paks: &mut Vec<PakReader<File>>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), Error> {
-    let mut level_asset = Asset::new(LEVEL_TEMPLATE_ASSET.to_vec(), None);
+    let mut level_asset = Asset::new(Cursor::new(LEVEL_TEMPLATE_ASSET.to_vec()), None);
     level_asset.set_engine_version(EngineVersion::VER_UE4_23);
     level_asset
         .parse_data()

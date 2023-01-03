@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Cursor};
 
 use unreal_asset::{
     cast, engine_version::EngineVersion, error::Error, exports::ExportNormalTrait,
@@ -21,7 +21,10 @@ const TEST_BULK: &[u8] = include_bytes!(concat!(assets_folder!(), "BP_DetPack_Ch
 
 #[test]
 fn unknown_properties() -> Result<(), Error> {
-    let mut asset = Asset::new(TEST_ASSET.to_vec(), Some(TEST_BULK.to_vec()));
+    let mut asset = Asset::new(
+        Cursor::new(TEST_ASSET.to_vec()),
+        Some(Cursor::new(TEST_BULK.to_vec())),
+    );
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;

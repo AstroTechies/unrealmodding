@@ -1,5 +1,7 @@
 mod shared;
 
+use std::io::Cursor;
+
 use unreal_asset::{
     cast,
     engine_version::EngineVersion,
@@ -26,7 +28,10 @@ const ASSET_BULK_FILE: &[u8] = include_bytes!(concat!(assets_folder!(), "asset.u
 
 #[test]
 fn custom_serialization_structs_in_map() -> Result<(), Error> {
-    let mut asset = Asset::new(ASSET_FILE.to_vec(), Some(ASSET_BULK_FILE.to_vec()));
+    let mut asset = Asset::new(
+        Cursor::new(ASSET_FILE.to_vec()),
+        Some(Cursor::new(ASSET_BULK_FILE.to_vec())),
+    );
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;

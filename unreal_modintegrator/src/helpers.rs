@@ -38,7 +38,7 @@ pub fn get_asset(
     mod_paks: &mut [PakReader<File>],
     name: &String,
     version: EngineVersion,
-) -> Result<Asset, Error> {
+) -> Result<Asset<Cursor<Vec<u8>>>, Error> {
     if let Ok(asset) = read_asset(
         |name| Ok(integrated_pak.get_entry(name).cloned()),
         version,
@@ -100,7 +100,7 @@ pub fn read_asset<F>(
     mut read_fn: F,
     engine_version: EngineVersion,
     name: &String,
-) -> Result<Asset, Error>
+) -> Result<Asset<Cursor<Vec<u8>>>, Error>
 where
     F: FnMut(&String) -> Result<Option<Vec<u8>>, Error>,
 {
@@ -113,13 +113,17 @@ where
     )?;
     let uasset = read_fn(name)?.ok_or_else(|| IntegrationError::asset_not_found(name.clone()))?;
 
-    let mut asset = Asset::new(uasset, uexp);
+    let mut asset = Asset::new(Cursor::new(uasset), uexp.map(Cursor::new));
     asset.set_engine_version(engine_version);
     asset.parse_data()?;
     Ok(asset)
 }
 
-pub fn write_asset(pak: &mut PakMemory, asset: &Asset, name: &String) -> Result<(), Error> {
+pub fn write_asset(
+    pak: &mut PakMemory,
+    asset: &Asset<Cursor<Vec<u8>>>,
+    name: &String,
+) -> Result<(), Error> {
     let mut uasset_cursor = Cursor::new(Vec::new());
     let mut uexp_cursor = match asset.use_separate_bulk_data_files {
         true => Some(Cursor::new(Vec::new())),
