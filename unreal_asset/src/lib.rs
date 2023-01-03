@@ -71,6 +71,7 @@ pub mod types;
 pub mod unversioned;
 pub mod uproperty;
 
+use containers::chain::Chain;
 use containers::indexed_map::IndexedMap;
 use cursor_ext::{ReadExt, WriteExt};
 use custom_version::{CustomVersion, CustomVersionTrait};
@@ -162,7 +163,7 @@ struct AssetHeader {
 /// Unreal Engine uasset
 pub struct Asset<C: Read + Seek> {
     // raw data
-    cursor: C,
+    cursor: Chain<C>,
 
     // parsed data
     pub info: String,
@@ -339,7 +340,7 @@ impl<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek> AssetTrait
     }
 }
 
-impl<'asset, 'cursor, W: Seek + Read + Write, C: Seek + Read> AssetWriter
+impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> AssetWriter
     for AssetSerializer<'asset, 'cursor, W, C>
 {
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
@@ -641,10 +642,7 @@ impl<'a, C: Read + Seek> Asset<C> {
     pub fn new(asset_data: C, bulk_data: Option<C>) -> Self {
         Asset {
             use_separate_bulk_data_files: bulk_data.is_some(),
-            cursor: match bulk_data {
-                Some(bulk) => todo!("create custom chain type"),
-                None => asset_data,
-            },
+            cursor: Chain::new(asset_data, bulk_data),
             info: String::from("Serialized with unrealmodding/uasset"),
             object_version: ObjectVersion::UNKNOWN,
             object_version_ue5: ObjectVersionUE5::UNKNOWN,
