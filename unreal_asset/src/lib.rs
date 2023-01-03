@@ -72,7 +72,7 @@ pub mod unversioned;
 pub mod uproperty;
 
 use containers::indexed_map::IndexedMap;
-use cursor_ext::CursorExt;
+use cursor_ext::{ReadExt, WriteExt};
 use custom_version::{CustomVersion, CustomVersionTrait};
 use engine_version::{get_object_versions, guess_engine_version, EngineVersion};
 use error::Error;

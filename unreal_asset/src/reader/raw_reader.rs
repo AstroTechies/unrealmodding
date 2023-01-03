@@ -3,7 +3,7 @@ use std::io::{self, Cursor, Read, Seek};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::containers::indexed_map::IndexedMap;
-use crate::cursor_ext::CursorExt;
+use crate::cursor_ext::ReadExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
