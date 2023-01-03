@@ -525,7 +525,7 @@ where
             });
         }
 
-        return Entry::Vacant(VacantEntry { key, map: self });
+        Entry::Vacant(VacantEntry { key, map: self })
     }
 
     pub fn get_by_key<Q>(&self, key: &Q) -> Option<&V>
