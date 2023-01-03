@@ -47,7 +47,7 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
         self.writer.get_custom_version::<T>()
     }
 
-    fn position(&self) -> u64 {
+    fn position(&mut self) -> u64 {
         self.writer.position()
     }
 
