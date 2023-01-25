@@ -545,6 +545,13 @@ impl AssetReader for Asset {
         let name_map_pointer = self.cursor.read_i32::<LittleEndian>()?;
         let number = self.cursor.read_i32::<LittleEndian>()?;
 
+        if name_map_pointer < 0 || name_map_pointer >= self.name_map_index_list.len() as i32 {
+            return Err(Error::fname(
+                name_map_pointer,
+                self.name_map_index_list.len(),
+            ));
+        }
+
         Ok(FName::new(
             self.get_name_reference(name_map_pointer),
             number,

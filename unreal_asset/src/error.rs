@@ -156,6 +156,7 @@ pub enum ErrorCode {
     Utf8(FromUtf8Error),
     Utf16(FromUtf16Error),
     NoData(Box<str>),
+    FName(i32, usize),
     InvalidFile(Box<str>),
     InvalidPackageIndex(Box<str>),
     InvalidEnumValue(Box<str>),
@@ -175,6 +176,12 @@ impl Error {
     pub fn no_data(msg: String) -> Self {
         Error {
             code: ErrorCode::NoData(msg.into_boxed_str()),
+        }
+    }
+
+    pub fn fname(index: i32, name_map_size: usize) -> Self {
+        Error {
+            code: ErrorCode::FName(index, name_map_size),
         }
     }
 
@@ -284,6 +291,11 @@ impl Display for ErrorCode {
             ErrorCode::Property(ref err) => Display::fmt(err, f),
             ErrorCode::Registry(ref err) => Display::fmt(err, f),
             ErrorCode::Usmap(ref err) => Display::fmt(err, f),
+            ErrorCode::FName(index, name_map_size) => write!(
+                f,
+                "Cannot read FName, index: {}, name map size: {}",
+                index, name_map_size
+            ),
         }
     }
 }
