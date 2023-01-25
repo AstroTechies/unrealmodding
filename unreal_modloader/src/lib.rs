@@ -138,7 +138,16 @@ where
     let update_progress = Arc::new(AtomicI32::new(0));
 
     let (background_tx, background_rx) = mpsc::channel::<BackgroundThreadMessage>();
-    let _ = background_tx.send(BackgroundThreadMessage::integrate());
+
+    // Only integrate if there is no update
+    let has_newer_update = config
+        .get_newer_update()
+        .map(|e| e.is_some())
+        .unwrap_or(false);
+
+    if !has_newer_update {
+        let _ = background_tx.send(BackgroundThreadMessage::integrate());
+    }
 
     // instantiate the GUI app
     let app = app::ModLoaderApp::new(
