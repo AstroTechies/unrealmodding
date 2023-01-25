@@ -216,6 +216,7 @@ fn bake_mod_data(asset: &mut Asset, mods: &Vec<Metadata>) -> Result<(), Error> {
             SyncMode::ClientOnly => "SyncMode::NewEnumerator1",
             SyncMode::None => "SyncMode::NewEnumerator0",
         };
+        asset.add_fname(coded_sync_mode);
 
         let rows: Vec<Property> = vec![
             StrProperty {
