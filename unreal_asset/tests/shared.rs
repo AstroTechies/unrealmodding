@@ -26,7 +26,7 @@ pub(crate) fn verify_reparse(
     let bulk_inner = bulk_cursor.map(|e| e.into_inner());
     if let Some(ref bulk_inner) = bulk_inner {
         let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uexp")?;
-        file.write_all(&bulk_inner)?;
+        file.write_all(bulk_inner)?;
     }
 
     let mut reparse = Asset::new(cursor_inner, bulk_inner);
@@ -64,7 +64,7 @@ pub(crate) fn verify_binary_equality(
     let bulk_inner = bulk_cursor.map(|e| e.into_inner());
     if let Some(ref bulk_inner) = bulk_inner {
         let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uexp")?;
-        file.write_all(&bulk_inner)?;
+        file.write_all(bulk_inner)?;
     }
 
     assert_eq!(cursor_inner, data);

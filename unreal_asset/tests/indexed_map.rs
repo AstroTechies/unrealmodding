@@ -26,10 +26,8 @@ fn iteration_by_index() {
     indexed_map.insert("Test3".to_string(), 3);
     indexed_map.insert("Test4".to_string(), 4);
 
-    let mut element = 0;
-    for (_, _, value) in indexed_map.iter() {
+    for (element, (_, _, value)) in indexed_map.iter().enumerate() {
         assert_eq!(*value, element + 1);
-        element += 1;
     }
 }
 

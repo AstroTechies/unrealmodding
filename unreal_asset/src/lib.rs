@@ -760,7 +760,7 @@ impl<'a> Asset {
         // reuseable buffers for reading
 
         // seek to start
-        self.cursor.seek(SeekFrom::Start(0))?;
+        self.cursor.rewind()?;
 
         // read and check magic
         if self.cursor.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {

@@ -42,7 +42,7 @@ impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
                 let mut s = DefaultHasher::new();
 
                 let name = reader.read_string()?.ok_or_else(|| {
-                    Error::invalid_file(format!("Name table entry {} is missing a name", i))
+                    Error::invalid_file(format!("Name table entry {i} is missing a name"))
                 })?;
                 name.hash(&mut s);
                 name_map_lookup.insert(s.finish(), i);

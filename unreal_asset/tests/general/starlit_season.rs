@@ -1,5 +1,6 @@
 use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 
+#[allow(clippy::duplicate_mod)]
 #[path = "../shared.rs"]
 mod shared;
 

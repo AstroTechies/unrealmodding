@@ -242,7 +242,7 @@ impl App for ModLoaderApp {
 
                         //ui.label(format!("{}", data.error.as_ref().unwrap()));
                         for warning in &data.warnings {
-                            ui.label(format!("{}", warning));
+                            ui.label(format!("{warning}"));
                         }
 
                         ui.label("");
@@ -277,8 +277,9 @@ impl App for ModLoaderApp {
 
                         let button = match exists {
                             true => Button::new(platform.to_string()),
-                            false => Button::new(format!("{} (not found)", platform))
-                                .sense(Sense::hover()),
+                            false => {
+                                Button::new(format!("{platform} (not found)")).sense(Sense::hover())
+                            }
                         };
 
                         if ui.add(button).clicked() {
@@ -364,7 +365,7 @@ impl ModLoaderApp {
         if !self.working.load(Ordering::Acquire) {
             ui.heading(title);
         } else {
-            ui.heading(format!("{} - Working...", title));
+            ui.heading(format!("{title} - Working..."));
         }
     }
 
@@ -536,7 +537,7 @@ impl ModLoaderApp {
                     ui.selectable_value(
                         &mut game_mod.selected_version,
                         show_version.clone(),
-                        format!("{}", show_version),
+                        format!("{show_version}"),
                     );
                 }
             });
@@ -554,7 +555,7 @@ impl ModLoaderApp {
                 ui.heading(&game_mod.name);
                 //});
 
-                ui.label(format!("Mod Id: {}", mod_id));
+                ui.label(format!("Mod Id: {mod_id}"));
                 ui.label(format!(
                     "Desciption: {}",
                     game_mod.description.as_ref().unwrap_or(&"None".to_owned())

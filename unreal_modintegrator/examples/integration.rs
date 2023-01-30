@@ -10,14 +10,15 @@ use unreal_pak::{PakMemory, PakReader};
 
 pub struct Config;
 
-fn handle_persistent_actors(
+#[allow(clippy::ptr_arg)]
+fn handle_linked_actor_components(
     _data: &(),
     _integrated_pak: &mut PakMemory,
     _game_paks: &mut Vec<PakReader<File>>,
     _mod_paks: &mut Vec<PakReader<File>>,
     actors: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
-    println!("{:?}", actors);
+    println!("Example linked actors: {actors:?}");
     Ok(())
 }
 
@@ -31,8 +32,8 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
             HashMap::new();
 
         handlers.insert(
-            String::from("persistent_actors"),
-            Box::new(handle_persistent_actors),
+            String::from("linked_persistent_actors"),
+            Box::new(handle_linked_actor_components),
         );
 
         handlers

@@ -14,7 +14,7 @@ impl Display for ErrorCode {
         match *self {
             ErrorCode::InvalidMetadata => f.write_str("Invalid metadata"),
             ErrorCode::UnsupportedSchema(schema) => {
-                write!(f, "Unsupported schema version {}", schema)
+                write!(f, "Unsupported schema version {schema}")
             }
             ErrorCode::Json(ref err) => Display::fmt(err, f),
             ErrorCode::SemVer(ref err) => Display::fmt(err, f),

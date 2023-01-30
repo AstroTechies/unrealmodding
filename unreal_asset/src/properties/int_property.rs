@@ -236,7 +236,7 @@ impl ByteProperty {
         };
 
         value.ok_or_else(|| {
-            Error::invalid_file(format!("Invalid length of {} for ByteProperty", length))
+            Error::invalid_file(format!("Invalid length of {length} for ByteProperty"))
         })
     }
 

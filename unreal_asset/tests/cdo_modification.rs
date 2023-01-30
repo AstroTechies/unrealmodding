@@ -37,8 +37,7 @@ fn cdo_modification() -> Result<(), Error> {
             e.get_base_export().object_flags & EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits()
                 == EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits()
         })
-        .map(|e| cast!(Export, NormalExport, e))
-        .flatten()
+        .and_then(|e| cast!(Export, NormalExport, e))
         .expect("Failed to find cdo export");
 
     let pickup_actor = cdo_export

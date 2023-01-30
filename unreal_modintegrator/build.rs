@@ -50,8 +50,7 @@ fn download_release(out_dir: &Path) {
 
     let api_response = blocking::Client::new()
         .get(format!(
-            "https://api.github.com/repos/{}/releases/latest",
-            ASSET_REPO
+            "https://api.github.com/repos/{ASSET_REPO}/releases/latest"
         ))
         .headers(headers.clone())
         .send()
@@ -105,14 +104,14 @@ fn cook_now(out_dir: &PathBuf) {
     let mut git = Command::new("git")
         .args([
             "clone",
-            format!("https://github.com/{}.git", ASSET_REPO).as_str(),
+            format!("https://github.com/{ASSET_REPO}.git").as_str(),
         ])
         .current_dir(out_dir)
         .spawn()
         .expect("failed to clone repo");
     let status = git.wait().expect("failed to run git");
     if !status.success() {
-        panic!("git failed to finish {}", status);
+        panic!("git failed to finish {status}");
     }
 
     let version_selector = env::var_os("UE_VERSION_SELECTOR").expect("UE_VERSION_SELECTOR not set");
@@ -129,7 +128,7 @@ fn cook_now(out_dir: &PathBuf) {
         .wait()
         .expect("failed to launch UnrealVersionSelector");
     if !status.success() {
-        panic!("UnrealVersionSelector failed to finish {}", status);
+        panic!("UnrealVersionSelector failed to finish {status}");
     }
 
     let ue4_cmd_path =
@@ -147,6 +146,6 @@ fn cook_now(out_dir: &PathBuf) {
         .expect("failed to launch UE4Editor-Cmd");
     let status = cook.wait().expect("failed to launch UE4Editor-Cmd");
     if !status.success() {
-        panic!("UE4Editor-Cmd failed to finish {}", status);
+        panic!("UE4Editor-Cmd failed to finish {status}");
     }
 }

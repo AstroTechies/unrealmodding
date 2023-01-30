@@ -77,12 +77,12 @@ fn main() {
                 .cloned()
                 .collect::<Vec<_>>();
             for (i, file_name) in names.iter().enumerate() {
-                println!("Record {}: {:?}", i, file_name);
+                println!("Record {i}: {file_name:?}");
 
                 match pak.read_entry(file_name) {
                     Ok(_) => (),
                     Err(e) => {
-                        eprintln!("Error reading record {}: {:?}! Error: {}", i, file_name, e);
+                        eprintln!("Error reading record {i}: {file_name:?}! Error: {e}");
                         exit(1);
                     }
                 }
@@ -100,7 +100,7 @@ fn main() {
                 None => path.parent().unwrap().join(path.file_stem().unwrap()),
             };
 
-            println!("Extracting to {:?}", output_folder);
+            println!("Extracting to {output_folder:?}");
 
             // TODO: get rid of this clone
             let names = pak
@@ -115,7 +115,7 @@ fn main() {
                         let dir_path = match path.parent() {
                             Some(dir) => dir,
                             None => {
-                                eprintln!("No parent directories found! {}: {:?}", i, file_name);
+                                eprintln!("No parent directories found! {i}: {file_name:?}");
                                 exit(1);
                             }
                         };
@@ -128,8 +128,7 @@ fn main() {
                                     Ok(file) => file,
                                     Err(err) => {
                                         eprintln!(
-                                            "Error creating file {}: {:?}! Error: {}",
-                                            i, path, err
+                                            "Error creating file {i}: {path:?}! Error: {err}"
                                         );
                                         exit(1);
                                     }
@@ -137,31 +136,24 @@ fn main() {
                                 // Write the file
                                 match file.write_all(data.as_slice()) {
                                     Ok(_) => {
-                                        println!("Record {}: {}", i, file_name);
+                                        println!("Record {i}: {file_name}");
                                     }
                                     Err(err) => {
                                         eprintln!(
-                                            "Error writing to file {}: {:?}! Error: {}",
-                                            i, path, err
+                                            "Error writing to file {i}: {path:?}! Error: {err}"
                                         );
                                         exit(1);
                                     }
                                 }
                             }
                             Err(err) => {
-                                eprintln!(
-                                    "Error creating directories {:?}! Error: {}",
-                                    dir_path, err
-                                );
+                                eprintln!("Error creating directories {dir_path:?}! Error: {err}");
                                 exit(1);
                             }
                         };
                     }
                     Err(err) => {
-                        eprintln!(
-                            "Error reading record {}: {:?}! Error: {}",
-                            i, file_name, err
-                        );
+                        eprintln!("Error reading record {i}: {file_name:?}! Error: {err}");
                         exit(1);
                     }
                 }
@@ -187,7 +179,7 @@ fn main() {
             let indir = Path::new(&indir).absolutize().unwrap().to_path_buf();
             let indir_len = indir.components().count();
 
-            println!("Creating {:?}", pakfile);
+            println!("Creating {pakfile:?}");
 
             // clear file
             OpenOptions::new()
@@ -211,7 +203,7 @@ fn main() {
                 unreal_pak::CompressionMethod::Zlib
             };
 
-            println!("Using compression method: {:?}", compression_method);
+            println!("Using compression method: {compression_method:?}");
             pak.compression = compression_method;
 
             // Get all files and write them to the .pak file
@@ -240,15 +232,15 @@ fn main() {
                 let file_data = match std::fs::read(file_path) {
                     Ok(file_data) => file_data,
                     Err(err) => {
-                        eprintln!("Error reading file {:?}! Error: {}", file_path, err);
+                        eprintln!("Error reading file {file_path:?}! Error: {err}");
                         exit(1);
                     }
                 };
 
                 match pak.write_entry(&file_name, &file_data) {
-                    Ok(_) => println!("Wrote file {}: {}", i, file_name),
+                    Ok(_) => println!("Wrote file {i}: {file_name}"),
                     Err(err) => {
-                        eprintln!("Error writing file in pak {:?}! Error: {}", file_name, err);
+                        eprintln!("Error writing file in pak {file_name:?}! Error: {err}");
                         exit(1);
                     }
                 }
@@ -257,7 +249,7 @@ fn main() {
             match pak.finish_write() {
                 Ok(_) => println!("Finsihed writing pak index and footer"),
                 Err(err) => {
-                    eprintln!("Error writing pak index or footer! Error: {}", err);
+                    eprintln!("Error writing pak index or footer! Error: {err}");
                     exit(1);
                 }
             }
@@ -273,7 +265,7 @@ fn open_file(path: &Path) -> File {
     match OpenOptions::new().read(true).open(path) {
         Ok(file) => file,
         Err(err) => {
-            eprintln!("Could not find/open file! Error: {}", err);
+            eprintln!("Could not find/open file! Error: {err}");
             exit(1);
         }
     }
@@ -283,7 +275,7 @@ fn check_header(pak: &mut PakReader<File>) {
     match pak.load_index() {
         Ok(_) => println!("Header is ok"),
         Err(err) => {
-            eprintln!("Error reading header! Error: {}", err);
+            eprintln!("Error reading header! Error: {err}");
             exit(1);
         }
     }

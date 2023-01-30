@@ -39,7 +39,7 @@ fn ac7() -> Result<(), Error> {
 
         parsed.parse_data()?;
         shared::verify_binary_equality(&decrypted_data, Some(&decrypted_bulk), &mut parsed)?;
-        shared::verify_all_exports_parsed(&mut parsed);
+        shared::verify_all_exports_parsed(&parsed);
 
         let mut data = Cursor::new(Vec::new());
         let mut bulk = Cursor::new(Vec::new());
