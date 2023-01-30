@@ -28,7 +28,6 @@ fn cdo_modification() -> Result<(), Error> {
     asset.set_engine_version(EngineVersion::VER_UE4_23);
 
     asset.parse_data()?;
-    println!("Exports: {}", asset.exports.len());
     shared::verify_binary_equality(TEST_ASSET, None, &mut asset)?;
 
     let cdo_export: &mut NormalExport = asset

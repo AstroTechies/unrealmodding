@@ -1282,9 +1282,8 @@ impl<'a> Asset {
                 if let Some(base_export) = base_export {
                     let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
-                        Err(e) => {
-                            //todo: warning?
-                            println!("{:?}", e);
+                        Err(_e) => {
+                            // todo: warning?
                             self.cursor
                                 .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
                             Ok(RawExport::from_base(base_export.clone(), self)?.into())

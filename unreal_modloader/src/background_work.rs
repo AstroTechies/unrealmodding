@@ -86,10 +86,7 @@ fn download_mod(
     Ok((metadata, file_path))
 }
 
-fn download_mods(
-    mods_path: &Path,
-    files_to_download: &[GameModVersion],
-) -> Vec<ModLoaderWarning> {
+fn download_mods(mods_path: &Path, files_to_download: &[GameModVersion]) -> Vec<ModLoaderWarning> {
     // let mut resolved = HashMap::new();
     let mut warnings = Vec::new();
 
@@ -249,7 +246,7 @@ where
                 if let Some(game_mod) = data_guard.game_mods.get(&mod_id) {
                     // remove file for each version
                     for (_, version) in game_mod.versions.iter().filter(|v| v.1.downloaded) {
-                        println!("Removing {:?}", mods_path.join(&version.file_name));
+                        debug!("Removing {:?}", mods_path.join(&version.file_name));
                         match fs::remove_file(mods_path.join(&version.file_name)) {
                             Ok(_) => {}
                             Err(err) => {

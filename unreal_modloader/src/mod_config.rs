@@ -21,10 +21,14 @@ struct ModsConfigData {
     mods: HashMap<String, ModConfigData>,
 }
 
+const fn default_true() -> bool {
+    true
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfigData {
-    // TODO: make this a non-Option at some point
-    force_latest: Option<bool>,
+    #[serde(default = "default_true")]
+    force_latest: bool,
     priority: u16,
     enabled: bool,
     version: String,
@@ -72,7 +76,7 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
 
         game_mod.enabled = mod_config.enabled;
 
-        if !mod_config.force_latest.unwrap_or(true) {
+        if !mod_config.force_latest {
             let config_version = Version::parse(&mod_config.version);
             if config_version.is_err() {
                 warn!(
@@ -107,11 +111,11 @@ pub(crate) fn write_config(data: &mut ModLoaderAppData) {
 
     for (mod_id, game_mod) in data.game_mods.iter() {
         let mod_config = ModConfigData {
-            force_latest: Some(match game_mod.selected_version {
+            force_latest: match game_mod.selected_version {
                 SelectedVersion::Latest(_) => true,
                 SelectedVersion::LatestIndirect(_) => true,
                 SelectedVersion::Specific(_) => false,
-            }),
+            },
             priority: 0,
             enabled: game_mod.enabled,
             version: game_mod.selected_version.clone().unwrap().to_string(),
