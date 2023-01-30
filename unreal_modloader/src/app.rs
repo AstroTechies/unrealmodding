@@ -8,19 +8,19 @@ use std::time::Instant;
 use eframe::{
     egui::{self, Button, ProgressBar, Sense, Widget},
     emath::Align,
-    App,
+    App, Frame,
 };
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use log::{debug, info};
 use parking_lot::Mutex;
 use semver::Version;
 
-use crate::background_work::BackgroundThreadMessage;
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
 use crate::update_info::UpdateInfo;
 use crate::FileToProcess;
+use crate::{background_work::BackgroundThreadMessage, error::ModLoaderError};
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,
@@ -89,20 +89,9 @@ impl App for ModLoaderApp {
                 .size(Size::exact(45.0))
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
-                        StripBuilder::new(ui)
-                            .size(Size::relative(0.5))
-                            .size(Size::remainder())
-                            .horizontal(|mut strip| {
-                                strip.cell(|ui| {
-                                    self.show_title(ui);
-                                });
-                                strip.cell(|ui| {
-                                    self.show_change_platform(ui);
-                                });
-                            });
-
-                        ui.separator();
+                        self.show_header(ui);
                     });
+                    // seperators only look good if at the start of a cell, not the end of the previous one.
                     strip.cell(|ui| {
                         ui.separator();
                         self.show_table(ui);
@@ -130,135 +119,29 @@ impl App for ModLoaderApp {
         let mut should_darken = false;
 
         let mut update_cancelled = false;
-        let newer_update = self.newer_update.lock();
+        let mut newer_update = self.newer_update.lock();
         if let Some(newer_update) = newer_update.as_ref() {
-            egui::Window::new("A new update is available")
-                .resizable(false)
-                .collapsible(false)
-                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
-                .default_size((600.0, 400.0))
-                .show(ctx, |ui| {
-                    StripBuilder::new(ui)
-                        .size(Size::exact(22.0))
-                        .size(Size::remainder())
-                        .size(Size::exact(22.0))
-                        .size(Size::exact(45.0))
-                        .vertical(|mut strip| {
-                            strip.cell(|ui| {
-                                ui.heading(format!(
-                                    "Update version {} is available!",
-                                    newer_update.version
-                                ));
-                            });
+            let update_started;
+            (update_started, update_cancelled) = self.show_update_window(ctx, newer_update);
 
-                            strip.cell(|ui| {
-                                ui.label(format!("Changelog:\n {}", newer_update.changelog));
-                            });
-
-                            strip.cell(|ui| {
-                                if self.updating {
-                                    let bar = ProgressBar::new(
-                                        self.update_progress.load(Ordering::Acquire) as f32 / 100.0,
-                                    );
-                                    bar.ui(ui);
-                                }
-                            });
-
-                            strip.cell(|ui| {
-                                ui.separator();
-                                ui.style_mut().spacing.button_padding = egui::vec2(9.0, 6.0);
-                                ui.style_mut()
-                                    .text_styles
-                                    .get_mut(&egui::TextStyle::Button)
-                                    .unwrap()
-                                    .size = 16.0;
-
-                                ui.with_layout(ui.layout().with_cross_align(Align::Center), |ui| {
-                                    StripBuilder::new(ui)
-                                        .size(Size::relative(0.5))
-                                        .size(Size::remainder())
-                                        .horizontal(|mut strip| {
-                                            strip.cell(|ui| {
-                                                if ui.button("Download").clicked() {
-                                                    // todo: error
-                                                    let _ = self
-                                                        .background_tx
-                                                        .send(BackgroundThreadMessage::UpdateApp);
-                                                    self.updating = true;
-                                                }
-                                            });
-
-                                            strip.cell(|ui| {
-                                                if ui.button("Cancel").clicked() {
-                                                    update_cancelled = true;
-                                                }
-                                            });
-                                        });
-                                });
-                            });
-                        });
-                });
+            if update_started {
+                self.updating = true;
+            }
 
             should_darken = true;
         }
-        drop(newer_update);
 
         if update_cancelled {
-            *self.newer_update.lock() = None;
+            *newer_update = None;
         }
 
-        if data.error.is_some() {
-            egui::Window::new("Critical Error")
-                .resizable(false)
-                .collapsible(false)
-                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
-                .fixed_size((600.0, 400.0))
-                .show(ctx, |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
+        drop(newer_update);
 
-                        ui.label(format!("{}", data.error.as_ref().unwrap()));
-                    });
-
-                    ui.separator();
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
-                        if ui.button("Quit").clicked() {
-                            frame.close();
-                        }
-                    });
-                });
-
+        if let Some(error) = &data.error {
+            self.show_error(ctx, frame, error);
             should_darken = true;
         } else if !data.warnings.is_empty() {
-            egui::Window::new("Warning")
-                .resizable(false)
-                .collapsible(false)
-                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
-                .fixed_size((600.0, 400.0))
-                .show(ctx, |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        //ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
-
-                        //ui.label(format!("{}", data.error.as_ref().unwrap()));
-                        for warning in &data.warnings {
-                            ui.label(format!("{warning}"));
-                        }
-
-                        ui.label("");
-                        ui.label("See modloader_log.txt for more details.");
-                        ui.label("");
-                    });
-
-                    ui.separator();
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
-                        if ui.button("Ok").clicked() {
-                            data.warnings.clear();
-                        }
-                    });
-                });
-
+            self.show_warnings(ctx, &mut data.warnings);
             should_darken = true;
         }
 
@@ -352,6 +235,22 @@ impl App for ModLoaderApp {
 }
 
 impl ModLoaderApp {
+    // Main UI parts
+
+    fn show_header(&mut self, ui: &mut egui::Ui) {
+        StripBuilder::new(ui)
+            .size(Size::relative(0.5))
+            .size(Size::remainder())
+            .horizontal(|mut strip| {
+                strip.cell(|ui| {
+                    self.show_title(ui);
+                });
+                strip.cell(|ui| {
+                    self.show_change_platform(ui);
+                });
+            });
+    }
+
     fn show_title(&self, ui: &mut egui::Ui) {
         let data = self.data.lock();
 
@@ -721,5 +620,131 @@ impl ModLoaderApp {
                 .background_tx
                 .send(BackgroundThreadMessage::integrate());
         }
+    }
+
+    // "popup" windows
+
+    fn show_update_window(&self, ctx: &egui::Context, newer_update: &UpdateInfo) -> (bool, bool) {
+        let mut update_started = false;
+        let mut update_cancelled = false;
+
+        egui::Window::new("A new update is available")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .default_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                StripBuilder::new(ui)
+                    .size(Size::exact(22.0))
+                    .size(Size::remainder())
+                    .size(Size::exact(22.0))
+                    .size(Size::exact(45.0))
+                    .vertical(|mut strip| {
+                        strip.cell(|ui| {
+                            ui.heading(format!(
+                                "Update version {} is available!",
+                                newer_update.version
+                            ));
+                        });
+
+                        strip.cell(|ui| {
+                            ui.label(format!("Changelog:\n {}", newer_update.changelog));
+                        });
+
+                        strip.cell(|ui| {
+                            if self.updating {
+                                let bar = ProgressBar::new(
+                                    self.update_progress.load(Ordering::Acquire) as f32 / 100.0,
+                                );
+                                bar.ui(ui);
+                            }
+                        });
+
+                        strip.cell(|ui| {
+                            ui.separator();
+                            ui.style_mut().spacing.button_padding = egui::vec2(9.0, 6.0);
+                            ui.style_mut()
+                                .text_styles
+                                .get_mut(&egui::TextStyle::Button)
+                                .unwrap()
+                                .size = 16.0;
+
+                            ui.with_layout(ui.layout().with_cross_align(Align::Center), |ui| {
+                                StripBuilder::new(ui)
+                                    .size(Size::relative(0.5))
+                                    .size(Size::remainder())
+                                    .horizontal(|mut strip| {
+                                        strip.cell(|ui| {
+                                            if ui.button("Download").clicked() {
+                                                // todo: error
+                                                let _ = self
+                                                    .background_tx
+                                                    .send(BackgroundThreadMessage::UpdateApp);
+                                                update_started = true;
+                                            }
+                                        });
+
+                                        strip.cell(|ui| {
+                                            if ui.button("Cancel").clicked() {
+                                                update_cancelled = true;
+                                            }
+                                        });
+                                    });
+                            });
+                        });
+                    });
+            });
+
+        (update_started, update_cancelled)
+    }
+
+    fn show_error(&self, ctx: &egui::Context, frame: &mut Frame, error: &ModLoaderError) {
+        egui::Window::new("Critical Error")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .fixed_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
+
+                    ui.label(format!("{error}"));
+                });
+
+                ui.separator();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                    if ui.button("Quit").clicked() {
+                        frame.close();
+                    }
+                });
+            });
+    }
+
+    fn show_warnings(&self, ctx: &egui::Context, warnings: &mut Vec<ModLoaderWarning>) {
+        egui::Window::new("Warning")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .fixed_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    for warning in warnings.iter() {
+                        ui.label(format!("{warning}"));
+                    }
+
+                    ui.label("");
+                    ui.label("See modloader_log.txt for more details.");
+                    ui.label("");
+                });
+
+                ui.separator();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                    if ui.button("Ok").clicked() {
+                        warnings.clear();
+                    }
+                });
+            });
     }
 }
