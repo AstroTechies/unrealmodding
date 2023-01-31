@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
 use log::{error, warn};
@@ -6,6 +6,7 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 
 use crate::game_mod::SelectedVersion;
+use crate::profile::Profile;
 use crate::ModLoaderAppData;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -13,7 +14,7 @@ struct ModConfig {
     selected_game_platform: Option<String>,
     refuse_mismatched_connections: bool,
     current: ModsConfigData,
-    profiles: HashMap<String, ModsConfigData>,
+    profiles: BTreeMap<String, Profile>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -21,13 +22,9 @@ struct ModsConfigData {
     mods: HashMap<String, ModConfigData>,
 }
 
-const fn default_true() -> bool {
-    true
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfigData {
-    #[serde(default = "default_true")]
+    #[serde(default = "crate::default_true")]
     force_latest: bool,
     priority: u16,
     enabled: bool,
@@ -96,6 +93,8 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
         let first_platform = data.install_managers.keys().next().unwrap();
         data.set_game_platform(first_platform);
     }
+
+    data.profiles = config.profiles;
 }
 
 pub(crate) fn write_config(data: &mut ModLoaderAppData) {
@@ -106,7 +105,7 @@ pub(crate) fn write_config(data: &mut ModLoaderAppData) {
         current: ModsConfigData {
             mods: HashMap::new(),
         },
-        profiles: HashMap::new(),
+        profiles: data.profiles.clone(),
     };
 
     for (mod_id, game_mod) in data.game_mods.iter() {

@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::{
     atomic::{AtomicBool, AtomicI32, Ordering},
     mpsc::Sender,
@@ -15,71 +16,73 @@ use log::{debug, info};
 use parking_lot::Mutex;
 use semver::Version;
 
-use crate::error::ModLoaderWarning;
+use crate::background_work::BackgroundThreadMessage;
+use crate::error::{ModLoaderError, ModLoaderWarning};
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
 use crate::update_info::UpdateInfo;
-use crate::FileToProcess;
-use crate::{background_work::BackgroundThreadMessage, error::ModLoaderError};
+use crate::{FileToProcess, ModLoaderAppData};
 
+#[derive(Debug)]
 pub(crate) struct ModLoaderApp {
-    pub data: Arc<Mutex<crate::ModLoaderAppData>>,
+    pub data: Arc<Mutex<ModLoaderAppData>>,
+    pub background_tx: Sender<BackgroundThreadMessage>,
 
     pub window_title: String,
+    pub modloader_version: &'static str,
 
     pub ready_exit: Arc<AtomicBool>,
-
-    pub last_integration_time: Arc<Mutex<Instant>>,
-
     pub working: Arc<AtomicBool>,
-
-    pub platform_selector_open: bool,
-    pub selected_mod_id: Option<String>,
+    pub last_integration_time: Arc<Mutex<Instant>>,
+    pub updating: Cell<bool>,
 
     pub newer_update: Arc<Mutex<Option<UpdateInfo>>>,
     pub update_progress: Arc<AtomicI32>,
 
-    pub modloader_version: &'static str,
-
-    pub background_tx: Sender<BackgroundThreadMessage>,
-
-    updating: bool,
+    pub platform_selector_open: bool,
+    pub selected_mod_id: Option<String>,
+    pub profile_manager_open: Cell<bool>,
 }
 
 impl ModLoaderApp {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        data: Arc<Mutex<crate::ModLoaderAppData>>,
+        data: Arc<Mutex<ModLoaderAppData>>,
+        background_tx: Sender<BackgroundThreadMessage>,
         window_title: String,
+        modloader_version: &'static str,
         ready_exit: Arc<AtomicBool>,
-        last_integration_time: Arc<Mutex<Instant>>,
         working: Arc<AtomicBool>,
+        last_integration_time: Arc<Mutex<Instant>>,
         newer_update: Arc<Mutex<Option<UpdateInfo>>>,
         update_progress: Arc<AtomicI32>,
-        modloader_version: &'static str,
-        background_tx: Sender<BackgroundThreadMessage>,
     ) -> Self {
         ModLoaderApp {
             data,
+            background_tx,
+
             window_title,
+            modloader_version,
+
             ready_exit,
-            last_integration_time,
             working,
+            last_integration_time,
+            updating: Cell::new(false),
+
             newer_update,
             update_progress,
-            modloader_version,
-            background_tx,
 
             platform_selector_open: false,
             selected_mod_id: None,
-
-            updating: false,
+            profile_manager_open: Cell::new(false),
         }
     }
 }
 
 impl App for ModLoaderApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Main UI
+
         egui::CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
                 .size(Size::exact(22.0))
@@ -114,21 +117,17 @@ impl App for ModLoaderApp {
                 });
         });
 
+        // "popup" windows
+
         let mut data = self.data.lock();
 
-        let mut should_darken = false;
+        let mut darken_background = false;
 
         let mut update_cancelled = false;
         let mut newer_update = self.newer_update.lock();
         if let Some(newer_update) = newer_update.as_ref() {
-            let update_started;
-            (update_started, update_cancelled) = self.show_update_window(ctx, newer_update);
-
-            if update_started {
-                self.updating = true;
-            }
-
-            should_darken = true;
+            self.show_update_window(ctx, newer_update, &mut update_cancelled);
+            darken_background = true;
         }
 
         if update_cancelled {
@@ -139,10 +138,10 @@ impl App for ModLoaderApp {
 
         if let Some(error) = &data.error {
             self.show_error(ctx, frame, error);
-            should_darken = true;
+            darken_background = true;
         } else if !data.warnings.is_empty() {
             self.show_warnings(ctx, &mut data.warnings);
-            should_darken = true;
+            darken_background = true;
         }
 
         if self.platform_selector_open {
@@ -175,7 +174,12 @@ impl App for ModLoaderApp {
                         }
                     }
                 });
-            should_darken = true;
+            darken_background = true;
+        }
+
+        if self.profile_manager_open.get() {
+            self.show_profile_manager(ctx, &mut data);
+            darken_background = true;
         }
 
         // Keyboard shortcuts
@@ -200,7 +204,7 @@ impl App for ModLoaderApp {
 
         drop(data);
 
-        if should_darken {
+        if darken_background {
             self.darken_background(ctx);
         }
 
@@ -210,7 +214,6 @@ impl App for ModLoaderApp {
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
         // Or keep it running while the background thread is actively working.
-        // Or while integration is pending.
         // Or while the last integration was not long ago.
         if self.working.load(Ordering::Acquire)
             || self.last_integration_time.lock().elapsed().as_secs() < 5
@@ -218,6 +221,7 @@ impl App for ModLoaderApp {
             ctx.request_repaint();
         }
 
+        // when background thread is ready to exit kill app by ending main thread
         if self.ready_exit.load(Ordering::Acquire) {
             frame.close();
         }
@@ -246,7 +250,7 @@ impl ModLoaderApp {
                     self.show_title(ui);
                 });
                 strip.cell(|ui| {
-                    self.show_change_platform(ui);
+                    self.show_header_right(ui);
                 });
             });
     }
@@ -268,10 +272,10 @@ impl ModLoaderApp {
         }
     }
 
-    fn show_change_platform(&mut self, ui: &mut egui::Ui) {
+    fn show_header_right(&mut self, ui: &mut egui::Ui) {
         let data = self.data.lock();
 
-        let title = format!(
+        let current_platform = format!(
             "Platform: {}",
             match data.selected_game_platform {
                 Some(ref platform) => platform.to_string(),
@@ -281,10 +285,13 @@ impl ModLoaderApp {
 
         ui.with_layout(ui.layout().with_cross_align(Align::Max), |ui| {
             ui.horizontal(|ui| {
+                if ui.button("Profiles").clicked() {
+                    self.profile_manager_open.set(true);
+                }
                 if ui.button("Change platform").clicked() {
                     self.platform_selector_open = true;
                 }
-                ui.label(title);
+                ui.label(current_platform);
             });
         });
     }
@@ -624,10 +631,12 @@ impl ModLoaderApp {
 
     // "popup" windows
 
-    fn show_update_window(&self, ctx: &egui::Context, newer_update: &UpdateInfo) -> (bool, bool) {
-        let mut update_started = false;
-        let mut update_cancelled = false;
-
+    fn show_update_window(
+        &self,
+        ctx: &egui::Context,
+        newer_update: &UpdateInfo,
+        update_cancelled: &mut bool,
+    ) {
         egui::Window::new("A new update is available")
             .resizable(false)
             .collapsible(false)
@@ -652,7 +661,7 @@ impl ModLoaderApp {
                         });
 
                         strip.cell(|ui| {
-                            if self.updating {
+                            if self.updating.get() {
                                 let bar = ProgressBar::new(
                                     self.update_progress.load(Ordering::Acquire) as f32 / 100.0,
                                 );
@@ -680,13 +689,13 @@ impl ModLoaderApp {
                                                 let _ = self
                                                     .background_tx
                                                     .send(BackgroundThreadMessage::UpdateApp);
-                                                update_started = true;
+                                                self.updating.set(true);
                                             }
                                         });
 
                                         strip.cell(|ui| {
                                             if ui.button("Cancel").clicked() {
-                                                update_cancelled = true;
+                                                *update_cancelled = true;
                                             }
                                         });
                                     });
@@ -694,8 +703,6 @@ impl ModLoaderApp {
                         });
                     });
             });
-
-        (update_started, update_cancelled)
     }
 
     fn show_error(&self, ctx: &egui::Context, frame: &mut Frame, error: &ModLoaderError) {
@@ -743,6 +750,29 @@ impl ModLoaderApp {
                     ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
                     if ui.button("Ok").clicked() {
                         warnings.clear();
+                    }
+                });
+            });
+    }
+
+    fn show_profile_manager(&self, ctx: &egui::Context, data: &mut ModLoaderAppData) {
+        egui::Window::new("Profiles")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .fixed_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    for profile in data.profiles.iter() {
+                        ui.label(format!("{profile:?}"));
+                    }
+                });
+
+                ui.separator();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                    if ui.button("Close").clicked() {
+                        self.profile_manager_open.set(false);
                     }
                 });
             });
