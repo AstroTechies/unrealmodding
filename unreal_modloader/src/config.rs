@@ -17,12 +17,28 @@ pub struct IconData {
     pub height: u32,
 }
 
-pub trait InstallManager: Debug + std::marker::Send {
+macro_rules! install_manager_trait {
+    ($($funcs:item)*) => {
+        #[cfg(feature = "cpp_loader")]
+        pub trait InstallManager: Debug + std::marker::Send + unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> {
+            $($funcs)*
+        }
+
+
+        #[cfg(not(feature = "cpp_loader"))]
+        pub trait InstallManager: Debug + std::marker::Send {
+            $($funcs)*
+        }
+
+    };
+}
+
+install_manager_trait!(
     fn get_game_install_path(&self) -> Option<PathBuf>;
     fn get_paks_path(&self) -> Option<PathBuf>;
     fn get_game_build(&self) -> Option<GameBuild>;
     fn launch_game(&self) -> Result<(), ModLoaderWarning>;
-}
+);
 
 pub trait GameConfig<'data, IC, D, E: std::error::Error + 'static>: std::marker::Send
 where
@@ -36,6 +52,9 @@ where
     fn update_modloader(&self, progress_callback: Box<dyn Fn(f32)>) -> Result<(), ModLoaderError>;
 
     fn get_icon(&self) -> Option<IconData>;
+
+    #[cfg(feature = "cpp_loader")]
+    fn get_cpp_loader_config() -> unreal_cpp_loader::config::GameSettings;
 
     const WINDOW_TITLE: &'static str;
     const CONFIG_DIR: &'static str;

@@ -34,6 +34,7 @@ use mod_processing::dependencies::DependencyGraph;
 use version::GameBuild;
 
 pub use unreal_asset;
+pub use unreal_cpp_loader;
 pub use unreal_modintegrator;
 pub use unreal_modmetadata;
 pub use unreal_pak;
@@ -75,6 +76,9 @@ pub(crate) struct ModLoaderAppData {
     /// install managers
     pub(crate) install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
     pub(crate) selected_game_platform: Option<String>,
+
+    #[cfg(feature = "cpp_loader")]
+    pub(crate) cpp_loader_config: unreal_cpp_loader::config::GameSettings,
 }
 
 impl ModLoaderAppData {
@@ -124,6 +128,9 @@ where
         selected_game_platform: None,
         failed: false,
         dependency_graph: None,
+
+        #[cfg(feature = "cpp_loader")]
+        cpp_loader_config: GC::get_cpp_loader_config(),
     }));
 
     let icon_data = config.get_icon();

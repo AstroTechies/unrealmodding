@@ -114,6 +114,11 @@ pub enum ModLoaderWarningKind {
     IndexFileMissingMod,
     DownloadFailed(reqwest::Error),
 
+    #[cfg(feature = "cpp_loader")]
+    DllInjector(dll_injector::error::InjectorError),
+    #[cfg(feature = "cpp_loader")]
+    Json(serde_json::Error),
+
     Other(String),
     Generic(Box<dyn std::error::Error + Send>),
 }
@@ -271,6 +276,11 @@ impl fmt::Display for ModLoaderWarning {
                 format!("{mod_name}Download failed: {err}")
             }
 
+            #[cfg(feature = "cpp_loader")]
+            ModLoaderWarningKind::DllInjector(ref err) => format!("Injector: {err}"),
+            #[cfg(feature = "cpp_loader")]
+            ModLoaderWarningKind::Json(ref err) => format!("Json: {err}"),
+
             ModLoaderWarningKind::Other(ref message) => format!("{mod_name}{message}"),
             ModLoaderWarningKind::Generic(ref err) => format!("{mod_name}Error: {err}"),
             ModLoaderWarningKind::UnresolvedDependency(ref dependency, ref requesters) => {
@@ -319,6 +329,26 @@ impl From<unreal_modintegrator::error::Error> for ModLoaderWarning {
     fn from(err: unreal_modintegrator::error::Error) -> Self {
         ModLoaderWarning {
             kind: ModLoaderWarningKind::IntegratorError(err),
+            mod_id: None,
+        }
+    }
+}
+
+#[cfg(feature = "cpp_loader")]
+impl From<dll_injector::error::InjectorError> for ModLoaderWarning {
+    fn from(err: dll_injector::error::InjectorError) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::DllInjector(err),
+            mod_id: None,
+        }
+    }
+}
+
+#[cfg(feature = "cpp_loader")]
+impl From<serde_json::Error> for ModLoaderWarning {
+    fn from(err: serde_json::Error) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::Json(err),
             mod_id: None,
         }
     }

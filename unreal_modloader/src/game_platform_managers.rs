@@ -1,5 +1,8 @@
 use std::{cell::RefCell, fmt::Debug, path::PathBuf};
 
+#[cfg(feature = "cpp_loader")]
+use std::{env, fs, io::Write};
+
 #[cfg(windows)]
 use std::{fs::File, io::Read};
 
@@ -65,6 +68,48 @@ impl InstallManager for SteamInstallManager {
     }
 }
 
+#[cfg(feature = "cpp_loader")]
+impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for SteamInstallManager {
+    fn get_config_location(&self) -> PathBuf {
+        env::temp_dir()
+            .join("unrealmodding")
+            .join("cpp_loader")
+            .join("config.json")
+    }
+
+    fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
+        let Some(install_path) = self.get_game_install_path() else {
+            //todo: error type
+            return Ok(());
+            // return Err(Box::new(crate::error::ModLoaderWarning::));
+        };
+
+        let dest_path = install_path
+            .join(self.game_name)
+            .join("Binaries")
+            .join("Win64");
+
+        let proxy_path = dest_path.join("xinput1_3.dll");
+        let dll_path = dest_path.join("UnrealEngineModLoader.dll");
+
+        let _ = fs::remove_file(&proxy_path);
+        let _ = fs::remove_file(&dll_path);
+
+        let mut proxy_file = File::create(proxy_path)?;
+        proxy_file.write_all(unreal_cpp_loader::PROXY_DLL)?;
+
+        let mut dll_file = File::create(dll_path)?;
+        dll_file.write_all(unreal_cpp_loader::LOADER_DLL)?;
+
+        Ok(())
+    }
+
+    fn load(&self) -> Result<(), ModLoaderWarning> {
+        // doing nothing on steam as xinput1_3.dll will handle everything
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct ProtonInstallManager {
     pub game_path: RefCell<Option<PathBuf>>,
@@ -121,6 +166,21 @@ impl InstallManager for ProtonInstallManager {
     }
 }
 
+#[cfg(feature = "cpp_loader")]
+impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for ProtonInstallManager {
+    fn get_config_location(&self) -> PathBuf {
+        todo!()
+    }
+
+    fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
+        todo!()
+    }
+
+    fn load(&self) -> Result<(), ModLoaderWarning> {
+        todo!()
+    }
+}
+
 #[cfg(windows)]
 #[derive(Debug)]
 pub struct MsStoreInstallManager {
@@ -131,6 +191,9 @@ pub struct MsStoreInstallManager {
     winstore_vendor_id: &'static str,
     game_name: &'static str,
     state_game_name: &'static str,
+
+    #[cfg(feature = "cpp_loader")]
+    dll_file: RefCell<Option<tempfile::NamedTempFile>>,
 }
 
 #[cfg(windows)]
@@ -147,6 +210,8 @@ impl MsStoreInstallManager {
             winstore_vendor_id,
             game_name,
             state_game_name,
+            #[cfg(feature = "cpp_loader")]
+            dll_file: RefCell::from(None),
         }
     }
 
@@ -205,6 +270,35 @@ impl InstallManager for MsStoreInstallManager {
             return Err(ModLoaderWarning::winstore_error());
         }
 
+        Ok(())
+    }
+}
+
+#[cfg(windows)]
+#[cfg(feature = "cpp_loader")]
+impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for MsStoreInstallManager {
+    fn get_config_location(&self) -> PathBuf {
+        env::temp_dir()
+            .join("unrealmodding")
+            .join("cpp_loader")
+            .join("config.json")
+    }
+
+    fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
+        let mut dll_file = tempfile::NamedTempFile::new()?;
+        dll_file.write_all(unreal_cpp_loader::LOADER_DLL)?;
+
+        *self.dll_file.borrow_mut() = Some(dll_file);
+        Ok(())
+    }
+
+    fn load(&self) -> Result<(), ModLoaderWarning> {
+        let dll_file = self.dll_file.borrow();
+        let dll_file = dll_file.as_ref().expect("Corrupted memory");
+
+        let process = dll_injector::Process::wait_for_process("Astro-UWP64-Shipping")?;
+
+        process.inject_dll(dll_file.path().to_str().unwrap())?;
         Ok(())
     }
 }
