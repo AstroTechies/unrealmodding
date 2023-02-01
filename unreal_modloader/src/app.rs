@@ -20,6 +20,7 @@ use crate::background_work::BackgroundThreadMessage;
 use crate::error::{ModLoaderError, ModLoaderWarning};
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
+use crate::profile::{Profile, ProfileMod};
 use crate::update_info::UpdateInfo;
 use crate::{FileToProcess, ModLoaderAppData};
 
@@ -302,10 +303,10 @@ impl ModLoaderApp {
         TableBuilder::new(ui)
             .striped(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .column(Column::initial(42.0).at_least(42.0))
+            .column(Column::initial(40.0).at_least(40.0).at_most(40.0))
             .column(Column::initial(170.0).at_least(20.0))
-            .column(Column::initial(120.0).at_least(120.0))
-            .column(Column::initial(70.0).at_least(20.0))
+            .column(Column::initial(115.0).at_least(115.0).at_most(115.0))
+            .column(Column::initial(115.0).at_least(20.0).at_most(115.0))
             .column(Column::initial(80.0).at_least(20.0))
             .column(Column::remainder().at_least(20.0))
             .resizable(true)
@@ -756,25 +757,149 @@ impl ModLoaderApp {
     }
 
     fn show_profile_manager(&self, ctx: &egui::Context, data: &mut ModLoaderAppData) {
+        let mut changed = false;
+
         egui::Window::new("Profiles")
             .resizable(false)
             .collapsible(false)
             .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
-            .fixed_size((600.0, 400.0))
+            .fixed_size((445.0, 400.0))
             .show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    for profile in data.profiles.iter() {
-                        ui.label(format!("{profile:?}"));
-                    }
-                });
+                StripBuilder::new(ui)
+                    .size(Size::remainder())
+                    .size(Size::exact(40.0))
+                    .vertical(|mut strip| {
+                        // Profile list
+                        strip.cell(|ui| {
+                            TableBuilder::new(ui)
+                                .striped(true)
+                                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                                .column(Column::exact(280.0))
+                                .column(Column::auto())
+                                .resizable(false)
+                                .header(20.0, |mut header| {
+                                    header.col(|ui| {
+                                        ui.strong("Name");
+                                    });
+                                    header.col(|ui| {
+                                        ui.strong("Actions");
+                                    });
+                                })
+                                .body(|mut body| {
+                                    let mut remove = None;
+                                    for (i, profile) in data.profiles.iter_mut().enumerate() {
+                                        body.row(18.0, |mut row| {
+                                            row.col(|ui| {
+                                                if ui
+                                                    .text_edit_singleline(&mut profile.name)
+                                                    .changed()
+                                                {
+                                                    changed = true;
+                                                }
+                                            });
+                                            row.col(|ui| {
+                                                if ui.button("Save").clicked() {
+                                                    profile.mods = data
+                                                        .game_mods
+                                                        .iter()
+                                                        .filter(|(_, game_mod)| game_mod.enabled)
+                                                        .map(|(mod_id, game_mod)| {
+                                                            (
+                                                                mod_id.clone(),
+                                                                ProfileMod {
+                                                                    force_latest: game_mod
+                                                                        .selected_version
+                                                                        .is_latest(),
+                                                                    version: game_mod
+                                                                        .selected_version
+                                                                        .clone()
+                                                                        .unwrap()
+                                                                        .to_string(),
+                                                                    ..Default::default()
+                                                                },
+                                                            )
+                                                        })
+                                                        .collect();
+                                                    changed = true;
+                                                };
 
-                ui.separator();
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
-                    if ui.button("Close").clicked() {
-                        self.profile_manager_open.set(false);
-                    }
-                });
+                                                if ui.button("Load").clicked() {
+                                                    for (mod_id, game_mod) in
+                                                        data.game_mods.iter_mut()
+                                                    {
+                                                        if let Some(_profile_entry) =
+                                                            profile.mods.get(mod_id)
+                                                        {
+                                                            game_mod.enabled = true;
+
+                                                            // TODO load version
+                                                        } else {
+                                                            game_mod.enabled = false;
+                                                        }
+                                                    }
+
+                                                    let _ = self
+                                                        .background_tx
+                                                        .send(BackgroundThreadMessage::integrate());
+                                                }
+
+                                                if ui.button("Delete").clicked() {
+                                                    remove = Some(i);
+                                                }
+                                            });
+                                        });
+                                    }
+                                    if let Some(i) = remove {
+                                        data.profiles.remove(i);
+                                        changed = true;
+                                    }
+                                });
+                        });
+
+                        // Footer
+                        strip.cell(|ui| {
+                            ui.separator();
+
+                            // big buttons
+                            ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+
+                            StripBuilder::new(ui)
+                                .size(Size::relative(0.5))
+                                .size(Size::remainder())
+                                .horizontal(|mut strip| {
+                                    strip.cell(|ui| {
+                                        ui.with_layout(
+                                            egui::Layout::left_to_right(egui::Align::Min),
+                                            |ui| {
+                                                if ui.button("New").clicked() {
+                                                    data.profiles.push(Profile {
+                                                        name: "New Profile".to_owned(),
+                                                        ..Default::default()
+                                                    });
+                                                    changed = true;
+                                                }
+                                            },
+                                        );
+                                    });
+                                    strip.cell(|ui| {
+                                        ui.with_layout(
+                                            egui::Layout::right_to_left(egui::Align::Min),
+                                            |ui| {
+                                                if ui.button("Close").clicked() {
+                                                    self.profile_manager_open.set(false);
+                                                }
+                                            },
+                                        );
+                                    });
+                                });
+                        })
+                    });
             });
+
+        if changed {
+            let _ = self
+                .background_tx
+                .send(BackgroundThreadMessage::WriteConfig);
+        }
     }
 }

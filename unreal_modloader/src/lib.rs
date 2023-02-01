@@ -65,7 +65,7 @@ pub(crate) struct ModLoaderAppData {
     pub files_to_process: Vec<FileToProcess>,
 
     pub game_mods: BTreeMap<String, GameMod>,
-    pub profiles: BTreeMap<String, profile::Profile>,
+    pub profiles: Vec<profile::Profile>,
 
     pub error: Option<ModLoaderError>,
     pub warnings: Vec<ModLoaderWarning>,

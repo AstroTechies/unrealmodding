@@ -50,6 +50,7 @@ pub(crate) enum BackgroundThreadMessage {
     Import(Vec<FileToProcess>),
     RemoveMod(String),
     Integrate(Instant),
+    WriteConfig,
     UpdateApp,
     Exit,
 }
@@ -572,6 +573,10 @@ where
                 background_thread_data
                     .working
                     .store(false, Ordering::Release);
+            }
+            BackgroundThreadMessage::WriteConfig => {
+                // update config file
+                write_config(&mut background_thread_data.data.lock());
             }
             BackgroundThreadMessage::Exit => {
                 break;

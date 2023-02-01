@@ -30,6 +30,14 @@ impl SelectedVersion {
             SelectedVersion::Specific(version) => version,
         }
     }
+
+    pub fn is_latest(&self) -> bool {
+        match self {
+            SelectedVersion::Latest(_) => true,
+            SelectedVersion::LatestIndirect(_) => true,
+            SelectedVersion::Specific(_) => false,
+        }
+    }
 }
 
 impl fmt::Display for SelectedVersion {
