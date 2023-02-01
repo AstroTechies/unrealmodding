@@ -3,7 +3,7 @@ members = [
     "unreal_pak", "unreal_pak_cli",
     "unreal_asset",
     "unreal_modmetadata",
-    "unreal_modloader", "unreal_modintegrator"
+    "unreal_modloader", "unreal_modintegrator", "unreal_cpp_loader", "dll_injector"
 ]
 
 [workspace.package]
@@ -16,6 +16,8 @@ unreal_modintegrator = { path = "./unreal_modintegrator" }
 unreal_asset = { path = "./unreal_asset" }
 unreal_pak = { path = "./unreal_pak" }
 unreal_modmetadata = { path = "./unreal_modmetadata" }
+unreal_cpp_loader = { path = "./unreal_cpp_loader" }
+dll_injector = { path = "./dll_injector" }
 
 byteorder = "1.4.3"
 lazy_static = "1.4.0"

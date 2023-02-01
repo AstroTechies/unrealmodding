@@ -1,0 +1,16 @@
+[package]
+name = "unreal_cpp_loader"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition = "2021"
+
+[dependencies]
+lazy_static.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+cmake = "0.1.49"
+git2 = "0.16.1"
