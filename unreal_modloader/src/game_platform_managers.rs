@@ -90,7 +90,7 @@ impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for St
             .join("Win64");
 
         let proxy_path = dest_path.join("xinput1_3.dll");
-        let dll_path = dest_path.join("UnrealEngineModLoader.dll");
+        let dll_path = dest_path.join("UnrealCppLoader.dll");
 
         let _ = fs::remove_file(&proxy_path);
         let _ = fs::remove_file(&dll_path);

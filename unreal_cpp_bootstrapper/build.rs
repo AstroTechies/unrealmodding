@@ -8,10 +8,9 @@ use std::{
 use cmake::Config;
 use git2::{Oid, Repository};
 
-const ASSET_REPO: &str = "AstroTechies/UnrealModLoader";
+const ASSET_REPO: &str = "AstroTechies/UnrealCppLoader";
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // todo pre-release: allow binary releases downloads instead
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=USE_PRECOMPILED_CPP_LOADER");
 
@@ -21,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
-    let mod_loader_dir = out_dir.join("UnrealModLoader");
+    let mod_loader_dir = out_dir.join("UnrealCppLoader");
     let _ = fs::remove_dir_all(&mod_loader_dir);
 
     let (unreal_mod_loader_path, xinput_proxy_path) = match use_prebuilt {
@@ -45,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error>> {
     fs::create_dir_all(mod_loader_dir)?;
 
-    let loader_file_path = mod_loader_dir.join("UnrealEngineModLoader.dll");
+    let loader_file_path = mod_loader_dir.join("UnrealCppLoader.dll");
     let proxy_file_path = mod_loader_dir.join("xinput1_3.dll");
 
     let latest_release = github_helpers::get_latest_release(ASSET_REPO)?;
@@ -53,7 +52,7 @@ fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Erro
     let loader_asset = latest_release
         .assets
         .iter()
-        .find(|e| e.name == "UnrealEngineModLoader.dll")
+        .find(|e| e.name == "UnrealCppLoader.dll")
         .unwrap();
     let proxy_asset = latest_release
         .assets
@@ -80,11 +79,11 @@ fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Erro
 
 fn compile(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error>> {
     let repository = Repository::clone(
-        "https://github.com/AstroTechies/UnrealModLoader.git",
+        &format!("https://github.com/{}.git", ASSET_REPO),
         mod_loader_dir,
     )?;
 
-    let oid_str = "4c2b9b6b600a0d5c229866de3e5e746d591d1136";
+    let oid_str = "183043de3b75ae8a2b6cb6120c494e034d2f380f";
     let oid = Oid::from_str(oid_str)?;
     let commit = repository.find_commit(oid)?;
 
@@ -112,12 +111,12 @@ fn compile(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error
     #[cfg(not(debug_assertions))]
     let debug = false;
 
-    let unreal_mod_loader_path = build_path.join("UnrealEngineModLoader");
+    let unreal_mod_loader_path = build_path.join("UnrealCppLoader");
     let unreal_mod_loader_path = match debug {
         true => unreal_mod_loader_path.join("Debug"),
         false => unreal_mod_loader_path.join("Release"),
     }
-    .join("UnrealEngineModLoader.dll");
+    .join("UnrealCppLoader.dll");
 
     let xinput_proxy_path = build_path.join("xinput1_3");
     let xinput_proxy_path = match debug {
