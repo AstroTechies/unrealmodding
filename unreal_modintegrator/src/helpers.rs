@@ -2,9 +2,6 @@ use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
 
-use lazy_static::lazy_static;
-use regex::Regex;
-
 use unreal_asset::{engine_version::EngineVersion, Asset};
 use unreal_pak::{PakMemory, PakReader};
 
