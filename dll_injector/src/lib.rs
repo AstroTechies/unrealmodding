@@ -1,6 +1,5 @@
 use std::mem::{size_of, transmute};
 
-use error::InjectorError;
 use windows::{
     s, w,
     Win32::{
@@ -23,6 +22,8 @@ use windows::{
         },
     },
 };
+
+use error::InjectorError;
 
 pub mod error;
 
@@ -63,7 +64,7 @@ impl Process {
         Ok(process.unwrap())
     }
 
-    fn foreach_thread(&self, cb: fn(HANDLE)) -> Result<(), InjectorError> {
+    fn foreach_thread(&self, callback: fn(HANDLE)) -> Result<(), InjectorError> {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, self.pid) }?;
 
         let mut thread_entry = THREADENTRY32 {
@@ -80,7 +81,7 @@ impl Process {
                 let thread =
                     unsafe { OpenThread(THREAD_ALL_ACCESS, false, thread_entry.th32ThreadID) }?;
 
-                cb(thread);
+                callback(thread);
             }
         }
 

@@ -1,9 +1,7 @@
-use std::{
-    env,
-    fs::{self, File, OpenOptions},
-    io::Write,
-    path::PathBuf,
-};
+use std::env;
+use std::fs::{self, File, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
 
 use error::CppBootstrapperError;
 use unreal_pak::PakReader;

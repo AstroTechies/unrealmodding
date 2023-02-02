@@ -15,12 +15,12 @@ use log::{debug, info};
 use parking_lot::Mutex;
 use semver::Version;
 
+use crate::background_work::BackgroundThreadMessage;
+use crate::error::{ModLoaderError, ModLoaderWarning};
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
 use crate::update_info::UpdateInfo;
-use crate::FileToProcess;
-use crate::{background_work::BackgroundThreadMessage, error::ModLoaderError};
-use crate::{error::ModLoaderWarning, ModLoaderAppData};
+use crate::{FileToProcess, ModLoaderAppData};
 
 #[cfg(feature = "cpp_loader")]
 use std::fs::{self, File};

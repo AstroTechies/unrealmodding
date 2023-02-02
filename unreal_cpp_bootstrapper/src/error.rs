@@ -1,4 +1,5 @@
-use std::{fmt::Display, io};
+use std::fmt::Display;
+use std::io;
 
 use unreal_pak::error::PakError;
 

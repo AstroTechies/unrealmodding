@@ -1,4 +1,6 @@
-use std::{error, fmt, string::FromUtf16Error};
+use std::error;
+use std::fmt;
+use std::string::FromUtf16Error;
 
 #[derive(Debug)]
 pub struct InjectorError {
