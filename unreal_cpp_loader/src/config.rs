@@ -108,7 +108,7 @@ pub struct StaticConstructObject_InternalInfo {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct GameSettings {
-    pub is_using_fchunked_fixed_object_array: bool,
+    pub is_using_fchunked_fixed_uobject_array: bool,
     pub uses_fname_pool: bool,
     pub is_using_deferred_spawn: bool,
     pub is_using_4_22: bool,

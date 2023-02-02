@@ -14,3 +14,4 @@ serde_json.workspace = true
 [build-dependencies]
 cmake = "0.1.49"
 git2 = "0.16.1"
+github_helpers.workspace = true
