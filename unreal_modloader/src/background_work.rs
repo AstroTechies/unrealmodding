@@ -555,6 +555,11 @@ where
                         start_integrator.elapsed().as_millis()
                     );
 
+                    #[cfg(feature = "cpp_loader")]
+                    {
+                        unreal_cpp_bootstrapper::bootstrap(IC::GAME_NAME, &paks_path)?;
+                    }
+
                     *background_thread_data.last_integration_time.lock() = Instant::now();
 
                     // update config file

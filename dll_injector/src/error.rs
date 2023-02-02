@@ -12,12 +12,20 @@ pub enum InjectorErrorKind {
     OutOfMemory,
 }
 
+impl InjectorError {
+    pub fn out_of_memory() -> Self {
+        InjectorError {
+            kind: InjectorErrorKind::OutOfMemory,
+        }
+    }
+}
+
 impl fmt::Display for InjectorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let err_msg = match self.kind {
             InjectorErrorKind::Utf16(ref err) => format!("Utf16: {err}"),
             InjectorErrorKind::WinApi(ref err) => format!("WinApi: {err}"),
-            InjectorErrorKind::OutOfMemory => format!("Out of memory!"),
+            InjectorErrorKind::OutOfMemory => "Out of memory!".to_string(),
         };
 
         write!(f, "{err_msg}")

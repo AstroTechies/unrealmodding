@@ -1,7 +1,4 @@
-use std::{
-    mem::{size_of, transmute},
-    ptr,
-};
+use std::mem::{size_of, transmute};
 
 use error::InjectorError;
 use windows::{
@@ -38,8 +35,10 @@ impl Process {
     pub fn find_process(starts_with: &str) -> Result<Option<Self>, InjectorError> {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }?;
 
-        let mut process_entry = PROCESSENTRY32W::default();
-        process_entry.dwSize = size_of::<PROCESSENTRY32W>() as u32;
+        let mut process_entry = PROCESSENTRY32W {
+            dwSize: size_of::<PROCESSENTRY32W>() as u32,
+            ..Default::default()
+        };
 
         if unsafe { Process32FirstW(snapshot, &mut process_entry) }.as_bool() {
             while unsafe { Process32NextW(snapshot, &mut process_entry) }.as_bool() {
@@ -56,8 +55,8 @@ impl Process {
     }
 
     pub fn wait_for_process(starts_with: &str) -> Result<Self, InjectorError> {
-        let mut process = Process::find_process(starts_with)?;
-        while let None = process {
+        let mut process = None;
+        while process.is_none() {
             process = Process::find_process(starts_with)?;
         }
 
@@ -67,8 +66,10 @@ impl Process {
     fn foreach_thread(&self, cb: fn(HANDLE)) -> Result<(), InjectorError> {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, self.pid) }?;
 
-        let mut thread_entry = THREADENTRY32::default();
-        thread_entry.dwSize = size_of::<THREADENTRY32>() as u32;
+        let mut thread_entry = THREADENTRY32 {
+            dwSize: size_of::<THREADENTRY32>() as u32,
+            ..Default::default()
+        };
 
         if unsafe { Thread32First(snapshot, &mut thread_entry) }.as_bool() {
             while unsafe { Thread32Next(snapshot, &mut thread_entry) }.as_bool() {
@@ -119,12 +120,10 @@ impl Process {
                 PAGE_READWRITE,
             )
         };
-        println!("Will be at: {:x}", path_mem as u64);
-        if path_mem == ptr::null_mut() {
+
+        if path_mem.is_null() {
             unsafe { CloseHandle(process_handle) };
-            // todo: return OOM
-            println!("oom1");
-            return Ok(());
+            return Err(InjectorError::out_of_memory());
         }
 
         let res = unsafe {
@@ -140,9 +139,7 @@ impl Process {
 
         if !res {
             unsafe { CloseHandle(process_handle) };
-            // todo: return OOM
-            println!("oom 2");
-            return Ok(());
+            return Err(InjectorError::out_of_memory());
         }
 
         let kernel32 = unsafe { GetModuleHandleW(w!("kernel32.dll")) }?;
@@ -150,9 +147,7 @@ impl Process {
 
         if load_library.is_none() {
             unsafe { CloseHandle(process_handle) };
-            // todo: return no loadlibraryw
-            println!("oom3");
-            return Ok(());
+            return Err(InjectorError::out_of_memory());
         }
 
         let thread_handle = unsafe {

@@ -2,12 +2,10 @@ use std::{
     env,
     fs::{self, File, OpenOptions},
     io::Write,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use error::CppBootstrapperError;
-use lazy_static::lazy_static;
-use regex::Regex;
 use unreal_pak::PakReader;
 
 pub mod config;

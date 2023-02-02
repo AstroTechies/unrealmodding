@@ -34,6 +34,7 @@ use mod_processing::dependencies::DependencyGraph;
 use version::GameBuild;
 
 pub use unreal_asset;
+#[cfg(feature = "cpp_loader")]
 pub use unreal_cpp_bootstrapper;
 pub use unreal_modintegrator;
 pub use unreal_modmetadata;

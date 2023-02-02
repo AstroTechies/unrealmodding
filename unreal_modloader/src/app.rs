@@ -578,13 +578,13 @@ impl ModLoaderApp {
                     return Err(e.into());
                 }
 
-                install_manager.prepare_load();
+                install_manager.prepare_load()?;
             }
 
             match install_manager.launch_game() {
                 Ok(_) => {
                     #[cfg(feature = "cpp_loader")]
-                    install_manager.load();
+                    install_manager.load()?;
 
                     Ok(())
                 }

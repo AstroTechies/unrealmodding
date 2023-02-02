@@ -81,7 +81,7 @@ fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Erro
 fn compile(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error>> {
     let repository = Repository::clone(
         "https://github.com/AstroTechies/UnrealModLoader.git",
-        &mod_loader_dir,
+        mod_loader_dir,
     )?;
 
     let oid_str = "4c2b9b6b600a0d5c229866de3e5e746d591d1136";

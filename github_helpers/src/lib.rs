@@ -47,7 +47,7 @@ pub fn get_latest_release(repo_url: &str) -> Result<Release, Box<dyn Error>> {
         .get(format!(
             "https://api.github.com/repos/{repo_url}/releases/latest"
         ))
-        .headers(headers.clone())
+        .headers(headers)
         .send()?;
 
     let release = api_response.json()?;
