@@ -56,12 +56,11 @@ impl Process {
     }
 
     pub fn wait_for_process(starts_with: &str) -> Result<Self, InjectorError> {
-        let mut process = None;
-        while process.is_none() {
-            process = Process::find_process(starts_with)?;
+        loop {
+            if let Some(process) = Process::find_process(starts_with)? {
+                break Ok(process);
+            }
         }
-
-        Ok(process.unwrap())
     }
 
     fn foreach_thread(&self, callback: fn(HANDLE)) -> Result<(), InjectorError> {
