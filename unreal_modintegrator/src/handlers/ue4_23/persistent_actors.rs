@@ -17,7 +17,7 @@ use unreal_asset::{
 };
 use unreal_pak::{PakMemory, PakReader};
 
-use crate::helpers::{game_to_absolute, get_asset, write_asset};
+use crate::helpers::{get_asset, write_asset};
 use crate::Error;
 
 const LEVEL_TEMPLATE_ASSET: &[u8] = include_bytes!("assets/LevelTemplate.umap");
@@ -144,8 +144,9 @@ pub fn handle_persistent_actors(
             actor_template.base_export.outer_index =
                 PackageIndex::new(level_export_index as i32 + 1); // package index starts from 1
 
-            let actor_asset_path = game_to_absolute(game_name, &component_path_raw)
-                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
+            let actor_asset_path =
+                unreal_modmetadata::game_to_absolute(game_name, &component_path_raw)
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
 
             let actor_asset = get_asset(
                 integrated_pak,
