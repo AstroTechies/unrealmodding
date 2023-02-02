@@ -7,7 +7,7 @@ edition = "2021"
 
 [features]
 no_bulk_data = ["unreal_modintegrator/no_bulk_data"]
-cpp_loader = ["dep:unreal_cpp_loader", "dep:tempfile", "dep:dll_injector"]
+cpp_loader = ["dep:unreal_cpp_bootstrapper", "dep:tempfile", "dep:dll_injector"]
 # Ue versions
 # If you want support for other ue versions, you can make a pull request with the support added,
 # or make an issue asking for a specific ue version to be supported.
@@ -20,8 +20,8 @@ unreal_modintegrator.workspace = true
 unreal_asset.workspace = true
 unreal_pak.workspace = true
 unreal_modmetadata.workspace = true
-unreal_cpp_loader.workspace = true
-unreal_cpp_loader.optional = true
+unreal_cpp_bootstrapper.workspace = true
+unreal_cpp_bootstrapper.optional = true
 dll_injector.workspace = true
 dll_injector.optional = true
 

@@ -34,7 +34,7 @@ use mod_processing::dependencies::DependencyGraph;
 use version::GameBuild;
 
 pub use unreal_asset;
-pub use unreal_cpp_loader;
+pub use unreal_cpp_bootstrapper;
 pub use unreal_modintegrator;
 pub use unreal_modmetadata;
 pub use unreal_pak;
@@ -78,7 +78,7 @@ pub(crate) struct ModLoaderAppData {
     pub(crate) selected_game_platform: Option<String>,
 
     #[cfg(feature = "cpp_loader")]
-    pub(crate) cpp_loader_config: unreal_cpp_loader::config::GameSettings,
+    pub(crate) cpp_loader_config: unreal_cpp_bootstrapper::config::GameSettings,
 }
 
 impl ModLoaderAppData {

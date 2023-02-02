@@ -1,5 +1,5 @@
 [package]
-name = "unreal_cpp_loader"
+name = "unreal_cpp_bootstrapper"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
@@ -10,6 +10,9 @@ lazy_static.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+unreal_pak.workspace = true
+unreal_modmetadata.workspace = true
+regex.workspace = true
 
 [build-dependencies]
 cmake = "0.1.49"

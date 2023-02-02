@@ -126,3 +126,9 @@ pub struct GameSettings {
     pub process_internal_function_settings: Option<ProcessInternalFunction>,
     pub static_construct_object_internal_info_settings: Option<StaticConstructObject_InternalInfo>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ModLoaderConfig {
+    pub settings: GameSettings,
+    pub mods_path: String,
+}

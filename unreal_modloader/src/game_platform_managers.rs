@@ -69,7 +69,7 @@ impl InstallManager for SteamInstallManager {
 }
 
 #[cfg(feature = "cpp_loader")]
-impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for SteamInstallManager {
+impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for SteamInstallManager {
     fn get_config_location(&self) -> PathBuf {
         env::temp_dir()
             .join("unrealmodding")
@@ -96,10 +96,10 @@ impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for SteamIns
         let _ = fs::remove_file(&dll_path);
 
         let mut proxy_file = File::create(proxy_path)?;
-        proxy_file.write_all(unreal_cpp_loader::PROXY_DLL)?;
+        proxy_file.write_all(unreal_cpp_bootstrapper::PROXY_DLL)?;
 
         let mut dll_file = File::create(dll_path)?;
-        dll_file.write_all(unreal_cpp_loader::LOADER_DLL)?;
+        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
 
         Ok(())
     }
@@ -167,7 +167,7 @@ impl InstallManager for ProtonInstallManager {
 }
 
 #[cfg(feature = "cpp_loader")]
-impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for ProtonInstallManager {
+impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for ProtonInstallManager {
     fn get_config_location(&self) -> PathBuf {
         todo!()
     }
@@ -276,7 +276,9 @@ impl InstallManager for MsStoreInstallManager {
 
 #[cfg(windows)]
 #[cfg(feature = "cpp_loader")]
-impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for MsStoreInstallManager {
+impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning>
+    for MsStoreInstallManager
+{
     fn get_config_location(&self) -> PathBuf {
         env::temp_dir()
             .join("unrealmodding")
@@ -286,7 +288,7 @@ impl unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> for MsStoreI
 
     fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
         let mut dll_file = tempfile::NamedTempFile::new()?;
-        dll_file.write_all(unreal_cpp_loader::LOADER_DLL)?;
+        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
 
         *self.dll_file.borrow_mut() = Some(dll_file);
         Ok(())

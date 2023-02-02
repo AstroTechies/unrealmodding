@@ -20,7 +20,7 @@ pub struct IconData {
 macro_rules! install_manager_trait {
     ($($funcs:item)*) => {
         #[cfg(feature = "cpp_loader")]
-        pub trait InstallManager: Debug + std::marker::Send + unreal_cpp_loader::CppLoaderInstallExtension<ModLoaderWarning> {
+        pub trait InstallManager: Debug + std::marker::Send + unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> {
             $($funcs)*
         }
 
@@ -54,7 +54,7 @@ where
     fn get_icon(&self) -> Option<IconData>;
 
     #[cfg(feature = "cpp_loader")]
-    fn get_cpp_loader_config() -> unreal_cpp_loader::config::GameSettings;
+    fn get_cpp_loader_config() -> unreal_cpp_bootstrapper::config::GameSettings;
 
     const WINDOW_TITLE: &'static str;
     const CONFIG_DIR: &'static str;
