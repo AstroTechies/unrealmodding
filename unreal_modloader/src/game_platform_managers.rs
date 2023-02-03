@@ -70,11 +70,20 @@ impl InstallManager for SteamInstallManager {
 
 #[cfg(feature = "cpp_loader")]
 impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for SteamInstallManager {
-    fn get_config_location(&self) -> PathBuf {
-        env::temp_dir()
+    fn get_config_location(&self) -> Result<PathBuf, ModLoaderWarning> {
+        Ok(env::temp_dir()
             .join("unrealmodding")
             .join("cpp_loader")
-            .join("config.json")
+            .join("config.json"))
+    }
+
+    fn get_extract_path(&self) -> Option<PathBuf> {
+        Some(
+            env::temp_dir()
+                .join("unrealmodding")
+                .join("cpp_loader")
+                .join("mods"),
+        )
     }
 
     fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
@@ -168,7 +177,11 @@ impl InstallManager for ProtonInstallManager {
 
 #[cfg(feature = "cpp_loader")]
 impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for ProtonInstallManager {
-    fn get_config_location(&self) -> PathBuf {
+    fn get_config_location(&self) -> Result<PathBuf, ModLoaderWarning> {
+        todo!()
+    }
+
+    fn get_extract_path(&self) -> Option<PathBuf> {
         todo!()
     }
 
@@ -191,9 +204,6 @@ pub struct MsStoreInstallManager {
     winstore_vendor_id: &'static str,
     game_name: &'static str,
     state_game_name: &'static str,
-
-    #[cfg(feature = "cpp_loader")]
-    dll_file: RefCell<Option<tempfile::NamedTempFile>>,
 }
 
 #[cfg(windows)]
@@ -210,8 +220,6 @@ impl MsStoreInstallManager {
             winstore_vendor_id,
             game_name,
             state_game_name,
-            #[cfg(feature = "cpp_loader")]
-            dll_file: RefCell::from(None),
         }
     }
 
@@ -221,6 +229,26 @@ impl MsStoreInstallManager {
                 game_path_helpers::determine_install_path_winstore(self.winstore_vendor_id).ok()
         }
         self.store_info.borrow().clone()
+    }
+
+    #[cfg(feature = "cpp_loader")]
+    fn get_loader_dir(&self) -> Result<PathBuf, ModLoaderWarning> {
+        let Some(store_info) = self.get_store_info() else {
+            return Err(ModLoaderWarning::winstore_error());
+        };
+
+        let Some(package_path) = game_path_helpers::determine_game_package_path_winstore(
+            &store_info
+        ) else {
+            return Err(ModLoaderWarning::winstore_error());
+        };
+
+        let tmp_dir = package_path.join("AC").join("Temp");
+        let loader_dir = tmp_dir.join("unrealmodding").join("cpp_loader");
+
+        fs::create_dir_all(&loader_dir)?;
+
+        Ok(loader_dir)
     }
 }
 
@@ -279,28 +307,33 @@ impl InstallManager for MsStoreInstallManager {
 impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning>
     for MsStoreInstallManager
 {
-    fn get_config_location(&self) -> PathBuf {
-        env::temp_dir()
-            .join("unrealmodding")
-            .join("cpp_loader")
-            .join("config.json")
+    fn get_config_location(&self) -> Result<PathBuf, ModLoaderWarning> {
+        self.get_loader_dir().map(|e| e.join("config.json"))
+    }
+
+    fn get_extract_path(&self) -> Option<PathBuf> {
+        self.get_loader_dir().ok().map(|e| e.join("mods"))
     }
 
     fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
-        let mut dll_file = tempfile::NamedTempFile::new()?;
-        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
+        let loader_dir = self.get_loader_dir()?;
+        let file_location = loader_dir.join("loader.dll");
 
-        *self.dll_file.borrow_mut() = Some(dll_file);
+        let _ = fs::remove_file(&file_location);
+
+        let mut dll_file = File::create(file_location)?;
+        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
+        dll_file.flush()?;
         Ok(())
     }
 
     fn load(&self) -> Result<(), ModLoaderWarning> {
-        let dll_file = self.dll_file.borrow();
-        let dll_file = dll_file.as_ref().expect("Corrupted memory");
+        let loader_dir = self.get_loader_dir()?;
+        let file_location = loader_dir.join("loader.dll");
 
         let process = dll_injector::Process::wait_for_process("Astro-UWP64-Shipping")?;
 
-        process.inject_dll(dll_file.path().to_str().unwrap())?;
+        process.inject_dll(file_location.to_str().unwrap())?;
         Ok(())
     }
 }

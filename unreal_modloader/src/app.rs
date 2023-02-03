@@ -565,12 +565,10 @@ impl ModLoaderApp {
 
             #[cfg(feature = "cpp_loader")]
             {
-                let config_location = install_manager.get_config_location();
+                let config_location = install_manager.get_config_location()?;
 
                 fs::create_dir_all(config_location.parent().unwrap())?;
-
                 let file = File::create(&config_location)?;
-
                 let writer = BufWriter::new(file);
 
                 if let Err(e) = serde_json::to_writer(writer, &data.cpp_loader_config) {

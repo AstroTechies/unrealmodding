@@ -80,6 +80,8 @@ pub(crate) struct ModLoaderAppData {
 
     #[cfg(feature = "cpp_loader")]
     pub(crate) cpp_loader_config: unreal_cpp_bootstrapper::config::GameSettings,
+    #[cfg(feature = "cpp_loader")]
+    pub(crate) cpp_loader_extract_path: Option<PathBuf>,
 }
 
 impl ModLoaderAppData {
@@ -89,6 +91,11 @@ impl ModLoaderAppData {
             self.game_install_path = manager.get_game_install_path();
             self.game_build = manager.get_game_build();
             self.paks_path = manager.get_paks_path();
+
+            #[cfg(feature = "cpp_loader")]
+            {
+                self.cpp_loader_extract_path = manager.get_extract_path();
+            }
 
             self.selected_game_platform = Some(platform.to_string());
 
@@ -132,6 +139,8 @@ where
 
         #[cfg(feature = "cpp_loader")]
         cpp_loader_config: GC::get_cpp_loader_config(),
+        #[cfg(feature = "cpp_loader")]
+        cpp_loader_extract_path: None,
     }));
 
     let icon_data = config.get_icon();

@@ -323,6 +323,13 @@ where
                     let install_path = data_guard.game_install_path.as_ref().unwrap().to_owned();
                     let refuse_mismatched_connections = data_guard.refuse_mismatched_connections;
 
+                    #[cfg(feature = "cpp_loader")]
+                    let cpp_loader_extract_path = data_guard
+                        .cpp_loader_extract_path
+                        .as_ref()
+                        .unwrap()
+                        .to_owned();
+
                     drop(data_guard);
                     debug!(
                         "Mods to install: {:?}",
@@ -557,7 +564,11 @@ where
 
                     #[cfg(feature = "cpp_loader")]
                     {
-                        unreal_cpp_bootstrapper::bootstrap(IC::GAME_NAME, &paks_path)?;
+                        unreal_cpp_bootstrapper::bootstrap(
+                            IC::GAME_NAME,
+                            &cpp_loader_extract_path,
+                            &paks_path,
+                        )?;
                     }
 
                     *background_thread_data.last_integration_time.lock() = Instant::now();
