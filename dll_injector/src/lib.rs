@@ -1,7 +1,5 @@
-use std::{
-    mem::{size_of, transmute},
-    ptr,
-};
+use std::mem::{size_of, transmute};
+use std::ptr;
 
 use windows::{
     core::PCWSTR,
