@@ -79,11 +79,11 @@ fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Erro
 
 fn compile(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error>> {
     let repository = Repository::clone(
-        &format!("https://github.com/{}.git", ASSET_REPO),
+        &format!("https://github.com/{ASSET_REPO}.git"),
         mod_loader_dir,
     )?;
 
-    let oid_str = "183043de3b75ae8a2b6cb6120c494e034d2f380f";
+    let oid_str = "5419d87591940dc40f14ee5375a5624cd58af175";
     let oid = Oid::from_str(oid_str)?;
     let commit = repository.find_commit(oid)?;
 
@@ -100,6 +100,11 @@ fn compile(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error
     #[cfg(not(debug_assertions))]
     {
         build_config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
+    }
+
+    #[cfg(feature = "gui")]
+    {
+        build_config.configure_arg("-DENABLE_GUI=ON");
     }
 
     let built = build_config.build();

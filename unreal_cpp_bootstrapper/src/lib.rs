@@ -13,19 +13,19 @@ pub const LOADER_DLL: &[u8] = include_bytes!(env!("CPP_LOADER_DLL_PATH"));
 pub const PROXY_DLL: &[u8] = include_bytes!(env!("CPP_LOADER_PROXY_PATH"));
 
 pub trait CppLoaderInstallExtension<E> {
-    fn get_config_location(&self) -> PathBuf;
+    fn get_config_location(&self) -> Result<PathBuf, E>;
+    fn get_extract_path(&self) -> Option<PathBuf>;
     fn prepare_load(&self) -> Result<(), E>;
     fn load(&self) -> Result<(), E>;
 }
 
-pub fn bootstrap(game_name: &str, path: &PathBuf) -> Result<(), CppBootstrapperError> {
-    let extract_path = env::temp_dir()
-        .join("unrealmodding")
-        .join("cpp_loader")
-        .join("mods");
-
-    fs::remove_dir_all(&extract_path)?;
-    fs::create_dir_all(&extract_path)?;
+pub fn bootstrap(
+    game_name: &str,
+    extract_path: &PathBuf,
+    path: &PathBuf,
+) -> Result<(), CppBootstrapperError> {
+    let _ = fs::remove_dir_all(extract_path);
+    fs::create_dir_all(extract_path)?;
 
     let paths = fs::read_dir(path)?;
 
