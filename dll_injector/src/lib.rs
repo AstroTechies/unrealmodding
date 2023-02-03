@@ -1,9 +1,22 @@
-use std::mem::{size_of, transmute};
+use std::{
+    mem::{size_of, transmute},
+    ptr,
+};
 
 use windows::{
+    core::PCWSTR,
     s, w,
     Win32::{
-        Foundation::{CloseHandle, HANDLE},
+        Foundation::{CloseHandle, ERROR_SUCCESS, HANDLE, PSID},
+        Security::{
+            Authorization::{
+                ConvertStringSidToSidW, GetNamedSecurityInfoW, SetEntriesInAclW,
+                SetNamedSecurityInfoW, EXPLICIT_ACCESS_W, SET_ACCESS, SE_FILE_OBJECT,
+                TRUSTEE_IS_SID, TRUSTEE_IS_WELL_KNOWN_GROUP, TRUSTEE_W,
+            },
+            ACL, DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR,
+            SUB_CONTAINERS_AND_OBJECTS_INHERIT,
+        },
         System::{
             Diagnostics::{
                 Debug::WriteProcessMemory,
@@ -14,7 +27,8 @@ use windows::{
                 },
             },
             LibraryLoader::{GetModuleHandleW, GetProcAddress},
-            Memory::{VirtualAllocEx, MEM_COMMIT, PAGE_READWRITE},
+            Memory::{LocalFree, VirtualAllocEx, MEM_COMMIT, PAGE_READWRITE},
+            SystemServices::{GENERIC_EXECUTE, GENERIC_READ, GENERIC_WRITE},
             Threading::{
                 CreateRemoteThread, OpenProcess, OpenThread, ResumeThread, SuspendThread,
                 PROCESS_CREATE_THREAD, PROCESS_VM_OPERATION, PROCESS_VM_WRITE, THREAD_ALL_ACCESS,
@@ -99,6 +113,71 @@ impl Process {
         })
     }
 
+    fn acl_file(dll_path: &[u16], access_string: PCWSTR) -> Result<(), InjectorError> {
+        let mut current_acl: *mut ACL = ptr::null::<ACL>() as *mut _;
+        let mut security_descriptor = PSECURITY_DESCRIPTOR::default();
+        let mut security_identifier = PSID::default();
+
+        let result = unsafe {
+            GetNamedSecurityInfoW(
+                PCWSTR::from_raw(dll_path.as_ptr()),
+                SE_FILE_OBJECT,
+                DACL_SECURITY_INFORMATION,
+                None,
+                None,
+                Some(&mut current_acl),
+                None,
+                &mut security_descriptor,
+            )
+        };
+
+        if result != ERROR_SUCCESS {
+            // todo: return err
+            return Ok(());
+        }
+
+        if unsafe { ConvertStringSidToSidW(access_string, &mut security_identifier as *mut _) }
+            .as_bool()
+        {
+            let explicit_access = EXPLICIT_ACCESS_W {
+                grfAccessPermissions: GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE,
+                grfAccessMode: SET_ACCESS,
+                grfInheritance: SUB_CONTAINERS_AND_OBJECTS_INHERIT,
+                Trustee: TRUSTEE_W {
+                    TrusteeForm: TRUSTEE_IS_SID,
+                    TrusteeType: TRUSTEE_IS_WELL_KNOWN_GROUP,
+                    ptstrName: unsafe { transmute(security_identifier) },
+                    ..Default::default()
+                },
+            };
+
+            let mut new_acl: *mut ACL = ptr::null::<ACL>() as *mut _;
+
+            if unsafe {
+                SetEntriesInAclW(Some(&[explicit_access]), Some(current_acl), &mut new_acl)
+            } == ERROR_SUCCESS
+            {
+                unsafe {
+                    SetNamedSecurityInfoW(
+                        PCWSTR::from_raw(dll_path.as_ptr()),
+                        SE_FILE_OBJECT,
+                        DACL_SECURITY_INFORMATION,
+                        None,
+                        None,
+                        Some(new_acl),
+                        None,
+                    )
+                };
+
+                unsafe { LocalFree(new_acl as isize) };
+            }
+        }
+
+        unsafe { LocalFree(transmute(security_descriptor)) };
+
+        Ok(())
+    }
+
     pub fn inject_dll(&self, dll_path: &str) -> Result<(), InjectorError> {
         self.freeze()?;
 
@@ -110,7 +189,11 @@ impl Process {
             )
         }?;
 
-        let path = dll_path.encode_utf16().collect::<Vec<u16>>();
+        let mut path = dll_path.encode_utf16().collect::<Vec<u16>>();
+        path.push(0x00); // null terminating
+
+        Process::acl_file(&path, w!("S-1-15-2-1"))?;
+
         let path_mem = unsafe {
             VirtualAllocEx(
                 process_handle,
