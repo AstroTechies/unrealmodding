@@ -10,6 +10,7 @@ pub struct InjectorError {
 #[derive(Debug)]
 pub enum InjectorErrorKind {
     Utf16(FromUtf16Error),
+    #[cfg(windows)]
     WinApi(windows::core::Error),
     OutOfMemory,
 }
@@ -26,6 +27,7 @@ impl fmt::Display for InjectorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let err_msg = match self.kind {
             InjectorErrorKind::Utf16(ref err) => format!("Utf16: {err}"),
+            #[cfg(windows)]
             InjectorErrorKind::WinApi(ref err) => format!("WinApi: {err}"),
             InjectorErrorKind::OutOfMemory => "Out of memory!".to_string(),
         };
@@ -42,6 +44,7 @@ impl From<FromUtf16Error> for InjectorError {
     }
 }
 
+#[cfg(windows)]
 impl From<windows::core::Error> for InjectorError {
     fn from(err: windows::core::Error) -> Self {
         InjectorError {

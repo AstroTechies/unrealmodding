@@ -1,6 +1,9 @@
+#[cfg(windows)]
 use std::mem::{size_of, transmute};
+#[cfg(windows)]
 use std::ptr;
 
+#[cfg(windows)]
 use windows::{
     core::PCWSTR,
     s, w,
@@ -35,6 +38,7 @@ use windows::{
     },
 };
 
+#[cfg(windows)]
 use error::InjectorError;
 
 pub mod error;
@@ -44,6 +48,7 @@ pub struct Process {
     pid: u32,
 }
 
+#[cfg(windows)]
 impl Process {
     pub fn find_process(starts_with: &str) -> Result<Option<Self>, InjectorError> {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }?;
