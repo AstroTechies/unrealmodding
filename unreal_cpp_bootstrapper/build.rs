@@ -113,7 +113,12 @@ fn compile(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error
 
     let mut build_config = Config::new(mod_loader_dir.to_str().unwrap());
 
-    build_config.configure_arg("-DFETCHCONTENT_QUIET=OFF");
+    build_config
+        .configure_arg("-DFETCHCONTENT_QUIET=OFF")
+        .configure_arg(format!(
+            "-DUNREALCPPLOADER_VERSION={}",
+            env!("CARGO_PKG_VERSION")
+        ));
 
     #[cfg(debug_assertions)]
     {
