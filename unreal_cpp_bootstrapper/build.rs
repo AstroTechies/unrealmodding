@@ -105,7 +105,7 @@ fn compile(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Error
         mod_loader_dir,
     )?;
 
-    let oid_str = "5419d87591940dc40f14ee5375a5624cd58af175";
+    let oid_str = "b186f54ffd079a1023cdbddb96e07c7ddd1676af";
     let oid = Oid::from_str(oid_str)?;
     let commit = repository.find_commit(oid)?;
 
