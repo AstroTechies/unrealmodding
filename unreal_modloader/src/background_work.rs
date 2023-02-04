@@ -50,6 +50,7 @@ pub(crate) enum BackgroundThreadMessage {
     Import(Vec<FileToProcess>),
     RemoveMod(String),
     Integrate(Instant),
+    WriteConfig,
     UpdateApp,
     LaunchGame,
     Exit,
@@ -628,6 +629,10 @@ where
                 if let Err(e) = start(&mut data) {
                     data.warnings.push(e);
                 }
+            }
+            BackgroundThreadMessage::WriteConfig => {
+                // update config file
+                write_config(&mut background_thread_data.data.lock());
             }
             BackgroundThreadMessage::Exit => {
                 break;
