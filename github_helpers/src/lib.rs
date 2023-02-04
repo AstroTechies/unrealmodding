@@ -52,7 +52,8 @@ pub fn get_latest_release(repo_url: &str) -> Result<Release, Box<dyn Error>> {
         .headers(headers)
         .send()?;
 
-    let release = api_response.json()?;
+    let text = api_response.text()?;
+    let release: Release = serde_json::from_str(&text)?;
 
     Ok(release)
 }

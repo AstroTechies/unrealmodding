@@ -22,7 +22,7 @@ use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
 use crate::profile::{Profile, ProfileMod};
 use crate::update_info::UpdateInfo;
-use crate::FileToProcess;
+use crate::{FileToProcess, ModLoaderAppData};
 
 #[derive(Debug)]
 pub(crate) struct ModLoaderApp {
