@@ -37,16 +37,28 @@ pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
     base_path
 }
 
+pub fn determine_prefix_path_proton(app_id: u32) -> Option<PathBuf> {
+    Some(
+        SteamDir::locate()?
+            .path
+            .join("steamapps")
+            .join("compatdata")
+            .join(app_id.to_string())
+            .join("pfx"),
+    )
+}
+
+pub fn determine_user_path_proton(app_id: u32) -> Option<PathBuf> {
+    Some(
+        determine_prefix_path_proton(app_id)?
+            .join("drive_c")
+            .join("users")
+            .join("steamuser"),
+    )
+}
+
 pub fn determine_installed_mods_path_proton(game_name: &str, app_id: u32) -> Option<PathBuf> {
-    let data_dir: PathBuf = SteamDir::locate()?
-        .path
-        .join("steamapps")
-        .join("compatdata")
-        .join(app_id.to_string())
-        .join("pfx")
-        .join("drive_c")
-        .join("users")
-        .join("steamuser")
+    let data_dir: PathBuf = determine_user_path_proton(app_id)?
         .join("AppData")
         .join("Local");
     let base_path = Some(data_dir.join(game_name).join("Saved").join("Paks"));
