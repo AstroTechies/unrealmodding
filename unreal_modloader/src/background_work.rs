@@ -51,6 +51,7 @@ pub(crate) enum BackgroundThreadMessage {
     RemoveMod(String),
     Integrate(Instant),
     UpdateApp,
+    LaunchGame,
     Exit,
 }
 
@@ -588,6 +589,45 @@ where
                 background_thread_data
                     .working
                     .store(false, Ordering::Release);
+            }
+            BackgroundThreadMessage::LaunchGame => {
+                fn start(data: &mut ModLoaderAppData) -> Result<(), ModLoaderWarning> {
+                    let install_manager = data.get_install_manager();
+                    let Some(install_manager) = install_manager else {
+                        return Err(ModLoaderWarning::other("No install manager".to_string()));
+                    };
+
+                    #[cfg(feature = "cpp_loader")]
+                    {
+                        let config_location = install_manager.get_config_location()?;
+
+                        fs::create_dir_all(config_location.parent().unwrap())?;
+                        let file = std::fs::File::create(&config_location)?;
+                        let writer = std::io::BufWriter::new(file);
+
+                        if let Err(e) = serde_json::to_writer(writer, &data.cpp_loader_config) {
+                            let _ = fs::remove_file(config_location);
+                            return Err(e.into());
+                        }
+
+                        install_manager.prepare_load()?;
+                    }
+
+                    match install_manager.launch_game() {
+                        Ok(_) => {
+                            #[cfg(feature = "cpp_loader")]
+                            install_manager.load()?;
+
+                            Ok(())
+                        }
+                        Err(warn) => Err(warn),
+                    }
+                }
+
+                let mut data = background_thread_data.data.lock();
+                if let Err(e) = start(&mut data) {
+                    data.warnings.push(e);
+                }
             }
             BackgroundThreadMessage::Exit => {
                 break;

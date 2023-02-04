@@ -20,12 +20,7 @@ use crate::error::{ModLoaderError, ModLoaderWarning};
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
 use crate::update_info::UpdateInfo;
-use crate::{FileToProcess, ModLoaderAppData};
-
-#[cfg(feature = "cpp_loader")]
-use std::fs::{self, File};
-#[cfg(feature = "cpp_loader")]
-use std::io::BufWriter;
+use crate::FileToProcess;
 
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<crate::ModLoaderAppData>>,
@@ -549,50 +544,11 @@ impl ModLoaderApp {
                             false => Button::new("Play"),
                         };
                         if ui.add(button).clicked() {
-                            self.launch_game(&mut data);
+                            let _ = self.background_tx.send(BackgroundThreadMessage::LaunchGame);
                         }
                     });
                 });
             });
-    }
-
-    fn launch_game(&self, data: &mut ModLoaderAppData) {
-        fn start(data: &mut ModLoaderAppData) -> Result<(), ModLoaderWarning> {
-            let install_manager = data.get_install_manager();
-            let Some(install_manager) = install_manager else {
-                return Err(ModLoaderWarning::other("No install manager".to_string()));
-            };
-
-            #[cfg(feature = "cpp_loader")]
-            {
-                let config_location = install_manager.get_config_location()?;
-
-                fs::create_dir_all(config_location.parent().unwrap())?;
-                let file = File::create(&config_location)?;
-                let writer = BufWriter::new(file);
-
-                if let Err(e) = serde_json::to_writer(writer, &data.cpp_loader_config) {
-                    let _ = fs::remove_file(config_location);
-                    return Err(e.into());
-                }
-
-                install_manager.prepare_load()?;
-            }
-
-            match install_manager.launch_game() {
-                Ok(_) => {
-                    #[cfg(feature = "cpp_loader")]
-                    install_manager.load()?;
-
-                    Ok(())
-                }
-                Err(warn) => Err(warn),
-            }
-        }
-
-        if let Err(e) = start(data) {
-            data.warnings.push(e);
-        }
     }
 
     fn darken_background(&mut self, ctx: &egui::Context) {
