@@ -49,10 +49,32 @@ fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Erro
 
     let latest_release = github_helpers::get_latest_release(ASSET_REPO)?;
 
+    #[cfg(debug_assertions)]
+    let debug = true;
+    #[cfg(not(debug_assertions))]
+    let debug = false;
+
+    #[cfg(feature = "gui")]
+    let enable_gui = true;
+    #[cfg(not(feature = "gui"))]
+    let enable_gui = false;
+
+    let expected_loader_name = format!(
+        "UnrealCppLoader-{}-{}.dll",
+        match enable_gui {
+            true => "gui",
+            false => "nogui",
+        },
+        match debug {
+            true => "debug",
+            false => "release",
+        }
+    );
+
     let loader_asset = latest_release
         .assets
         .iter()
-        .find(|e| e.name == "UnrealCppLoader.dll")
+        .find(|e| e.name == expected_loader_name)
         .unwrap();
     let proxy_asset = latest_release
         .assets
