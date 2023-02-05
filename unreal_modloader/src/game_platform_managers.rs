@@ -1,7 +1,13 @@
 use std::{cell::RefCell, fmt::Debug, path::PathBuf};
 
+#[cfg(feature = "cpp_loader")]
+use std::{env, fs, io::Write};
+
+#[cfg(any(windows, feature = "cpp_loader"))]
+use std::fs::File;
+
 #[cfg(windows)]
-use std::{fs::File, io::Read};
+use std::io::Read;
 
 use crate::{
     config::InstallManager, error::ModLoaderWarning, game_path_helpers, version::GameBuild,
@@ -65,6 +71,57 @@ impl InstallManager for SteamInstallManager {
     }
 }
 
+#[cfg(feature = "cpp_loader")]
+impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for SteamInstallManager {
+    fn get_config_location(&self) -> Result<PathBuf, ModLoaderWarning> {
+        Ok(env::temp_dir()
+            .join("unrealmodding")
+            .join("cpp_loader")
+            .join("config.json"))
+    }
+
+    fn get_extract_path(&self) -> Option<PathBuf> {
+        Some(
+            env::temp_dir()
+                .join("unrealmodding")
+                .join("cpp_loader")
+                .join("mods"),
+        )
+    }
+
+    fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
+        let Some(install_path) = self.get_game_install_path() else {
+            //todo: error type
+            return Ok(());
+            // return Err(Box::new(crate::error::ModLoaderWarning::));
+        };
+
+        let dest_path = install_path
+            .join(self.game_name)
+            .join("Binaries")
+            .join("Win64");
+
+        let proxy_path = dest_path.join("xinput1_3.dll");
+        let dll_path = dest_path.join("UnrealCppLoader.dll");
+
+        let _ = fs::remove_file(&proxy_path);
+        let _ = fs::remove_file(&dll_path);
+
+        let mut proxy_file = File::create(proxy_path)?;
+        proxy_file.write_all(unreal_cpp_bootstrapper::PROXY_DLL)?;
+
+        let mut dll_file = File::create(dll_path)?;
+        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
+
+        Ok(())
+    }
+
+    fn load(&self) -> Result<(), ModLoaderWarning> {
+        // doing nothing on steam as xinput1_3.dll will handle everything
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct ProtonInstallManager {
     pub game_path: RefCell<Option<PathBuf>>,
@@ -108,6 +165,7 @@ impl InstallManager for ProtonInstallManager {
                 self.app_id,
             );
         }
+
         self.mods_path.borrow().clone()
     }
 
@@ -117,6 +175,86 @@ impl InstallManager for ProtonInstallManager {
 
     fn launch_game(&self) -> Result<(), ModLoaderWarning> {
         open::that(format!("steam://run/{}", self.app_id))?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "cpp_loader")]
+impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for ProtonInstallManager {
+    fn get_config_location(&self) -> Result<PathBuf, ModLoaderWarning> {
+        game_path_helpers::determine_user_path_proton(self.app_id)
+            .map(|e| {
+                e.join("Temp")
+                    .join("unrealmodding")
+                    .join("cpp_loader")
+                    .join("config.json")
+            })
+            .ok_or_else(ModLoaderWarning::steam_error)
+    }
+
+    fn get_extract_path(&self) -> Option<PathBuf> {
+        game_path_helpers::determine_user_path_proton(self.app_id).map(|e| {
+            e.join("Temp")
+                .join("unrealmodding")
+                .join("cpp_loader")
+                .join("mods")
+        })
+    }
+
+    fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
+        let Some(install_path) = self.get_game_install_path() else {
+            return Err(ModLoaderWarning::steam_error());
+        };
+
+        let Some(prefix_path) = game_path_helpers::determine_prefix_path_proton(self.app_id) else {
+            return Err(ModLoaderWarning::steam_error());
+        };
+
+        let registry_path = install_path.join("reg.reg");
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(registry_path)?;
+
+        let mut writer = std::io::BufWriter::new(file);
+        write!(writer, "Windows Registry Editor Version 5.00")?;
+
+        write!(
+            writer,
+            "[HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\{}-Win64-Shipping.exe\\DllOverrides]",
+            self.game_name
+        )?;
+
+        write!(writer, "\"xinput1_3\"=\"native,builtin\"")?;
+
+        drop(writer);
+
+        let _ = std::process::Command::new("wine")
+            .args(["regedit", "C:\\Users\\steamuser\\reg.reg"])
+            .env("WINEPREFIX", prefix_path.to_str().unwrap())
+            .output()?;
+
+        let dest_path = install_path
+            .join(self.game_name)
+            .join("Binaries")
+            .join("Win64");
+
+        let proxy_path = dest_path.join("xinput1_3.dll");
+        let dll_path = dest_path.join("UnrealCppLoader.dll");
+
+        let _ = fs::remove_file(&proxy_path);
+        let _ = fs::remove_file(&dll_path);
+
+        let mut proxy_file = File::create(proxy_path)?;
+        proxy_file.write_all(unreal_cpp_bootstrapper::PROXY_DLL)?;
+
+        let mut dll_file = File::create(dll_path)?;
+        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
+
+        Ok(())
+    }
+
+    fn load(&self) -> Result<(), ModLoaderWarning> {
         Ok(())
     }
 }
@@ -156,6 +294,26 @@ impl MsStoreInstallManager {
                 game_path_helpers::determine_install_path_winstore(self.winstore_vendor_id).ok()
         }
         self.store_info.borrow().clone()
+    }
+
+    #[cfg(feature = "cpp_loader")]
+    fn get_loader_dir(&self) -> Result<PathBuf, ModLoaderWarning> {
+        let Some(store_info) = self.get_store_info() else {
+            return Err(ModLoaderWarning::winstore_error());
+        };
+
+        let Some(package_path) = game_path_helpers::determine_game_package_path_winstore(
+            &store_info
+        ) else {
+            return Err(ModLoaderWarning::winstore_error());
+        };
+
+        let tmp_dir = package_path.join("AC").join("Temp");
+        let loader_dir = tmp_dir.join("unrealmodding").join("cpp_loader");
+
+        fs::create_dir_all(&loader_dir)?;
+
+        Ok(loader_dir)
     }
 }
 
@@ -205,6 +363,42 @@ impl InstallManager for MsStoreInstallManager {
             return Err(ModLoaderWarning::winstore_error());
         }
 
+        Ok(())
+    }
+}
+
+#[cfg(windows)]
+#[cfg(feature = "cpp_loader")]
+impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning>
+    for MsStoreInstallManager
+{
+    fn get_config_location(&self) -> Result<PathBuf, ModLoaderWarning> {
+        self.get_loader_dir().map(|e| e.join("config.json"))
+    }
+
+    fn get_extract_path(&self) -> Option<PathBuf> {
+        self.get_loader_dir().ok().map(|e| e.join("mods"))
+    }
+
+    fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
+        let loader_dir = self.get_loader_dir()?;
+        let file_location = loader_dir.join("loader.dll");
+
+        let _ = fs::remove_file(&file_location);
+
+        let mut dll_file = File::create(file_location)?;
+        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
+        dll_file.flush()?;
+        Ok(())
+    }
+
+    fn load(&self) -> Result<(), ModLoaderWarning> {
+        let loader_dir = self.get_loader_dir()?;
+        let file_location = loader_dir.join("loader.dll");
+
+        let process = dll_injector::Process::wait_for_process("Astro-UWP64-Shipping")?;
+
+        process.inject_dll(file_location.to_str().unwrap())?;
         Ok(())
     }
 }

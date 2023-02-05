@@ -35,6 +35,8 @@ use mod_processing::dependencies::DependencyGraph;
 use version::GameBuild;
 
 pub use unreal_asset;
+#[cfg(feature = "cpp_loader")]
+pub use unreal_cpp_bootstrapper;
 pub use unreal_modintegrator;
 pub use unreal_modmetadata;
 pub use unreal_pak;
@@ -77,6 +79,11 @@ pub(crate) struct ModLoaderAppData {
     /// install managers
     pub install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
     pub selected_game_platform: Option<String>,
+    
+    #[cfg(feature = "cpp_loader")]
+    pub(crate) cpp_loader_config: unreal_cpp_bootstrapper::config::GameSettings,
+    #[cfg(feature = "cpp_loader")]
+    pub(crate) cpp_loader_extract_path: Option<PathBuf>,
 }
 
 impl ModLoaderAppData {
@@ -86,6 +93,11 @@ impl ModLoaderAppData {
             self.game_install_path = manager.get_game_install_path();
             self.game_build = manager.get_game_build();
             self.paks_path = manager.get_paks_path();
+
+            #[cfg(feature = "cpp_loader")]
+            {
+                self.cpp_loader_extract_path = manager.get_extract_path();
+            }
 
             self.selected_game_platform = Some(platform.to_string());
 
@@ -113,7 +125,8 @@ where
     let data = Arc::new(Mutex::new(ModLoaderAppData {
         refuse_mismatched_connections: true,
         install_managers: config.get_install_managers(),
-
+        #[cfg(feature = "cpp_loader")]
+        cpp_loader_config: GC::get_cpp_loader_config(),
         ..Default::default()
     }));
 

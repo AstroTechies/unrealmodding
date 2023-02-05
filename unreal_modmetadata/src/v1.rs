@@ -126,6 +126,7 @@ impl Metadata {
             download: metadata.download,
             integrator,
             dependencies: HashMap::new(),
+            cpp_loader_dlls: Vec::new(),
         })
     }
 }

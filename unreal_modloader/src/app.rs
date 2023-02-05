@@ -552,13 +552,7 @@ impl ModLoaderApp {
                             false => Button::new("Play"),
                         };
                         if ui.add(button).clicked() {
-                            let install_manager = data.get_install_manager();
-                            if let Some(install_manager) = install_manager {
-                                match install_manager.launch_game() {
-                                    Ok(_) => {}
-                                    Err(warn) => data.warnings.push(warn),
-                                };
-                            }
+                            let _ = self.background_tx.send(BackgroundThreadMessage::LaunchGame);
                         }
                     });
                 });

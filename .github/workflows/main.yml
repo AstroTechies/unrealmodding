@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:  
+jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
@@ -28,19 +28,30 @@ jobs:
           toolchain: stable
           components: clippy
           override: true
-          
+
       - uses: actions-rs/clippy-check@v1
         name: Clippy check ue 4.23 w/bulk
         env:
           USE_PREBUILT_ASSETS: 1
+          USE_PRECOMPILED_CPP_LOADER: 1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --features "ue4_23" -- -D warnings
+
+      - uses: actions-rs/clippy-check@v1
+        name: Clippy check ue 4.23 w/bulk w/cpp_loader
+        env:
+            USE_PREBUILT_ASSETS: 1
+            USE_PRECOMPILED_CPP_LOADER: 1
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            args: --features "ue4_23,cpp_loader" -- -D warnings
 
       - uses: actions-rs/cargo@v1
         name: Unit test
         env:
           USE_PREBUILT_ASSETS: 1
+          USE_PRECOMPILED_CPP_LOADER: 1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: test

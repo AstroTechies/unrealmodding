@@ -37,16 +37,28 @@ pub fn determine_installed_mods_path_steam(game_name: &str) -> Option<PathBuf> {
     base_path
 }
 
+pub fn determine_prefix_path_proton(app_id: u32) -> Option<PathBuf> {
+    Some(
+        SteamDir::locate()?
+            .path
+            .join("steamapps")
+            .join("compatdata")
+            .join(app_id.to_string())
+            .join("pfx"),
+    )
+}
+
+pub fn determine_user_path_proton(app_id: u32) -> Option<PathBuf> {
+    Some(
+        determine_prefix_path_proton(app_id)?
+            .join("drive_c")
+            .join("users")
+            .join("steamuser"),
+    )
+}
+
 pub fn determine_installed_mods_path_proton(game_name: &str, app_id: u32) -> Option<PathBuf> {
-    let data_dir: PathBuf = SteamDir::locate()?
-        .path
-        .join("steamapps")
-        .join("compatdata")
-        .join(app_id.to_string())
-        .join("pfx")
-        .join("drive_c")
-        .join("users")
-        .join("steamuser")
+    let data_dir: PathBuf = determine_user_path_proton(app_id)?
         .join("AppData")
         .join("Local");
     let base_path = Some(data_dir.join(game_name).join("Saved").join("Paks"));
@@ -56,22 +68,35 @@ pub fn determine_installed_mods_path_proton(game_name: &str, app_id: u32) -> Opt
 }
 
 #[cfg(windows)]
+pub fn determine_game_package_path_winstore(store_info: &MsStoreInfo) -> Option<PathBuf> {
+    let base_dirs = BaseDirs::new();
+    let Some(base_dirs) = base_dirs else {
+
+        warn!("Could not determine base directory");
+        return None;
+    };
+
+    let data_dir = base_dirs.data_local_dir();
+
+    let package_path = Some(
+        data_dir
+            .join("Packages")
+            .join(store_info.runtime_id.clone()),
+    );
+
+    trace!("package path: {:?}", package_path);
+
+    package_path
+}
+
+#[cfg(windows)]
 pub fn determine_installed_mods_path_winstore(
     store_info: &MsStoreInfo,
     game_name: &str,
 ) -> Option<PathBuf> {
-    let base_dirs = BaseDirs::new();
-    if base_dirs.is_none() {
-        warn!("Could not determine base directory");
-        return None;
-    }
-    let base_dirs = base_dirs.unwrap();
-
-    let data_dir = base_dirs.data_local_dir();
+    let package_path = determine_game_package_path_winstore(store_info)?;
     let base_path = Some(
-        data_dir
-            .join("Packages")
-            .join(store_info.runtime_id.clone())
+        package_path
             .join("LocalState")
             .join(game_name)
             .join("Saved")
