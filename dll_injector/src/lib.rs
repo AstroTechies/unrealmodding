@@ -116,7 +116,7 @@ impl Process {
         })
     }
 
-    fn acl_file(dll_path: &[u16], access_string: PCWSTR) -> Result<(), InjectorError> {
+    fn set_uwp_permissions(dll_path: &[u16], access_string: PCWSTR) -> Result<(), InjectorError> {
         let mut current_acl: *mut ACL = ptr::null::<ACL>() as *mut _;
         let mut security_descriptor = PSECURITY_DESCRIPTOR::default();
         let mut security_identifier = PSID::default();
@@ -195,7 +195,7 @@ impl Process {
         let mut path = dll_path.encode_utf16().collect::<Vec<u16>>();
         path.push(0x00); // null terminating
 
-        Process::acl_file(&path, w!("S-1-15-2-1"))?;
+        Process::set_uwp_permissions(&path, w!("S-1-15-2-1"))?;
 
         let path_mem = unsafe {
             VirtualAllocEx(
