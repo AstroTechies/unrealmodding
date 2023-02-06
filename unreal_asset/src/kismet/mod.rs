@@ -608,9 +608,9 @@ impl KismetPropertyPointer {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KismetSwitchCase {
-    case_index_value_term: KismetExpression,
-    next_offset: u32,
-    case_term: KismetExpression,
+    pub case_index_value_term: KismetExpression,
+    pub next_offset: u32,
+    pub case_term: KismetExpression,
 }
 
 impl KismetSwitchCase {
