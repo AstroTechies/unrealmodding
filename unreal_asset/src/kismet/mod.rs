@@ -1286,6 +1286,7 @@ impl KismetExpressionTrait for ExCallMulticastDelegate {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        offset += KismetExpression::write(&self.delegate, asset)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }
