@@ -1148,7 +1148,7 @@ impl ExArrayConst {
         asset.read_i32::<LittleEndian>()?; // num_entries
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndArrayConst)?;
         Ok(ExArrayConst {
-            token: EExprToken::ExAddMulticastDelegate,
+            token: EExprToken::ExArrayConst,
             inner_property,
             elements,
         })
