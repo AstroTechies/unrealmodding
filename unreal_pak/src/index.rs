@@ -1,13 +1,13 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use sha1::{Digest, Sha1};
 
 use crate::buf_ext::{BufReaderExt, BufWriterExt};
+use crate::compression::CompressionMethods;
 use crate::error::PakError;
 use crate::header::Header;
 use crate::pakversion::PakVersion;
-use crate::PAK_MAGIC;
+use crate::{hash, PAK_MAGIC};
 
 #[derive(Debug)]
 pub(crate) struct Index {
@@ -66,10 +66,7 @@ impl Index {
         index.footer.index_offset = index_offset;
         index.footer.index_size = index_data.len() as u64;
 
-        let mut hasher = Sha1::new();
-        hasher.update(&index_data);
-        // sha1 always outputs 20 bytes
-        index.footer.index_hash = hasher.finalize().to_vec().try_into().unwrap();
+        index.footer.index_hash = hash(&index_data);
 
         writer.write_all(&index_data)?;
 
@@ -85,13 +82,15 @@ pub(crate) struct Footer {
     pub index_offset: u64,
     pub index_size: u64,
     pub index_hash: [u8; 20],
+    pub compression_methods: CompressionMethods,
     pub index_encrypted: Option<bool>,
     pub encryption_key_guid: Option<[u8; 0x10]>,
 }
 
 impl Footer {
     pub(crate) fn read<R: Read + Seek>(reader: &mut R) -> Result<Self, PakError> {
-        // magic offset can only be 0x2C (2-7), 0xCC (8,11), 0xCD (9)
+        // magic offset can only be 0x2C (v2-v7), 0xCC (v8,v11), 0xCD (v9)
+        // TODO UE4.22 add support for 4 compression fnames
         let possible_offsets = vec![-0x2C, -0xCC, -0xCD];
 
         let mut magic_offset = None;
@@ -115,6 +114,18 @@ impl Footer {
         let mut index_hash = [0u8; 20];
         reader.read_exact(&mut index_hash)?;
 
+        // if version 9 skip frozen index byte
+        if pak_version == PakVersion::PakFileVersionFrozenIndex {
+            reader.seek(SeekFrom::Current(1))?;
+        }
+
+        let compression_methods =
+            if pak_version >= PakVersion::PakFileVersionFnameBasedCompressionMethod {
+                CompressionMethods::from_reader(reader)?
+            } else {
+                CompressionMethods::default()
+            };
+
         // index_encrypted is one byte before magic
         let mut index_encrypted = None;
         if pak_version >= PakVersion::PakFileVersionIndexEncryption {
@@ -131,13 +142,12 @@ impl Footer {
             encryption_key_guid = Some(buf);
         }
 
-        // TODO: read frozen index and compression FStrings (5 * 0x20)
-
         Ok(Footer {
             pak_version,
             index_offset,
             index_size,
             index_hash,
+            compression_methods,
             index_encrypted,
             encryption_key_guid,
         })
@@ -173,10 +183,9 @@ impl Footer {
         }
 
         // compression methods
-        const COMPRESSION_NAME: &[u8] = b"Zlib";
-        writer.write_all(COMPRESSION_NAME)?;
-        // filler bytes to fill space intended for 5 * 0x20 compression names
-        writer.write_all(&[0u8; 5 * 0x20 - COMPRESSION_NAME.len()])?;
+        if footer.pak_version >= PakVersion::PakFileVersionFnameBasedCompressionMethod {
+            writer.write_all(footer.compression_methods.as_bytes().as_slice())?;
+        }
 
         Ok(())
     }

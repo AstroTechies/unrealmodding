@@ -17,11 +17,9 @@
 use std::io::{Read, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use num_enum::TryFromPrimitive;
 
 use crate::error::PakError;
 use crate::pakversion::PakVersion;
-use crate::CompressionMethod;
 
 #[derive(Debug)]
 pub(crate) struct Header {
@@ -29,7 +27,7 @@ pub(crate) struct Header {
     pub offset: u64,
     pub compressed_size: u64,
     pub decompressed_size: u64,
-    pub compression_method: CompressionMethod,
+    pub compression_method: u32,
     pub hash: [u8; 20],
     pub compression_blocks: Option<Vec<Block>>,
     pub flags: Option<u8>,
@@ -53,13 +51,8 @@ impl Header {
         let compressed_size = reader.read_u64::<LittleEndian>()?;
         let decompressed_size = reader.read_u64::<LittleEndian>()?;
 
-        // TODO: the assumption of 0x01 = zlib is actually incorrect after PakFileVersionFnameBasedCompressionMethod,
-        // it is actually an index into the compression format name array in the footer
-        let compression_method =
-            match CompressionMethod::try_from_primitive(reader.read_i32::<LittleEndian>()?) {
-                Ok(compression_method) => compression_method,
-                Err(_) => CompressionMethod::Unknown,
-            };
+        // TODO UE4.22 apparently this can be 1 byte too?
+        let compression_method = reader.read_u32::<LittleEndian>()?;
 
         if pak_version <= PakVersion::PakFileVersionInitial {
             let _timestamp = reader.read_u64::<LittleEndian>()?;
@@ -73,7 +66,7 @@ impl Header {
         let mut compression_block_size = None;
 
         if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
-            if compression_method != CompressionMethod::None {
+            if compression_method != 0 {
                 let block_count = reader.read_u32::<LittleEndian>()? as usize;
                 let mut compression_blocks_inner = Vec::with_capacity(block_count);
 
@@ -119,12 +112,12 @@ impl Header {
         writer.write_u64::<LittleEndian>(header.offset)?;
         writer.write_u64::<LittleEndian>(header.compressed_size)?;
         writer.write_u64::<LittleEndian>(header.decompressed_size)?;
-        writer.write_i32::<LittleEndian>(header.compression_method.into())?;
+        writer.write_u32::<LittleEndian>(header.compression_method)?;
 
         writer.write_all(&header.hash)?;
 
         if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
-            if header.compression_method != CompressionMethod::None {
+            if header.compression_method != 0 {
                 if let Some(compression_blocks) = &header.compression_blocks {
                     writer.write_u32::<LittleEndian>(compression_blocks.len() as u32)?;
                     for block in compression_blocks {

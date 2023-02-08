@@ -3,12 +3,12 @@
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Seek, Write};
 
+use crate::compression::CompressionMethods;
 use crate::entry::write_entry;
 use crate::error::PakError;
 use crate::header::Header;
 use crate::index::{Footer, Index};
 use crate::pakversion::PakVersion;
-use crate::CompressionMethod;
 
 /// An Unreal pak file writer which allows incrementally writing data.
 /// Good for working with very large files, but it has restrictions when it
@@ -23,7 +23,7 @@ where
     /// mount point (Unreal stuff)
     pub mount_point: String,
     /// the compression method preferred for this file
-    pub compression: CompressionMethod,
+    compression: CompressionMethods,
     /// the compression block size
     pub block_size: u32,
     entries: BTreeMap<String, Header>,
@@ -35,11 +35,11 @@ where
     &'data W: Write + Seek,
 {
     /// Creates a new `PakFile` configured to write files.
-    pub fn new(writer: &'data W, pak_version: PakVersion, compression: CompressionMethod) -> Self {
+    pub fn new(writer: &'data W, pak_version: PakVersion) -> Self {
         Self {
             pak_version,
             mount_point: "../../../".to_owned(),
-            compression,
+            compression: CompressionMethods::zlib(),
             block_size: 0x010000,
             entries: BTreeMap::new(),
             writer: BufWriter::new(writer),
@@ -53,7 +53,13 @@ where
 
     /// Writes the given data into the pak file on disk.
     /// Writes should happen in an aplphabetical order.
-    pub fn write_entry(&mut self, name: &String, data: &Vec<u8>) -> Result<(), PakError> {
+    /// Entries under 32 bytes are never compressed.
+    pub fn write_entry(
+        &mut self,
+        name: &String,
+        data: &Vec<u8>,
+        compress: bool,
+    ) -> Result<(), PakError> {
         if self.entries.contains_key(name) {
             return Err(PakError::double_write(name.clone()));
         }
@@ -62,7 +68,8 @@ where
             &mut self.writer,
             self.pak_version,
             data,
-            self.compression,
+            compress,
+            &self.compression,
             self.block_size,
         )?;
         self.entries.insert(name.clone(), header);
@@ -78,6 +85,7 @@ where
             index_offset: 0,
             index_size: 0,
             index_hash: [0u8; 20],
+            compression_methods: self.compression,
             index_encrypted: Some(false),
             encryption_key_guid: Some([0u8; 0x10]),
         };

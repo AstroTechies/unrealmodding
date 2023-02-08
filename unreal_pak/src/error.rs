@@ -5,7 +5,7 @@ use std::fmt;
 use std::io;
 
 use crate::pakversion::PakVersion;
-use crate::CompressionMethod;
+use crate::Compression;
 
 /// Error type used by unreal_pak
 #[derive(Debug)]
@@ -22,7 +22,7 @@ impl PakError {
         }
     }
     /// construct UnsupportedCompression error
-    pub fn compression_unsupported(method: CompressionMethod) -> Self {
+    pub fn compression_unsupported(method: Compression) -> Self {
         PakError {
             kind: PakErrorKind::CompressionUnsupported(method),
         }
@@ -112,7 +112,7 @@ pub enum PakErrorKind {
     /// the pak version found is not supported by the library
     PakVersionUnsupported(PakVersion),
     /// the compression found is not supported by the library
-    CompressionUnsupported(CompressionMethod),
+    CompressionUnsupported(Compression),
     /// encryption is not supported
     EncryptionUnsupported,
     /// the state of a struct is invalid

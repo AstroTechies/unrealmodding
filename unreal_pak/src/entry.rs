@@ -1,12 +1,11 @@
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
-use sha1::{Digest, Sha1};
-
+use crate::compression::CompressionMethods;
 use crate::error::PakError;
+use crate::hash;
 use crate::header::{Block, Header};
 use crate::pakversion::PakVersion;
-use crate::CompressionMethod;
+use crate::Compression;
 
 /// Read a pak entry at the given offset in the reader
 ///
@@ -18,6 +17,7 @@ use crate::CompressionMethod;
 pub(crate) fn read_entry<R>(
     reader: &mut R,
     pak_version: PakVersion,
+    compression: &CompressionMethods,
     offset: u64,
 ) -> Result<Vec<u8>, PakError>
 where
@@ -27,13 +27,31 @@ where
 
     let header = Header::read(reader, pak_version)?;
 
-    match header.compression_method {
-        CompressionMethod::None => {
+    let compression_method = if pak_version >= PakVersion::PakFileVersionFnameBasedCompressionMethod
+    {
+        if header.compression_method == 0 {
+            Compression::None
+        } else if header.compression_method <= 5 {
+            compression.0[header.compression_method as usize - 1].clone()
+        } else {
+            let mut arr = [0; 0x20];
+            arr[0] = header.compression_method as u8;
+            Compression::Unknown(arr)
+        }
+    } else {
+        match header.compression_method {
+            0x01 | 0x10 | 0x20 => Compression::zlib(),
+            _ => Compression::None,
+        }
+    };
+
+    match compression_method {
+        Compression::None => {
             let mut data = vec![0u8; header.decompressed_size as usize];
             reader.read_exact(data.as_mut_slice())?;
             Ok(data)
         }
-        CompressionMethod::Zlib => {
+        Compression::Known(_) => {
             let mut data = Vec::with_capacity(header.decompressed_size as usize);
 
             let compression_blocks = header
@@ -44,13 +62,13 @@ where
                 // we do not need to seek here because the reader is at the end of the header and compression blocks are continuous
                 let mut compressed_data = vec![0u8; block.size as usize];
                 reader.read_exact(&mut compressed_data)?;
-                let mut decoder = ZlibDecoder::new(&compressed_data[..]);
-                decoder.read_to_end(&mut data)?;
+                compression_method.decompress(&mut data, compressed_data.as_slice())?;
+                //decoder.read_to_end(&mut data)?;
             }
 
             Ok(data)
         }
-        _ => Err(PakError::compression_unsupported(header.compression_method)),
+        _ => Err(PakError::compression_unsupported(compression_method)),
     }
 }
 
@@ -67,7 +85,8 @@ pub(crate) fn write_entry<W>(
     writer: &mut W,
     pak_version: PakVersion,
     data: &Vec<u8>,
-    compression_method: CompressionMethod,
+    compress: bool,
+    compression: &CompressionMethods,
     block_size: u32,
 ) -> Result<Header, PakError>
 where
@@ -76,15 +95,23 @@ where
     let offset = writer.stream_position()?;
     let decompressed_size = data.len() as u64;
 
+    let compress = compress && decompressed_size >= 32;
+    let compression_method = if compress {
+        compression.0[0].clone()
+    } else {
+        Compression::None
+    };
+
     // compress data in memory
-    let mut compressed_data = if !matches!(compression_method, CompressionMethod::None) {
+    let mut compressed_data = if compress {
         Vec::with_capacity(data.len())
     } else {
+        // this will actually never be used
         Vec::new()
     };
     let mut compression_blocks = None;
     let data = match compression_method {
-        CompressionMethod::Zlib => {
+        Compression::Known(_) => {
             if pak_version < PakVersion::PakFileVersionCompressionEncryption {
                 return Err(PakError::configuration_invalid());
             }
@@ -96,9 +123,7 @@ where
             for chunk in data.chunks(block_size as usize) {
                 let begin = compressed_data.len() as u64;
 
-                let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-                encoder.write_all(chunk)?;
-                let block_compressed_data = encoder.finish()?;
+                let block_compressed_data = compression_method.compress(chunk)?;
                 compressed_data.extend_from_slice(&block_compressed_data);
 
                 compression_blocks_inner.push(Block {
@@ -110,14 +135,9 @@ where
             compression_blocks = Some(compression_blocks_inner);
             &compressed_data
         }
-        CompressionMethod::None => data,
+        Compression::None => data,
         _ => return Err(PakError::compression_unsupported(compression_method)),
     };
-
-    let mut hasher = Sha1::new();
-    hasher.update(data);
-    // sha1 always outputs 20 bytes
-    let hash: [u8; 20] = hasher.finalize().to_vec().try_into().unwrap();
 
     let compression_block_size = if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
         compression_blocks.as_ref().map(|blocks| {
@@ -135,8 +155,8 @@ where
         offset: 0x00,
         compressed_size: data.len() as u64,
         decompressed_size,
-        compression_method,
-        hash,
+        compression_method: if compress { 1 } else { 0 },
+        hash: hash(data),
         compression_blocks,
         compression_block_size,
         flags: Some(0x00),

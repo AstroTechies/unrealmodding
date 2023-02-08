@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::io::{BufReader, Read, Seek};
 
+use crate::compression::CompressionMethods;
 use crate::entry::read_entry;
 use crate::error::PakError;
 use crate::header::Header;
@@ -19,6 +20,7 @@ where
     pak_version: PakVersion,
     /// mount point (Unreal stuff)
     pub mount_point: String,
+    compression: CompressionMethods,
     entries: BTreeMap<String, Header>,
     reader: BufReader<&'data R>,
 }
@@ -32,6 +34,7 @@ where
         Self {
             pak_version: PakVersion::PakFileVersionInvalid,
             mount_point: "".to_owned(),
+            compression: Default::default(),
             entries: BTreeMap::new(),
             reader: BufReader::new(reader),
         }
@@ -43,7 +46,7 @@ where
 
         self.pak_version = index.footer.pak_version;
         self.mount_point = index.mount_point.clone();
-        //? maybe also store compression somehow?
+        self.compression = index.footer.compression_methods;
 
         for (name, header) in index.entries {
             self.entries.insert(name, header);
@@ -68,6 +71,11 @@ where
             .entries
             .get(name)
             .ok_or_else(|| PakError::entry_not_found(name.clone()))?;
-        read_entry(&mut self.reader, self.pak_version, header.offset)
+        read_entry(
+            &mut self.reader,
+            self.pak_version,
+            &self.compression,
+            header.offset,
+        )
     }
 }
