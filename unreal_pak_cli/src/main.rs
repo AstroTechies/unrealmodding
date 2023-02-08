@@ -6,7 +6,7 @@ use std::time::SystemTime;
 
 use clap::{Parser, Subcommand};
 use path_absolutize::Absolutize;
-use unreal_pak::{pakversion::PakVersion, CompressionMethod, PakReader, PakWriter};
+use unreal_pak::{pakversion::PakVersion, PakReader, PakWriter};
 use walkdir::WalkDir;
 
 /// Command line tool for working with Unreal Engine .pak files.
@@ -191,20 +191,8 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak = PakWriter::new(
-                &file,
-                PakVersion::PakFileVersionFnameBasedCompressionMethod,
-                CompressionMethod::Zlib,
-            );
-
-            let compression_method = if no_compression {
-                unreal_pak::CompressionMethod::None
-            } else {
-                unreal_pak::CompressionMethod::Zlib
-            };
-
-            println!("Using compression method: {compression_method:?}");
-            pak.compression = compression_method;
+            let mut pak =
+                PakWriter::new(&file, PakVersion::PakFileVersionFnameBasedCompressionMethod);
 
             // Get all files and write them to the .pak file
             let files = WalkDir::new(&indir)
@@ -237,7 +225,7 @@ fn main() {
                     }
                 };
 
-                match pak.write_entry(&file_name, &file_data) {
+                match pak.write_entry(&file_name, &file_data, !no_compression) {
                     Ok(_) => println!("Wrote file {i}: {file_name}"),
                     Err(err) => {
                         eprintln!("Error writing file in pak {file_name:?}! Error: {err}");
