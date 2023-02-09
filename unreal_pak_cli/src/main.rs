@@ -191,8 +191,7 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak =
-                PakWriter::new(&file, PakVersion::PakFileVersionFnameBasedCompressionMethod);
+            let mut pak = PakWriter::new(&file, PakVersion::FnameBasedCompressionMethod);
 
             // Get all files and write them to the .pak file
             let files = WalkDir::new(&indir)
