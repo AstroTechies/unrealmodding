@@ -32,7 +32,7 @@ where
     /// Creates a new `PakFile` configured to read files.
     pub fn new(reader: &'data R) -> Self {
         Self {
-            pak_version: PakVersion::PakFileVersionInvalid,
+            pak_version: PakVersion::Invalid,
             mount_point: "".to_owned(),
             compression: Default::default(),
             entries: BTreeMap::new(),

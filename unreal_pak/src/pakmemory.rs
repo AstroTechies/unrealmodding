@@ -61,7 +61,7 @@ impl PakMemory {
 
     /// Create a new PakMemory based on the data of the reader.
     pub fn load_from<R: Read + Seek>(reader: &mut R) -> Result<Self, PakError> {
-        let mut pak_memory = Self::new(PakVersion::PakFileVersionInvalid);
+        let mut pak_memory = Self::new(PakVersion::Invalid);
         pak_memory.load(reader)?;
         Ok(pak_memory)
     }

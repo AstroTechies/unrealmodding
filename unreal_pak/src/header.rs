@@ -54,7 +54,7 @@ impl Header {
         // TODO UE4.22 apparently this can be 1 byte too?
         let compression_method = reader.read_u32::<LittleEndian>()?;
 
-        if pak_version <= PakVersion::PakFileVersionInitial {
+        if pak_version <= PakVersion::Initial {
             let _timestamp = reader.read_u64::<LittleEndian>()?;
         }
 
@@ -65,7 +65,7 @@ impl Header {
         let mut flags = None;
         let mut compression_block_size = None;
 
-        if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
+        if pak_version >= PakVersion::CompressionEncryption {
             if compression_method != 0 {
                 let block_count = reader.read_u32::<LittleEndian>()? as usize;
                 let mut compression_blocks_inner = Vec::with_capacity(block_count);
@@ -73,7 +73,7 @@ impl Header {
                 for _ in 0..block_count {
                     // convert old absolute to relative offsets
                     let start_offset = reader.read_u64::<LittleEndian>()?
-                        - if pak_version < PakVersion::PakFileVersionRelativeChunkOffsets {
+                        - if pak_version < PakVersion::RelativeChunkOffsets {
                             offset
                         } else {
                             0
@@ -116,7 +116,7 @@ impl Header {
 
         writer.write_all(&header.hash)?;
 
-        if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
+        if pak_version >= PakVersion::CompressionEncryption {
             if header.compression_method != 0 {
                 if let Some(compression_blocks) = &header.compression_blocks {
                     writer.write_u32::<LittleEndian>(compression_blocks.len() as u32)?;
@@ -141,14 +141,14 @@ impl Header {
         len += 28;
 
         // timestamp
-        if pak_version <= PakVersion::PakFileVersionInitial {
+        if pak_version <= PakVersion::Initial {
             len += 8;
         }
 
         // hash
         len += 20;
 
-        if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
+        if pak_version >= PakVersion::CompressionEncryption {
             if let Some(block_count) = block_count {
                 // block count
                 len += 4;

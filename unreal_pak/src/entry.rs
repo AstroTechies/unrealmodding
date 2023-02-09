@@ -27,8 +27,7 @@ where
 
     let header = Header::read(reader, pak_version)?;
 
-    let compression_method = if pak_version >= PakVersion::PakFileVersionFnameBasedCompressionMethod
-    {
+    let compression_method = if pak_version >= PakVersion::FnameBasedCompressionMethod {
         if header.compression_method == 0 {
             Compression::None
         } else if header.compression_method <= 5 {
@@ -112,7 +111,7 @@ where
     let mut compression_blocks = None;
     let data = match compression_method {
         Compression::Known(_) => {
-            if pak_version < PakVersion::PakFileVersionCompressionEncryption {
+            if pak_version < PakVersion::CompressionEncryption {
                 return Err(PakError::configuration_invalid());
             }
 
@@ -139,7 +138,7 @@ where
         _ => return Err(PakError::compression_unsupported(compression_method)),
     };
 
-    let compression_block_size = if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
+    let compression_block_size = if pak_version >= PakVersion::CompressionEncryption {
         compression_blocks.as_ref().map(|blocks| {
             if blocks.len() == 1 {
                 decompressed_size as u32
