@@ -1,6 +1,6 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt, BE, LE};
 
 use crate::buf_ext::{BufReaderExt, BufWriterExt};
 use crate::compression::CompressionMethods;
@@ -24,7 +24,7 @@ impl Index {
 
         let mount_point = reader.read_fstring()?.unwrap_or_default();
 
-        let entry_count = reader.read_u32::<LittleEndian>()?;
+        let entry_count = reader.read_u32::<LE>()?;
         let mut entries = Vec::with_capacity(entry_count as usize);
 
         if footer.pak_version < PakVersion::PathHashIndex {
@@ -51,7 +51,7 @@ impl Index {
 
         index_writer.write_fstring(Some(&index.mount_point))?;
 
-        index_writer.write_u32::<LittleEndian>(index.entries.len() as u32)?;
+        index_writer.write_u32::<LE>(index.entries.len() as u32)?;
 
         if index.footer.pak_version < PakVersion::PathHashIndex {
             for (name, header) in index.entries {
@@ -95,7 +95,7 @@ impl Footer {
         let mut magic_offset = None;
         for offset in possible_offsets {
             reader.seek(SeekFrom::End(offset))?;
-            if reader.read_u32::<BigEndian>()? == PAK_MAGIC {
+            if reader.read_u32::<BE>()? == PAK_MAGIC {
                 magic_offset = Some(offset);
             }
         }
@@ -104,13 +104,13 @@ impl Footer {
         // seek to file version
         reader.seek(SeekFrom::End(magic_offset + 4))?;
 
-        let mut pak_version = PakVersion::from_num(reader.read_u32::<LittleEndian>()?);
+        let mut pak_version = PakVersion::from_num(reader.read_u32::<LE>()?);
         if magic_offset == -0xAC {
             pak_version.set_subversion();
         }
 
-        let index_offset = reader.read_u64::<LittleEndian>()?;
-        let index_size = reader.read_u64::<LittleEndian>()?;
+        let index_offset = reader.read_u64::<LE>()?;
+        let index_size = reader.read_u64::<LE>()?;
 
         let mut index_hash = [0u8; 20];
         reader.read_exact(&mut index_hash)?;
@@ -167,12 +167,12 @@ impl Footer {
         }
 
         // write magic and pak version
-        writer.write_u32::<BigEndian>(PAK_MAGIC)?;
-        writer.write_u32::<LittleEndian>(footer.pak_version.to_num())?;
+        writer.write_u32::<BE>(PAK_MAGIC)?;
+        writer.write_u32::<LE>(footer.pak_version.to_num())?;
 
         // write index offset and length
-        writer.write_u64::<LittleEndian>(footer.index_offset)?;
-        writer.write_u64::<LittleEndian>(footer.index_size)?;
+        writer.write_u64::<LE>(footer.index_offset)?;
+        writer.write_u64::<LE>(footer.index_size)?;
 
         // write hash
         writer.write_all(&footer.index_hash)?;

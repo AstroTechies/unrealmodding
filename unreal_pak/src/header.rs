@@ -16,7 +16,7 @@
 
 use std::io::{Read, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use crate::error::PakError;
 use crate::pakversion::PakVersion;
@@ -46,16 +46,16 @@ pub(crate) struct Block {
 impl Header {
     /// Read data from the reader into a Header, reader needs to be set at start of a header
     pub(crate) fn read<R: Read>(reader: &mut R, pak_version: PakVersion) -> Result<Self, PakError> {
-        let offset = reader.read_u64::<LittleEndian>()?;
+        let offset = reader.read_u64::<LE>()?;
 
-        let compressed_size = reader.read_u64::<LittleEndian>()?;
-        let decompressed_size = reader.read_u64::<LittleEndian>()?;
+        let compressed_size = reader.read_u64::<LE>()?;
+        let decompressed_size = reader.read_u64::<LE>()?;
 
         // TODO UE4.22 apparently this can be 1 byte too?
-        let compression_method = reader.read_u32::<LittleEndian>()?;
+        let compression_method = reader.read_u32::<LE>()?;
 
         if pak_version <= PakVersion::Initial {
-            let _timestamp = reader.read_u64::<LittleEndian>()?;
+            let _timestamp = reader.read_u64::<LE>()?;
         }
 
         let mut hash = [0u8; 20];
@@ -67,18 +67,18 @@ impl Header {
 
         if pak_version >= PakVersion::CompressionEncryption {
             if compression_method != 0 {
-                let block_count = reader.read_u32::<LittleEndian>()? as usize;
+                let block_count = reader.read_u32::<LE>()? as usize;
                 let mut compression_blocks_inner = Vec::with_capacity(block_count);
 
                 for _ in 0..block_count {
                     // convert old absolute to relative offsets
-                    let start_offset = reader.read_u64::<LittleEndian>()?
+                    let start_offset = reader.read_u64::<LE>()?
                         - if pak_version < PakVersion::RelativeChunkOffsets {
                             offset
                         } else {
                             0
                         };
-                    let end_offset = reader.read_u64::<LittleEndian>()?;
+                    let end_offset = reader.read_u64::<LE>()?;
                     compression_blocks_inner.push(Block {
                         start: start_offset,
                         size: end_offset - start_offset,
@@ -88,7 +88,7 @@ impl Header {
             }
 
             flags = Some(reader.read_u8()?);
-            compression_block_size = Some(reader.read_u32::<LittleEndian>()?);
+            compression_block_size = Some(reader.read_u32::<LE>()?);
         }
 
         Ok(Header {
@@ -109,26 +109,26 @@ impl Header {
         pak_version: PakVersion,
         header: &Self,
     ) -> Result<(), PakError> {
-        writer.write_u64::<LittleEndian>(header.offset)?;
-        writer.write_u64::<LittleEndian>(header.compressed_size)?;
-        writer.write_u64::<LittleEndian>(header.decompressed_size)?;
-        writer.write_u32::<LittleEndian>(header.compression_method)?;
+        writer.write_u64::<LE>(header.offset)?;
+        writer.write_u64::<LE>(header.compressed_size)?;
+        writer.write_u64::<LE>(header.decompressed_size)?;
+        writer.write_u32::<LE>(header.compression_method)?;
 
         writer.write_all(&header.hash)?;
 
         if pak_version >= PakVersion::CompressionEncryption {
             if header.compression_method != 0 {
                 if let Some(compression_blocks) = &header.compression_blocks {
-                    writer.write_u32::<LittleEndian>(compression_blocks.len() as u32)?;
+                    writer.write_u32::<LE>(compression_blocks.len() as u32)?;
                     for block in compression_blocks {
-                        writer.write_u64::<LittleEndian>(block.start)?;
-                        writer.write_u64::<LittleEndian>(block.start + block.size)?;
+                        writer.write_u64::<LE>(block.start)?;
+                        writer.write_u64::<LE>(block.start + block.size)?;
                     }
                 }
             }
 
             writer.write_u8(header.flags.unwrap_or(0))?;
-            writer.write_u32::<LittleEndian>(header.compression_block_size.unwrap_or(0x010000))?;
+            writer.write_u32::<LE>(header.compression_block_size.unwrap_or(0x010000))?;
         }
 
         Ok(())

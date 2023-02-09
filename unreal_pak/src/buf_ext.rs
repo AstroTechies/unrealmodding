@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use crate::error::PakError;
 
@@ -17,7 +17,7 @@ where
 {
     fn read_fstring(&mut self) -> Result<Option<String>, PakError> {
         // todo: unicode encoding
-        let len = self.read_u32::<LittleEndian>()?;
+        let len = self.read_u32::<LE>()?;
 
         if len == 0 {
             return Ok(None);
@@ -41,14 +41,14 @@ where
 {
     fn write_fstring(&mut self, string: Option<&str>) -> Result<(), PakError> {
         if string.is_none() {
-            self.write_i32::<LittleEndian>(0)?;
+            self.write_i32::<LE>(0)?;
             return Ok(());
         }
         let string = string.unwrap();
         let is_unicode = string.len() != string.chars().count();
         match is_unicode {
-            true => self.write_i32::<LittleEndian>(-(string.len() as i32) + 1)?,
-            false => self.write_i32::<LittleEndian>(string.len() as i32 + 1)?,
+            true => self.write_i32::<LE>(-(string.len() as i32) + 1)?,
+            false => self.write_i32::<LE>(string.len() as i32 + 1)?,
         };
         let bytes = string.as_bytes();
         self.write_all(bytes)?;
