@@ -2,35 +2,10 @@ use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
 
-use lazy_static::lazy_static;
-use regex::Regex;
-
 use unreal_asset::{engine_version::EngineVersion, Asset};
 use unreal_pak::{PakMemory, PakReader};
 
 use crate::{error::IntegrationError, Error};
-
-lazy_static! {
-    static ref GAME_REGEX: Regex = Regex::new(r"^/Game/").unwrap();
-}
-
-pub fn game_to_absolute(game_name: &str, path: &str) -> Option<String> {
-    if !GAME_REGEX.is_match(path) {
-        return None;
-    }
-
-    let path_str = GAME_REGEX
-        .replace(path, String::from(game_name) + "/Content/")
-        .to_string();
-    let path = Path::new(&path_str);
-    match path.extension() {
-        Some(_) => Some(path_str),
-        None => path
-            .with_extension("uasset")
-            .to_str()
-            .map(|e| e.to_string()),
-    }
-}
 
 pub fn get_asset(
     integrated_pak: &mut PakMemory,

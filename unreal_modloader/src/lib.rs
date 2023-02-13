@@ -22,6 +22,7 @@ pub mod game_path_helpers;
 pub mod game_platform_managers;
 mod mod_config;
 mod mod_processing;
+pub(crate) mod profile;
 pub mod update_info;
 pub mod version;
 
@@ -34,6 +35,8 @@ use mod_processing::dependencies::DependencyGraph;
 use version::GameBuild;
 
 pub use unreal_asset;
+#[cfg(feature = "cpp_loader")]
+pub use unreal_cpp_bootstrapper;
 pub use unreal_modintegrator;
 pub use unreal_modmetadata;
 pub use unreal_pak;
@@ -50,7 +53,7 @@ impl FileToProcess {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) struct ModLoaderAppData {
     /// %LocalAppData%\[GameName]\Saved\Mods
     pub mods_path: Option<PathBuf>,
@@ -64,6 +67,7 @@ pub(crate) struct ModLoaderAppData {
     pub files_to_process: Vec<FileToProcess>,
 
     pub game_mods: BTreeMap<String, GameMod>,
+    pub profiles: Vec<profile::Profile>,
 
     pub error: Option<ModLoaderError>,
     pub warnings: Vec<ModLoaderWarning>,
@@ -73,8 +77,13 @@ pub(crate) struct ModLoaderAppData {
     pub dependency_graph: Option<DependencyGraph>,
 
     /// install managers
-    pub(crate) install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
-    pub(crate) selected_game_platform: Option<String>,
+    pub install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
+    pub selected_game_platform: Option<String>,
+    
+    #[cfg(feature = "cpp_loader")]
+    pub(crate) cpp_loader_config: unreal_cpp_bootstrapper::config::GameSettings,
+    #[cfg(feature = "cpp_loader")]
+    pub(crate) cpp_loader_extract_path: Option<PathBuf>,
 }
 
 impl ModLoaderAppData {
@@ -84,6 +93,11 @@ impl ModLoaderAppData {
             self.game_install_path = manager.get_game_install_path();
             self.game_build = manager.get_game_build();
             self.paks_path = manager.get_paks_path();
+
+            #[cfg(feature = "cpp_loader")]
+            {
+                self.cpp_loader_extract_path = manager.get_extract_path();
+            }
 
             self.selected_game_platform = Some(platform.to_string());
 
@@ -109,21 +123,11 @@ where
     IC: 'static + IntegratorConfig<'data, D, E>,
 {
     let data = Arc::new(Mutex::new(ModLoaderAppData {
-        mods_path: None,
-        paks_path: None,
-        game_install_path: None,
-
-        game_build: None,
         refuse_mismatched_connections: true,
-        game_mods: BTreeMap::new(),
-        files_to_process: Vec::new(),
-
-        error: None,
-        warnings: Vec::new(),
         install_managers: config.get_install_managers(),
-        selected_game_platform: None,
-        failed: false,
-        dependency_graph: None,
+        #[cfg(feature = "cpp_loader")]
+        cpp_loader_config: GC::get_cpp_loader_config(),
+        ..Default::default()
     }));
 
     let icon_data = config.get_icon();
@@ -138,19 +142,28 @@ where
     let update_progress = Arc::new(AtomicI32::new(0));
 
     let (background_tx, background_rx) = mpsc::channel::<BackgroundThreadMessage>();
-    let _ = background_tx.send(BackgroundThreadMessage::integrate());
+
+    // Only integrate if there is no update
+    let has_newer_update = config
+        .get_newer_update()
+        .map(|e| e.is_some())
+        .unwrap_or(false);
+
+    if !has_newer_update {
+        let _ = background_tx.send(BackgroundThreadMessage::integrate());
+    }
 
     // instantiate the GUI app
     let app = app::ModLoaderApp::new(
         data.clone(),
+        background_tx,
         GC::WINDOW_TITLE.to_owned(),
+        GC::CRATE_VERSION,
         ready_exit.clone(),
-        last_integration_time.clone(),
         working.clone(),
+        last_integration_time.clone(),
         newer_update.clone(),
         update_progress.clone(),
-        GC::CRATE_VERSION,
-        background_tx,
     );
 
     // spawn a background thread to handle long running tasks
@@ -205,4 +218,8 @@ where
             Box::new(app)
         }),
     );
+}
+
+pub const fn default_true() -> bool {
+    true
 }

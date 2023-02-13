@@ -25,7 +25,7 @@ impl Display for IntegrationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::GameNotFound => write!(f, "Game not found"),
-            Self::AssetNotFound(ref name) => write!(f, "Asset {:?} not found", name),
+            Self::AssetNotFound(ref name) => write!(f, "Asset {name:?} not found"),
             Self::CorruptedStarterPak => write!(f, "Corrupted starter pak"),
         }
     }

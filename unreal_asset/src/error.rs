@@ -56,7 +56,7 @@ impl Display for UsmapError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self {
             UsmapError::UnsupportedCompression(compression) => {
-                write!(f, "Unsupported compression: {}", compression)
+                write!(f, "Unsupported compression: {compression}")
             }
             UsmapError::InvalidCompressionData => write!(f, "Invalid compression data"),
         }
@@ -88,11 +88,10 @@ impl RegistryError {
 impl Display for RegistryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            RegistryError::InvalidIndex(index) => write!(f, "Invalid index: {}", index),
+            RegistryError::InvalidIndex(index) => write!(f, "Invalid index: {index}"),
             RegistryError::Version(ref msg, version) => write!(
                 f,
-                "Invalid value {} for asset registry with version {}",
-                msg, version
+                "Invalid value {msg} for asset registry with version {version}"
             ),
             RegistryError::Other(ref err) => f.write_str(err),
         }
@@ -141,7 +140,7 @@ impl Display for PropertyError {
                 write!(f, "include_header: true on headerless property")
             }
             PropertyError::PropertyFieldNone(ref field_name, ref expected) => {
-                write!(f, "{} is None expected {}", field_name, expected)
+                write!(f, "{field_name} is None expected {expected}")
             }
             PropertyError::InvalidStruct(ref err) => f.write_str(err),
             PropertyError::InvalidArrayType(ref err) => f.write_str(err),
@@ -156,6 +155,7 @@ pub enum ErrorCode {
     Utf8(FromUtf8Error),
     Utf16(FromUtf16Error),
     NoData(Box<str>),
+    FName(i32, usize),
     InvalidFile(Box<str>),
     InvalidPackageIndex(Box<str>),
     InvalidEnumValue(Box<str>),
@@ -175,6 +175,12 @@ impl Error {
     pub fn no_data(msg: String) -> Self {
         Error {
             code: ErrorCode::NoData(msg.into_boxed_str()),
+        }
+    }
+
+    pub fn fname(index: i32, name_map_size: usize) -> Self {
+        Error {
+            code: ErrorCode::FName(index, name_map_size),
         }
     }
 
@@ -284,6 +290,10 @@ impl Display for ErrorCode {
             ErrorCode::Property(ref err) => Display::fmt(err, f),
             ErrorCode::Registry(ref err) => Display::fmt(err, f),
             ErrorCode::Usmap(ref err) => Display::fmt(err, f),
+            ErrorCode::FName(index, name_map_size) => write!(
+                f,
+                "Cannot read FName, index: {index}, name map size: {name_map_size}"
+            ),
         }
     }
 }

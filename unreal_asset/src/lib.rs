@@ -551,6 +551,13 @@ impl<C: Read + Seek> AssetReader for Asset<C> {
         let name_map_pointer = self.cursor.read_i32::<LittleEndian>()?;
         let number = self.cursor.read_i32::<LittleEndian>()?;
 
+        if name_map_pointer < 0 || name_map_pointer >= self.name_map_index_list.len() as i32 {
+            return Err(Error::fname(
+                name_map_pointer,
+                self.name_map_index_list.len(),
+            ));
+        }
+
         Ok(FName::new(
             self.get_name_reference(name_map_pointer),
             number,
@@ -749,7 +756,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         // reuseable buffers for reading
 
         // seek to start
-        self.cursor.seek(SeekFrom::Start(0))?;
+        self.cursor.rewind()?;
 
         // read and check magic
         if self.cursor.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {
@@ -1278,9 +1285,8 @@ impl<'a, C: Read + Seek> Asset<C> {
                 if let Some(base_export) = base_export {
                     let export: Result<Export, Error> = match self.read_export(&base_export, i) {
                         Ok(e) => Ok(e),
-                        Err(e) => {
-                            //todo: warning?
-                            println!("{:?}", e);
+                        Err(_e) => {
+                            // todo: warning?
                             self.cursor
                                 .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
                             Ok(RawExport::from_base(base_export.clone(), self)?.into())

@@ -30,7 +30,6 @@ fn create_property(
     property_type: &str,
     data: &serde_json::Value,
 ) -> Result<Property, io::Error> {
-    println!("Creating {}", property_type);
     match property_type {
         "ObjectProperty" => {
             let data = data.as_object().ok_or_else(|| {
@@ -53,7 +52,6 @@ fn create_property(
                 .map(|e| e.as_str())
                 .flatten()
                 .unwrap_or("BlueprintGeneratedClass");
-            println!("{} {}", path, import_type);
 
             let object_name = Path::new(path)
                 .file_stem()
@@ -273,8 +271,6 @@ pub(crate) fn integrate(
     _mod_paks: &mut Vec<PakFile>,
     custom: Vec<&serde_json::Value>,
 ) -> Result<(), io::Error> {
-    println!("{:?}", custom);
-
     for custom_mod in custom {
         let entries = custom_mod
             .as_object()
@@ -282,9 +278,9 @@ pub(crate) fn integrate(
 
         for (asset_name, modifications) in entries {
             // todo: open asset
-            let asset_name = game_to_absolute(&game_info.game_name, asset_name.as_str())
-                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset path"))?;
-            println!("{:?}", asset_name);
+            let asset_name =
+                unreal_modmetadata::game_to_absolute(&game_info.game_name, asset_name.as_str())
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset path"))?;
 
             let mut asset =
                 get_asset(integrated_pak, game_paks, &asset_name, game_info.ue_version)?;
@@ -308,7 +304,6 @@ pub(crate) fn integrate(
                 for i in 0..asset.exports.len() {
                     let export = &asset.exports[i];
                     if let Some(normal_export) = export.get_normal_export() {
-                        println!("{}", normal_export.base_export.object_name.content);
                         if normal_export.base_export.object_name.content == export_name {
                             export_index = Some(i);
                             break;
@@ -352,7 +347,6 @@ pub(crate) fn integrate(
                         property_info,
                     )?;
                 }
-                println!("{} {} {:?}", export_name, modification, export_index);
             }
 
             write_asset(integrated_pak, &asset, &asset_name)

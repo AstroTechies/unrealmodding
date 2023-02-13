@@ -50,7 +50,9 @@ pub(crate) enum BackgroundThreadMessage {
     Import(Vec<FileToProcess>),
     RemoveMod(String),
     Integrate(Instant),
+    WriteConfig,
     UpdateApp,
+    LaunchGame,
     Exit,
 }
 
@@ -86,10 +88,7 @@ fn download_mod(
     Ok((metadata, file_path))
 }
 
-fn download_mods(
-    mods_path: &Path,
-    files_to_download: &[GameModVersion],
-) -> Vec<ModLoaderWarning> {
+fn download_mods(mods_path: &Path, files_to_download: &[GameModVersion]) -> Vec<ModLoaderWarning> {
     // let mut resolved = HashMap::new();
     let mut warnings = Vec::new();
 
@@ -249,7 +248,7 @@ where
                 if let Some(game_mod) = data_guard.game_mods.get(&mod_id) {
                     // remove file for each version
                     for (_, version) in game_mod.versions.iter().filter(|v| v.1.downloaded) {
-                        println!("Removing {:?}", mods_path.join(&version.file_name));
+                        debug!("Removing {:?}", mods_path.join(&version.file_name));
                         match fs::remove_file(mods_path.join(&version.file_name)) {
                             Ok(_) => {}
                             Err(err) => {
@@ -325,6 +324,13 @@ where
                     let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
                     let install_path = data_guard.game_install_path.as_ref().unwrap().to_owned();
                     let refuse_mismatched_connections = data_guard.refuse_mismatched_connections;
+
+                    #[cfg(feature = "cpp_loader")]
+                    let cpp_loader_extract_path = data_guard
+                        .cpp_loader_extract_path
+                        .as_ref()
+                        .unwrap()
+                        .to_owned();
 
                     drop(data_guard);
                     debug!(
@@ -558,6 +564,15 @@ where
                         start_integrator.elapsed().as_millis()
                     );
 
+                    #[cfg(feature = "cpp_loader")]
+                    {
+                        unreal_cpp_bootstrapper::bootstrap(
+                            IC::GAME_NAME,
+                            &cpp_loader_extract_path,
+                            &paks_path,
+                        )?;
+                    }
+
                     *background_thread_data.last_integration_time.lock() = Instant::now();
 
                     // update config file
@@ -575,6 +590,49 @@ where
                 background_thread_data
                     .working
                     .store(false, Ordering::Release);
+            }
+            BackgroundThreadMessage::LaunchGame => {
+                fn start(data: &mut ModLoaderAppData) -> Result<(), ModLoaderWarning> {
+                    let install_manager = data.get_install_manager();
+                    let Some(install_manager) = install_manager else {
+                        return Err(ModLoaderWarning::other("No install manager".to_string()));
+                    };
+
+                    #[cfg(feature = "cpp_loader")]
+                    {
+                        let config_location = install_manager.get_config_location()?;
+
+                        fs::create_dir_all(config_location.parent().unwrap())?;
+                        let file = std::fs::File::create(&config_location)?;
+                        let writer = std::io::BufWriter::new(file);
+
+                        if let Err(e) = serde_json::to_writer(writer, &data.cpp_loader_config) {
+                            let _ = fs::remove_file(config_location);
+                            return Err(e.into());
+                        }
+
+                        install_manager.prepare_load()?;
+                    }
+
+                    match install_manager.launch_game() {
+                        Ok(_) => {
+                            #[cfg(feature = "cpp_loader")]
+                            install_manager.load()?;
+
+                            Ok(())
+                        }
+                        Err(warn) => Err(warn),
+                    }
+                }
+
+                let mut data = background_thread_data.data.lock();
+                if let Err(e) = start(&mut data) {
+                    data.warnings.push(e);
+                }
+            }
+            BackgroundThreadMessage::WriteConfig => {
+                // update config file
+                write_config(&mut background_thread_data.data.lock());
             }
             BackgroundThreadMessage::Exit => {
                 break;

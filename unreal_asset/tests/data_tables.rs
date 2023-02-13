@@ -53,9 +53,6 @@ fn data_tables() -> Result<(), Error> {
     }
     assert!(found_test_name);
 
-    drop(first_entry);
-    drop(data_table_export);
-
     let mut modified = Cursor::new(Vec::new());
     asset.write_data(&mut modified, None)?;
     let modified = modified.into_inner();

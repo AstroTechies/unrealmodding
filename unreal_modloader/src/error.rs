@@ -44,19 +44,19 @@ impl ModLoaderError {
 impl fmt::Display for ModLoaderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let err_msg = match self.kind {
-            ModLoaderErrorKind::IoError(ref err) => format!("IO error: {}", err),
+            ModLoaderErrorKind::IoError(ref err) => format!("IO error: {err}"),
             ModLoaderErrorKind::IoErrorWithMessage(ref err, ref message) => {
-                format!("IO error: {}: {}", err, message)
+                format!("IO error: {err}: {message}")
             }
-            ModLoaderErrorKind::PakError(ref err) => format!("UnrealPak error: {}", err),
+            ModLoaderErrorKind::PakError(ref err) => format!("UnrealPak error: {err}"),
             ModLoaderErrorKind::NoBasePath => {
                 "No base path found (%localappdata%\\GameName)".to_owned()
             }
-            ModLoaderErrorKind::Generic(ref err) => format!("Error: {}", err),
-            ModLoaderErrorKind::Other(ref msg) => format!("Other: {}", msg),
+            ModLoaderErrorKind::Generic(ref err) => format!("Error: {err}"),
+            ModLoaderErrorKind::Other(ref msg) => format!("Other: {msg}"),
         };
 
-        write!(f, "{}", err_msg)
+        write!(f, "{err_msg}")
     }
 }
 
@@ -113,6 +113,13 @@ pub enum ModLoaderWarningKind {
     InvalidIndexFile,
     IndexFileMissingMod,
     DownloadFailed(reqwest::Error),
+
+    #[cfg(feature = "cpp_loader")]
+    DllInjector(dll_injector::error::InjectorError),
+    #[cfg(feature = "cpp_loader")]
+    Json(serde_json::Error),
+    #[cfg(feature = "cpp_loader")]
+    CppBootstrapper(unreal_cpp_bootstrapper::error::CppBootstrapperError),
 
     Other(String),
     Generic(Box<dyn std::error::Error + Send>),
@@ -229,20 +236,20 @@ impl ModLoaderWarning {
 impl fmt::Display for ModLoaderWarning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mod_name = match &self.mod_id {
-            Some(mod_id) => format!("mod: {:?}, ", mod_id),
+            Some(mod_id) => format!("mod: {mod_id:?}, "),
             None => "".to_owned(),
         };
 
         let err_msg = match self.kind {
-            ModLoaderWarningKind::IoError(ref err) => format!("{}IO error: {}", mod_name, err),
+            ModLoaderWarningKind::IoError(ref err) => format!("{mod_name}IO error: {err}"),
             ModLoaderWarningKind::IoErrorWithMessage(ref err, ref message) => {
-                format!("{}IO error: {}: {}", mod_name, err, message)
+                format!("{mod_name}IO error: {err}: {message}")
             }
             ModLoaderWarningKind::UnrealPakError(ref err) => {
-                format!("{}UnrealPak error: {}", mod_name, err)
+                format!("{mod_name}UnrealPak error: {err}")
             }
             ModLoaderWarningKind::IntegratorError(ref err) => {
-                format!("{}Integrator error: {}", mod_name, err)
+                format!("{mod_name}Integrator error: {err}")
             }
 
             ModLoaderWarningKind::SteamError => "Failed to locate Steam installation".to_string(),
@@ -250,30 +257,36 @@ impl fmt::Display for ModLoaderWarning {
                 "Failed to locate WinStore installation".to_string()
             }
 
-            ModLoaderWarningKind::MissingMetadata => format!("{}Missing metadata", mod_name),
-            ModLoaderWarningKind::InvalidMetadata => format!("{}Invalid metadata", mod_name),
-            ModLoaderWarningKind::InvalidModId => format!("{}Invalid mod ID", mod_name),
+            ModLoaderWarningKind::MissingMetadata => format!("{mod_name}Missing metadata"),
+            ModLoaderWarningKind::InvalidMetadata => format!("{mod_name}Invalid metadata"),
+            ModLoaderWarningKind::InvalidModId => format!("{mod_name}Invalid mod ID"),
             ModLoaderWarningKind::InvalidModFileName => {
-                format!("{}Invalid mod file name", mod_name)
+                format!("{mod_name}Invalid mod file name")
             }
-            ModLoaderWarningKind::InvalidVersion => format!("{}Invalid version", mod_name),
+            ModLoaderWarningKind::InvalidVersion => format!("{mod_name}Invalid version"),
             ModLoaderWarningKind::IndexFileDownloadFailed(ref err) => {
-                format!("{}Failed to download index file {}", mod_name, err)
+                format!("{mod_name}Failed to download index file {err}")
             }
-            ModLoaderWarningKind::IndexFileDownloadFailedStatus(ref status) => format!(
-                "{}Failed to download index file, status: {}",
-                mod_name, status
-            ),
-            ModLoaderWarningKind::InvalidIndexFile => format!("{}Invalid index file", mod_name),
+            ModLoaderWarningKind::IndexFileDownloadFailedStatus(ref status) => {
+                format!("{mod_name}Failed to download index file, status: {status}")
+            }
+            ModLoaderWarningKind::InvalidIndexFile => format!("{mod_name}Invalid index file"),
             ModLoaderWarningKind::IndexFileMissingMod => {
-                format!("{}Index file missing mod", mod_name)
+                format!("{mod_name}Index file missing mod")
             }
             ModLoaderWarningKind::DownloadFailed(ref err) => {
-                format!("{}Download failed: {}", mod_name, err)
+                format!("{mod_name}Download failed: {err}")
             }
 
-            ModLoaderWarningKind::Other(ref message) => format!("{}{}", mod_name, message),
-            ModLoaderWarningKind::Generic(ref err) => format!("{}Error: {}", mod_name, err),
+            #[cfg(feature = "cpp_loader")]
+            ModLoaderWarningKind::DllInjector(ref err) => format!("Injector: {err}"),
+            #[cfg(feature = "cpp_loader")]
+            ModLoaderWarningKind::Json(ref err) => format!("Json: {err}"),
+            #[cfg(feature = "cpp_loader")]
+            ModLoaderWarningKind::CppBootstrapper(ref err) => format!("Cpp boostrapper: {err}"),
+
+            ModLoaderWarningKind::Other(ref message) => format!("{mod_name}{message}"),
+            ModLoaderWarningKind::Generic(ref err) => format!("{mod_name}Error: {err}"),
             ModLoaderWarningKind::UnresolvedDependency(ref dependency, ref requesters) => {
                 format!(
                     "Error: Unresolved dependency {} for mods: \n{}",
@@ -281,8 +294,7 @@ impl fmt::Display for ModLoaderWarning {
                     requesters
                         .iter()
                         .map(|(requester, requested_version)| format!(
-                            "{}: {}\n",
-                            requester, requested_version
+                            "{requester}: {requested_version}\n"
                         ))
                         .collect::<Vec<_>>()
                         .join("\n")
@@ -295,7 +307,7 @@ impl fmt::Display for ModLoaderWarning {
             ),
         };
 
-        write!(f, "{}", err_msg)
+        write!(f, "{err_msg}")
     }
 }
 
@@ -321,6 +333,36 @@ impl From<unreal_modintegrator::error::Error> for ModLoaderWarning {
     fn from(err: unreal_modintegrator::error::Error) -> Self {
         ModLoaderWarning {
             kind: ModLoaderWarningKind::IntegratorError(err),
+            mod_id: None,
+        }
+    }
+}
+
+#[cfg(feature = "cpp_loader")]
+impl From<dll_injector::error::InjectorError> for ModLoaderWarning {
+    fn from(err: dll_injector::error::InjectorError) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::DllInjector(err),
+            mod_id: None,
+        }
+    }
+}
+
+#[cfg(feature = "cpp_loader")]
+impl From<serde_json::Error> for ModLoaderWarning {
+    fn from(err: serde_json::Error) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::Json(err),
+            mod_id: None,
+        }
+    }
+}
+
+#[cfg(feature = "cpp_loader")]
+impl From<unreal_cpp_bootstrapper::error::CppBootstrapperError> for ModLoaderWarning {
+    fn from(err: unreal_cpp_bootstrapper::error::CppBootstrapperError) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::CppBootstrapper(err),
             mod_id: None,
         }
     }

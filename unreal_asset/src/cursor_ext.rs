@@ -27,15 +27,13 @@ impl<R: Read + Seek> ReadExt for R {
         let len = self.read_i32::<LittleEndian>()?;
         if len == i32::MIN {
             return Err(Error::invalid_file(format!(
-                "Tried to read string with length {}",
-                len
+                "Tried to read string with length {len}"
             )));
         }
 
         if !(-131072..=131072).contains(&len) {
             return Err(Error::invalid_file(format!(
-                "Tried to read string with length {}",
-                len
+                "Tried to read string with length {len}"
             )));
         }
 

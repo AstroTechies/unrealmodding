@@ -45,7 +45,7 @@ fn unknown_properties() -> Result<(), Error> {
                     {
                         *entry = true;
                     } else {
-                        assert!(false);
+                        panic!("Test failed!");
                     }
                 }
             }

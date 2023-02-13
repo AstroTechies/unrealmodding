@@ -159,8 +159,7 @@ impl TextProperty {
                 }
                 _ => {
                     return Err(Error::unimplemented(format!(
-                        "Unimplemented reader for {:?}",
-                        history_type
+                        "Unimplemented reader for {history_type:?}"
                     )));
                 }
             }

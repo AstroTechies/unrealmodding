@@ -1,14 +1,7 @@
 use std::env;
 use std::fs::{self, OpenOptions};
-use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
-use reqwest::{
-    blocking,
-    header::{self, HeaderMap},
-};
-use serde::Deserialize;
 
 const ASSET_REPO: &str = "AstroTechies/ModIntegrator";
 
@@ -40,34 +33,7 @@ fn download_release(out_dir: &Path) {
 
     let project_dir = out_dir.join("ModIntegrator");
 
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        header::USER_AGENT,
-        "reqwest/unreal_modintegrator-buildscript"
-            .parse()
-            .expect("Invalid user agent"),
-    );
-
-    let api_response = blocking::Client::new()
-        .get(format!(
-            "https://api.github.com/repos/{}/releases/latest",
-            ASSET_REPO
-        ))
-        .headers(headers.clone())
-        .send()
-        .unwrap();
-
-    #[derive(Debug, Deserialize)]
-    struct Release {
-        assets: Vec<ReleaseAsset>,
-    }
-    #[derive(Debug, Deserialize)]
-    struct ReleaseAsset {
-        name: String,
-        browser_download_url: String,
-    }
-
-    let release: Release = api_response.json().unwrap();
+    let release = github_helpers::get_latest_release(ASSET_REPO).unwrap();
 
     #[cfg(all(feature = "ue4_23", not(feature = "no_bulk_data")))]
     let file_name = "ue4_23.zip";
@@ -86,13 +52,7 @@ fn download_release(out_dir: &Path) {
         .open(project_dir.join(file_name))
         .expect("Could not open file");
 
-    let mut response = blocking::Client::new()
-        .get(&asset.browser_download_url)
-        .headers(headers)
-        .send()
-        .unwrap();
-
-    io::copy(&mut response, &mut file).expect("Could not copy downloaded file");
+    asset.download(&mut file).unwrap();
 
     let integrator_dir =
         project_dir.join("Saved/Cooked/WindowsNoEditor/ModIntegrator/Content/Integrator");
@@ -105,14 +65,14 @@ fn cook_now(out_dir: &PathBuf) {
     let mut git = Command::new("git")
         .args([
             "clone",
-            format!("https://github.com/{}.git", ASSET_REPO).as_str(),
+            format!("https://github.com/{ASSET_REPO}.git").as_str(),
         ])
         .current_dir(out_dir)
         .spawn()
         .expect("failed to clone repo");
     let status = git.wait().expect("failed to run git");
     if !status.success() {
-        panic!("git failed to finish {}", status);
+        panic!("git failed to finish {status}");
     }
 
     let version_selector = env::var_os("UE_VERSION_SELECTOR").expect("UE_VERSION_SELECTOR not set");
@@ -129,7 +89,7 @@ fn cook_now(out_dir: &PathBuf) {
         .wait()
         .expect("failed to launch UnrealVersionSelector");
     if !status.success() {
-        panic!("UnrealVersionSelector failed to finish {}", status);
+        panic!("UnrealVersionSelector failed to finish {status}");
     }
 
     let ue4_cmd_path =
@@ -147,6 +107,6 @@ fn cook_now(out_dir: &PathBuf) {
         .expect("failed to launch UE4Editor-Cmd");
     let status = cook.wait().expect("failed to launch UE4Editor-Cmd");
     if !status.success() {
-        panic!("UE4Editor-Cmd failed to finish {}", status);
+        panic!("UE4Editor-Cmd failed to finish {status}");
     }
 }

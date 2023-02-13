@@ -73,27 +73,26 @@ impl fmt::Display for PakError {
                 format!("Unsupported pak version: {}", *version as u32)
             }
             PakErrorKind::CompressionUnsupported(ref method) => {
-                format!("Unsupported compression method: {:?}", method)
+                format!("Unsupported compression method: {method:?}")
             }
             PakErrorKind::EncryptionUnsupported => "Encryption is not supported".to_string(),
             PakErrorKind::ConfigurationInvalid => "Invalid configuration".to_string(),
-            PakErrorKind::DoubleWrite(ref name) => format!(
-                "Attempted to write a file twice into the same PakFile, name: {}",
-                name
-            ),
+            PakErrorKind::DoubleWrite(ref name) => {
+                format!("Attempted to write a file twice into the same PakFile, name: {name}")
+            }
 
             PakErrorKind::PakInvalid => "Invalid pak file".to_string(),
             PakErrorKind::EntryNotFound(ref file_name) => {
-                format!("File not found: {}", file_name)
+                format!("File not found: {file_name}")
             }
             PakErrorKind::EntryInvalid => "Invalid file".to_string(),
 
             PakErrorKind::IoError(ref err) => {
-                format!("IO error: {}", err)
+                format!("IO error: {err}")
             }
         };
 
-        write!(f, "{}", err_msg)
+        write!(f, "{err_msg}")
     }
 }
 

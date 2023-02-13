@@ -30,20 +30,28 @@ impl SelectedVersion {
             SelectedVersion::Specific(version) => version,
         }
     }
+
+    pub fn is_latest(&self) -> bool {
+        match self {
+            SelectedVersion::Latest(_) => true,
+            SelectedVersion::LatestIndirect(_) => true,
+            SelectedVersion::Specific(_) => false,
+        }
+    }
 }
 
 impl fmt::Display for SelectedVersion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SelectedVersion::Latest(version) => write!(f, "Latest ({})", version),
+            SelectedVersion::Latest(version) => write!(f, "Latest ({version})"),
             SelectedVersion::LatestIndirect(version) => {
                 if let Some(version) = version {
-                    write!(f, "{}*", version)
+                    write!(f, "{version}*")
                 } else {
                     write!(f, "None")
                 }
             }
-            SelectedVersion::Specific(version) => write!(f, "{}", version),
+            SelectedVersion::Specific(version) => write!(f, "{version}"),
         }
     }
 }

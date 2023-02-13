@@ -608,9 +608,9 @@ impl KismetPropertyPointer {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KismetSwitchCase {
-    case_index_value_term: KismetExpression,
-    next_offset: u32,
-    case_term: KismetExpression,
+    pub case_index_value_term: KismetExpression,
+    pub next_offset: u32,
+    pub case_term: KismetExpression,
 }
 
 impl KismetSwitchCase {
@@ -1148,7 +1148,7 @@ impl ExArrayConst {
         asset.read_i32::<LittleEndian>()?; // num_entries
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndArrayConst)?;
         Ok(ExArrayConst {
-            token: EExprToken::ExAddMulticastDelegate,
+            token: EExprToken::ExArrayConst,
             inner_property,
             elements,
         })
@@ -1286,6 +1286,7 @@ impl KismetExpressionTrait for ExCallMulticastDelegate {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
         asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        offset += KismetExpression::write(&self.delegate, asset)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }

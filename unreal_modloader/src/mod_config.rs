@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 use std::fs;
 
-use log::{error, warn};
+use log::{debug, error, warn};
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::game_mod::SelectedVersion;
+use crate::profile::parse_profile_config;
 use crate::ModLoaderAppData;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -13,7 +15,7 @@ struct ModConfig {
     selected_game_platform: Option<String>,
     refuse_mismatched_connections: bool,
     current: ModsConfigData,
-    profiles: HashMap<String, ModsConfigData>,
+    profiles: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -23,8 +25,8 @@ struct ModsConfigData {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ModConfigData {
-    // TODO: make this a non-Option at some point
-    force_latest: Option<bool>,
+    #[serde(default = "crate::default_true")]
+    force_latest: bool,
     priority: u16,
     enabled: bool,
     version: String,
@@ -72,7 +74,7 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
 
         game_mod.enabled = mod_config.enabled;
 
-        if !mod_config.force_latest.unwrap_or(true) {
+        if !mod_config.force_latest {
             let config_version = Version::parse(&mod_config.version);
             if config_version.is_err() {
                 warn!(
@@ -86,12 +88,23 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
         }
     }
 
+    data.profiles = match parse_profile_config(config.profiles) {
+        Ok(profiles) => profiles,
+        Err(err) => {
+            // not such a bad error
+            error!("{}", err);
+            Vec::new()
+        }
+    };
+
     if let Some(ref selected_game_platform) = config.selected_game_platform {
         data.set_game_platform(selected_game_platform);
     } else if !data.set_game_platform("Steam") {
         let first_platform = data.install_managers.keys().next().unwrap();
         data.set_game_platform(first_platform);
     }
+
+    debug!("Loaded config");
 }
 
 pub(crate) fn write_config(data: &mut ModLoaderAppData) {
@@ -102,16 +115,12 @@ pub(crate) fn write_config(data: &mut ModLoaderAppData) {
         current: ModsConfigData {
             mods: HashMap::new(),
         },
-        profiles: HashMap::new(),
+        profiles: serde_json::to_value(data.profiles.clone()).unwrap(),
     };
 
     for (mod_id, game_mod) in data.game_mods.iter() {
         let mod_config = ModConfigData {
-            force_latest: Some(match game_mod.selected_version {
-                SelectedVersion::Latest(_) => true,
-                SelectedVersion::LatestIndirect(_) => true,
-                SelectedVersion::Specific(_) => false,
-            }),
+            force_latest: game_mod.selected_version.is_latest(),
             priority: 0,
             enabled: game_mod.enabled,
             version: game_mod.selected_version.clone().unwrap().to_string(),
@@ -122,4 +131,6 @@ pub(crate) fn write_config(data: &mut ModLoaderAppData) {
 
     let config_str = serde_json::to_string(&config).unwrap();
     fs::write(config_path, config_str).unwrap();
+
+    debug!("Wrote config");
 }

@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::{
     atomic::{AtomicBool, AtomicI32, Ordering},
     mpsc::Sender,
@@ -8,7 +9,7 @@ use std::time::Instant;
 use eframe::{
     egui::{self, Button, ProgressBar, Sense, Widget},
     emath::Align,
-    App,
+    App, Frame,
 };
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use log::{debug, info};
@@ -16,70 +17,73 @@ use parking_lot::Mutex;
 use semver::Version;
 
 use crate::background_work::BackgroundThreadMessage;
-use crate::error::ModLoaderWarning;
+use crate::error::{ModLoaderError, ModLoaderWarning};
 use crate::game_mod::{GameMod, SelectedVersion};
 use crate::mod_processing::dependencies::DependencyGraph;
+use crate::profile::{Profile, ProfileMod};
 use crate::update_info::UpdateInfo;
-use crate::FileToProcess;
+use crate::{FileToProcess, ModLoaderAppData};
 
+#[derive(Debug)]
 pub(crate) struct ModLoaderApp {
-    pub data: Arc<Mutex<crate::ModLoaderAppData>>,
+    pub data: Arc<Mutex<ModLoaderAppData>>,
+    pub background_tx: Sender<BackgroundThreadMessage>,
 
     pub window_title: String,
+    pub modloader_version: &'static str,
 
     pub ready_exit: Arc<AtomicBool>,
-
-    pub last_integration_time: Arc<Mutex<Instant>>,
-
     pub working: Arc<AtomicBool>,
-
-    pub platform_selector_open: bool,
-    pub selected_mod_id: Option<String>,
+    pub last_integration_time: Arc<Mutex<Instant>>,
+    pub updating: Cell<bool>,
 
     pub newer_update: Arc<Mutex<Option<UpdateInfo>>>,
     pub update_progress: Arc<AtomicI32>,
 
-    pub modloader_version: &'static str,
-
-    pub background_tx: Sender<BackgroundThreadMessage>,
-
-    updating: bool,
+    pub platform_selector_open: bool,
+    pub selected_mod_id: Option<String>,
+    pub profile_manager_open: Cell<bool>,
 }
 
 impl ModLoaderApp {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        data: Arc<Mutex<crate::ModLoaderAppData>>,
+        data: Arc<Mutex<ModLoaderAppData>>,
+        background_tx: Sender<BackgroundThreadMessage>,
         window_title: String,
+        modloader_version: &'static str,
         ready_exit: Arc<AtomicBool>,
-        last_integration_time: Arc<Mutex<Instant>>,
         working: Arc<AtomicBool>,
+        last_integration_time: Arc<Mutex<Instant>>,
         newer_update: Arc<Mutex<Option<UpdateInfo>>>,
         update_progress: Arc<AtomicI32>,
-        modloader_version: &'static str,
-        background_tx: Sender<BackgroundThreadMessage>,
     ) -> Self {
         ModLoaderApp {
             data,
+            background_tx,
+
             window_title,
+            modloader_version,
+
             ready_exit,
-            last_integration_time,
             working,
+            last_integration_time,
+            updating: Cell::new(false),
+
             newer_update,
             update_progress,
-            modloader_version,
-            background_tx,
 
             platform_selector_open: false,
             selected_mod_id: None,
-
-            updating: false,
+            profile_manager_open: Cell::new(false),
         }
     }
 }
 
 impl App for ModLoaderApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Main UI
+
         egui::CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
                 .size(Size::exact(22.0))
@@ -89,20 +93,9 @@ impl App for ModLoaderApp {
                 .size(Size::exact(45.0))
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
-                        StripBuilder::new(ui)
-                            .size(Size::relative(0.5))
-                            .size(Size::remainder())
-                            .horizontal(|mut strip| {
-                                strip.cell(|ui| {
-                                    self.show_title(ui);
-                                });
-                                strip.cell(|ui| {
-                                    self.show_change_platform(ui);
-                                });
-                            });
-
-                        ui.separator();
+                        self.show_header(ui);
                     });
+                    // seperators only look good if at the start of a cell, not the end of the previous one.
                     strip.cell(|ui| {
                         ui.separator();
                         self.show_table(ui);
@@ -125,141 +118,31 @@ impl App for ModLoaderApp {
                 });
         });
 
+        // "popup" windows
+
         let mut data = self.data.lock();
 
-        let mut should_darken = false;
+        let mut darken_background = false;
 
         let mut update_cancelled = false;
-        let newer_update = self.newer_update.lock();
+        let mut newer_update = self.newer_update.lock();
         if let Some(newer_update) = newer_update.as_ref() {
-            egui::Window::new("A new update is available")
-                .resizable(false)
-                .collapsible(false)
-                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
-                .default_size((600.0, 400.0))
-                .show(ctx, |ui| {
-                    StripBuilder::new(ui)
-                        .size(Size::exact(22.0))
-                        .size(Size::remainder())
-                        .size(Size::exact(22.0))
-                        .size(Size::exact(45.0))
-                        .vertical(|mut strip| {
-                            strip.cell(|ui| {
-                                ui.heading(format!(
-                                    "Update version {} is available!",
-                                    newer_update.version
-                                ));
-                            });
-
-                            strip.cell(|ui| {
-                                ui.label(format!("Changelog:\n {}", newer_update.changelog));
-                            });
-
-                            strip.cell(|ui| {
-                                if self.updating {
-                                    let bar = ProgressBar::new(
-                                        self.update_progress.load(Ordering::Acquire) as f32 / 100.0,
-                                    );
-                                    bar.ui(ui);
-                                }
-                            });
-
-                            strip.cell(|ui| {
-                                ui.separator();
-                                ui.style_mut().spacing.button_padding = egui::vec2(9.0, 6.0);
-                                ui.style_mut()
-                                    .text_styles
-                                    .get_mut(&egui::TextStyle::Button)
-                                    .unwrap()
-                                    .size = 16.0;
-
-                                ui.with_layout(ui.layout().with_cross_align(Align::Center), |ui| {
-                                    StripBuilder::new(ui)
-                                        .size(Size::relative(0.5))
-                                        .size(Size::remainder())
-                                        .horizontal(|mut strip| {
-                                            strip.cell(|ui| {
-                                                if ui.button("Download").clicked() {
-                                                    // todo: error
-                                                    let _ = self
-                                                        .background_tx
-                                                        .send(BackgroundThreadMessage::UpdateApp);
-                                                    self.updating = true;
-                                                }
-                                            });
-
-                                            strip.cell(|ui| {
-                                                if ui.button("Cancel").clicked() {
-                                                    update_cancelled = true;
-                                                }
-                                            });
-                                        });
-                                });
-                            });
-                        });
-                });
-
-            should_darken = true;
+            self.show_update_window(ctx, newer_update, &mut update_cancelled);
+            darken_background = true;
         }
-        drop(newer_update);
 
         if update_cancelled {
-            *self.newer_update.lock() = None;
+            *newer_update = None;
         }
 
-        if data.error.is_some() {
-            egui::Window::new("Critical Error")
-                .resizable(false)
-                .collapsible(false)
-                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
-                .fixed_size((600.0, 400.0))
-                .show(ctx, |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
+        drop(newer_update);
 
-                        ui.label(format!("{}", data.error.as_ref().unwrap()));
-                    });
-
-                    ui.separator();
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
-                        if ui.button("Quit").clicked() {
-                            frame.close();
-                        }
-                    });
-                });
-
-            should_darken = true;
+        if let Some(error) = &data.error {
+            self.show_error(ctx, frame, error);
+            darken_background = true;
         } else if !data.warnings.is_empty() {
-            egui::Window::new("Warning")
-                .resizable(false)
-                .collapsible(false)
-                .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
-                .fixed_size((600.0, 400.0))
-                .show(ctx, |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        //ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
-
-                        //ui.label(format!("{}", data.error.as_ref().unwrap()));
-                        for warning in &data.warnings {
-                            ui.label(format!("{}", warning));
-                        }
-
-                        ui.label("");
-                        ui.label("See modloader_log.txt for more details.");
-                        ui.label("");
-                    });
-
-                    ui.separator();
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
-                        if ui.button("Ok").clicked() {
-                            data.warnings.clear();
-                        }
-                    });
-                });
-
-            should_darken = true;
+            self.show_warnings(ctx, &mut data.warnings);
+            darken_background = true;
         }
 
         if self.platform_selector_open {
@@ -277,8 +160,9 @@ impl App for ModLoaderApp {
 
                         let button = match exists {
                             true => Button::new(platform.to_string()),
-                            false => Button::new(format!("{} (not found)", platform))
-                                .sense(Sense::hover()),
+                            false => {
+                                Button::new(format!("{platform} (not found)")).sense(Sense::hover())
+                            }
                         };
 
                         if ui.add(button).clicked() {
@@ -291,7 +175,12 @@ impl App for ModLoaderApp {
                         }
                     }
                 });
-            should_darken = true;
+            darken_background = true;
+        }
+
+        if self.profile_manager_open.get() {
+            self.show_profile_manager(ctx, &mut data);
+            darken_background = true;
         }
 
         // Keyboard shortcuts
@@ -316,7 +205,7 @@ impl App for ModLoaderApp {
 
         drop(data);
 
-        if should_darken {
+        if darken_background {
             self.darken_background(ctx);
         }
 
@@ -326,7 +215,6 @@ impl App for ModLoaderApp {
         // otherwise the background thread might be done, but the paint loop is
         // in idle becasue there is no user input.
         // Or keep it running while the background thread is actively working.
-        // Or while integration is pending.
         // Or while the last integration was not long ago.
         if self.working.load(Ordering::Acquire)
             || self.last_integration_time.lock().elapsed().as_secs() < 5
@@ -334,6 +222,7 @@ impl App for ModLoaderApp {
             ctx.request_repaint();
         }
 
+        // when background thread is ready to exit kill app by ending main thread
         if self.ready_exit.load(Ordering::Acquire) {
             frame.close();
         }
@@ -351,6 +240,22 @@ impl App for ModLoaderApp {
 }
 
 impl ModLoaderApp {
+    // Main UI parts
+
+    fn show_header(&mut self, ui: &mut egui::Ui) {
+        StripBuilder::new(ui)
+            .size(Size::relative(0.5))
+            .size(Size::remainder())
+            .horizontal(|mut strip| {
+                strip.cell(|ui| {
+                    self.show_title(ui);
+                });
+                strip.cell(|ui| {
+                    self.show_header_right(ui);
+                });
+            });
+    }
+
     fn show_title(&self, ui: &mut egui::Ui) {
         let data = self.data.lock();
 
@@ -364,14 +269,14 @@ impl ModLoaderApp {
         if !self.working.load(Ordering::Acquire) {
             ui.heading(title);
         } else {
-            ui.heading(format!("{} - Working...", title));
+            ui.heading(format!("{title} - Working..."));
         }
     }
 
-    fn show_change_platform(&mut self, ui: &mut egui::Ui) {
+    fn show_header_right(&mut self, ui: &mut egui::Ui) {
         let data = self.data.lock();
 
-        let title = format!(
+        let current_platform = format!(
             "Platform: {}",
             match data.selected_game_platform {
                 Some(ref platform) => platform.to_string(),
@@ -381,10 +286,13 @@ impl ModLoaderApp {
 
         ui.with_layout(ui.layout().with_cross_align(Align::Max), |ui| {
             ui.horizontal(|ui| {
+                if ui.button("Profiles").clicked() {
+                    self.profile_manager_open.set(true);
+                }
                 if ui.button("Change platform").clicked() {
                     self.platform_selector_open = true;
                 }
-                ui.label(title);
+                ui.label(current_platform);
             });
         });
     }
@@ -395,10 +303,10 @@ impl ModLoaderApp {
         TableBuilder::new(ui)
             .striped(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .column(Column::initial(42.0).at_least(42.0))
+            .column(Column::initial(40.0).at_least(40.0).at_most(40.0))
             .column(Column::initial(170.0).at_least(20.0))
-            .column(Column::initial(120.0).at_least(120.0))
-            .column(Column::initial(70.0).at_least(20.0))
+            .column(Column::initial(115.0).at_least(115.0).at_most(115.0))
+            .column(Column::initial(115.0).at_least(20.0).at_most(115.0))
             .column(Column::initial(80.0).at_least(20.0))
             .column(Column::remainder().at_least(20.0))
             .resizable(true)
@@ -536,7 +444,7 @@ impl ModLoaderApp {
                     ui.selectable_value(
                         &mut game_mod.selected_version,
                         show_version.clone(),
-                        format!("{}", show_version),
+                        format!("{show_version}"),
                     );
                 }
             });
@@ -554,7 +462,7 @@ impl ModLoaderApp {
                 ui.heading(&game_mod.name);
                 //});
 
-                ui.label(format!("Mod Id: {}", mod_id));
+                ui.label(format!("Mod Id: {mod_id}"));
                 ui.label(format!(
                     "Desciption: {}",
                     game_mod.description.as_ref().unwrap_or(&"None".to_owned())
@@ -644,13 +552,7 @@ impl ModLoaderApp {
                             false => Button::new("Play"),
                         };
                         if ui.add(button).clicked() {
-                            let install_manager = data.get_install_manager();
-                            if let Some(install_manager) = install_manager {
-                                match install_manager.launch_game() {
-                                    Ok(_) => {}
-                                    Err(warn) => data.warnings.push(warn),
-                                };
-                            }
+                            let _ = self.background_tx.send(BackgroundThreadMessage::LaunchGame);
                         }
                     });
                 });
@@ -719,6 +621,279 @@ impl ModLoaderApp {
             let _ = self
                 .background_tx
                 .send(BackgroundThreadMessage::integrate());
+        }
+    }
+
+    // "popup" windows
+
+    fn show_update_window(
+        &self,
+        ctx: &egui::Context,
+        newer_update: &UpdateInfo,
+        update_cancelled: &mut bool,
+    ) {
+        egui::Window::new("A new update is available")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .default_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                StripBuilder::new(ui)
+                    .size(Size::exact(22.0))
+                    .size(Size::remainder())
+                    .size(Size::exact(22.0))
+                    .size(Size::exact(45.0))
+                    .vertical(|mut strip| {
+                        strip.cell(|ui| {
+                            ui.heading(format!(
+                                "Update version {} is available!",
+                                newer_update.version
+                            ));
+                        });
+
+                        strip.cell(|ui| {
+                            ui.label(format!("Changelog:\n {}", newer_update.changelog));
+                        });
+
+                        strip.cell(|ui| {
+                            if self.updating.get() {
+                                let bar = ProgressBar::new(
+                                    self.update_progress.load(Ordering::Acquire) as f32 / 100.0,
+                                );
+                                bar.ui(ui);
+                            }
+                        });
+
+                        strip.cell(|ui| {
+                            ui.separator();
+                            ui.style_mut().spacing.button_padding = egui::vec2(9.0, 6.0);
+                            ui.style_mut()
+                                .text_styles
+                                .get_mut(&egui::TextStyle::Button)
+                                .unwrap()
+                                .size = 16.0;
+
+                            ui.with_layout(ui.layout().with_cross_align(Align::Center), |ui| {
+                                StripBuilder::new(ui)
+                                    .size(Size::relative(0.5))
+                                    .size(Size::remainder())
+                                    .horizontal(|mut strip| {
+                                        strip.cell(|ui| {
+                                            if ui.button("Download").clicked() {
+                                                // todo: error
+                                                let _ = self
+                                                    .background_tx
+                                                    .send(BackgroundThreadMessage::UpdateApp);
+                                                self.updating.set(true);
+                                            }
+                                        });
+
+                                        strip.cell(|ui| {
+                                            if ui.button("Cancel").clicked() {
+                                                *update_cancelled = true;
+                                            }
+                                        });
+                                    });
+                            });
+                        });
+                    });
+            });
+    }
+
+    fn show_error(&self, ctx: &egui::Context, frame: &mut Frame, error: &ModLoaderError) {
+        egui::Window::new("Critical Error")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .fixed_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(10.0, 25.0);
+
+                    ui.label(format!("{error}"));
+                });
+
+                ui.separator();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                    if ui.button("Quit").clicked() {
+                        frame.close();
+                    }
+                });
+            });
+    }
+
+    fn show_warnings(&self, ctx: &egui::Context, warnings: &mut Vec<ModLoaderWarning>) {
+        egui::Window::new("Warning")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .fixed_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    for warning in warnings.iter() {
+                        ui.label(format!("{warning}"));
+                    }
+
+                    ui.label("");
+                    ui.label("See modloader_log.txt for more details.");
+                    ui.label("");
+                });
+
+                ui.separator();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                    if ui.button("Ok").clicked() {
+                        warnings.clear();
+                    }
+                });
+            });
+    }
+
+    fn show_profile_manager(&self, ctx: &egui::Context, data: &mut ModLoaderAppData) {
+        let mut changed = false;
+
+        egui::Window::new("Profiles")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .fixed_size((445.0, 400.0))
+            .show(ctx, |ui| {
+                StripBuilder::new(ui)
+                    .size(Size::remainder())
+                    .size(Size::exact(40.0))
+                    .vertical(|mut strip| {
+                        // Profile list
+                        strip.cell(|ui| {
+                            TableBuilder::new(ui)
+                                .striped(true)
+                                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                                .column(Column::exact(280.0))
+                                .column(Column::auto())
+                                .resizable(false)
+                                .header(20.0, |mut header| {
+                                    header.col(|ui| {
+                                        ui.strong("Name");
+                                    });
+                                    header.col(|ui| {
+                                        ui.strong("Actions");
+                                    });
+                                })
+                                .body(|mut body| {
+                                    let mut remove = None;
+                                    for (i, profile) in data.profiles.iter_mut().enumerate() {
+                                        body.row(18.0, |mut row| {
+                                            row.col(|ui| {
+                                                if ui
+                                                    .text_edit_singleline(&mut profile.name)
+                                                    .changed()
+                                                {
+                                                    changed = true;
+                                                }
+                                            });
+                                            row.col(|ui| {
+                                                if ui.button("Save").clicked() {
+                                                    profile.mods = data
+                                                        .game_mods
+                                                        .iter()
+                                                        .filter(|(_, game_mod)| game_mod.enabled)
+                                                        .map(|(mod_id, game_mod)| {
+                                                            (
+                                                                mod_id.clone(),
+                                                                ProfileMod {
+                                                                    force_latest: game_mod
+                                                                        .selected_version
+                                                                        .is_latest(),
+                                                                    version: game_mod
+                                                                        .selected_version
+                                                                        .clone()
+                                                                        .unwrap()
+                                                                        .to_string(),
+                                                                    ..Default::default()
+                                                                },
+                                                            )
+                                                        })
+                                                        .collect();
+                                                    changed = true;
+                                                };
+
+                                                if ui.button("Load").clicked() {
+                                                    for (mod_id, game_mod) in
+                                                        data.game_mods.iter_mut()
+                                                    {
+                                                        if let Some(_profile_entry) =
+                                                            profile.mods.get(mod_id)
+                                                        {
+                                                            game_mod.enabled = true;
+
+                                                            // TODO load version
+                                                        } else {
+                                                            game_mod.enabled = false;
+                                                        }
+                                                    }
+
+                                                    let _ = self
+                                                        .background_tx
+                                                        .send(BackgroundThreadMessage::integrate());
+                                                }
+
+                                                if ui.button("Delete").clicked() {
+                                                    remove = Some(i);
+                                                }
+                                            });
+                                        });
+                                    }
+                                    if let Some(i) = remove {
+                                        data.profiles.remove(i);
+                                        changed = true;
+                                    }
+                                });
+                        });
+
+                        // Footer
+                        strip.cell(|ui| {
+                            ui.separator();
+
+                            // big buttons
+                            ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+
+                            StripBuilder::new(ui)
+                                .size(Size::relative(0.5))
+                                .size(Size::remainder())
+                                .horizontal(|mut strip| {
+                                    strip.cell(|ui| {
+                                        ui.with_layout(
+                                            egui::Layout::left_to_right(egui::Align::Min),
+                                            |ui| {
+                                                if ui.button("New").clicked() {
+                                                    data.profiles.push(Profile {
+                                                        name: "New Profile".to_owned(),
+                                                        ..Default::default()
+                                                    });
+                                                    changed = true;
+                                                }
+                                            },
+                                        );
+                                    });
+                                    strip.cell(|ui| {
+                                        ui.with_layout(
+                                            egui::Layout::right_to_left(egui::Align::Min),
+                                            |ui| {
+                                                if ui.button("Close").clicked() {
+                                                    self.profile_manager_open.set(false);
+                                                }
+                                            },
+                                        );
+                                    });
+                                });
+                        })
+                    });
+            });
+
+        if changed {
+            let _ = self
+                .background_tx
+                .send(BackgroundThreadMessage::WriteConfig);
         }
     }
 }

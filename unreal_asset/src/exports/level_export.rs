@@ -12,7 +12,7 @@ use crate::types::PackageIndex;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
     pub normal_export: NormalExport,
-    
+
     pub actors: Vec<PackageIndex>,
     pub namespace: Option<String>,
     pub value: Option<String>,
