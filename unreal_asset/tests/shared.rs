@@ -1,6 +1,4 @@
-use std::fs::File;
 use std::io::Cursor;
-use std::io::Write;
 
 use unreal_asset::{cast, engine_version::EngineVersion, error::Error, exports::Export, Asset};
 
@@ -16,18 +14,6 @@ pub(crate) fn verify_reparse(
         bulk_cursor = Some(Cursor::new(Vec::new()));
     }
     asset.write_data(&mut cursor, bulk_cursor.as_mut())?;
-
-    let cursor_inner = cursor.clone().into_inner();
-    {
-        let mut file = File::create("test_thing.uasset")?;
-        file.write_all(&cursor_inner)?;
-    }
-
-    let bulk_inner = bulk_cursor.clone().map(|e| e.into_inner());
-    if let Some(ref bulk_inner) = bulk_inner {
-        let mut file = File::create("test_thing.uexp")?;
-        file.write_all(&bulk_inner)?;
-    }
 
     let mut reparse = Asset::new(cursor, bulk_cursor);
     reparse.set_engine_version(engine_version);
@@ -56,16 +42,8 @@ pub(crate) fn verify_binary_equality(
     }
 
     let cursor_inner = cursor.into_inner();
-    {
-        let mut file = File::create("test_thing.uasset")?;
-        file.write_all(&cursor_inner)?;
-    }
 
     let bulk_inner = bulk_cursor.map(|e| e.into_inner());
-    if let Some(ref bulk_inner) = bulk_inner {
-        let mut file = File::create("test_thing.uexp")?;
-        file.write_all(&bulk_inner)?;
-    }
 
     assert_eq!(cursor_inner, data);
 
