@@ -19,13 +19,13 @@ pub(crate) fn verify_reparse(
 
     let cursor_inner = cursor.clone().into_inner();
     {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uasset")?;
+        let mut file = File::create("test_thing.uasset")?;
         file.write_all(&cursor_inner)?;
     }
 
     let bulk_inner = bulk_cursor.clone().map(|e| e.into_inner());
     if let Some(ref bulk_inner) = bulk_inner {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uexp")?;
+        let mut file = File::create("test_thing.uexp")?;
         file.write_all(&bulk_inner)?;
     }
 
@@ -57,13 +57,13 @@ pub(crate) fn verify_binary_equality(
 
     let cursor_inner = cursor.into_inner();
     {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uasset")?;
+        let mut file = File::create("test_thing.uasset")?;
         file.write_all(&cursor_inner)?;
     }
 
     let bulk_inner = bulk_cursor.map(|e| e.into_inner());
     if let Some(ref bulk_inner) = bulk_inner {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uexp")?;
+        let mut file = File::create("test_thing.uexp")?;
         file.write_all(&bulk_inner)?;
     }
 
@@ -83,6 +83,5 @@ pub(crate) fn verify_all_exports_parsed(asset: &Asset<Cursor<Vec<u8>>>) -> bool 
             return false;
         }
     }
-
     true
 }

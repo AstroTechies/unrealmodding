@@ -5,23 +5,14 @@ use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 #[path = "../shared.rs"]
 mod shared;
 
-macro_rules! assets_folder {
-    () => {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/assets/general/Misc_426/"
-        )
-    };
-}
-
 const TEST_ASSETS: [(&[u8], &[u8]); 2] = [
     (
-        include_bytes!(concat!(assets_folder!(), "MainChar_BellySlice_BR.uasset")),
-        include_bytes!(concat!(assets_folder!(), "MainChar_BellySlice_BR.uexp")),
+        include_bytes!("../assets/general/Misc_426/MainChar_BellySlice_BR.uasset"),
+        include_bytes!("../assets/general/Misc_426/MainChar_BellySlice_BR.uexp"),
     ),
     (
-        include_bytes!(concat!(assets_folder!(), "RaceSimDataAsset.uasset")),
-        include_bytes!(concat!(assets_folder!(), "RaceSimDataAsset.uexp")),
+        include_bytes!("../assets/general/Misc_426/RaceSimDataAsset.uasset"),
+        include_bytes!("../assets/general/Misc_426/RaceSimDataAsset.uexp"),
     ),
 ];
 

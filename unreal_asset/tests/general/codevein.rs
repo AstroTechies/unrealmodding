@@ -5,18 +5,9 @@ use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 #[path = "../shared.rs"]
 mod shared;
 
-macro_rules! assets_folder {
-    () => {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/assets/general/CodeVein/"
-        )
-    };
-}
-
 const TEST_ASSETS: [(&[u8], &[u8]); 1] = [(
-    include_bytes!(concat!(assets_folder!(), "SK_Inner_Female1.uasset")),
-    include_bytes!(concat!(assets_folder!(), "SK_Inner_Female1.uexp")),
+    include_bytes!("../assets/general/CodeVein/SK_Inner_Female1.uasset"),
+    include_bytes!("../assets/general/CodeVein/SK_Inner_Female1.uexp"),
 )];
 
 #[test]

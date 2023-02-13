@@ -5,19 +5,9 @@ use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 #[path = "../shared.rs"]
 mod shared;
 
-macro_rules! assets_folder {
-    () => {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/assets/general/Versioned/"
-        )
-    };
-}
-
-const TEST_ASSETS: [&[u8]; 1] = [include_bytes!(concat!(
-    assets_folder!(),
-    "Assault_M1A1Thompson_WW2_DrumSuppressor.uasset"
-))];
+const TEST_ASSETS: [&[u8]; 1] = [include_bytes!(
+    "../assets/general/Versioned/Assault_M1A1Thompson_WW2_DrumSuppressor.uasset"
+)];
 
 #[test]
 fn versioned() -> Result<(), Error> {
