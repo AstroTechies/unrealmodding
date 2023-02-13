@@ -6,9 +6,24 @@ use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 #[path = "../shared.rs"]
 mod shared;
 
+macro_rules! assets_folder {
+    () => {
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/assets/general/StarlitSeason/"
+        )
+    };
+}
+
 const TEST_ASSETS: [(&[u8], &[u8]); 1] = [(
-    include_bytes!("../assets/general/StarlitSeason/CharacterCostume_chr0001_DataTable.uasset"),
-    include_bytes!("../assets/general/StarlitSeason/CharacterCostume_chr0001_DataTable.uexp"),
+    include_bytes!(concat!(
+        assets_folder!(),
+        "CharacterCostume_chr0001_DataTable.uasset"
+    )),
+    include_bytes!(concat!(
+        assets_folder!(),
+        "CharacterCostume_chr0001_DataTable.uexp"
+    )),
 )];
 
 #[test]

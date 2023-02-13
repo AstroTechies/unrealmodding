@@ -6,13 +6,25 @@ use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 #[path = "../shared.rs"]
 mod shared;
 
+macro_rules! assets_folder {
+    () => {
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/assets/general/BloodStained/"
+        )
+    };
+}
+
 const TEST_ASSETS: [&[u8]; 6] = [
-    include_bytes!("../assets/general/Bloodstained/m01SIP_000_BG.umap"),
-    include_bytes!("../assets/general/Bloodstained/m01SIP_000_Gimmick.umap"),
-    include_bytes!("../assets/general/Bloodstained/m02VIL_004_Gimmick.umap"),
-    include_bytes!("../assets/general/Bloodstained/m05SAN_000_Gimmick.umap"),
-    include_bytes!("../assets/general/Bloodstained/PB_DT_ItemMaster.uasset"),
-    include_bytes!("../assets/general/Bloodstained/PB_DT_RandomizerRoomCheck.uasset"),
+    include_bytes!(concat!(assets_folder!(), "m01SIP_000_BG.umap")),
+    include_bytes!(concat!(assets_folder!(), "m01SIP_000_Gimmick.umap")),
+    include_bytes!(concat!(assets_folder!(), "m02VIL_004_Gimmick.umap")),
+    include_bytes!(concat!(assets_folder!(), "m05SAN_000_Gimmick.umap")),
+    include_bytes!(concat!(assets_folder!(), "PB_DT_ItemMaster.uasset")),
+    include_bytes!(concat!(
+        assets_folder!(),
+        "PB_DT_RandomizerRoomCheck.uasset"
+    )),
 ];
 
 #[test]
