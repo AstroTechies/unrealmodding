@@ -46,7 +46,7 @@ impl<C: io::Read + io::Seek> io::Read for Chain<C> {
                                 let mut first = vec![0; to_end];
                                 let mut second = vec![0; len - to_end];
                                 self.first.read_exact(&mut first)?;
-                                sec.read(&mut second)?;
+                                sec.read_exact(&mut second)?;
                                 first.append(&mut second);
                                 first.as_slice().read(buf)?
                             }
