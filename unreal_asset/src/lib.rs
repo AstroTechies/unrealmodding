@@ -3,17 +3,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! use std::{
-//!     fs::File,
-//!     io::{Cursor, Read},
-//!     path::Path,
-//! };
+//! use std::fs::File;
 //!
-//! let mut file = File::open("asset.uasset").unwrap();
-//! let mut data = Vec::new();
-//! file.read_to_end(&mut data).unwrap();
-//!
-//! let mut asset = Asset:new(data, None);
+//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), None);
 //! asset.parse_data().unwrap();
 //!
 //! println!("{:#?}", asset.engine_version);
@@ -22,21 +14,10 @@
 //! ## Reading an asset that uses bulk data
 //!
 //! ```no_run
-//! use std::{
-//!     fs::File,
-//!     io::{Cursor, Read},
-//!     path::Path,
-//! };
+//! use std::fs::File;
 //!
-//! let mut file = File::open("asset.uasset").unwrap();
-//! let mut data = Vec::new();
-//! file.read_to_end(&mut data).unwrap();
 //!
-//! let mut file = File::open("asset.uexp").unwrap();
-//! let mut bulk_data = Vec::new();
-//! file.read_to_end(&mut bulk_data).unwrap();
-//!
-//! let mut asset = Asset:new(data, Some(bulk_data));
+//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), Some(File::open("asset.uexp").unwrap()));
 //! asset.parse_data().unwrap();
 //!
 //! println!("{:#?}", asset.engine_version);
@@ -983,6 +964,10 @@ impl<'a, C: Read + Seek> Asset<C> {
             return index.to_string();
         }
         self.name_map_index_list[index as usize].to_owned()
+    }
+
+    pub fn get_name_reference_mut(&mut self, index: i32) -> &mut String {
+        &mut self.name_map_index_list[index as usize]
     }
 
     pub fn add_fname(&mut self, slice: &str) -> FName {
