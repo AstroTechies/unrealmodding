@@ -965,6 +965,11 @@ impl<'a> Asset {
         &self.name_map_index_list
     }
 
+    // users cannot mess up references in the lookup table by accident if it's an iterator
+    pub fn get_name_map_index_list_mut(&mut self) -> std::slice::IterMut<String> {
+        self.name_map_index_list.iter_mut()
+    }
+
     pub fn get_name_reference(&self, index: i32) -> String {
         if index < 0 {
             return (-index).to_string(); // is this right even?
@@ -973,6 +978,10 @@ impl<'a> Asset {
             return index.to_string();
         }
         self.name_map_index_list[index as usize].to_owned()
+    }
+
+    pub fn get_name_reference_mut(&mut self, index: i32) -> &mut String {
+        &mut self.name_map_index_list[index as usize]
     }
 
     pub fn add_fname(&mut self, slice: &str) -> FName {
