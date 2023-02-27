@@ -31,7 +31,7 @@ where
         if header.compression_method == 0 {
             Compression::None
         } else if header.compression_method <= 5 {
-            compression.0[header.compression_method as usize - 1].clone()
+            compression.0[header.compression_method as usize - 1]
         } else {
             let mut arr = [0; 0x20];
             arr[0] = header.compression_method as u8;
@@ -62,7 +62,6 @@ where
                 let mut compressed_data = vec![0u8; block.size as usize];
                 reader.read_exact(&mut compressed_data)?;
                 compression_method.decompress(&mut data, compressed_data.as_slice())?;
-                //decoder.read_to_end(&mut data)?;
             }
 
             Ok(data)
@@ -96,7 +95,7 @@ where
 
     let compress = compress && decompressed_size >= 32;
     let compression_method = if compress {
-        compression.0[0].clone()
+        compression.0[0]
     } else {
         Compression::None
     };

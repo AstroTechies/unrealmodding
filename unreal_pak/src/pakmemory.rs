@@ -108,7 +108,7 @@ impl PakMemory {
             index_offset: 0,
             index_size: 0,
             index_hash: [0u8; 20],
-            compression_methods: self.compression.clone(),
+            compression_methods: self.compression,
             index_encrypted: Some(false),
             encryption_key_guid: Some([0u8; 0x10]),
         };

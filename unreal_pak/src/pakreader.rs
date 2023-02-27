@@ -88,7 +88,7 @@ where
         PakReaderIter {
             reader: &mut self.reader,
             pak_version: self.pak_version,
-            compression: &self.compression,
+            compression: self.compression,
             iter: self.entries.iter(),
         }
     }
@@ -101,7 +101,7 @@ where
 {
     reader: &'data mut BufReader<&'data R>,
     pak_version: PakVersion,
-    compression: &'a CompressionMethods,
+    compression: CompressionMethods,
     iter: std::collections::btree_map::Iter<'a, String, Header>,
 }
 
@@ -118,7 +118,7 @@ where
                 read_entry(
                     &mut self.reader,
                     self.pak_version,
-                    self.compression,
+                    &self.compression,
                     header.offset,
                 ),
             )

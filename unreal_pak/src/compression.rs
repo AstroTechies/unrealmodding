@@ -9,7 +9,7 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 use flate2::{read::ZlibDecoder, write::ZlibEncoder};
 
 /// Enum representing which compression method is being used for an entry
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Compression {
     /// No Compression
     #[default]
@@ -84,7 +84,7 @@ fn pad_zeroes(slice: &[u8]) -> [u8; 0x20] {
     arr
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) struct CompressionMethods(pub [Compression; 5]);
 
 impl CompressionMethods {
