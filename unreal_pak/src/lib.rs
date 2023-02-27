@@ -19,6 +19,7 @@ File parts:
 //! Encrytion is currently unsupported
 
 mod buf_ext;
+pub mod compression;
 mod entry;
 pub mod error;
 mod header;
@@ -32,23 +33,14 @@ pub use pakmemory::PakMemory;
 pub use pakreader::PakReader;
 pub use pakwriter::PakWriter;
 
-pub(crate) const PAK_MAGIC: u32 = u32::from_be_bytes([0xe1, 0x12, 0x6f, 0x5a]);
+pub use compression::Compression;
+pub use error::PakError;
 
-/// Enum representing which compression method is being used for an entry
-#[derive(
-    PartialEq, Eq, Debug, Clone, Copy, Default, num_enum::IntoPrimitive, num_enum::TryFromPrimitive,
-)]
-#[repr(i32)]
-pub enum CompressionMethod {
-    /// No comprssion
-    None = 0,
-    /// Standard Zlib comprssion
-    #[default]
-    Zlib = 1,
-    /// BiasMemory comprssion
-    BiasMemory = 2,
-    /// BiasSpeed comprssion
-    BiasSpeed = 3,
-    /// Unknown comprssion
-    Unknown = 255,
+pub(crate) const PAK_MAGIC: u32 = u32::from_be_bytes([0xE1, 0x12, 0x6F, 0x5A]);
+
+pub(crate) fn hash(data: &[u8]) -> [u8; 20] {
+    use sha1::{Digest, Sha1};
+    let mut hasher = Sha1::new();
+    hasher.update(data);
+    hasher.finalize().into()
 }

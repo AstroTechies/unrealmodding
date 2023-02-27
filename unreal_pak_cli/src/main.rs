@@ -6,7 +6,7 @@ use std::time::SystemTime;
 
 use clap::{Parser, Subcommand};
 use path_absolutize::Absolutize;
-use unreal_pak::{pakversion::PakVersion, CompressionMethod, PakReader, PakWriter};
+use unreal_pak::{pakversion::PakVersion, PakReader, PakWriter};
 use walkdir::WalkDir;
 
 /// Command line tool for working with Unreal Engine .pak files.
@@ -102,14 +102,8 @@ fn main() {
 
             println!("Extracting to {output_folder:?}");
 
-            // TODO: get rid of this clone
-            let names = pak
-                .get_entry_names()
-                .into_iter()
-                .cloned()
-                .collect::<Vec<_>>();
-            for (i, file_name) in names.iter().enumerate() {
-                match pak.read_entry(file_name) {
+            for (i, (file_name, data)) in pak.iter().enumerate() {
+                match data {
                     Ok(data) => {
                         let path = output_folder.join(file_name);
                         let dir_path = match path.parent() {
@@ -191,20 +185,7 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak = PakWriter::new(
-                &file,
-                PakVersion::PakFileVersionFnameBasedCompressionMethod,
-                CompressionMethod::Zlib,
-            );
-
-            let compression_method = if no_compression {
-                unreal_pak::CompressionMethod::None
-            } else {
-                unreal_pak::CompressionMethod::Zlib
-            };
-
-            println!("Using compression method: {compression_method:?}");
-            pak.compression = compression_method;
+            let mut pak = PakWriter::new(&file, PakVersion::FnameBasedCompressionMethod);
 
             // Get all files and write them to the .pak file
             let files = WalkDir::new(&indir)
@@ -237,7 +218,7 @@ fn main() {
                     }
                 };
 
-                match pak.write_entry(&file_name, &file_data) {
+                match pak.write_entry(&file_name, &file_data, !no_compression) {
                     Ok(_) => println!("Wrote file {i}: {file_name}"),
                     Err(err) => {
                         eprintln!("Error writing file in pak {file_name:?}! Error: {err}");
@@ -256,7 +237,7 @@ fn main() {
         }
     }
     println!(
-        "upakcli took {:?} seconds...",
+        "unreal_pak_cli took {:?} seconds...",
         start.elapsed().unwrap().as_secs_f32()
     )
 }

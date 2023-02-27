@@ -1,11 +1,14 @@
 [workspace]
 members = [
-    "unreal_pak", "unreal_pak_cli",
+    "unreal_pak",
+    "unreal_pak_cli",
     "unreal_asset",
     "unreal_modmetadata",
-    "unreal_modloader", "unreal_modintegrator",
-    "unreal_cpp_bootstrapper", "dll_injector",
-    "github_helpers"
+    "unreal_modloader",
+    "unreal_modintegrator",
+    "unreal_cpp_bootstrapper",
+    "dll_injector",
+    "github_helpers",
 ]
 
 [workspace.package]
@@ -22,6 +25,7 @@ unreal_cpp_bootstrapper = { path = "./unreal_cpp_bootstrapper" }
 dll_injector = { path = "./dll_injector" }
 github_helpers = { path = "./github_helpers" }
 
+bitvec = "1.0.1"
 byteorder = "1.4.3"
 lazy_static = "1.4.0"
 log = "0.4.17"

@@ -6,7 +6,9 @@ description.workspace = true
 edition = "2021"
 
 [dependencies]
+bitvec.workspace = true
 byteorder.workspace = true
 flate2 = { version = "1.0.25", features = ["zlib"], default-features = false }
 num_enum.workspace = true
+rand = "0.8.5"
 sha-1 = "0.10.1"

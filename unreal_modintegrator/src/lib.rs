@@ -430,8 +430,7 @@ pub fn integrate_mods<
     }
 
     if !mods.is_empty() {
-        let mut generated_pak =
-            PakMemory::new(PakVersion::PakFileVersionFnameBasedCompressionMethod);
+        let mut generated_pak = PakMemory::new(PakVersion::FnameBasedCompressionMethod);
 
         #[cfg(not(feature = "no_bulk_data"))]
         let list_of_mods_bulk = Some(LIST_OF_MODS_BULK.to_vec());

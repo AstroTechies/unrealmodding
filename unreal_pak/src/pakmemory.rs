@@ -3,11 +3,11 @@
 use std::collections::BTreeMap;
 use std::io::{Read, Seek, Write};
 
+use crate::compression::CompressionMethods;
 use crate::entry::{read_entry, write_entry};
 use crate::error::PakError;
-use crate::index::{Footer, Index};
+use crate::index::{random_path_hash_seed, Footer, Index};
 use crate::pakversion::PakVersion;
-use crate::CompressionMethod;
 
 /// A Unreal Pak file which keeps all of it's data in memory.
 /// It allows reading and writing of the same entries before comitting the file to disk.
@@ -18,7 +18,7 @@ pub struct PakMemory {
     /// mount point (Unreal stuff)
     pub mount_point: String,
     /// the compression method preferred for this file
-    pub compression: CompressionMethod,
+    compression: CompressionMethods,
     /// the compression block size
     pub block_size: u32,
     entries: BTreeMap<String, Vec<u8>>,
@@ -30,7 +30,7 @@ impl PakMemory {
         Self {
             pak_version,
             mount_point: "../../../".to_owned(),
-            compression: CompressionMethod::default(),
+            compression: CompressionMethods::default(),
             block_size: 0x010000,
             entries: BTreeMap::new(),
         }
@@ -42,11 +42,17 @@ impl PakMemory {
 
         self.pak_version = index.footer.pak_version;
         self.mount_point = index.mount_point.clone();
+        self.compression = index.footer.compression_methods;
 
         for (name, header) in index.entries {
             self.entries.insert(
                 name,
-                read_entry(&mut reader, self.pak_version, header.offset)?,
+                read_entry(
+                    &mut reader,
+                    self.pak_version,
+                    &self.compression,
+                    header.offset,
+                )?,
             );
         }
 
@@ -55,7 +61,7 @@ impl PakMemory {
 
     /// Create a new PakMemory based on the data of the reader.
     pub fn load_from<R: Read + Seek>(reader: &mut R) -> Result<Self, PakError> {
-        let mut pak_memory = Self::new(PakVersion::PakFileVersionInvalid);
+        let mut pak_memory = Self::new(PakVersion::Invalid);
         pak_memory.load(reader)?;
         Ok(pak_memory)
     }
@@ -80,7 +86,7 @@ impl PakMemory {
         self.entries.insert(name, data);
     }
 
-    /// Finish writing the pak file by writing index and footer
+    /// Write all the data as a finished pak file into the provided writer.
     pub fn write<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PakError> {
         let mut written_entries = Vec::new();
 
@@ -89,7 +95,8 @@ impl PakMemory {
                 writer,
                 self.pak_version,
                 data,
-                self.compression,
+                true,
+                &self.compression,
                 self.block_size,
             )?;
             written_entries.push((name.clone(), header));
@@ -101,16 +108,44 @@ impl PakMemory {
             index_offset: 0,
             index_size: 0,
             index_hash: [0u8; 20],
+            compression_methods: self.compression,
             index_encrypted: Some(false),
             encryption_key_guid: Some([0u8; 0x10]),
         };
 
         let index = Index {
             mount_point: self.mount_point.clone(),
+            path_hash_seed: Some(random_path_hash_seed()),
             entries: written_entries,
             footer,
         };
 
         Index::write(writer, index)
+    }
+
+    /// Iterate over the entries in the PakMemory
+    pub fn iter(&self) -> PakMemoryIter<'_> {
+        PakMemoryIter(self.entries.iter())
+    }
+}
+
+/// An iterator over the entries of a PakMemory
+pub struct PakMemoryIter<'a>(std::collections::btree_map::Iter<'a, String, Vec<u8>>);
+
+impl<'a> Iterator for PakMemoryIter<'a> {
+    type Item = (&'a String, &'a Vec<u8>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+impl<'a> IntoIterator for &'a PakMemory {
+    type Item = (&'a String, &'a Vec<u8>);
+
+    type IntoIter = PakMemoryIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }

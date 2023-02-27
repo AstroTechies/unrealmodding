@@ -14,14 +14,14 @@
     - u32 block size
 */
 
-use std::io::{Read, Write};
+use std::io::{self, Read, Seek, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use num_enum::TryFromPrimitive;
+use bitvec::prelude::*;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
+use crate::compression::{Compression, CompressionMethods};
 use crate::error::PakError;
 use crate::pakversion::PakVersion;
-use crate::CompressionMethod;
 
 #[derive(Debug)]
 pub(crate) struct Header {
@@ -29,7 +29,7 @@ pub(crate) struct Header {
     pub offset: u64,
     pub compressed_size: u64,
     pub decompressed_size: u64,
-    pub compression_method: CompressionMethod,
+    pub compression_method: Compression,
     pub hash: [u8; 20],
     pub compression_blocks: Option<Vec<Block>>,
     pub flags: Option<u8>,
@@ -47,22 +47,22 @@ pub(crate) struct Block {
 
 impl Header {
     /// Read data from the reader into a Header, reader needs to be set at start of a header
-    pub(crate) fn read<R: Read>(reader: &mut R, pak_version: PakVersion) -> Result<Self, PakError> {
-        let offset = reader.read_u64::<LittleEndian>()?;
+    pub(crate) fn read<R: Read>(
+        reader: &mut R,
+        pak_version: PakVersion,
+        compression: &CompressionMethods,
+    ) -> Result<Self, PakError> {
+        let offset = reader.read_u64::<LE>()?;
 
-        let compressed_size = reader.read_u64::<LittleEndian>()?;
-        let decompressed_size = reader.read_u64::<LittleEndian>()?;
+        let compressed_size = reader.read_u64::<LE>()?;
+        let decompressed_size = reader.read_u64::<LE>()?;
 
-        // TODO: the assumption of 0x01 = zlib is actually incorrect after PakFileVersionFnameBasedCompressionMethod,
-        // it is actually an index into the compression format name array in the footer
+        // TODO UE4.22 apparently this can be 1 byte too?
         let compression_method =
-            match CompressionMethod::try_from_primitive(reader.read_i32::<LittleEndian>()?) {
-                Ok(compression_method) => compression_method,
-                Err(_) => CompressionMethod::Unknown,
-            };
+            Compression::from_u32(reader.read_u32::<LE>()?, pak_version, compression);
 
-        if pak_version <= PakVersion::PakFileVersionInitial {
-            let _timestamp = reader.read_u64::<LittleEndian>()?;
+        if pak_version <= PakVersion::Initial {
+            let _timestamp = reader.read_u64::<LE>()?;
         }
 
         let mut hash = [0u8; 20];
@@ -72,20 +72,20 @@ impl Header {
         let mut flags = None;
         let mut compression_block_size = None;
 
-        if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
-            if compression_method != CompressionMethod::None {
-                let block_count = reader.read_u32::<LittleEndian>()? as usize;
+        if pak_version >= PakVersion::CompressionEncryption {
+            if !matches!(compression_method, Compression::None) {
+                let block_count = reader.read_u32::<LE>()? as usize;
                 let mut compression_blocks_inner = Vec::with_capacity(block_count);
 
                 for _ in 0..block_count {
                     // convert old absolute to relative offsets
-                    let start_offset = reader.read_u64::<LittleEndian>()?
-                        - if pak_version < PakVersion::PakFileVersionRelativeChunkOffsets {
+                    let start_offset = reader.read_u64::<LE>()?
+                        - if pak_version < PakVersion::RelativeChunkOffsets {
                             offset
                         } else {
                             0
                         };
-                    let end_offset = reader.read_u64::<LittleEndian>()?;
+                    let end_offset = reader.read_u64::<LE>()?;
                     compression_blocks_inner.push(Block {
                         start: start_offset,
                         size: end_offset - start_offset,
@@ -95,7 +95,7 @@ impl Header {
             }
 
             flags = Some(reader.read_u8()?);
-            compression_block_size = Some(reader.read_u32::<LittleEndian>()?);
+            compression_block_size = Some(reader.read_u32::<LE>()?);
         }
 
         Ok(Header {
@@ -110,32 +110,91 @@ impl Header {
         })
     }
 
+    /// Read (bit)encoded header
+    pub(crate) fn read_encoded<R: Read + Seek>(
+        reader: &mut R,
+        pak_version: PakVersion,
+        compression: &CompressionMethods,
+    ) -> Result<Self, PakError> {
+        let mut header_bits = [0u8; 4];
+        reader.read_exact(&mut header_bits)?;
+        let header_bits = header_bits.view_bits::<Lsb0>();
+
+        // compression blocks
+        // this is actually irrelevant here because it is also included in the header before the actual data
+        let mut block_size = header_bits[0..=5].load_le::<u32>();
+        let _block_count = header_bits[6..=21].load_le::<u32>();
+
+        if block_size == 0x3f {
+            block_size = reader.read_u32::<LE>()?;
+        } else {
+            block_size <<= 11;
+        }
+
+        let is_encrypted = header_bits[22];
+        let compression_method = Compression::from_u32(
+            header_bits[23..=28].load_le::<u32>(),
+            pak_version,
+            compression,
+        );
+
+        let mut read_size = |bit: usize| -> io::Result<_> {
+            Ok(if header_bits[bit] {
+                reader.read_u32::<LE>()? as u64
+            } else {
+                reader.read_u64::<LE>()?
+            })
+        };
+
+        let offset = read_size(31)?;
+        let decompressed_size = read_size(30)?;
+        let compressed_size = if matches!(compression_method, Compression::None) {
+            decompressed_size
+        } else {
+            read_size(29)?
+        };
+
+        // compression blocks could be read here but why waste the time, they won't get used anyways
+
+        Ok(Header {
+            offset,
+            compressed_size,
+            decompressed_size,
+            compression_method,
+            hash: [0; 20],
+            compression_blocks: None,
+            compression_block_size: Some(block_size),
+            flags: Some(if is_encrypted { 1 } else { 0 }),
+        })
+    }
+
     /// Write data from a Header into the writer, writer needs to be set where the header is supposed to be written
     pub(crate) fn write<W: Write>(
         writer: &mut W,
         pak_version: PakVersion,
+        compression: &CompressionMethods,
         header: &Self,
     ) -> Result<(), PakError> {
-        writer.write_u64::<LittleEndian>(header.offset)?;
-        writer.write_u64::<LittleEndian>(header.compressed_size)?;
-        writer.write_u64::<LittleEndian>(header.decompressed_size)?;
-        writer.write_i32::<LittleEndian>(header.compression_method.into())?;
+        writer.write_u64::<LE>(header.offset)?;
+        writer.write_u64::<LE>(header.compressed_size)?;
+        writer.write_u64::<LE>(header.decompressed_size)?;
+        writer.write_u32::<LE>(header.compression_method.as_u32(pak_version, compression)?)?;
 
         writer.write_all(&header.hash)?;
 
-        if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
-            if header.compression_method != CompressionMethod::None {
+        if pak_version >= PakVersion::CompressionEncryption {
+            if !matches!(header.compression_method, Compression::None) {
                 if let Some(compression_blocks) = &header.compression_blocks {
-                    writer.write_u32::<LittleEndian>(compression_blocks.len() as u32)?;
+                    writer.write_u32::<LE>(compression_blocks.len() as u32)?;
                     for block in compression_blocks {
-                        writer.write_u64::<LittleEndian>(block.start)?;
-                        writer.write_u64::<LittleEndian>(block.start + block.size)?;
+                        writer.write_u64::<LE>(block.start)?;
+                        writer.write_u64::<LE>(block.start + block.size)?;
                     }
                 }
             }
 
             writer.write_u8(header.flags.unwrap_or(0))?;
-            writer.write_u32::<LittleEndian>(header.compression_block_size.unwrap_or(0x010000))?;
+            writer.write_u32::<LE>(header.compression_block_size.unwrap_or(0x010000))?;
         }
 
         Ok(())
@@ -148,14 +207,14 @@ impl Header {
         len += 28;
 
         // timestamp
-        if pak_version <= PakVersion::PakFileVersionInitial {
+        if pak_version <= PakVersion::Initial {
             len += 8;
         }
 
         // hash
         len += 20;
 
-        if pak_version >= PakVersion::PakFileVersionCompressionEncryption {
+        if pak_version >= PakVersion::CompressionEncryption {
             if let Some(block_count) = block_count {
                 // block count
                 len += 4;
