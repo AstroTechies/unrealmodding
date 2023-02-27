@@ -71,11 +71,70 @@ where
             .entries
             .get(name)
             .ok_or_else(|| PakError::entry_not_found(name.clone()))?;
+        self.read_entry_at_offset(header.offset)
+    }
+
+    fn read_entry_at_offset(&mut self, offset: u64) -> Result<Vec<u8>, PakError> {
         read_entry(
             &mut self.reader,
             self.pak_version,
             &self.compression,
-            header.offset,
+            offset,
         )
+    }
+
+    /// Iterate over the entries in the PakReader
+    pub fn iter<'a: 'data>(&'a mut self) -> PakReaderIter<'a, 'data, R> {
+        PakReaderIter {
+            reader: &mut self.reader,
+            pak_version: self.pak_version,
+            compression: &self.compression,
+            iter: self.entries.iter(),
+        }
+    }
+}
+
+/// An iterator over the entries of a PakReader
+pub struct PakReaderIter<'a, 'data, R>
+where
+    &'data R: Read + Seek,
+{
+    reader: &'data mut BufReader<&'data R>,
+    pak_version: PakVersion,
+    compression: &'a CompressionMethods,
+    iter: std::collections::btree_map::Iter<'a, String, Header>,
+}
+
+impl<'a, 'data, R> Iterator for PakReaderIter<'a, 'data, R>
+where
+    &'data R: Read + Seek,
+{
+    type Item = (&'a String, Result<Vec<u8>, PakError>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|(name, header)| {
+            (
+                name,
+                read_entry(
+                    &mut self.reader,
+                    self.pak_version,
+                    self.compression,
+                    header.offset,
+                ),
+            )
+        })
+    }
+}
+
+impl<'a: 'data, 'data, R> IntoIterator for &'a mut PakReader<'data, R>
+where
+    &'data R: Read + Seek,
+{
+    type Item = (&'a String, Result<Vec<u8>, PakError>);
+
+    type IntoIter = PakReaderIter<'a, 'data, R>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }

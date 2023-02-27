@@ -102,14 +102,8 @@ fn main() {
 
             println!("Extracting to {output_folder:?}");
 
-            // TODO: get rid of this clone
-            let names = pak
-                .get_entry_names()
-                .into_iter()
-                .cloned()
-                .collect::<Vec<_>>();
-            for (i, file_name) in names.iter().enumerate() {
-                match pak.read_entry(file_name) {
+            for (i, (file_name, data)) in pak.iter().enumerate() {
+                match data {
                     Ok(data) => {
                         let path = output_folder.join(file_name);
                         let dir_path = match path.parent() {
@@ -243,7 +237,7 @@ fn main() {
         }
     }
     println!(
-        "upakcli took {:?} seconds...",
+        "unreal_pak_cli took {:?} seconds...",
         start.elapsed().unwrap().as_secs_f32()
     )
 }

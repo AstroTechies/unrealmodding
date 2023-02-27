@@ -122,4 +122,30 @@ impl PakMemory {
 
         Index::write(writer, index)
     }
+
+    /// Iterate over the entries in the PakMemory
+    pub fn iter(&self) -> PakMemoryIter<'_> {
+        PakMemoryIter(self.entries.iter())
+    }
+}
+
+/// An iterator over the entries of a PakMemory
+pub struct PakMemoryIter<'a>(std::collections::btree_map::Iter<'a, String, Vec<u8>>);
+
+impl<'a> Iterator for PakMemoryIter<'a> {
+    type Item = (&'a String, &'a Vec<u8>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+impl<'a> IntoIterator for &'a PakMemory {
+    type Item = (&'a String, &'a Vec<u8>);
+
+    type IntoIter = PakMemoryIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
 }

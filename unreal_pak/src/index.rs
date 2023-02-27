@@ -80,7 +80,7 @@ impl Index {
             for (dir_name, dir) in &full_directory_index {
                 for (file_name, encoded_offset) in dir {
                     let mut path = dir_name.strip_prefix('/').unwrap_or(dir_name).to_owned();
-                    path.push_str(&file_name);
+                    path.push_str(file_name);
 
                     reader.seek(SeekFrom::Start(position + *encoded_offset as u64))?;
                     let entry = Header::read_encoded(&mut reader, footer.pak_version)?;
