@@ -1,25 +1,27 @@
-//! Cursor extensions for easier deserialization
+//! Read and Seek extensions for easier deserialization
 
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::error::Error;
 
-pub trait CursorExt {
+pub trait ReadExt {
     /// Read string of format \<length i32\>\<string\>\<null\>
     fn read_string(&mut self) -> Result<Option<String>, Error>;
     /// Read u8 as bool
     fn read_bool(&mut self) -> Result<bool, Error>;
+}
 
+pub trait WriteExt {
     /// Write string of format \<length i32\>\<string\>\<null\>
     fn write_string(&mut self, string: &Option<String>) -> Result<usize, Error>;
     /// Write bool as u8
     fn write_bool(&mut self, value: bool) -> Result<(), Error>;
 }
 
-impl CursorExt for Cursor<Vec<u8>> {
+impl<R: Read + Seek> ReadExt for R {
     // read string of format <length i32><string><null>
     fn read_string(&mut self) -> Result<Option<String>, Error> {
         let len = self.read_i32::<LittleEndian>()?;
@@ -68,7 +70,9 @@ impl CursorExt for Cursor<Vec<u8>> {
         let res = self.read_u8()?;
         Ok(res > 0)
     }
+}
 
+impl<W: Write> WriteExt for W {
     fn write_string(&mut self, string: &Option<String>) -> Result<usize, Error> {
         if string.is_none() {
             self.write_i32::<LittleEndian>(0)?;

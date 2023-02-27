@@ -76,7 +76,7 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
         self.reader.get_custom_version::<T>()
     }
 
-    fn position(&self) -> u64 {
+    fn position(&mut self) -> u64 {
         self.reader.position()
     }
 

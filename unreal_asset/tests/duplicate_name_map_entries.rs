@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Cursor};
 
 use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 
@@ -18,7 +18,10 @@ const ASSET_BULK_FILE: &[u8] = include_bytes!(concat!(assets_folder!(), "BIOME_A
 
 #[test]
 fn duplicate_name_map_entries() -> Result<(), Error> {
-    let mut asset = Asset::new(ASSET_FILE.to_vec(), Some(ASSET_BULK_FILE.to_vec()));
+    let mut asset = Asset::new(
+        Cursor::new(ASSET_FILE.to_vec()),
+        Some(Cursor::new(ASSET_BULK_FILE.to_vec())),
+    );
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;

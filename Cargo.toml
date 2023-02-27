@@ -6,6 +6,9 @@ members = [
     "unreal_modmetadata",
     "unreal_modloader",
     "unreal_modintegrator",
+    "unreal_cpp_bootstrapper",
+    "dll_injector",
+    "github_helpers",
 ]
 
 [workspace.package]
@@ -18,6 +21,9 @@ unreal_modintegrator = { path = "./unreal_modintegrator" }
 unreal_asset = { path = "./unreal_asset" }
 unreal_pak = { path = "./unreal_pak" }
 unreal_modmetadata = { path = "./unreal_modmetadata" }
+unreal_cpp_bootstrapper = { path = "./unreal_cpp_bootstrapper" }
+dll_injector = { path = "./dll_injector" }
+github_helpers = { path = "./github_helpers" }
 
 bitvec = "1.0.1"
 byteorder = "1.4.3"

@@ -77,6 +77,9 @@ pub struct Metadata {
 
     #[serde(default)]
     pub integrator: HashMap<String, Value>,
+
+    #[serde(default)]
+    pub cpp_loader_dlls: Vec<String>,
 }
 
 impl Hash for Metadata {
@@ -103,6 +106,8 @@ impl Hash for Metadata {
             element_name.hash(state);
             hash_value!(element, state);
         }
+
+        self.cpp_loader_dlls.hash(state);
     }
 }
 
@@ -119,6 +124,7 @@ impl PartialEq for Metadata {
             && self.homepage == other.homepage
             && self.download == other.download
             && self.dependencies == other.dependencies
+            && self.cpp_loader_dlls == other.cpp_loader_dlls
             && self.integrator.len() == other.integrator.len();
 
         let mut hasher = DefaultHasher::new();
@@ -267,6 +273,46 @@ mod tests {
             game_build: Some("1.2.3".to_string()),
             sync: Some(SyncMode::ServerAndClient),
             dependencies,
+            ..Default::default()
+        };
+
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn v2_cpp_loader_dlls_test() {
+        let src = r#"
+        {
+            "schema_version": 2,
+            "name": "Test",
+            "mod_id": "TestModId",
+            "author": "TestAuthor",
+            "description": "Test Description",
+            "version": "1.0.0",
+            "game_build": "1.2.3",
+            "sync": "serverclient",
+            "cpp_loader_dlls": [
+                "/Game/Mods/TestModId/a.dll",
+                "/Game/Mods/TestModId/b.dll"
+            ]
+        }
+        "#;
+
+        let parsed: Metadata = serde_json::from_str(src).unwrap();
+
+        let expected = Metadata {
+            schema_version: 2,
+            name: "Test".to_string(),
+            mod_id: "TestModId".to_string(),
+            author: Some("TestAuthor".to_string()),
+            description: Some("Test Description".to_string()),
+            mod_version: "1.0.0".to_string(),
+            game_build: Some("1.2.3".to_string()),
+            sync: Some(SyncMode::ServerAndClient),
+            cpp_loader_dlls: Vec::from([
+                "/Game/Mods/TestModId/a.dll".to_string(),
+                "/Game/Mods/TestModId/b.dll".to_string(),
+            ]),
             ..Default::default()
         };
 

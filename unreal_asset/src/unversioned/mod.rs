@@ -5,7 +5,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     containers::indexed_map::IndexedMap,
-    cursor_ext::CursorExt,
+    cursor_ext::ReadExt,
     error::{Error, UsmapError},
 };
 

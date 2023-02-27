@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, ErrorKind};
+use std::io::{self, Cursor, ErrorKind};
 use std::path::Path;
 
 use unreal_asset::engine_version::EngineVersion;
@@ -17,7 +17,7 @@ use unreal_asset::{
 };
 use unreal_pak::{PakMemory, PakReader};
 
-use crate::helpers::{game_to_absolute, get_asset, write_asset};
+use crate::helpers::{get_asset, write_asset};
 use crate::Error;
 
 const LEVEL_TEMPLATE_ASSET: &[u8] = include_bytes!("assets/LevelTemplate.umap");
@@ -39,7 +39,7 @@ pub fn handle_persistent_actors(
     mod_paks: &mut Vec<PakReader<File>>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), Error> {
-    let mut level_asset = Asset::new(LEVEL_TEMPLATE_ASSET.to_vec(), None);
+    let mut level_asset = Asset::new(Cursor::new(LEVEL_TEMPLATE_ASSET.to_vec()), None);
     level_asset.set_engine_version(EngineVersion::VER_UE4_23);
     level_asset
         .parse_data()
@@ -144,8 +144,9 @@ pub fn handle_persistent_actors(
             actor_template.base_export.outer_index =
                 PackageIndex::new(level_export_index as i32 + 1); // package index starts from 1
 
-            let actor_asset_path = game_to_absolute(game_name, &component_path_raw)
-                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
+            let actor_asset_path =
+                unreal_modmetadata::game_to_absolute(game_name, &component_path_raw)
+                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
 
             let actor_asset = get_asset(
                 integrated_pak,

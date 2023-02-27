@@ -3,7 +3,7 @@ use std::io::{self, Cursor, Seek, Write};
 use byteorder::WriteBytesExt;
 
 use crate::containers::indexed_map::IndexedMap;
-use crate::cursor_ext::CursorExt;
+use crate::cursor_ext::WriteExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
@@ -43,7 +43,7 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         CustomVersion::new([0u8; 16], 0)
     }
 
-    fn position(&self) -> u64 {
+    fn position(&mut self) -> u64 {
         self.cursor.position()
     }
 

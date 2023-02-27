@@ -1,12 +1,10 @@
-use std::fs::File;
 use std::io::Cursor;
-use std::io::Write;
 
 use unreal_asset::{cast, engine_version::EngineVersion, error::Error, exports::Export, Asset};
 
 #[allow(dead_code)]
 pub(crate) fn verify_reparse(
-    asset: &mut Asset,
+    asset: &mut Asset<Cursor<Vec<u8>>>,
     engine_version: EngineVersion,
 ) -> Result<(), Error> {
     let mut cursor = Cursor::new(Vec::new());
@@ -17,19 +15,7 @@ pub(crate) fn verify_reparse(
     }
     asset.write_data(&mut cursor, bulk_cursor.as_mut())?;
 
-    let cursor_inner = cursor.into_inner();
-    {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uasset")?;
-        file.write_all(&cursor_inner)?;
-    }
-
-    let bulk_inner = bulk_cursor.map(|e| e.into_inner());
-    if let Some(ref bulk_inner) = bulk_inner {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uexp")?;
-        file.write_all(bulk_inner)?;
-    }
-
-    let mut reparse = Asset::new(cursor_inner, bulk_inner);
+    let mut reparse = Asset::new(cursor, bulk_cursor);
     reparse.set_engine_version(engine_version);
 
     reparse.parse_data()?;
@@ -41,7 +27,7 @@ pub(crate) fn verify_reparse(
 pub(crate) fn verify_binary_equality(
     data: &[u8],
     bulk: Option<&[u8]>,
-    asset: &mut Asset,
+    asset: &mut Asset<Cursor<Vec<u8>>>,
 ) -> Result<(), Error> {
     let mut cursor = Cursor::new(Vec::new());
 
@@ -56,16 +42,8 @@ pub(crate) fn verify_binary_equality(
     }
 
     let cursor_inner = cursor.into_inner();
-    {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uasset")?;
-        file.write_all(&cursor_inner)?;
-    }
 
     let bulk_inner = bulk_cursor.map(|e| e.into_inner());
-    if let Some(ref bulk_inner) = bulk_inner {
-        let mut file = File::create("C:\\Users\\Kate\\Desktop\\astro\\test_thing.uexp")?;
-        file.write_all(bulk_inner)?;
-    }
 
     assert_eq!(cursor_inner, data);
 
@@ -77,7 +55,7 @@ pub(crate) fn verify_binary_equality(
 }
 
 #[allow(dead_code)]
-pub(crate) fn verify_all_exports_parsed(asset: &Asset) -> bool {
+pub(crate) fn verify_all_exports_parsed(asset: &Asset<Cursor<Vec<u8>>>) -> bool {
     for export in &asset.exports {
         if cast!(Export, RawExport, export).is_some() {
             return false;

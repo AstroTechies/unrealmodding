@@ -13,7 +13,7 @@ pub trait AssetTrait {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>;
-    fn position(&self) -> u64;
+    fn position(&mut self) -> u64;
     fn set_position(&mut self, pos: u64);
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64>;
 
