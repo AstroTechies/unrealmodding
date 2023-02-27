@@ -25,26 +25,9 @@ where
 {
     reader.seek(SeekFrom::Start(offset))?;
 
-    let header = Header::read(reader, pak_version)?;
+    let header = Header::read(reader, pak_version, compression)?;
 
-    let compression_method = if pak_version >= PakVersion::FnameBasedCompressionMethod {
-        if header.compression_method == 0 {
-            Compression::None
-        } else if header.compression_method <= 5 {
-            compression.0[header.compression_method as usize - 1]
-        } else {
-            let mut arr = [0; 0x20];
-            arr[0] = header.compression_method as u8;
-            Compression::Unknown(arr)
-        }
-    } else {
-        match header.compression_method {
-            0x01 | 0x10 | 0x20 => Compression::zlib(),
-            _ => Compression::None,
-        }
-    };
-
-    match compression_method {
+    match header.compression_method {
         Compression::None => {
             let mut data = vec![0u8; header.decompressed_size as usize];
             reader.read_exact(data.as_mut_slice())?;
@@ -61,12 +44,14 @@ where
                 // we do not need to seek here because the reader is at the end of the header and compression blocks are continuous
                 let mut compressed_data = vec![0u8; block.size as usize];
                 reader.read_exact(&mut compressed_data)?;
-                compression_method.decompress(&mut data, compressed_data.as_slice())?;
+                header
+                    .compression_method
+                    .decompress(&mut data, compressed_data.as_slice())?;
             }
 
             Ok(data)
         }
-        _ => Err(PakError::compression_unsupported(compression_method)),
+        _ => Err(PakError::compression_unsupported(header.compression_method)),
     }
 }
 
@@ -153,14 +138,14 @@ where
         offset: 0x00,
         compressed_size: data.len() as u64,
         decompressed_size,
-        compression_method: if compress { 1 } else { 0 },
+        compression_method,
         hash: hash(data),
         compression_blocks,
         compression_block_size,
         flags: Some(0x00),
     };
 
-    Header::write(writer, pak_version, &header)?;
+    Header::write(writer, pak_version, compression, &header)?;
     writer.write_all(data)?;
 
     // the offset in the header right before the data is always 0x00, so only set here

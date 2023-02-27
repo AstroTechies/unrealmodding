@@ -33,7 +33,10 @@ impl Index {
             for _ in 0..entry_count {
                 let file_name = reader.read_fstring()?;
 
-                entries.push((file_name, Header::read(reader, footer.pak_version)?));
+                entries.push((
+                    file_name,
+                    Header::read(reader, footer.pak_version, &footer.compression_methods)?,
+                ));
             }
         } else {
             path_hash_seed = Some(reader.read_u64::<LE>()?);
@@ -83,7 +86,11 @@ impl Index {
                     path.push_str(file_name);
 
                     reader.seek(SeekFrom::Start(position + *encoded_offset as u64))?;
-                    let entry = Header::read_encoded(&mut reader, footer.pak_version)?;
+                    let entry = Header::read_encoded(
+                        &mut reader,
+                        footer.pak_version,
+                        &footer.compression_methods,
+                    )?;
 
                     entries.push((path, entry));
                 }
@@ -110,7 +117,12 @@ impl Index {
         if index.footer.pak_version < PakVersion::PathHashIndex {
             for (name, header) in index.entries {
                 index_writer.write_fstring(Some(name.as_str()))?;
-                Header::write(&mut index_writer, index.footer.pak_version, &header)?;
+                Header::write(
+                    &mut index_writer,
+                    index.footer.pak_version,
+                    &index.footer.compression_methods,
+                    &header,
+                )?;
             }
         } else {
             dbg!(index.path_hash_seed);

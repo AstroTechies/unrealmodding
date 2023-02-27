@@ -27,6 +27,12 @@ impl PakError {
             kind: PakErrorKind::CompressionUnsupported(method),
         }
     }
+    /// construct UnsupportedCompression error
+    pub fn compression_unsupported_unknown() -> Self {
+        PakError {
+            kind: PakErrorKind::CompressionUnsupported(Compression::Unknown([0; 0x20])),
+        }
+    }
     /// construct EncryptionUnsupported error
     pub fn enrcryption_unsupported() -> Self {
         PakError {

@@ -8,6 +8,9 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 
 use flate2::{read::ZlibDecoder, write::ZlibEncoder};
 
+use crate::error::PakError;
+use crate::pakversion::PakVersion;
+
 /// Enum representing which compression method is being used for an entry
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Compression {
@@ -37,6 +40,58 @@ impl Compression {
         } else {
             Self::Unknown(buf)
         })
+    }
+
+    pub(crate) fn from_u32(
+        compression_method_num: u32,
+        pak_version: PakVersion,
+        compression: &CompressionMethods,
+    ) -> Self {
+        if pak_version >= PakVersion::FnameBasedCompressionMethod {
+            if compression_method_num == 0 {
+                Compression::None
+            } else if compression_method_num <= 5 {
+                compression.0[compression_method_num as usize - 1]
+            } else {
+                let mut arr = [0; 0x20];
+                arr[0] = compression_method_num as u8;
+                Compression::Unknown(arr)
+            }
+        } else {
+            match compression_method_num {
+                0x01 | 0x10 | 0x20 => Compression::zlib(),
+                _ => Compression::None,
+            }
+        }
+    }
+
+    pub(crate) fn as_u32(
+        &self,
+        pak_version: PakVersion,
+        compression: &CompressionMethods,
+    ) -> Result<u32, PakError> {
+        match self {
+            Self::Known(method) => {
+                if pak_version >= PakVersion::FnameBasedCompressionMethod {
+                    match compression
+                        .0
+                        .iter()
+                        .enumerate()
+                        .find(|(_, method)| *method == self)
+                    {
+                        Some((i, _)) => Ok((i + 1) as u32),
+                        None => Err(PakError::compression_unsupported_unknown()),
+                    }
+                } else {
+                    match *method {
+                        "Zlib" => Ok(1),
+                        _ => Err(PakError::compression_unsupported_unknown()),
+                    }
+                }
+            }
+            Self::None => Ok(0),
+            _ => Err(PakError::compression_unsupported_unknown()),
+        }
     }
 
     pub(crate) fn as_bytes(&self) -> [u8; 0x20] {
@@ -125,23 +180,4 @@ impl CompressionMethods {
 
         buf
     }
-}
-
-/// Enum representing compression method ree pak v8
-#[derive(
-    PartialEq, Eq, Debug, Clone, Copy, Default, num_enum::IntoPrimitive, num_enum::TryFromPrimitive,
-)]
-#[repr(i32)]
-pub(crate) enum OldCompressionMethod {
-    /// No comprssion
-    None = 0,
-    /// Standard Zlib comprssion
-    #[default]
-    Zlib = 1,
-    /// BiasMemory comprssion
-    BiasMemory = 2,
-    /// BiasSpeed comprssion
-    BiasSpeed = 3,
-    /// Unknown comprssion
-    Unknown = 255,
 }
