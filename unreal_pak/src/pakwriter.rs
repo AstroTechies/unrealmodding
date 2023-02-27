@@ -7,7 +7,7 @@ use crate::compression::CompressionMethods;
 use crate::entry::write_entry;
 use crate::error::PakError;
 use crate::header::Header;
-use crate::index::{Footer, Index};
+use crate::index::{random_path_hash_seed, Footer, Index};
 use crate::pakversion::PakVersion;
 
 /// An Unreal pak file writer which allows incrementally writing data.
@@ -92,6 +92,7 @@ where
 
         let index = Index {
             mount_point: self.mount_point,
+            path_hash_seed: Some(random_path_hash_seed()),
             entries: self.entries.into_iter().collect::<Vec<_>>(),
             footer,
         };

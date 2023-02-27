@@ -1,9 +1,11 @@
 [workspace]
 members = [
-    "unreal_pak", "unreal_pak_cli",
+    "unreal_pak",
+    "unreal_pak_cli",
     "unreal_asset",
     "unreal_modmetadata",
-    "unreal_modloader", "unreal_modintegrator"
+    "unreal_modloader",
+    "unreal_modintegrator",
 ]
 
 [workspace.package]
@@ -17,6 +19,7 @@ unreal_asset = { path = "./unreal_asset" }
 unreal_pak = { path = "./unreal_pak" }
 unreal_modmetadata = { path = "./unreal_modmetadata" }
 
+bitvec = "1.0.1"
 byteorder = "1.4.3"
 lazy_static = "1.4.0"
 log = "0.4.17"

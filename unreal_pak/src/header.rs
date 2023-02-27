@@ -14,8 +14,9 @@
     - u32 block size
 */
 
-use std::io::{Read, Write};
+use std::io::{self, Read, Seek, Write};
 
+use bitvec::prelude::*;
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use crate::error::PakError;
@@ -100,6 +101,59 @@ impl Header {
             compression_blocks,
             compression_block_size,
             flags,
+        })
+    }
+
+    /// Read (bit)encoded header
+    pub(crate) fn read_encoded<R: Read + Seek>(
+        reader: &mut R,
+        _pak_version: PakVersion,
+    ) -> Result<Self, PakError> {
+        let mut header_bits = [0u8; 4];
+        reader.read_exact(&mut header_bits)?;
+        let header_bits = header_bits.view_bits::<Lsb0>();
+
+        // compression blocks
+        // this is actually irrelevant here because it is also included in the header before the actual data
+        let mut block_size = header_bits[0..=5].load_le::<u32>();
+        let _block_count = header_bits[6..=21].load_le::<u32>();
+
+        if block_size == 0x3f {
+            block_size = reader.read_u32::<LE>()?;
+        } else {
+            block_size <<= 11;
+        }
+
+        let is_encrypted = header_bits[22];
+        let compression_method = header_bits[23..=28].load_le::<u32>();
+
+        let mut read_size = |bit: usize| -> io::Result<_> {
+            Ok(if header_bits[bit] {
+                reader.read_u32::<LE>()? as u64
+            } else {
+                reader.read_u64::<LE>()?
+            })
+        };
+
+        let offset = read_size(31)?;
+        let decompressed_size = read_size(30)?;
+        let compressed_size = if compression_method == 0 {
+            decompressed_size
+        } else {
+            read_size(29)?
+        };
+
+        // compression blocks could be read here but why waste the time, they won't get used anyways
+
+        Ok(Header {
+            offset,
+            compressed_size,
+            decompressed_size,
+            compression_method,
+            hash: [0; 20],
+            compression_blocks: None,
+            compression_block_size: Some(block_size),
+            flags: Some(if is_encrypted { 1 } else { 0 }),
         })
     }
 

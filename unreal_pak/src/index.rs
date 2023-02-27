@@ -12,6 +12,7 @@ use crate::{hash, PAK_MAGIC};
 #[derive(Debug)]
 pub(crate) struct Index {
     pub mount_point: String,
+    pub path_hash_seed: Option<u64>,
     pub entries: Vec<(String, Header)>,
     pub footer: Footer,
 }
@@ -22,23 +23,76 @@ impl Index {
 
         reader.seek(SeekFrom::Start(footer.index_offset))?;
 
-        let mount_point = reader.read_fstring()?.unwrap_or_default();
+        let mount_point = reader.read_fstring()?;
+        let mut path_hash_seed = None;
 
         let entry_count = reader.read_u32::<LE>()?;
         let mut entries = Vec::with_capacity(entry_count as usize);
 
         if footer.pak_version < PakVersion::PathHashIndex {
             for _ in 0..entry_count {
-                let file_name = reader.read_fstring()?.ok_or_else(PakError::pak_invalid)?;
+                let file_name = reader.read_fstring()?;
 
                 entries.push((file_name, Header::read(reader, footer.pak_version)?));
             }
         } else {
-            return Err(PakError::pak_version_unsupported(footer.pak_version));
+            path_hash_seed = Some(reader.read_u64::<LE>()?);
+
+            // path hash index
+            if reader.read_u32::<LE>()? != 0 {
+                let _path_hash_index_offset = reader.read_u64::<LE>()?;
+                let _path_hash_index_size = reader.read_u64::<LE>()?;
+                // skip hash
+                reader.seek(SeekFrom::Current(20))?;
+            }
+
+            let full_directory_index = if reader.read_u32::<LE>()? != 0 {
+                let full_directory_index_offset = reader.read_u64::<LE>()?;
+                let _full_directory_index_size = reader.read_u64::<LE>()?;
+                // skip hash
+                reader.seek(SeekFrom::Current(20))?;
+
+                let previous_pos = reader.stream_position()?;
+                reader.seek(SeekFrom::Start(full_directory_index_offset))?;
+
+                let directory_count = reader.read_u32::<LE>()? as usize;
+                let mut directories = Vec::new();
+                for _ in 0..directory_count {
+                    let directory_name = reader.read_fstring()?;
+                    let file_count = reader.read_u32::<LE>()? as usize;
+                    let mut files = Vec::new();
+                    for _ in 0..file_count {
+                        let file_name = reader.read_fstring()?;
+                        files.push((file_name, reader.read_u32::<LE>()?));
+                    }
+                    directories.push((directory_name, files));
+                }
+
+                reader.seek(SeekFrom::Start(previous_pos))?;
+                directories
+            } else {
+                return Err(PakError::pak_invalid());
+            };
+
+            let _encoded_size = reader.read_u32::<LE>()? as usize;
+            let position = reader.stream_position()?;
+
+            for (dir_name, dir) in &full_directory_index {
+                for (file_name, encoded_offset) in dir {
+                    let mut path = dir_name.strip_prefix('/').unwrap_or(dir_name).to_owned();
+                    path.push_str(&file_name);
+
+                    reader.seek(SeekFrom::Start(position + *encoded_offset as u64))?;
+                    let entry = Header::read_encoded(&mut reader, footer.pak_version)?;
+
+                    entries.push((path, entry));
+                }
+            }
         }
 
         Ok(Index {
             mount_point,
+            path_hash_seed,
             entries,
             footer,
         })
@@ -59,6 +113,7 @@ impl Index {
                 Header::write(&mut index_writer, index.footer.pak_version, &header)?;
             }
         } else {
+            dbg!(index.path_hash_seed);
             return Err(PakError::pak_version_unsupported(index.footer.pak_version));
         }
 
@@ -189,4 +244,10 @@ impl Footer {
 
         Ok(())
     }
+}
+
+// 64 bit LE num, but always less than u32::MAX
+pub(crate) fn random_path_hash_seed() -> u64 {
+    use rand::Rng;
+    rand::thread_rng().gen::<u32>() as u64
 }

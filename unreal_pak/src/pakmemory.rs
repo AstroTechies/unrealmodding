@@ -6,7 +6,7 @@ use std::io::{Read, Seek, Write};
 use crate::compression::CompressionMethods;
 use crate::entry::{read_entry, write_entry};
 use crate::error::PakError;
-use crate::index::{Footer, Index};
+use crate::index::{random_path_hash_seed, Footer, Index};
 use crate::pakversion::PakVersion;
 
 /// A Unreal Pak file which keeps all of it's data in memory.
@@ -115,6 +115,7 @@ impl PakMemory {
 
         let index = Index {
             mount_point: self.mount_point.clone(),
+            path_hash_seed: Some(random_path_hash_seed()),
             entries: written_entries,
             footer,
         };
