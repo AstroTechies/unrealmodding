@@ -8,6 +8,7 @@ members = [
     "unreal_modintegrator",
     "unreal_cpp_bootstrapper",
     "dll_injector",
+    "unreal_helpers",
     "github_helpers",
 ]
 
@@ -17,12 +18,13 @@ authors = ["AstroTechies, localcc, konsti219"]
 description = "Tools for making and loading Unreal Engine Mods."
 
 [workspace.dependencies]
-unreal_modintegrator = { path = "./unreal_modintegrator" }
-unreal_asset = { path = "./unreal_asset" }
 unreal_pak = { path = "./unreal_pak" }
+unreal_asset = { path = "./unreal_asset" }
 unreal_modmetadata = { path = "./unreal_modmetadata" }
+unreal_modintegrator = { path = "./unreal_modintegrator" }
 unreal_cpp_bootstrapper = { path = "./unreal_cpp_bootstrapper" }
 dll_injector = { path = "./dll_injector" }
+unreal_helpers = { path = "./unreal_helpers" }
 github_helpers = { path = "./github_helpers" }
 
 bitvec = "1.0.1"

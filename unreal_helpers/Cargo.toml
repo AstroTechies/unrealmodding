@@ -1,0 +1,12 @@
+[package]
+name = "unreal_helpers"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition = "2021"
+
+[dependencies]
+bitvec.workspace = true
+byteorder.workspace = true
+lazy_static.workspace = true
+regex.workspace = true
