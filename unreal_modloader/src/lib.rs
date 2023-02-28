@@ -79,7 +79,7 @@ pub(crate) struct ModLoaderAppData {
     /// install managers
     pub install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
     pub selected_game_platform: Option<String>,
-    
+
     #[cfg(feature = "cpp_loader")]
     pub(crate) cpp_loader_config: unreal_cpp_bootstrapper::config::GameSettings,
     #[cfg(feature = "cpp_loader")]

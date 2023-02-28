@@ -271,7 +271,7 @@ impl AssetRegistryState {
             let offset = writer.position();
             writer.write_i32::<LittleEndian>(name_map.len() as i32)?;
             for name in name_map {
-                writer.write_string(&Some(name.clone()))?; // todo: no cloning
+                writer.write_fstring(Some(name))?;
 
                 match writer.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                     true => {

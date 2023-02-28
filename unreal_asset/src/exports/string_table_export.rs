@@ -27,17 +27,17 @@ impl StringTableExport {
         let normal_export = NormalExport::from_base(base, asset)?;
         asset.read_i32::<LittleEndian>()?;
 
-        let namespace = asset.read_string()?;
+        let namespace = asset.read_fstring()?;
 
         let mut table = IndexedMap::new();
         let num_entries = asset.read_i32::<LittleEndian>()?;
         for _ in 0..num_entries {
             table.insert(
                 asset
-                    .read_string()?
+                    .read_fstring()?
                     .ok_or_else(|| Error::no_data("StringTable key is None".to_string()))?,
                 asset
-                    .read_string()?
+                    .read_fstring()?
                     .ok_or_else(|| Error::no_data("StringTable value is None".to_string()))?,
             );
         }
@@ -55,11 +55,11 @@ impl ExportTrait for StringTableExport {
         self.normal_export.write(asset)?;
         asset.write_i32::<LittleEndian>(0)?;
 
-        asset.write_string(&self.namespace)?;
+        asset.write_fstring(self.namespace.as_deref())?;
         asset.write_i32::<LittleEndian>(self.table.len() as i32)?;
         for (_, key, value) in &self.table {
-            asset.write_string(&Some(key.clone()))?;
-            asset.write_string(&Some(value.clone()))?;
+            asset.write_fstring(Some(key))?;
+            asset.write_fstring(Some(value))?;
         }
         Ok(())
     }

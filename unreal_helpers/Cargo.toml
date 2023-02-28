@@ -1,15 +1,12 @@
 [package]
-name = "unreal_pak"
+name = "unreal_helpers"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
 edition = "2021"
 
 [dependencies]
-unreal_helpers.workspace = true
-
 bitvec.workspace = true
 byteorder.workspace = true
-flate2 = { version = "1.0.25", features = ["zlib"], default-features = false }
-rand = "0.8.5"
-sha-1 = "0.10.1"
+lazy_static.workspace = true
+regex.workspace = true

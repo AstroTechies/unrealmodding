@@ -30,11 +30,11 @@ use std::mem::size_of;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
+use unreal_helpers::{UnrealReadExt, UnrealWriteExt};
+
 pub mod ac7;
-pub mod bitvec_ext;
 pub mod containers;
 mod crc;
-pub mod cursor_ext;
 pub mod custom_version;
 pub mod engine_version;
 pub mod enums;
@@ -54,7 +54,6 @@ pub mod uproperty;
 
 use containers::chain::Chain;
 use containers::indexed_map::IndexedMap;
-use cursor_ext::{ReadExt, WriteExt};
 use custom_version::{CustomVersion, CustomVersionTrait};
 use engine_version::{get_object_versions, guess_engine_version, EngineVersion};
 use error::Error;
@@ -349,55 +348,55 @@ impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> AssetWriter
         Ok(())
     }
 
-    fn write_u8(&mut self, value: u8) -> Result<(), io::Error> {
+    fn write_u8(&mut self, value: u8) -> io::Result<()> {
         self.cursor.write_u8(value)
     }
 
-    fn write_i8(&mut self, value: i8) -> Result<(), io::Error> {
+    fn write_i8(&mut self, value: i8) -> io::Result<()> {
         self.cursor.write_i8(value)
     }
 
-    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> Result<(), io::Error> {
+    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> io::Result<()> {
         self.cursor.write_u16::<T>(value)
     }
 
-    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> Result<(), io::Error> {
+    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> io::Result<()> {
         self.cursor.write_i16::<T>(value)
     }
 
-    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> Result<(), io::Error> {
+    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> io::Result<()> {
         self.cursor.write_u32::<T>(value)
     }
 
-    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> Result<(), io::Error> {
+    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> io::Result<()> {
         self.cursor.write_i32::<T>(value)
     }
 
-    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> Result<(), io::Error> {
+    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> io::Result<()> {
         self.cursor.write_u64::<T>(value)
     }
 
-    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> Result<(), io::Error> {
+    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> io::Result<()> {
         self.cursor.write_i64::<T>(value)
     }
 
-    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> Result<(), io::Error> {
+    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> io::Result<()> {
         self.cursor.write_f32::<T>(value)
     }
 
-    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> Result<(), io::Error> {
+    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> io::Result<()> {
         self.cursor.write_f64::<T>(value)
     }
 
-    fn write_string(&mut self, value: &Option<String>) -> Result<usize, Error> {
-        self.cursor.write_string(value)
+    fn write_fstring(&mut self, value: Option<&str>) -> io::Result<usize> {
+        self.cursor.write_fstring(value)
     }
 
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), io::Error> {
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
         self.cursor.write_all(buf)
     }
 
-    fn write_bool(&mut self, value: bool) -> Result<(), Error> {
+    fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.cursor.write_bool(value)
     }
 }
@@ -565,55 +564,55 @@ impl<C: Read + Seek> AssetReader for Asset<C> {
         self.read_array_with_length(length, getter)
     }
 
-    fn read_u8(&mut self) -> Result<u8, std::io::Error> {
+    fn read_u8(&mut self) -> io::Result<u8> {
         self.cursor.read_u8()
     }
 
-    fn read_i8(&mut self) -> Result<i8, std::io::Error> {
+    fn read_i8(&mut self) -> io::Result<i8> {
         self.cursor.read_i8()
     }
 
-    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> Result<u16, std::io::Error> {
+    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> io::Result<u16> {
         self.cursor.read_u16::<T>()
     }
 
-    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> Result<i16, std::io::Error> {
+    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> io::Result<i16> {
         self.cursor.read_i16::<T>()
     }
 
-    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> Result<u32, std::io::Error> {
+    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> io::Result<u32> {
         self.cursor.read_u32::<T>()
     }
 
-    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> Result<i32, std::io::Error> {
+    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> io::Result<i32> {
         self.cursor.read_i32::<T>()
     }
 
-    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> Result<u64, std::io::Error> {
+    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> io::Result<u64> {
         self.cursor.read_u64::<T>()
     }
 
-    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> Result<i64, std::io::Error> {
+    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> io::Result<i64> {
         self.cursor.read_i64::<T>()
     }
 
-    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> Result<f32, std::io::Error> {
+    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> io::Result<f32> {
         self.cursor.read_f32::<T>()
     }
 
-    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> Result<f64, std::io::Error> {
+    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> io::Result<f64> {
         self.cursor.read_f64::<T>()
     }
 
-    fn read_string(&mut self) -> Result<Option<String>, Error> {
-        self.cursor.read_string()
+    fn read_fstring(&mut self) -> io::Result<Option<String>> {
+        self.cursor.read_fstring()
     }
 
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), std::io::Error> {
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
         self.cursor.read_exact(buf)
     }
 
-    fn read_bool(&mut self) -> Result<bool, Error> {
+    fn read_bool(&mut self) -> io::Result<bool> {
         self.cursor.read_bool()
     }
 }
@@ -732,7 +731,6 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.object_version_ue5 = object_version_ue5;
         self.custom_versions = CustomVersion::get_default_custom_version_container(engine_version);
     }
-
     fn parse_header(&mut self) -> Result<(), Error> {
         // reuseable buffers for reading
 
@@ -793,7 +791,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         // read folder name
         self.folder_name = self
             .cursor
-            .read_string()?
+            .read_fstring()?
             .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
@@ -918,7 +916,7 @@ impl<'a, C: Read + Seek> Asset<C> {
     fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
         let s = self
             .cursor
-            .read_string()?
+            .read_fstring()?
             .ok_or_else(|| Error::no_data("name_map_string is None".to_string()))?;
         let mut hashes = 0;
         if self.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED && !s.is_empty() {
@@ -1193,7 +1191,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                 .seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
 
             for _i in 0..self.soft_package_reference_count as usize {
-                if let Some(reference) = self.cursor.read_string()? {
+                if let Some(reference) = self.cursor.read_fstring()? {
                     soft_package_reference_list.push(reference);
                 }
             }
@@ -1414,7 +1412,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         cursor.write_i32::<LittleEndian>(asset_header.header_offset)?;
-        cursor.write_string(&Some(self.folder_name.clone()))?;
+        cursor.write_fstring(Some(&self.folder_name))?;
         cursor.write_u32::<LittleEndian>(self.package_flags)?;
         cursor.write_i32::<LittleEndian>(self.name_map_index_list.len() as i32)?;
         cursor.write_i32::<LittleEndian>(asset_header.name_offset)?;
@@ -1608,7 +1606,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         };
 
         for name in &self.name_map_index_list {
-            serializer.write_string(&Some(name.clone()))?;
+            serializer.write_fstring(Some(name))?;
 
             if self.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                 match self.override_name_map_hashes.get_by_key(name) {
@@ -1672,7 +1670,7 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         if let Some(ref package_references) = self.soft_package_reference_list {
             for reference in package_references {
-                serializer.write_string(&Some(reference.clone()))?;
+                serializer.write_fstring(Some(reference))?;
             }
         }
 
@@ -1912,7 +1910,7 @@ impl FEngineVersion {
         let minor = cursor.read_u16::<LittleEndian>()?;
         let patch = cursor.read_u16::<LittleEndian>()?;
         let build = cursor.read_u32::<LittleEndian>()?;
-        let branch = cursor.read_string()?;
+        let branch = cursor.read_fstring()?;
 
         Ok(Self::new(major, minor, patch, build, branch))
     }
@@ -1922,7 +1920,7 @@ impl FEngineVersion {
         cursor.write_u16::<LittleEndian>(self.minor)?;
         cursor.write_u16::<LittleEndian>(self.patch)?;
         cursor.write_u32::<LittleEndian>(self.build)?;
-        cursor.write_string(&self.branch)?;
+        cursor.write_fstring(self.branch.as_deref())?;
         Ok(())
     }
 

@@ -39,7 +39,7 @@ impl UniqueNetIdProperty {
         let value = match size > 0 {
             true => Some(UniqueNetId {
                 ty: asset.read_fname()?,
-                contents: asset.read_string()?,
+                contents: asset.read_fstring()?,
             }),
             false => None,
         };
@@ -67,7 +67,7 @@ impl PropertyTrait for UniqueNetIdProperty {
             Some(value) => {
                 let mut length = 3 * size_of::<i32>();
                 asset.write_fname(&value.ty)?;
-                length += asset.write_string(&value.contents)?;
+                length += asset.write_fstring(value.contents.as_deref())?;
 
                 let end = asset.position();
                 asset.seek(SeekFrom::Start(begin))?;

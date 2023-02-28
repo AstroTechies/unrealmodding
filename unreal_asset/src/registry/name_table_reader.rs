@@ -41,7 +41,7 @@ impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
             for i in 0..name_count {
                 let mut s = DefaultHasher::new();
 
-                let name = reader.read_string()?.ok_or_else(|| {
+                let name = reader.read_fstring()?.ok_or_else(|| {
                     Error::invalid_file(format!("Name table entry {i} is missing a name"))
                 })?;
                 name.hash(&mut s);
@@ -192,55 +192,55 @@ impl<'reader, Reader: AssetReader> AssetReader for NameTableReader<'reader, Read
         self.read_array_with_length(length, getter)
     }
 
-    fn read_u8(&mut self) -> Result<u8, io::Error> {
+    fn read_u8(&mut self) -> io::Result<u8> {
         self.reader.read_u8()
     }
 
-    fn read_i8(&mut self) -> Result<i8, io::Error> {
+    fn read_i8(&mut self) -> io::Result<i8> {
         self.reader.read_i8()
     }
 
-    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> Result<u16, io::Error> {
+    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> io::Result<u16> {
         self.reader.read_u16::<T>()
     }
 
-    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> Result<i16, io::Error> {
+    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> io::Result<i16> {
         self.reader.read_i16::<T>()
     }
 
-    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> Result<u32, io::Error> {
+    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> io::Result<u32> {
         self.reader.read_u32::<T>()
     }
 
-    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> Result<i32, io::Error> {
+    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> io::Result<i32> {
         self.reader.read_i32::<T>()
     }
 
-    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> Result<u64, io::Error> {
+    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> io::Result<u64> {
         self.reader.read_u64::<T>()
     }
 
-    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> Result<i64, io::Error> {
+    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> io::Result<i64> {
         self.reader.read_i64::<T>()
     }
 
-    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> Result<f32, io::Error> {
+    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> io::Result<f32> {
         self.reader.read_f32::<T>()
     }
 
-    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> Result<f64, io::Error> {
+    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> io::Result<f64> {
         self.reader.read_f64::<T>()
     }
 
-    fn read_string(&mut self) -> Result<Option<String>, Error> {
-        self.reader.read_string()
+    fn read_fstring(&mut self) -> io::Result<Option<String>> {
+        self.reader.read_fstring()
     }
 
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), io::Error> {
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
         self.reader.read_exact(buf)
     }
 
-    fn read_bool(&mut self) -> Result<bool, Error> {
+    fn read_bool(&mut self) -> io::Result<bool> {
         self.reader.read_bool()
     }
 }

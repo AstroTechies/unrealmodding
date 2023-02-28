@@ -65,7 +65,7 @@ impl PropertyTrait for MovieSceneTrackImplementationPtrProperty {
                         Error::no_data("TypeName property is not StrProperty".to_string())
                     })?;
                 had_typename = str_property.value.is_some();
-                asset.write_string(&str_property.value)?;
+                asset.write_fstring(str_property.value.as_deref())?;
             } else {
                 Property::write(property, asset, true)?;
             }

@@ -38,9 +38,9 @@ impl LevelExport {
             actors.push(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
         }
 
-        let namespace = asset.read_string()?;
+        let namespace = asset.read_fstring()?;
         asset.read_i32::<LittleEndian>()?; // null
-        let value = asset.read_string()?;
+        let value = asset.read_fstring()?;
 
         asset.read_i64::<LittleEndian>()?; // null
         let flags_probably = asset.read_u64::<LittleEndian>()?;
@@ -71,9 +71,9 @@ impl ExportTrait for LevelExport {
             asset.write_i32::<LittleEndian>(actor.index)?;
         }
 
-        asset.write_string(&self.namespace)?;
+        asset.write_fstring(self.namespace.as_deref())?;
         asset.write_i32::<LittleEndian>(0)?;
-        asset.write_string(&self.value)?;
+        asset.write_fstring(self.value.as_deref())?;
 
         asset.write_u64::<LittleEndian>(0)?;
         asset.write_u64::<LittleEndian>(self.flags_probably)?;

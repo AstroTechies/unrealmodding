@@ -2,8 +2,9 @@ use std::io::{self, Cursor, Read, Seek};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
+use unreal_helpers::UnrealReadExt;
+
 use crate::containers::indexed_map::IndexedMap;
-use crate::cursor_ext::ReadExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
@@ -123,7 +124,7 @@ impl AssetReader for RawReader {
     }
 
     fn read_fname(&mut self) -> Result<FName, Error> {
-        let string = self.read_string()?.unwrap_or_else(|| "None".to_string());
+        let string = self.read_fstring()?.unwrap_or_else(|| "None".to_string());
         Ok(FName::new(string, 0))
     }
 
@@ -147,55 +148,55 @@ impl AssetReader for RawReader {
         self.read_array_with_length(length, getter)
     }
 
-    fn read_u8(&mut self) -> Result<u8, io::Error> {
+    fn read_u8(&mut self) -> io::Result<u8> {
         self.cursor.read_u8()
     }
 
-    fn read_i8(&mut self) -> Result<i8, io::Error> {
+    fn read_i8(&mut self) -> io::Result<i8> {
         self.cursor.read_i8()
     }
 
-    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> Result<u16, io::Error> {
+    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> io::Result<u16> {
         self.cursor.read_u16::<T>()
     }
 
-    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> Result<i16, io::Error> {
+    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> io::Result<i16> {
         self.cursor.read_i16::<T>()
     }
 
-    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> Result<u32, io::Error> {
+    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> io::Result<u32> {
         self.cursor.read_u32::<T>()
     }
 
-    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> Result<i32, io::Error> {
+    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> io::Result<i32> {
         self.cursor.read_i32::<T>()
     }
 
-    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> Result<u64, io::Error> {
+    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> io::Result<u64> {
         self.cursor.read_u64::<T>()
     }
 
-    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> Result<i64, io::Error> {
+    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> io::Result<i64> {
         self.cursor.read_i64::<T>()
     }
 
-    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> Result<f32, io::Error> {
+    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> io::Result<f32> {
         self.cursor.read_f32::<T>()
     }
 
-    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> Result<f64, io::Error> {
+    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> io::Result<f64> {
         self.cursor.read_f64::<T>()
     }
 
-    fn read_string(&mut self) -> Result<Option<String>, Error> {
-        self.cursor.read_string()
+    fn read_fstring(&mut self) -> io::Result<Option<String>> {
+        self.cursor.read_fstring()
     }
 
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), io::Error> {
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
         self.cursor.read_exact(buf)
     }
 
-    fn read_bool(&mut self) -> Result<bool, Error> {
+    fn read_bool(&mut self) -> io::Result<bool> {
         Ok(self.read_u8()? != 0)
     }
 }

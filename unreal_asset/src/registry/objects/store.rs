@@ -154,8 +154,9 @@ impl Store {
         let mut texts = Vec::new();
         if order == ELoadOrder::TextFirst {
             asset.seek(std::io::SeekFrom::Current(4))?;
-            texts = asset
-                .read_array_with_length(texts_count, |asset: &mut Reader| asset.read_string())?;
+            texts = asset.read_array_with_length(texts_count, |asset: &mut Reader| {
+                Ok(asset.read_fstring()?)
+            })?;
         }
 
         let numberless_names = asset
@@ -177,8 +178,9 @@ impl Store {
             })?;
 
         if order == ELoadOrder::Member {
-            texts = asset
-                .read_array_with_length(texts_count, |asset: &mut Reader| asset.read_string())?;
+            texts = asset.read_array_with_length(texts_count, |asset: &mut Reader| {
+                Ok(asset.read_fstring()?)
+            })?;
         }
 
         let ansi_string_offsets = asset

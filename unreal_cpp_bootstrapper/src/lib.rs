@@ -43,7 +43,7 @@ pub fn bootstrap(
         for dll in metadata
             .cpp_loader_dlls
             .iter()
-            .filter_map(|e| unreal_modmetadata::game_to_absolute(game_name, e))
+            .filter_map(|e| unreal_helpers::game_to_absolute(game_name, e))
         {
             let dll_path = PathBuf::from(&dll);
             let dll_data = pak.read_entry(&dll)?;

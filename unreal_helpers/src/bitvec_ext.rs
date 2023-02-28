@@ -2,7 +2,9 @@
 
 use bitvec::{order::BitOrder, prelude::BitVec, store::BitStore};
 
+/// BitVec extention for setting ranges.
 pub trait BitVecExt<T: BitStore, O: BitOrder> {
+    /// BitVec extention for setting a range from another range.
     fn set_range_from_range(&mut self, index: i32, num: i32, range: &BitVec<T, O>, offset: i32);
 }
 

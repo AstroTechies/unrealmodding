@@ -2,7 +2,8 @@ use bitvec::{order::Lsb0, prelude::BitVec};
 use byteorder::LittleEndian;
 use lazy_static::lazy_static;
 
-use crate::bitvec_ext::BitVecExt;
+use unreal_helpers::BitVecExt;
+
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::flags::EDependencyProperty;

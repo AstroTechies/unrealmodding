@@ -1,7 +1,5 @@
-use std::{path::Path, str::FromStr};
+use std::str::FromStr;
 
-use lazy_static::lazy_static;
-use regex::Regex;
 use semver::VersionReq;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -122,28 +120,6 @@ pub fn from_slice(slice: &[u8]) -> Result<Metadata, Error> {
         1 => Ok(v1::Metadata::to_v2(slice)?),
         2 => Ok(serde_json::from_slice(slice)?),
         _ => Err(Error::unsupported_schema(schema_version)),
-    }
-}
-
-lazy_static! {
-    static ref GAME_REGEX: Regex = Regex::new(r"^/Game/").unwrap();
-}
-
-pub fn game_to_absolute(game_name: &str, path: &str) -> Option<String> {
-    if !GAME_REGEX.is_match(path) {
-        return None;
-    }
-
-    let path_str = GAME_REGEX
-        .replace(path, String::from(game_name) + "/Content/")
-        .to_string();
-    let path = Path::new(&path_str);
-    match path.extension() {
-        Some(_) => Some(path_str),
-        None => path
-            .with_extension("uasset")
-            .to_str()
-            .map(|e| e.to_string()),
     }
 }
 

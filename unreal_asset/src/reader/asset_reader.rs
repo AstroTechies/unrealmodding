@@ -22,17 +22,17 @@ pub trait AssetReader: AssetTrait {
         getter: impl Fn(&mut Self) -> Result<T, Error>,
     ) -> Result<Vec<T>, Error>;
 
-    fn read_u8(&mut self) -> Result<u8, io::Error>;
-    fn read_i8(&mut self) -> Result<i8, io::Error>;
-    fn read_u16<T: ByteOrder>(&mut self) -> Result<u16, io::Error>;
-    fn read_i16<T: ByteOrder>(&mut self) -> Result<i16, io::Error>;
-    fn read_u32<T: ByteOrder>(&mut self) -> Result<u32, io::Error>;
-    fn read_i32<T: ByteOrder>(&mut self) -> Result<i32, io::Error>;
-    fn read_u64<T: ByteOrder>(&mut self) -> Result<u64, io::Error>;
-    fn read_i64<T: ByteOrder>(&mut self) -> Result<i64, io::Error>;
-    fn read_f32<T: ByteOrder>(&mut self) -> Result<f32, io::Error>;
-    fn read_f64<T: ByteOrder>(&mut self) -> Result<f64, io::Error>;
-    fn read_string(&mut self) -> Result<Option<String>, Error>;
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), io::Error>;
-    fn read_bool(&mut self) -> Result<bool, Error>;
+    fn read_u8(&mut self) -> io::Result<u8>;
+    fn read_i8(&mut self) -> io::Result<i8>;
+    fn read_u16<T: ByteOrder>(&mut self) -> io::Result<u16>;
+    fn read_i16<T: ByteOrder>(&mut self) -> io::Result<i16>;
+    fn read_u32<T: ByteOrder>(&mut self) -> io::Result<u32>;
+    fn read_i32<T: ByteOrder>(&mut self) -> io::Result<i32>;
+    fn read_u64<T: ByteOrder>(&mut self) -> io::Result<u64>;
+    fn read_i64<T: ByteOrder>(&mut self) -> io::Result<i64>;
+    fn read_f32<T: ByteOrder>(&mut self) -> io::Result<f32>;
+    fn read_f64<T: ByteOrder>(&mut self) -> io::Result<f64>;
+    fn read_fstring(&mut self) -> io::Result<Option<String>>;
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()>;
+    fn read_bool(&mut self) -> io::Result<bool>;
 }
