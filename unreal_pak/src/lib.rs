@@ -18,7 +18,6 @@ File parts:
 //! Supports both reading and writing and aims to support all pak versions.
 //! Encrytion is currently unsupported
 
-mod buf_ext;
 pub mod compression;
 mod entry;
 pub mod error;

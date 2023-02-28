@@ -144,9 +144,8 @@ pub fn handle_persistent_actors(
             actor_template.base_export.outer_index =
                 PackageIndex::new(level_export_index as i32 + 1); // package index starts from 1
 
-            let actor_asset_path =
-                unreal_modmetadata::game_to_absolute(game_name, &component_path_raw)
-                    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
+            let actor_asset_path = unreal_helpers::game_to_absolute(game_name, &component_path_raw)
+                .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid actor path"))?;
 
             let actor_asset = get_asset(
                 integrated_pak,

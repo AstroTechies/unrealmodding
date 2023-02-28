@@ -2,7 +2,8 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use byteorder::{ReadBytesExt, WriteBytesExt, BE, LE};
 
-use crate::buf_ext::{BufReaderExt, BufWriterExt};
+use unreal_helpers::{UnrealReadExt, UnrealWriteExt};
+
 use crate::compression::CompressionMethods;
 use crate::error::PakError;
 use crate::header::Header;
@@ -23,7 +24,7 @@ impl Index {
 
         reader.seek(SeekFrom::Start(footer.index_offset))?;
 
-        let mount_point = reader.read_fstring()?;
+        let mount_point = reader.read_fstring()?.unwrap_or_default();
         let mut path_hash_seed = None;
 
         let entry_count = reader.read_u32::<LE>()?;
@@ -31,7 +32,7 @@ impl Index {
 
         if footer.pak_version < PakVersion::PathHashIndex {
             for _ in 0..entry_count {
-                let file_name = reader.read_fstring()?;
+                let file_name = reader.read_fstring()?.unwrap_or_default();
 
                 entries.push((
                     file_name,
@@ -61,11 +62,11 @@ impl Index {
                 let directory_count = reader.read_u32::<LE>()? as usize;
                 let mut directories = Vec::new();
                 for _ in 0..directory_count {
-                    let directory_name = reader.read_fstring()?;
+                    let directory_name = reader.read_fstring()?.unwrap_or_default();
                     let file_count = reader.read_u32::<LE>()? as usize;
                     let mut files = Vec::new();
                     for _ in 0..file_count {
-                        let file_name = reader.read_fstring()?;
+                        let file_name = reader.read_fstring()?.unwrap_or_default();
                         files.push((file_name, reader.read_u32::<LE>()?));
                     }
                     directories.push((directory_name, files));

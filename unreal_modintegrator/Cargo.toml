@@ -16,6 +16,7 @@ ue4_23 = []
 unreal_asset.workspace = true
 unreal_pak.workspace = true
 unreal_modmetadata.workspace = true
+unreal_helpers.workspace = true
 
 lazy_static.workspace = true
 log.workspace = true
