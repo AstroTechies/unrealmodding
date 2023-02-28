@@ -67,7 +67,7 @@ impl FontData {
             local_font_face_asset = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
 
             if local_font_face_asset.index == 0 {
-                font_filename = asset.read_string()?;
+                font_filename = asset.read_fstring()?;
                 hinting = Some(EFontHinting::try_from(asset.read_u8()?)?);
                 loading_policy = Some(EFontLoadingPolicy::try_from(asset.read_u8()?)?);
             }
@@ -101,7 +101,7 @@ impl FontData {
             asset.write_i32::<LittleEndian>(self.local_font_face_asset.index)?;
 
             if self.local_font_face_asset.index == 0 {
-                asset.write_string(&self.font_filename)?;
+                asset.write_fstring(self.font_filename.as_deref())?;
                 asset.write_u8(self.hinting.ok_or_else(|| {
                     PropertyError::property_field_none("hinting", "Some(EFontHinting)")
                 })? as u8)?;

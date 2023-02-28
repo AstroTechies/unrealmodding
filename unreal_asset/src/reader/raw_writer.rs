@@ -2,8 +2,9 @@ use std::io::{self, Cursor, Seek, Write};
 
 use byteorder::WriteBytesExt;
 
+use unreal_helpers::UnrealWriteExt;
+
 use crate::containers::indexed_map::IndexedMap;
-use crate::cursor_ext::WriteExt;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
@@ -131,59 +132,59 @@ impl<'cursor> AssetWriter for RawWriter<'cursor> {
     }
 
     fn write_fname(&mut self, fname: &FName) -> Result<(), crate::error::Error> {
-        self.cursor.write_string(&Some(fname.content.clone()))?; // todo: ref
+        self.cursor.write_fstring(Some(&fname.content))?;
         Ok(())
     }
 
-    fn write_u8(&mut self, value: u8) -> Result<(), io::Error> {
+    fn write_u8(&mut self, value: u8) -> io::Result<()> {
         self.cursor.write_u8(value)
     }
 
-    fn write_i8(&mut self, value: i8) -> Result<(), io::Error> {
+    fn write_i8(&mut self, value: i8) -> io::Result<()> {
         self.cursor.write_i8(value)
     }
 
-    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> Result<(), io::Error> {
+    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> io::Result<()> {
         self.cursor.write_u16::<T>(value)
     }
 
-    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> Result<(), io::Error> {
+    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> io::Result<()> {
         self.cursor.write_i16::<T>(value)
     }
 
-    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> Result<(), io::Error> {
+    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> io::Result<()> {
         self.cursor.write_u32::<T>(value)
     }
 
-    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> Result<(), io::Error> {
+    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> io::Result<()> {
         self.cursor.write_i32::<T>(value)
     }
 
-    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> Result<(), io::Error> {
+    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> io::Result<()> {
         self.cursor.write_u64::<T>(value)
     }
 
-    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> Result<(), io::Error> {
+    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> io::Result<()> {
         self.cursor.write_i64::<T>(value)
     }
 
-    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> Result<(), io::Error> {
+    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> io::Result<()> {
         self.cursor.write_f32::<T>(value)
     }
 
-    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> Result<(), io::Error> {
+    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> io::Result<()> {
         self.cursor.write_f64::<T>(value)
     }
 
-    fn write_string(&mut self, value: &Option<String>) -> Result<usize, crate::error::Error> {
-        self.cursor.write_string(value)
+    fn write_fstring(&mut self, value: Option<&str>) -> io::Result<usize> {
+        self.cursor.write_fstring(value)
     }
 
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), io::Error> {
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
         self.cursor.write_all(buf)
     }
 
-    fn write_bool(&mut self, value: bool) -> Result<(), crate::error::Error> {
+    fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.cursor.write_bool(value)
     }
 }

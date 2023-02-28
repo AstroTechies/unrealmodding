@@ -37,7 +37,7 @@ pub struct SoftObjectPath {
 impl SoftObjectPath {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let asset_path_name = asset.read_fname()?;
-        let sub_path_string = asset.read_string()?;
+        let sub_path_string = asset.read_fstring()?;
 
         Ok(SoftObjectPath {
             asset_path_name,
@@ -47,7 +47,7 @@ impl SoftObjectPath {
 
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.asset_path_name)?;
-        asset.write_string(&self.sub_path_string)?;
+        asset.write_fstring(self.sub_path_string.as_deref())?;
 
         Ok(())
     }
@@ -100,7 +100,7 @@ impl AssetObjectProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let value = asset.read_string()?;
+        let value = asset.read_fstring()?;
         Ok(AssetObjectProperty {
             name,
             property_guid,
@@ -117,7 +117,7 @@ impl PropertyTrait for AssetObjectProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_string(&self.value)
+        Ok(asset.write_fstring(self.value.as_deref())?)
     }
 }
 

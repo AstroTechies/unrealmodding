@@ -25,7 +25,7 @@ impl FWorldTileLayer {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let object_version = asset.get_object_version();
 
-        let name = asset.read_string()?;
+        let name = asset.read_fstring()?;
         let reserved_0 = asset.read_i32::<LittleEndian>()?;
         let reserved_1 = IntPointProperty::new(asset, FName::default(), false, 0)?;
 
@@ -53,7 +53,7 @@ impl FWorldTileLayer {
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         let object_version = asset.get_object_version();
 
-        asset.write_string(&self.name)?;
+        asset.write_fstring(self.name.as_deref())?;
         asset.write_i32::<LittleEndian>(self.reserved_0)?;
         self.reserved_1.write(asset, false)?;
 
@@ -150,7 +150,7 @@ impl FWorldTileInfo {
         let mut parent_tile_package_name = None;
         if object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO_UPDATED {
             hide_in_tile_view = Some(asset.read_i32::<LittleEndian>()? == 1);
-            parent_tile_package_name = asset.read_string()?;
+            parent_tile_package_name = asset.read_fstring()?;
         }
 
         let mut lod_list = None;
@@ -209,7 +209,7 @@ impl FWorldTileInfo {
                 },
             )?;
 
-            asset.write_string(&self.parent_tile_package_name)?;
+            asset.write_fstring(self.parent_tile_package_name.as_deref())?;
         }
 
         if object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO_LOD_LIST {

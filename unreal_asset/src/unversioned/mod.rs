@@ -1,13 +1,13 @@
-use std::{hash::Hash, io::Cursor};
+use std::hash::Hash;
+use std::io::{self, Cursor};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::{
-    containers::indexed_map::IndexedMap,
-    cursor_ext::ReadExt,
-    error::{Error, UsmapError},
-};
+use unreal_helpers::UnrealReadExt;
+
+use crate::containers::indexed_map::IndexedMap;
+use crate::error::{Error, UsmapError};
 
 use self::{properties::UsmapProperty, usmap_reader::UsmapReader};
 
@@ -112,7 +112,7 @@ impl Usmap {
 
         let names_len = self.read_i32()?;
         for _ in 0..names_len {
-            let name = self.read_string()?;
+            let name = self.read_fstring()?.unwrap_or_default();
             self.name_map.push(name);
         }
 
@@ -170,51 +170,51 @@ impl Usmap {
 }
 
 impl UsmapReader for Usmap {
-    fn read_i8(&mut self) -> Result<i8, std::io::Error> {
+    fn read_i8(&mut self) -> io::Result<i8> {
         self.cursor.read_i8()
     }
 
-    fn read_u8(&mut self) -> Result<u8, std::io::Error> {
+    fn read_u8(&mut self) -> io::Result<u8> {
         self.cursor.read_u8()
     }
 
-    fn read_i16(&mut self) -> Result<i16, std::io::Error> {
+    fn read_i16(&mut self) -> io::Result<i16> {
         self.cursor.read_i16::<LittleEndian>()
     }
 
-    fn read_u16(&mut self) -> Result<u16, std::io::Error> {
+    fn read_u16(&mut self) -> io::Result<u16> {
         self.cursor.read_u16::<LittleEndian>()
     }
 
-    fn read_i32(&mut self) -> Result<i32, std::io::Error> {
+    fn read_i32(&mut self) -> io::Result<i32> {
         self.cursor.read_i32::<LittleEndian>()
     }
 
-    fn read_u32(&mut self) -> Result<u32, std::io::Error> {
+    fn read_u32(&mut self) -> io::Result<u32> {
         self.cursor.read_u32::<LittleEndian>()
     }
 
-    fn read_i64(&mut self) -> Result<i64, std::io::Error> {
+    fn read_i64(&mut self) -> io::Result<i64> {
         self.cursor.read_i64::<LittleEndian>()
     }
 
-    fn read_u64(&mut self) -> Result<u64, std::io::Error> {
+    fn read_u64(&mut self) -> io::Result<u64> {
         self.cursor.read_u64::<LittleEndian>()
     }
 
-    fn read_f32(&mut self) -> Result<f32, std::io::Error> {
+    fn read_f32(&mut self) -> io::Result<f32> {
         self.cursor.read_f32::<LittleEndian>()
     }
 
-    fn read_f64(&mut self) -> Result<f64, std::io::Error> {
+    fn read_f64(&mut self) -> io::Result<f64> {
         self.cursor.read_f64::<LittleEndian>()
     }
 
-    fn read_string(&mut self) -> Result<String, Error> {
-        self.cursor.read_string().map(|e| e.unwrap_or_default())
+    fn read_fstring(&mut self) -> io::Result<Option<String>> {
+        self.cursor.read_fstring()
     }
 
-    fn read_name(&mut self) -> Result<String, std::io::Error> {
+    fn read_name(&mut self) -> io::Result<String> {
         let index = self.read_i32()?;
         if index < 0 {
             return Ok("".to_string());

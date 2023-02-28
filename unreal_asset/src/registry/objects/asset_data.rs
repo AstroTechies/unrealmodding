@@ -58,7 +58,7 @@ impl AssetData {
         let mut tags_and_values = IndexedMap::new();
 
         for _ in 0..size {
-            tags_and_values.insert(asset.read_fname()?, asset.read_string()?);
+            tags_and_values.insert(asset.read_fname()?, asset.read_fstring()?);
         }
         Ok(tags_and_values)
     }
@@ -70,7 +70,7 @@ impl AssetData {
         asset.write_i32::<LittleEndian>(tags_and_values.len() as i32)?;
         for (_, key, value) in tags_and_values {
             asset.write_fname(key)?;
-            asset.write_string(value)?;
+            asset.write_fstring(value.as_deref())?;
         }
         Ok(())
     }

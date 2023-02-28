@@ -154,55 +154,55 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
         Ok(())
     }
 
-    fn write_u8(&mut self, value: u8) -> Result<(), io::Error> {
+    fn write_u8(&mut self, value: u8) -> io::Result<()> {
         self.writer.write_u8(value)
     }
 
-    fn write_i8(&mut self, value: i8) -> Result<(), io::Error> {
+    fn write_i8(&mut self, value: i8) -> io::Result<()> {
         self.writer.write_i8(value)
     }
 
-    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> Result<(), io::Error> {
+    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> io::Result<()> {
         self.writer.write_u16::<T>(value)
     }
 
-    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> Result<(), io::Error> {
+    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> io::Result<()> {
         self.writer.write_i16::<T>(value)
     }
 
-    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> Result<(), io::Error> {
+    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> io::Result<()> {
         self.writer.write_u32::<T>(value)
     }
 
-    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> Result<(), io::Error> {
+    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> io::Result<()> {
         self.writer.write_i32::<T>(value)
     }
 
-    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> Result<(), io::Error> {
+    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> io::Result<()> {
         self.writer.write_u64::<T>(value)
     }
 
-    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> Result<(), io::Error> {
+    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> io::Result<()> {
         self.writer.write_i64::<T>(value)
     }
 
-    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> Result<(), io::Error> {
+    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> io::Result<()> {
         self.writer.write_f32::<T>(value)
     }
 
-    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> Result<(), io::Error> {
+    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> io::Result<()> {
         self.writer.write_f64::<T>(value)
     }
 
-    fn write_string(&mut self, value: &Option<String>) -> Result<usize, crate::error::Error> {
-        self.writer.write_string(value)
+    fn write_fstring(&mut self, value: Option<&str>) -> io::Result<usize> {
+        self.writer.write_fstring(value)
     }
 
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), io::Error> {
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
         self.writer.write_all(buf)
     }
 
-    fn write_bool(&mut self, value: bool) -> Result<(), crate::error::Error> {
+    fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.writer.write_bool(value)
     }
 }
