@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::env;
-use std::fs;
+use std::fs::{self, File};
 use std::io::{self, Error};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -15,6 +15,7 @@ use directories::BaseDirs;
 use log::{debug, warn};
 use parking_lot::Mutex;
 use semver::Version;
+use sha2::{Digest, Sha256};
 
 use unreal_modintegrator::{
     integrate_mods, FileMod, IntegratorConfig, IntegratorModInfo, INTEGRATOR_PAK_FILE_NAME,
@@ -34,6 +35,7 @@ use crate::mod_processing::{
 use crate::update_info::UpdateInfo;
 use crate::FileToProcess;
 use crate::ModLoaderAppData;
+use crate::UntrustedMod;
 
 pub(crate) struct BackgroundThreadData {
     pub(crate) data: Arc<Mutex<ModLoaderAppData>>,
@@ -455,6 +457,7 @@ where
                             Some(available_version) => {
                                 let (metadata, mod_path) =
                                     download_mod(&mods_path, available_version)?;
+
                                 mods_to_install.push(GameModVersion {
                                     mod_id: metadata.mod_id.clone(),
                                     file_name: available_version.file_name.clone(),
@@ -462,6 +465,7 @@ where
                                     download_url: Some(available_version.download_url.clone()),
                                     metadata: Some(metadata),
                                 });
+
                                 to_enable.push(mod_id.clone());
                                 downloaded_mods.push(FileToProcess::new(mod_path, false));
                             }
@@ -497,7 +501,6 @@ where
                             game_mod.enabled = true;
                         }
                     }
-                    drop(data_guard);
 
                     // remove all old files
                     match fs::remove_dir_all(&paks_path) {
@@ -513,17 +516,52 @@ where
                     }?;
                     fs::create_dir_all(&paks_path)?;
 
+                    let trusted_mods = data_guard.trusted_mods.clone();
+                    let mut untrusted_mods = Vec::new();
+
                     // copy new files
-                    for mod_version in mods_to_install {
-                        fs::copy(
-                            mods_path.join(mod_version.file_name.as_str()),
-                            paks_path.join(mod_version.file_name.as_str()),
-                        )
-                        .map(|_| ())?;
+                    let mods_to_install = mods_to_install
+                        .into_iter()
+                        .map(|e| {
+                            (
+                                data_guard
+                                    .game_mods
+                                    .get(&e.mod_id)
+                                    .unwrap()
+                                    .selected_version
+                                    .to_string(),
+                                e,
+                            )
+                        })
+                        .collect::<Vec<_>>();
+
+                    drop(data_guard);
+
+                    for (version_string, mod_version) in mods_to_install {
+                        let dst_path = paks_path.join(mod_version.file_name.as_str());
+                        fs::copy(mods_path.join(mod_version.file_name.as_str()), &dst_path)
+                            .map(|_| ())?;
+
+                        if let Some(ref metadata) = mod_version.metadata {
+                            if !metadata.cpp_loader_dlls.is_empty() {
+                                let mut hasher = Sha256::new();
+                                let mut file = File::open(&dst_path)?;
+                                let _ = io::copy(&mut file, &mut hasher)?;
+                                let hash = hasher.finalize()[..].to_vec();
+
+                                if !trusted_mods.contains(&hash) {
+                                    untrusted_mods.push(UntrustedMod::new(
+                                        mod_version.mod_id.clone(),
+                                        version_string,
+                                        hash,
+                                    ));
+                                }
+                            }
+                        }
 
                         mods_to_integrate.push(
                             FileMod {
-                                path: paks_path.join(mod_version.file_name.as_str()),
+                                path: dst_path,
                                 mod_id: mod_version.mod_id.clone(),
                                 priority: mod_version
                                     .file_name
@@ -536,6 +574,8 @@ where
                             .into(),
                         );
                     }
+
+                    background_thread_data.data.lock().untrusted_mods = untrusted_mods;
 
                     mods_to_integrate.sort_by_key(|a| a.get_priority());
 

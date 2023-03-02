@@ -41,6 +41,7 @@ pub(crate) struct ModLoaderApp {
     pub update_progress: Arc<AtomicI32>,
 
     pub platform_selector_open: bool,
+    pub untrusted_mods_open: bool,
     pub selected_mod_id: Option<String>,
     pub profile_manager_open: Cell<bool>,
 }
@@ -74,6 +75,7 @@ impl ModLoaderApp {
             update_progress,
 
             platform_selector_open: false,
+            untrusted_mods_open: false,
             selected_mod_id: None,
             profile_manager_open: Cell::new(false),
         }
@@ -183,6 +185,13 @@ impl App for ModLoaderApp {
             darken_background = true;
         }
 
+        drop(data);
+
+        if self.untrusted_mods_open {
+            self.show_untrusted_mods(ctx);
+            darken_background = true;
+        }
+
         // Keyboard shortcuts
 
         // esc show default bottom text
@@ -202,8 +211,6 @@ impl App for ModLoaderApp {
                     .send(BackgroundThreadMessage::integrate());
             }
         }
-
-        drop(data);
 
         if darken_background {
             self.darken_background(ctx);
@@ -504,7 +511,7 @@ impl ModLoaderApp {
         }
     }
 
-    fn show_footer(&self, ui: &mut egui::Ui) {
+    fn show_footer(&mut self, ui: &mut egui::Ui) {
         let mut data = self.data.lock();
 
         StripBuilder::new(ui)
@@ -552,7 +559,12 @@ impl ModLoaderApp {
                             false => Button::new("Play"),
                         };
                         if ui.add(button).clicked() {
-                            let _ = self.background_tx.send(BackgroundThreadMessage::LaunchGame);
+                            if !data.untrusted_mods.is_empty() {
+                                self.untrusted_mods_open = true;
+                            } else {
+                                let _ =
+                                    self.background_tx.send(BackgroundThreadMessage::LaunchGame);
+                            }
                         }
                     });
                 });
@@ -895,5 +907,66 @@ impl ModLoaderApp {
                 .background_tx
                 .send(BackgroundThreadMessage::WriteConfig);
         }
+    }
+
+    fn show_untrusted_mods(&mut self, ctx: &egui::Context) {
+        let mut data = self.data.lock();
+
+        egui::Window::new("Untrusted Mods")
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .fixed_size((600.0, 400.0))
+            .show(ctx, |ui| {
+                ui.vertical(|ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            "These mods may contain code that can harm your computer, trust them?",
+                        );
+                    });
+
+                    ui.add_space(8.0);
+
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        for untrusted_mod in &data.untrusted_mods {
+                            ui.label(format!(
+                                "{} version {}",
+                                untrusted_mod.name, untrusted_mod.version
+                            ));
+                        }
+                    });
+
+                    ui.add_space(8.0);
+
+                    ui.separator();
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+
+                        if ui.button("Trust").clicked() {
+                            let untrusted_mods = data
+                                .untrusted_mods
+                                .iter()
+                                .map(|e| e.hash.clone())
+                                .collect::<Vec<_>>();
+
+                            data.trusted_mods.extend(untrusted_mods);
+                            data.untrusted_mods.clear();
+
+                            let _ = self
+                                .background_tx
+                                .send(BackgroundThreadMessage::WriteConfig);
+
+                            let _ = self.background_tx.send(BackgroundThreadMessage::LaunchGame);
+
+                            self.untrusted_mods_open = false;
+                        }
+
+                        if ui.button("Cancel").clicked() {
+                            self.untrusted_mods_open = false;
+                        }
+                    });
+                });
+            });
     }
 }

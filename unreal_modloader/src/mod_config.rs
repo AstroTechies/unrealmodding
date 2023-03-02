@@ -15,6 +15,8 @@ struct ModConfig {
     selected_game_platform: Option<String>,
     refuse_mismatched_connections: bool,
     current: ModsConfigData,
+    #[serde(default)]
+    trusted_mods: Vec<String>,
     profiles: Value,
 }
 
@@ -88,6 +90,12 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
         }
     }
 
+    data.trusted_mods = config
+        .trusted_mods
+        .iter()
+        .filter_map(|e| hex::decode(e).ok())
+        .collect::<Vec<_>>();
+
     data.profiles = match parse_profile_config(config.profiles) {
         Ok(profiles) => profiles,
         Err(err) => {
@@ -115,6 +123,11 @@ pub(crate) fn write_config(data: &mut ModLoaderAppData) {
         current: ModsConfigData {
             mods: HashMap::new(),
         },
+        trusted_mods: data
+            .trusted_mods
+            .iter()
+            .map(hex::encode)
+            .collect::<Vec<_>>(),
         profiles: serde_json::to_value(data.profiles.clone()).unwrap(),
     };
 
