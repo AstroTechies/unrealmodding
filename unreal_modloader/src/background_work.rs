@@ -24,7 +24,7 @@ use unreal_modmetadata::Metadata;
 use unreal_pak::PakReader;
 
 use crate::config;
-use crate::error::{ModLoaderError, ModLoaderWarning, ModLoaderWarningKind};
+use crate::error::{ModLoaderError, ModLoaderWarning};
 use crate::game_mod::{self, GameModVersion};
 use crate::mod_config::{load_config, write_config};
 use crate::mod_processing::{
@@ -107,19 +107,6 @@ fn download_mods(mods_path: &Path, files_to_download: &[GameModVersion]) -> Vec<
     }
 
     warnings
-}
-
-pub(crate) fn has_critical_warnings(warnings: &[ModLoaderWarning]) -> bool {
-    return warnings.iter().any(|warning| {
-        !matches!(
-            warning.kind,
-            ModLoaderWarningKind::IndexFileDownloadFailed(_)
-                | ModLoaderWarningKind::IndexFileDownloadFailedStatus(_)
-                | ModLoaderWarningKind::InvalidIndexFile
-                | ModLoaderWarningKind::IndexFileMissingMod
-                | ModLoaderWarningKind::DownloadFailed(_)
-        )
-    });
 }
 
 pub(crate) fn background_work<'data, GC, IC, D: 'data, E: 'static + std::error::Error + Send>(
@@ -296,13 +283,13 @@ where
 
                 let mut data_guard = background_thread_data.data.lock();
 
-                if data_guard.game_install_path.is_none()
-                    || has_critical_warnings(&data_guard.warnings)
-                {
+                if data_guard.game_install_path.is_none() {
                     continue;
                 }
                 data_guard.failed = false;
 
+                // TODO this should at somepoint be changed to `-> Result<Vec<ModLoaderWarning>, ModLoaderError>`
+                // to properly convey that some things might critically fail.
                 let integration_work = || -> Result<(), ModLoaderWarning> {
                     background_thread_data
                         .working
@@ -479,16 +466,10 @@ where
                         }
                     }
 
-                    background_thread_data.data.lock().dependency_graph = Some(graph);
-
-                    if has_critical_warnings(&warnings) {
-                        background_thread_data.data.lock().warnings.extend(warnings);
-                        return Err(ModLoaderWarning::other(
-                            "Critical Error occured during pre-integration!".to_owned(),
-                        ));
-                    }
-
-                    background_thread_data.data.lock().warnings.extend(warnings);
+                    let mut data_guard = background_thread_data.data.lock();
+                    data_guard.dependency_graph = Some(graph);
+                    data_guard.warnings.extend(warnings);
+                    drop(data_guard);
 
                     // process dependencies
                     let warnings =

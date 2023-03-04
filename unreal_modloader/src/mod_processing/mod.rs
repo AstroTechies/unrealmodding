@@ -15,6 +15,8 @@ use version_handling::{auto_pick_versions, set_mod_data_from_version};
 
 mod verify;
 
+// TODO this should at somepoint be changed to `-> Result<Vec<ModLoaderWarning>, ModLoaderError>`
+// to properly convey that some things might critically fail.
 pub(crate) fn process_modfiles(
     mod_files: &Vec<FileToProcess>,
     data: &Arc<Mutex<ModLoaderAppData>>,
