@@ -37,6 +37,7 @@ use version::GameBuild;
 pub use unreal_asset;
 #[cfg(feature = "cpp_loader")]
 pub use unreal_cpp_bootstrapper;
+pub use unreal_helpers;
 pub use unreal_modintegrator;
 pub use unreal_modmetadata;
 pub use unreal_pak;
@@ -50,6 +51,23 @@ pub(crate) struct FileToProcess {
 impl FileToProcess {
     pub fn new(path: PathBuf, newly_added: bool) -> Self {
         FileToProcess { path, newly_added }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct UntrustedMod {
+    pub name: String,
+    pub version: String,
+    pub hash: Vec<u8>,
+}
+
+impl UntrustedMod {
+    pub fn new(name: String, version: String, hash: Vec<u8>) -> Self {
+        UntrustedMod {
+            name,
+            version,
+            hash,
+        }
     }
 }
 
@@ -79,6 +97,9 @@ pub(crate) struct ModLoaderAppData {
     /// install managers
     pub install_managers: BTreeMap<&'static str, Box<dyn InstallManager>>,
     pub selected_game_platform: Option<String>,
+
+    pub trusted_mods: Vec<Vec<u8>>,
+    pub untrusted_mods: Vec<UntrustedMod>,
 
     #[cfg(feature = "cpp_loader")]
     pub(crate) cpp_loader_config: unreal_cpp_bootstrapper::config::GameSettings,

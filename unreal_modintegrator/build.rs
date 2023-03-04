@@ -7,6 +7,7 @@ const ASSET_REPO: &str = "AstroTechies/ModIntegrator";
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=USE_PREBUILT_ASSETS");
 
     #[cfg(feature = "no_bulk_data")]
     compile_error!("no_bulk_data feature is not supported yet.");
