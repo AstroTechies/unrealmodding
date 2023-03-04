@@ -5,9 +5,9 @@ name: CI
 # Controls when the workflow will run
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -28,6 +28,16 @@ jobs:
           toolchain: stable
           components: clippy
           override: true
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions-rs/cargo@v1
+        name: Unit test
+        env:
+          USE_PREBUILT_ASSETS: 1
+          USE_PRECOMPILED_CPP_LOADER: 1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: test
 
       - uses: actions-rs/clippy-check@v1
         name: Clippy check ue 4.23 w/bulk
@@ -41,17 +51,8 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         name: Clippy check ue 4.23 w/bulk w/cpp_loader
         env:
-            USE_PREBUILT_ASSETS: 1
-            USE_PRECOMPILED_CPP_LOADER: 1
-        with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            args: --features "ue4_23,cpp_loader" -- -D warnings
-
-      - uses: actions-rs/cargo@v1
-        name: Unit test
-        env:
           USE_PREBUILT_ASSETS: 1
           USE_PRECOMPILED_CPP_LOADER: 1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          command: test
+          args: --features "ue4_23,cpp_loader" -- -D warnings
