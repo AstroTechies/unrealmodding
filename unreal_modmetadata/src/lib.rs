@@ -23,8 +23,9 @@ macro_rules! hash_value {
     };
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum SyncMode {
+    #[default]
     #[serde(rename = "serverclient")]
     ServerAndClient,
     #[serde(rename = "server")]
@@ -33,12 +34,6 @@ pub enum SyncMode {
     ClientOnly,
     #[serde(rename = "none")]
     None,
-}
-
-impl Default for SyncMode {
-    fn default() -> Self {
-        SyncMode::ServerAndClient
-    }
 }
 
 impl std::fmt::Display for SyncMode {
