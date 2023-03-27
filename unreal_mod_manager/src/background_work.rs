@@ -17,10 +17,10 @@ use parking_lot::Mutex;
 use semver::Version;
 use sha2::{Digest, Sha256};
 
-use unreal_modintegrator::{
+use unreal_mod_integrator::{
     integrate_mods, FileMod, IntegratorConfig, IntegratorModInfo, INTEGRATOR_PAK_FILE_NAME,
 };
-use unreal_modmetadata::Metadata;
+use unreal_mod_metadata::Metadata;
 use unreal_pak::PakReader;
 
 use crate::config;
@@ -84,7 +84,7 @@ fn download_mod(
     pak.load_index()?;
 
     let metadata = pak.read_entry(&String::from("metadata.json"))?;
-    let metadata = unreal_modmetadata::from_slice(&metadata)
+    let metadata = unreal_mod_metadata::from_slice(&metadata)
         .map_err(|_| ModLoaderWarning::invalid_metadata(mod_version.file_name.clone()))?;
 
     Ok((metadata, file_path))

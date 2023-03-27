@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
 use semver::Version;
-use unreal_modmetadata::{Dependency, DownloadInfo, Metadata, SyncMode};
+use unreal_mod_metadata::{Dependency, DownloadInfo, Metadata, SyncMode};
 
 use crate::version::GameBuild;
 

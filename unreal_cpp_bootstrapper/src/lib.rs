@@ -38,7 +38,7 @@ pub fn bootstrap(
             continue;
         };
 
-        let metadata = unreal_modmetadata::from_slice(&metadata_entry)?;
+        let metadata = unreal_mod_metadata::from_slice(&metadata_entry)?;
 
         for dll in metadata
             .cpp_loader_dlls

@@ -5,7 +5,7 @@ use std::io;
 use std::path::PathBuf;
 
 use unreal_asset::engine_version::EngineVersion;
-use unreal_modintegrator::{HandlerFn, IntegratorConfig};
+use unreal_mod_integrator::{HandlerFn, IntegratorConfig};
 use unreal_pak::{PakMemory, PakReader};
 
 pub struct Config;
@@ -54,7 +54,7 @@ impl<'data> IntegratorConfig<'data, (), io::Error> for Config {
     // }
     const ENGINE_VERSION: EngineVersion = EngineVersion::VER_UE4_23;
 
-    fn get_baked_mods(&self) -> Vec<unreal_modintegrator::IntegratorMod<io::Error>> {
+    fn get_baked_mods(&self) -> Vec<unreal_mod_integrator::IntegratorMod<io::Error>> {
         Vec::new()
     }
 }
@@ -68,7 +68,7 @@ fn main() {
 
     let game_path = args[0].clone();
     let mods_path = args[1].clone();
-    unreal_modintegrator::integrate_mods(
+    unreal_mod_integrator::integrate_mods(
         &config,
         &[],
         &PathBuf::from(&mods_path),

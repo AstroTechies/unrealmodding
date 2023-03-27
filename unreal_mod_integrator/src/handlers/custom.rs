@@ -279,7 +279,7 @@ pub(crate) fn integrate(
         for (asset_name, modifications) in entries {
             // todo: open asset
             let asset_name =
-                unreal_modmetadata::game_to_absolute(&game_info.game_name, asset_name.as_str())
+                unreal_mod_metadata::game_to_absolute(&game_info.game_name, asset_name.as_str())
                     .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid asset path"))?;
 
             let mut asset =

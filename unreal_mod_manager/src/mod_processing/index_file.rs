@@ -8,7 +8,7 @@ use reqwest::blocking::Client;
 use semver::Version;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
-use unreal_modmetadata::DownloadInfo;
+use unreal_mod_metadata::DownloadInfo;
 
 use crate::error::ModLoaderWarning;
 use crate::game_mod::{GameModVersion, SelectedVersion};

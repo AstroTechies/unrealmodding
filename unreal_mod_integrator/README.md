@@ -1,4 +1,4 @@
-# unreal_modintegrator
+# unreal_mod_integrator
 
 Library crate for "integrating" Unreal Engine game mods.
 

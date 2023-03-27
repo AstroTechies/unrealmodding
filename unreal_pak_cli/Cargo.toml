@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 unreal_pak.workspace = true
 
-clap = { version = "4.0.29", features = ["derive"] }
+clap = { version = "4.1.13", features = ["derive"] }
 path-absolutize = "3.0.14"
-walkdir = "2.3.2"
+walkdir = "2.3.3"

@@ -3,7 +3,7 @@ use std::fs;
 
 use log::{debug, warn};
 use semver::Version;
-use unreal_modmetadata::{self, Metadata};
+use unreal_mod_metadata::{self, Metadata};
 use unreal_pak::{error::PakErrorKind, PakReader};
 
 use crate::error::ModLoaderWarning;
@@ -44,7 +44,7 @@ pub(crate) fn read_pak_files(
                     }
                 })?;
 
-            let metadata: Metadata = unreal_modmetadata::from_slice(&record).map_err(|err| {
+            let metadata: Metadata = unreal_mod_metadata::from_slice(&record).map_err(|err| {
                 warn!("json error: {}", err);
                 ModLoaderWarning::invalid_metadata(file_name)
             })?;

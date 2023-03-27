@@ -95,7 +95,7 @@ pub enum ModLoaderWarningKind {
     IoError(io::Error),
     IoErrorWithMessage(io::Error, String),
     UnrealPakError(PakError),
-    IntegratorError(unreal_modintegrator::error::Error),
+    IntegratorError(unreal_mod_integrator::error::Error),
 
     UnresolvedDependency(String, Vec<(String, String)>),
     ReferencedByOtherMods(String, Vec<String>),
@@ -329,8 +329,8 @@ impl From<PakError> for ModLoaderWarning {
     }
 }
 
-impl From<unreal_modintegrator::error::Error> for ModLoaderWarning {
-    fn from(err: unreal_modintegrator::error::Error) -> Self {
+impl From<unreal_mod_integrator::error::Error> for ModLoaderWarning {
+    fn from(err: unreal_mod_integrator::error::Error) -> Self {
         ModLoaderWarning {
             kind: ModLoaderWarningKind::IntegratorError(err),
             mod_id: None,
