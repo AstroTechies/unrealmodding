@@ -1,5 +1,5 @@
 [package]
-name = "unreal_modmetadata"
+name = "unreal_mod_metadata"
 version.workspace = true
 authors.workspace = true
 description.workspace = true

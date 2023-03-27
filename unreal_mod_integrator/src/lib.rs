@@ -20,7 +20,7 @@ use unreal_asset::{
     types::FName,
     Asset,
 };
-use unreal_modmetadata::{Metadata, SyncMode};
+use unreal_mod_metadata::{Metadata, SyncMode};
 use unreal_pak::{pakversion::PakVersion, PakMemory, PakReader};
 
 mod assets;
@@ -411,7 +411,7 @@ pub fn integrate_mods<
         pak.load_index()?;
 
         let record = pak.read_entry(&String::from("metadata.json"))?;
-        let metadata = unreal_modmetadata::from_slice(&record)?;
+        let metadata = unreal_mod_metadata::from_slice(&record)?;
         read_mods.push(metadata.clone());
 
         debug!(

@@ -36,7 +36,7 @@ pub enum ErrorCode {
     Io(io::Error),
     Uasset(unreal_asset::error::Error),
     Pak(unreal_pak::error::PakError),
-    UnrealModMetaData(unreal_modmetadata::error::Error),
+    UnrealModMetaData(unreal_mod_metadata::error::Error),
     Json(serde_json::Error),
     Integration(IntegrationError),
     Other(Box<dyn std::error::Error + Send>),
@@ -101,8 +101,8 @@ impl From<unreal_pak::error::PakError> for Error {
     }
 }
 
-impl From<unreal_modmetadata::error::Error> for Error {
-    fn from(e: unreal_modmetadata::error::Error) -> Self {
+impl From<unreal_mod_metadata::error::Error> for Error {
+    fn from(e: unreal_mod_metadata::error::Error) -> Self {
         Error {
             code: ErrorCode::UnrealModMetaData(e),
         }

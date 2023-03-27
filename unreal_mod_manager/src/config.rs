@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 
-use unreal_modintegrator::IntegratorConfig;
+use unreal_mod_integrator::IntegratorConfig;
 
 use crate::version::GameBuild;
 use crate::{

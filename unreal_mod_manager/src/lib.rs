@@ -11,7 +11,7 @@ use eframe::egui;
 use log::error;
 use parking_lot::Mutex;
 
-use unreal_modintegrator::IntegratorConfig;
+use unreal_mod_integrator::IntegratorConfig;
 
 mod app;
 mod background_work;
@@ -38,8 +38,8 @@ pub use unreal_asset;
 #[cfg(feature = "cpp_loader")]
 pub use unreal_cpp_bootstrapper;
 pub use unreal_helpers;
-pub use unreal_modintegrator;
-pub use unreal_modmetadata;
+pub use unreal_mod_integrator;
+pub use unreal_mod_metadata;
 pub use unreal_pak;
 
 #[derive(Debug, Clone)]

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use petgraph::{graph::NodeIndex, prelude::DiGraph, visit::IntoNodeReferences, Direction};
 use semver::{Version, VersionReq};
-use unreal_modmetadata::{Dependency, DownloadInfo};
+use unreal_mod_metadata::{Dependency, DownloadInfo};
 
 use crate::error::ModLoaderWarning;
 

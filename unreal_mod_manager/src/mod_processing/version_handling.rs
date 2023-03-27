@@ -2,7 +2,7 @@ use std::fs;
 
 use log::warn;
 use semver::Version;
-use unreal_modmetadata::SyncMode;
+use unreal_mod_metadata::SyncMode;
 
 use crate::game_mod::SelectedVersion;
 use crate::version::GameBuild;

@@ -12,7 +12,7 @@ pub struct CppBootstrapperError {
 pub enum CppBootstrapperErrorKind {
     Io(io::Error),
     Pak(PakError),
-    Metadata(unreal_modmetadata::error::Error),
+    Metadata(unreal_mod_metadata::error::Error),
 }
 
 impl Display for CppBootstrapperError {
@@ -43,8 +43,8 @@ impl From<PakError> for CppBootstrapperError {
     }
 }
 
-impl From<unreal_modmetadata::error::Error> for CppBootstrapperError {
-    fn from(err: unreal_modmetadata::error::Error) -> Self {
+impl From<unreal_mod_metadata::error::Error> for CppBootstrapperError {
+    fn from(err: unreal_mod_metadata::error::Error) -> Self {
         CppBootstrapperError {
             kind: CppBootstrapperErrorKind::Metadata(err),
         }

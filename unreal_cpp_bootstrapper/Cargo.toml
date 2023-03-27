@@ -6,9 +6,9 @@ description.workspace = true
 edition = "2021"
 
 [dependencies]
-unreal_pak.workspace = true
-unreal_modmetadata.workspace = true
 unreal_helpers.workspace = true
+unreal_mod_metadata.workspace = true
+unreal_pak.workspace = true
 
 lazy_static.workspace = true
 log.workspace = true
