@@ -3,6 +3,7 @@ name = "unreal_cpp_bootstrapper"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
+license.workspace = true
 edition = "2021"
 
 [dependencies]

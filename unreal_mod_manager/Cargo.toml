@@ -3,6 +3,7 @@ name = "unreal_mod_manager"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
+license.workspace = true
 edition = "2021"
 
 [features]
@@ -28,8 +29,8 @@ unreal_mod_metadata.workspace = true
 unreal_pak.workspace = true
 
 directories = "4.0.1"
-eframe = "0.20.1"
-egui_extras = "0.20.0"
+eframe = "0.21.3"
+egui_extras = "0.21.0"
 lazy_static.workspace = true
 log.workspace = true
 open = "3.2.0"
@@ -44,6 +45,7 @@ steamlocate = "1.1.1"
 sha2 = "0.10.6"
 tempfile = { version = "3.4.0", optional = true }
 hex = "0.4.3"
+egui_commonmark = "0.7.0"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.11.0"

@@ -15,6 +15,7 @@ members = [
 [workspace.package]
 version = "0.1.12"
 authors = ["AstroTechies, localcc, konsti219"]
+license = "MIT"
 description = "Tools for making and loading Unreal Engine Mods."
 
 [workspace.dependencies]

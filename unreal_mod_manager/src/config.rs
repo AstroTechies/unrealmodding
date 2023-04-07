@@ -53,6 +53,8 @@ where
 
     fn get_icon(&self) -> Option<IconData>;
 
+    fn get_about() -> String;
+
     #[cfg(feature = "cpp_loader")]
     fn get_cpp_loader_config() -> unreal_cpp_bootstrapper::config::GameSettings;
 

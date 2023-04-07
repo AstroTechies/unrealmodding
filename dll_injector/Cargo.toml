@@ -3,6 +3,7 @@ name = "dll_injector"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
+license.workspace = true
 edition = "2021"
 
 [target.'cfg(windows)'.dependencies]

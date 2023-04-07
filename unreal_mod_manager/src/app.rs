@@ -11,8 +11,9 @@ use eframe::{
     emath::Align,
     App, Frame,
 };
+use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
-use log::{debug, info};
+use log::info;
 use parking_lot::Mutex;
 use semver::Version;
 
@@ -44,6 +45,9 @@ pub(crate) struct ModLoaderApp {
     pub untrusted_mods_open: bool,
     pub selected_mod_id: Option<String>,
     pub profile_manager_open: Cell<bool>,
+
+    pub about_text: String,
+    pub about_open: Cell<bool>,
 }
 
 impl ModLoaderApp {
@@ -58,6 +62,7 @@ impl ModLoaderApp {
         last_integration_time: Arc<Mutex<Instant>>,
         newer_update: Arc<Mutex<Option<UpdateInfo>>>,
         update_progress: Arc<AtomicI32>,
+        about_text: String,
     ) -> Self {
         ModLoaderApp {
             data,
@@ -78,6 +83,9 @@ impl ModLoaderApp {
             untrusted_mods_open: false,
             selected_mod_id: None,
             profile_manager_open: Cell::new(false),
+
+            about_text,
+            about_open: Cell::new(false),
         }
     }
 }
@@ -92,6 +100,7 @@ impl App for ModLoaderApp {
                 .size(Size::relative(0.45))
                 .size(Size::remainder())
                 .size(Size::exact(14.0))
+                .size(Size::exact(2.0))
                 .size(Size::exact(45.0))
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
@@ -108,10 +117,18 @@ impl App for ModLoaderApp {
                     });
 
                     strip.cell(|ui| {
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                            ui.label(format!("Version: {}", self.modloader_version));
+                        ui.horizontal(|ui| {
+                            if ui.button("About").clicked() {
+                                self.about_open.set(true);
+                            }
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                ui.label(format!("Version: {}", self.modloader_version));
+                            });
                         });
                     });
+
+                    // spacing
+                    strip.cell(|_| {});
 
                     strip.cell(|ui| {
                         ui.separator();
@@ -192,15 +209,20 @@ impl App for ModLoaderApp {
             darken_background = true;
         }
 
+        if self.about_open.get() {
+            self.show_about(ctx);
+            darken_background = true;
+        }
+
         // Keyboard shortcuts
 
         // esc show default bottom text
-        if ctx.input().key_pressed(egui::Key::Escape) {
+        if ctx.input(|e| e.key_pressed(egui::Key::Escape)) {
             self.selected_mod_id = None;
         }
 
         // delete to remove a mod
-        if ctx.input().key_pressed(egui::Key::Delete) {
+        if ctx.input(|e| e.key_pressed(egui::Key::Delete)) {
             if let Some(ref id) = self.selected_mod_id {
                 let _ = self
                     .background_tx
@@ -577,7 +599,7 @@ impl ModLoaderApp {
             egui::Id::new("panel_darken"),
         ));
 
-        let screen_rect = ctx.input().screen_rect();
+        let screen_rect = ctx.input(|e| e.screen_rect());
         painter.rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(192));
     }
 
@@ -585,24 +607,29 @@ impl ModLoaderApp {
     fn detect_files_being_dropped(&mut self, ctx: &egui::Context) {
         #[allow(clippy::format_push_string)]
         // Preview hovering files
-        if !ctx.input().raw.hovered_files.is_empty() {
+        if !ctx.input(|e| e.raw.hovered_files.is_empty()) {
             use egui::*;
 
-            let mut text = "Dropping files:\n".to_owned();
-            for file in &ctx.input().raw.hovered_files {
-                if let Some(path) = &file.path {
-                    text += &format!("\n{}", path.display());
-                } else if !file.mime.is_empty() {
-                    text += &format!("\n{}", file.mime);
-                } else {
-                    text += "\n???";
+            let text = ctx.input(|i| {
+                use std::fmt::Write as _;
+
+                let mut text = "Dropping files:\n".to_owned();
+                for file in &i.raw.hovered_files {
+                    if let Some(path) = &file.path {
+                        write!(text, "\n{}", path.display()).ok();
+                    } else if !file.mime.is_empty() {
+                        write!(text, "\n{}", file.mime).ok();
+                    } else {
+                        text += "\n???";
+                    }
                 }
-            }
+                text
+            });
 
             let painter =
                 ctx.layer_painter(LayerId::new(Order::Foreground, Id::new("file_drop_target")));
 
-            let screen_rect = ctx.input().screen_rect();
+            let screen_rect = ctx.input(|e| e.screen_rect());
             painter.rect_filled(screen_rect, 0.0, Color32::from_black_alpha(192));
             painter.text(
                 screen_rect.center(),
@@ -614,17 +641,13 @@ impl ModLoaderApp {
         }
 
         // Collect dropped files
-        let mut files_to_import = Vec::new();
-        for dropped_file in ctx.input().raw.dropped_files.iter() {
-            debug!("Dropped file: {:?}", dropped_file.path);
-
-            files_to_import.push(FileToProcess::new(
-                dropped_file.path.as_ref().unwrap().to_owned(),
-                true,
-            ));
-
-            self.working.store(true, Ordering::Release); // why is ui setting self.working?
-        }
+        let files_to_import = ctx.input(|e| {
+            e.raw
+                .dropped_files
+                .iter()
+                .map(|e| FileToProcess::new(e.path.as_ref().unwrap().to_owned(), true))
+                .collect::<Vec<_>>()
+        });
 
         if !files_to_import.is_empty() {
             let _ = self
@@ -965,6 +988,38 @@ impl ModLoaderApp {
                         if ui.button("Cancel").clicked() {
                             self.untrusted_mods_open = false;
                         }
+                    });
+                });
+            });
+    }
+
+    fn show_about(&mut self, ctx: &egui::Context) {
+        egui::Window::new("About")
+            .resizable(true)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_TOP, (0.0, 50.0))
+            .default_size((600.0, 400.0))
+            .vscroll(false)
+            .show(ctx, |ui| {
+                egui::TopBottomPanel::bottom("bottom_panel")
+                    .resizable(false)
+                    .min_height(0.0)
+                    .show_inside(ui, |ui| {
+                        ui.vertical(|ui| {
+                            ui.add_space(8.0);
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
+                                if ui.button("Close").clicked() {
+                                    self.about_open.set(false);
+                                }
+                            });
+                        });
+                    });
+
+                egui::CentralPanel::default().show_inside(ui, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        let mut cache = CommonMarkCache::default();
+                        CommonMarkViewer::new("viewer").show(ui, &mut cache, &self.about_text);
                     });
                 });
             });
