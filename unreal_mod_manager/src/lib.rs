@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, AtomicI32},
@@ -174,6 +175,9 @@ where
         let _ = background_tx.send(BackgroundThreadMessage::integrate());
     }
 
+    let mut about_text = format!("# Mod manager version: {}\n", GC::CRATE_VERSION);
+    write!(about_text, "{}", GC::get_about()).expect("Failed to concatenate about text");
+
     // instantiate the GUI app
     let app = app::ModLoaderApp::new(
         data.clone(),
@@ -185,6 +189,7 @@ where
         last_integration_time.clone(),
         newer_update.clone(),
         update_progress.clone(),
+        about_text,
     );
 
     // spawn a background thread to handle long running tasks
@@ -238,7 +243,11 @@ where
 
             Box::new(app)
         }),
-    );
+    )
+    .unwrap_or_else(|_| {
+        error!("Failed to start gui");
+        panic!();
+    });
 }
 
 pub const fn default_true() -> bool {

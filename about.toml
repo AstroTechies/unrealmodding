@@ -1,0 +1,28 @@
+accepted = [
+    "Apache-2.0",
+    "MIT",
+    "Unicode-DFS-2016",
+    "WTFPL",
+    "OFL-1.1",
+    "LicenseRef-UFL-1.0",
+    "Zlib",
+    "BSD-2-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "MPL-2.0",
+    "BSD-3-Clause",
+    "ISC"
+]
+
+[unreal_asset.clarify]
+license = "MIT"
+
+[[unreal_asset.clarify.files]]
+path = 'LICENSE'
+license = 'MIT'
+checksum = 'C4F0D7437AB4D3EC6F8C1F71FD279A86EE05CC1486CEE306B1B7890ED76C03C4'
+
+[[unreal_asset.clarify.files]]
+path = 'licenses/LICENSE.UAssetAPI'
+license = 'MIT'
+checksum = 'C0FC201CF231E76249104762E4C5B681068C1E7F1917B2A0DC0222E4E1B76067'
