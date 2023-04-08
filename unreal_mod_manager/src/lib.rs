@@ -176,7 +176,7 @@ where
     }
 
     let mut about_text = format!("# Mod manager version: {}\n", GC::CRATE_VERSION);
-    write!(about_text, "{}", GC::get_about()).expect("Failed to concatenate about text");
+    write!(about_text, "{}", GC::ABOUT_TEXT).expect("Failed to concatenate about text");
 
     // instantiate the GUI app
     let app = app::ModLoaderApp::new(
