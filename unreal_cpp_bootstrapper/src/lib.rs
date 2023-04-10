@@ -13,9 +13,14 @@ pub const LOADER_DLL: &[u8] = include_bytes!(env!("CPP_LOADER_DLL_PATH"));
 pub const PROXY_DLL: &[u8] = include_bytes!(env!("CPP_LOADER_PROXY_PATH"));
 
 pub trait CppLoaderInstallExtension<E> {
+    /// Path to where the loader config file can be written. The injected DLL will read this.
     fn get_config_location(&self) -> Result<PathBuf, E>;
-    fn get_extract_path(&self) -> Option<PathBuf>;
+    /// Path to extract Mod DLLs to
+    fn get_extract_path(&self) -> Result<PathBuf, E>;
+    /// Function run before starting the game while Mods are being installed. Used for for writing DLLs.
     fn prepare_load(&self) -> Result<(), E>;
+    /// Function run while the game starts.
+    /// Used to inject DLLs if the install method does not allow for the game to load DLLs by iteself.
     fn load(&self) -> Result<(), E>;
 }
 
