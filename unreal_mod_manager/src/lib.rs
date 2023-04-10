@@ -197,6 +197,7 @@ where
 
     let background_thread_data = BackgroundThreadData {
         data,
+        use_cpp_loader: false,
         ready_exit,
         last_integration_time,
         working,

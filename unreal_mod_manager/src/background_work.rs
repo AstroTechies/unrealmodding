@@ -38,14 +38,16 @@ use crate::ModLoaderAppData;
 use crate::UntrustedMod;
 
 pub(crate) struct BackgroundThreadData {
-    pub(crate) data: Arc<Mutex<ModLoaderAppData>>,
-    pub(crate) ready_exit: Arc<AtomicBool>,
-    pub(crate) last_integration_time: Arc<Mutex<Instant>>,
-    pub(crate) working: Arc<AtomicBool>,
+    pub data: Arc<Mutex<ModLoaderAppData>>,
+    pub use_cpp_loader: bool,
 
-    pub(crate) newer_update: Arc<Mutex<Option<UpdateInfo>>>,
-    pub(crate) should_update: Arc<AtomicBool>,
-    pub(crate) update_progress: Arc<AtomicI32>,
+    pub ready_exit: Arc<AtomicBool>,
+    pub last_integration_time: Arc<Mutex<Instant>>,
+    pub working: Arc<AtomicBool>,
+
+    pub newer_update: Arc<Mutex<Option<UpdateInfo>>>,
+    pub should_update: Arc<AtomicBool>,
+    pub update_progress: Arc<AtomicI32>,
 }
 
 pub(crate) enum BackgroundThreadMessage {
@@ -115,7 +117,7 @@ fn download_mods(mods_path: &Path, files_to_download: &[GameModVersion]) -> Vec<
 
 pub(crate) fn background_work<'data, GC, IC, D: 'data, E: 'static + std::error::Error + Send>(
     config: GC,
-    background_thread_data: BackgroundThreadData,
+    mut background_thread_data: BackgroundThreadData,
     receiver: Receiver<BackgroundThreadMessage>,
 ) -> Result<(), Error>
 where
@@ -319,6 +321,7 @@ where
 
                 let start_pre = Instant::now();
                 let mut warnings = Vec::new();
+                background_thread_data.use_cpp_loader = false;
 
                 // gather mods to be installed
                 let mut mods_to_install = data_guard
@@ -531,6 +534,7 @@ where
                         fs::copy(mods_path.join(mod_version.file_name.as_str()), &dst_path)
                             .map(|_| ())?;
 
+                        // extract DLLS
                         if let Some(ref metadata) = mod_version.metadata {
                             if !metadata.cpp_loader_dlls.is_empty() {
                                 let mut hasher = Sha256::new();
@@ -545,6 +549,8 @@ where
                                         hash,
                                     ));
                                 }
+
+                                background_thread_data.use_cpp_loader = true;
                             }
                         }
 
@@ -603,7 +609,7 @@ where
                     );
 
                     #[cfg(feature = "cpp_loader")]
-                    {
+                    if background_thread_data.use_cpp_loader {
                         match unreal_cpp_bootstrapper::bootstrap(
                             IC::GAME_NAME,
                             &cpp_loader_extract_path,
@@ -614,7 +620,7 @@ where
                                 warn!("Bootstrap failed!");
                                 return Err(err.into());
                             }
-                        };
+                        }
                     }
 
                     *background_thread_data.last_integration_time.lock() = Instant::now();
@@ -650,14 +656,14 @@ where
                     .store(false, Ordering::Release);
             }
             BackgroundThreadMessage::LaunchGame => {
-                fn start(data: &mut ModLoaderAppData) -> Result<(), ModLoaderWarning> {
+                let start = |data: &mut ModLoaderAppData| -> Result<(), ModLoaderWarning> {
                     let install_manager = data.get_install_manager();
                     let Some(install_manager) = install_manager else {
                         return Err(ModLoaderWarning::other("No install manager".to_string()));
                     };
 
                     #[cfg(feature = "cpp_loader")]
-                    {
+                    if background_thread_data.use_cpp_loader {
                         let config_location = install_manager.get_config_location()?;
 
                         fs::create_dir_all(config_location.parent().unwrap())?;
@@ -675,13 +681,15 @@ where
                     match install_manager.launch_game() {
                         Ok(_) => {
                             #[cfg(feature = "cpp_loader")]
-                            install_manager.load()?;
+                            if background_thread_data.use_cpp_loader {
+                                install_manager.load()?;
+                            }
 
                             Ok(())
                         }
                         Err(warn) => Err(warn),
                     }
-                }
+                };
 
                 let mut data = background_thread_data.data.lock();
                 if let Err(e) = start(&mut data) {
