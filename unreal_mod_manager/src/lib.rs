@@ -105,11 +105,12 @@ pub(crate) struct ModLoaderAppData {
     #[cfg(feature = "cpp_loader")]
     pub(crate) cpp_loader_config: unreal_cpp_bootstrapper::config::GameSettings,
     #[cfg(feature = "cpp_loader")]
-    pub(crate) cpp_loader_extract_path: Option<PathBuf>,
+    pub(crate) cpp_loader_extract_path: PathBuf,
 }
 
 impl ModLoaderAppData {
-    pub fn set_game_platform(&mut self, platform: &str) -> bool {
+    // TODO actually return an error?
+    pub fn set_game_platform(&mut self, platform: &str) -> Result<(), ()> {
         let manager = self.install_managers.get(platform);
         if let Some(manager) = manager {
             self.game_install_path = manager.get_game_install_path();
@@ -118,15 +119,15 @@ impl ModLoaderAppData {
 
             #[cfg(feature = "cpp_loader")]
             {
-                self.cpp_loader_extract_path = manager.get_extract_path();
+                self.cpp_loader_extract_path = manager.get_extract_path().map_err(|_| ())?;
             }
 
             self.selected_game_platform = Some(platform.to_string());
 
             write_config(self);
-            return true;
+            return Ok(());
         }
-        false
+        Err(())
     }
 
     #[allow(clippy::borrowed_box)]

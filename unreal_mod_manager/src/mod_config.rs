@@ -38,9 +38,9 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
     macro_rules! bail {
         () => {{
             warn!("Error reading config file!");
-            if !data.set_game_platform("Steam") {
+            if data.set_game_platform("Steam").is_err() {
                 let first_platform = data.install_managers.keys().next().unwrap();
-                data.set_game_platform(first_platform);
+                let _ = data.set_game_platform(first_platform);
             }
             return;
         }};
@@ -106,10 +106,10 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
     };
 
     if let Some(ref selected_game_platform) = config.selected_game_platform {
-        data.set_game_platform(selected_game_platform);
-    } else if !data.set_game_platform("Steam") {
+        let _ = data.set_game_platform(selected_game_platform);
+    } else if data.set_game_platform("Steam").is_err() {
         let first_platform = data.install_managers.keys().next().unwrap();
-        data.set_game_platform(first_platform);
+        let _ = data.set_game_platform(first_platform);
     }
 
     debug!("Loaded config");
