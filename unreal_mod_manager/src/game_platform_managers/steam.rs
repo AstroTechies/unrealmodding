@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 
 #[cfg(feature = "cpp_loader")]
-use std::{env, fs, io::Write};
+use std::env;
 
 use crate::config::InstallManager;
 use crate::error::ModLoaderWarning;
@@ -93,23 +93,25 @@ impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for St
             .join("Binaries")
             .join("Win64");
 
-        let proxy_path = dest_path.join("xinput1_3.dll");
-        let dll_path = dest_path.join("UnrealCppLoader.dll");
-
-        let _ = fs::remove_file(&proxy_path);
-        let _ = fs::remove_file(&dll_path);
-
-        let mut proxy_file = fs::File::create(proxy_path)?;
-        proxy_file.write_all(unreal_cpp_bootstrapper::PROXY_DLL)?;
-
-        let mut dll_file = fs::File::create(dll_path)?;
-        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
+        super::write_loader_dll(dest_path.as_path())?;
+        super::write_proxy_dll(dest_path.as_path())?;
 
         Ok(())
     }
 
+    // doing nothing on steam as xinput1_3.dll will handle everything
     fn load(&self) -> Result<(), ModLoaderWarning> {
-        // doing nothing on steam as xinput1_3.dll will handle everything
         Ok(())
+    }
+
+    fn remove(&self) {
+        if let Some(install_path) = self.get_game_install_path() {
+            let dest_path = install_path
+                .join(self.game_name)
+                .join("Binaries")
+                .join("Win64");
+
+            super::remove_dlls(dest_path.as_path());
+        };
     }
 }

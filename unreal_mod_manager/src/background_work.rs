@@ -313,7 +313,14 @@ where
                 if let Err(err) = fs::create_dir_all(&paks_path) {
                     data_guard.warnings.push(err.into());
                 };
-                // TODO cpp loader cleanup
+
+                // cpp loader cleanup
+                #[cfg(feature = "cpp_loader")]
+                {
+                    if let Some(install_manager) = data_guard.get_install_manager() {
+                        install_manager.remove();
+                    };
+                }
 
                 background_thread_data
                     .working

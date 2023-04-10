@@ -3,9 +3,6 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 
-#[cfg(feature = "cpp_loader")]
-use std::io::Write;
-
 use crate::config::InstallManager;
 use crate::error::ModLoaderWarning;
 use crate::game_path_helpers;
@@ -134,24 +131,20 @@ impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning>
     }
 
     fn prepare_load(&self) -> Result<(), ModLoaderWarning> {
-        let loader_dir = self.get_loader_dir()?;
-        let file_location = loader_dir.join("loader.dll");
-
-        let _ = fs::remove_file(&file_location);
-
-        let mut dll_file = fs::File::create(file_location)?;
-        dll_file.write_all(unreal_cpp_bootstrapper::LOADER_DLL)?;
-        dll_file.flush()?;
-        Ok(())
+        super::write_loader_dll(self.get_loader_dir()?.as_path()).map_err(|e| e.into())
     }
 
     fn load(&self) -> Result<(), ModLoaderWarning> {
         let loader_dir = self.get_loader_dir()?;
-        let file_location = loader_dir.join("loader.dll");
+        let file_location = loader_dir.join(super::LOADER_DLL_NAME);
 
         let process = dll_injector::Process::wait_for_process("Astro-UWP64-Shipping")?;
 
         process.inject_dll(file_location.to_str().unwrap())?;
         Ok(())
+    }
+
+    fn remove(&self) {
+        // no need to remove any files because there are none written to important dirs.
     }
 }

@@ -22,6 +22,8 @@ pub trait CppLoaderInstallExtension<E> {
     /// Function run while the game starts.
     /// Used to inject DLLs if the install method does not allow for the game to load DLLs by iteself.
     fn load(&self) -> Result<(), E>;
+    /// Undo all modifications to restore vanilla behaviour
+    fn remove(&self);
 }
 
 pub fn bootstrap(
