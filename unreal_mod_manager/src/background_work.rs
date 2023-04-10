@@ -313,37 +313,45 @@ where
                 };
                 // TODO cpp loader cleanup
 
-                let integration_work = || -> Result<Vec<ModLoaderWarning>, ModLoaderWarning> {
+                background_thread_data
+                    .working
+                    .store(true, Ordering::Release);
+
+                let start_pre = Instant::now();
+                let mut warnings = Vec::new();
+
+                // gather mods to be installed
+                let mut mods_to_install = data_guard
+                    .game_mods
+                    .iter()
+                    .filter(|(_, m)| m.enabled)
+                    .map(|(_, m)| {
+                        m.versions
+                            .get(&m.selected_version.clone().unwrap())
+                            .unwrap()
+                            .clone()
+                    })
+                    .collect::<Vec<_>>();
+
+                drop(data_guard);
+
+                debug!(
+                    "Mods to install: {:?}",
+                    mods_to_install
+                        .iter()
+                        .map(|m| &m.file_name)
+                        .collect::<Vec<_>>()
+                );
+
+                if mods_to_install.is_empty() {
+                    debug!("Aborting Inteagration because no mods are enabled.");
                     background_thread_data
                         .working
-                        .store(true, Ordering::Release);
+                        .store(false, Ordering::Release);
+                    continue;
+                }
 
-                    let start_pre = Instant::now();
-                    let mut warnings = Vec::new();
-
-                    // gather mods to be installed
-                    let mut mods_to_install = data_guard
-                        .game_mods
-                        .iter()
-                        .filter(|(_, m)| m.enabled)
-                        .map(|(_, m)| {
-                            m.versions
-                                .get(&m.selected_version.clone().unwrap())
-                                .unwrap()
-                                .clone()
-                        })
-                        .collect::<Vec<_>>();
-
-                    drop(data_guard);
-
-                    debug!(
-                        "Mods to install: {:?}",
-                        mods_to_install
-                            .iter()
-                            .map(|m| &m.file_name)
-                            .collect::<Vec<_>>()
-                    );
-
+                let integration_work = || -> Result<Vec<ModLoaderWarning>, ModLoaderWarning> {
                     warnings.extend(download_mods(&mods_path, &mods_to_install));
 
                     // process newly downloaded files
