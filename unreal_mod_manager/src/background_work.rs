@@ -590,7 +590,7 @@ where
                             .lock()
                             .refuse_mismatched_connections,
                     ) {
-                        Ok(_) => debug!("Integration succesful"),
+                        Ok(_) => debug!("Integration successful"),
                         Err(err) => {
                             warn!("Integration failed!");
                             return Err(err.into());
@@ -609,7 +609,7 @@ where
                             &cpp_loader_extract_path,
                             &paks_path,
                         ) {
-                            Ok(_) => debug!("Bootstrap succesful"),
+                            Ok(_) => debug!("Bootstrap successful"),
                             Err(err) => {
                                 warn!("Bootstrap failed!");
                                 return Err(err.into());
@@ -626,12 +626,16 @@ where
                 };
                 match integration_work() {
                     Ok(warnings) => {
-                        debug!("Integration work finished with the following warnimgs:");
-                        for warning in &warnings {
-                            warn!("{}", warning);
+                        if warnings.is_empty() {
+                            debug!("Integration work was successful.");
+                        } else {
+                            debug!("Integration work finished with the following warnings:");
+                            for warning in &warnings {
+                                warn!("{}", warning);
+                            }
+                            let mut data_guard = background_thread_data.data.lock();
+                            data_guard.warnings.extend(warnings);
                         }
-                        let mut data_guard = background_thread_data.data.lock();
-                        data_guard.warnings.extend(warnings);
                     }
                     Err(err) => {
                         error!("Mayor Integration work error: {}", err);
