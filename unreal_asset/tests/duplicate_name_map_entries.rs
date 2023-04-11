@@ -18,10 +18,11 @@ const ASSET_BULK_FILE: &[u8] = include_bytes!(concat!(assets_folder!(), "BIOME_A
 
 #[test]
 fn duplicate_name_map_entries() -> Result<(), Error> {
-    let mut asset = Asset::new(Cursor::new(ASSET_FILE), Some(Cursor::new(ASSET_BULK_FILE)));
-    asset.set_engine_version(EngineVersion::VER_UE4_25);
-
-    asset.parse_data()?;
+    let asset = Asset::new(
+        Cursor::new(ASSET_FILE),
+        Some(Cursor::new(ASSET_BULK_FILE)),
+        EngineVersion::VER_UE4_25,
+    )?;
 
     let mut has_duplicates = false;
 

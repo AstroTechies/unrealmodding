@@ -23,10 +23,11 @@ const TEST_ASSETS: [(&[u8], &[u8]); 1] = [(
 #[test]
 fn codevein() -> Result<(), Error> {
     for (test_asset, asset_bulk) in TEST_ASSETS {
-        let mut asset = Asset::new(Cursor::new(test_asset), Some(Cursor::new(asset_bulk)));
-        asset.set_engine_version(EngineVersion::VER_UE4_18);
-
-        asset.parse_data()?;
+        let mut asset = Asset::new(
+            Cursor::new(test_asset),
+            Some(Cursor::new(asset_bulk)),
+            EngineVersion::VER_UE4_18,
+        )?;
         shared::verify_binary_equality(test_asset, Some(asset_bulk), &mut asset)?;
         assert!(shared::verify_all_exports_parsed(&asset));
     }

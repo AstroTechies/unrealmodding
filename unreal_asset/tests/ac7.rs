@@ -37,10 +37,9 @@ fn ac7() -> Result<(), Error> {
         let mut parsed = Asset::new(
             Cursor::new(decrypted_data.as_slice()),
             Some(Cursor::new(decrypted_bulk.as_slice())),
-        );
-        parsed.set_engine_version(EngineVersion::VER_UE4_18);
+            EngineVersion::VER_UE4_18,
+        )?;
 
-        parsed.parse_data()?;
         shared::verify_binary_equality(&decrypted_data, Some(&decrypted_bulk), &mut parsed)?;
         shared::verify_all_exports_parsed(&parsed);
 

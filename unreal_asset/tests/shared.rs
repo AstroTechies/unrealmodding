@@ -15,10 +15,7 @@ pub(crate) fn verify_reparse(
     }
     asset.write_data(&mut cursor, bulk_cursor.as_mut())?;
 
-    let mut reparse = Asset::new(cursor, bulk_cursor);
-    reparse.set_engine_version(engine_version);
-
-    reparse.parse_data()?;
+    Asset::new(cursor, bulk_cursor, engine_version)?;
 
     Ok(())
 }
