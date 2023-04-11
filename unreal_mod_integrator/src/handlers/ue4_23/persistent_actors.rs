@@ -39,11 +39,12 @@ pub fn handle_persistent_actors(
     mod_paks: &mut Vec<PakReader<File>>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), Error> {
-    let mut level_asset = Asset::new(Cursor::new(LEVEL_TEMPLATE_ASSET.to_vec()), None);
-    level_asset.set_engine_version(EngineVersion::VER_UE4_23);
-    level_asset
-        .parse_data()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    let mut level_asset = Asset::new(
+        Cursor::new(LEVEL_TEMPLATE_ASSET),
+        None,
+        EngineVersion::VER_UE4_23,
+    )
+    .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
 
     let actor_template = cast!(Export, NormalExport, level_asset.exports[2].clone())
         .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted actor_template"))?;

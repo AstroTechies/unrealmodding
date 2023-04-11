@@ -88,15 +88,16 @@ where
     )?;
     let uasset = read_fn(name)?.ok_or_else(|| IntegrationError::asset_not_found(name.clone()))?;
 
-    let mut asset = Asset::new(Cursor::new(uasset), uexp.map(Cursor::new));
-    asset.set_engine_version(engine_version);
-    asset.parse_data()?;
-    Ok(asset)
+    Ok(Asset::new(
+        Cursor::new(uasset),
+        uexp.map(Cursor::new),
+        engine_version,
+    )?)
 }
 
 pub fn write_asset(
     pak: &mut PakMemory,
-    asset: &Asset<Cursor<Vec<u8>>>,
+    asset: &Asset<Cursor<&[u8]>>,
     name: &String,
 ) -> Result<(), Error> {
     let mut uasset_cursor = Cursor::new(Vec::new());

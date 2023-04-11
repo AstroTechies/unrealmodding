@@ -172,18 +172,7 @@ pub trait IntegratorConfig<'data, D, E: std::error::Error + 'static> {
     const ENGINE_VERSION: EngineVersion;
 }
 
-fn read_in_memory(
-    uasset: Vec<u8>,
-    uexp: Option<Vec<u8>>,
-    engine_version: EngineVersion,
-) -> Result<Asset<Cursor<Vec<u8>>>, Error> {
-    let mut asset = Asset::new(Cursor::new(uasset), uexp.map(Cursor::new));
-    asset.set_engine_version(engine_version);
-    asset.parse_data()?;
-    Ok(asset)
-}
-
-fn bake_mod_data(asset: &mut Asset<Cursor<Vec<u8>>>, mods: &Vec<Metadata>) -> Result<(), Error> {
+fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Result<(), Error> {
     let data_table_export = asset
         .exports
         .iter()
@@ -312,7 +301,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<Vec<u8>>>, mods: &Vec<Metadata>) -> Re
 }
 
 fn bake_integrator_data(
-    asset: &mut Asset<Cursor<Vec<u8>>>,
+    asset: &mut Asset<Cursor<&[u8]>>,
     integrator_version: String,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
@@ -433,13 +422,13 @@ pub fn integrate_mods<
         let mut generated_pak = PakMemory::new(PakVersion::FnameBasedCompressionMethod);
 
         #[cfg(not(feature = "no_bulk_data"))]
-        let list_of_mods_bulk = Some(LIST_OF_MODS_BULK.to_vec());
+        let list_of_mods_bulk = Some(LIST_OF_MODS_BULK);
         #[cfg(feature = "no_bulk_data")]
         let list_of_mods_bulk = None;
 
-        let mut list_of_mods = read_in_memory(
-            LIST_OF_MODS_ASSET.to_vec(),
-            list_of_mods_bulk,
+        let mut list_of_mods = Asset::new(
+            Cursor::new(LIST_OF_MODS_ASSET),
+            list_of_mods_bulk.map(Cursor::new),
             C::ENGINE_VERSION,
         )?;
         bake_mod_data(&mut list_of_mods, &read_mods)?;
@@ -450,13 +439,13 @@ pub fn integrate_mods<
         )?;
 
         #[cfg(not(feature = "no_bulk_data"))]
-        let integrator_statics_bulk = Some(INTEGRATOR_STATICS_BULK.to_vec());
+        let integrator_statics_bulk = Some(INTEGRATOR_STATICS_BULK);
         #[cfg(feature = "no_bulk_data")]
         let integrator_statics_bulk = None;
 
-        let mut integrator_statics = read_in_memory(
-            INTEGRATOR_STATICS_ASSET.to_vec(),
-            integrator_statics_bulk,
+        let mut integrator_statics = Asset::new(
+            Cursor::new(INTEGRATOR_STATICS_ASSET),
+            integrator_statics_bulk.map(Cursor::new),
             C::ENGINE_VERSION,
         )?;
 
