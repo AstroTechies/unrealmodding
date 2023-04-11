@@ -12,7 +12,7 @@ use std::sync::{
 use std::time::Instant;
 
 use directories::BaseDirs;
-use log::{debug, warn};
+use log::{debug, error, warn};
 use parking_lot::Mutex;
 use semver::Version;
 use sha2::{Digest, Sha256};
@@ -38,14 +38,16 @@ use crate::ModLoaderAppData;
 use crate::UntrustedMod;
 
 pub(crate) struct BackgroundThreadData {
-    pub(crate) data: Arc<Mutex<ModLoaderAppData>>,
-    pub(crate) ready_exit: Arc<AtomicBool>,
-    pub(crate) last_integration_time: Arc<Mutex<Instant>>,
-    pub(crate) working: Arc<AtomicBool>,
+    pub data: Arc<Mutex<ModLoaderAppData>>,
+    pub use_cpp_loader: bool,
 
-    pub(crate) newer_update: Arc<Mutex<Option<UpdateInfo>>>,
-    pub(crate) should_update: Arc<AtomicBool>,
-    pub(crate) update_progress: Arc<AtomicI32>,
+    pub ready_exit: Arc<AtomicBool>,
+    pub last_integration_time: Arc<Mutex<Instant>>,
+    pub working: Arc<AtomicBool>,
+
+    pub newer_update: Arc<Mutex<Option<UpdateInfo>>>,
+    pub should_update: Arc<AtomicBool>,
+    pub update_progress: Arc<AtomicI32>,
 }
 
 pub(crate) enum BackgroundThreadMessage {
@@ -91,14 +93,18 @@ fn download_mod(
 }
 
 fn download_mods(mods_path: &Path, files_to_download: &[GameModVersion]) -> Vec<ModLoaderWarning> {
-    // let mut resolved = HashMap::new();
     let mut warnings = Vec::new();
 
     // ? Maybe parallelize this?
+    // ? Add a way to force redownload mods?
     for mod_version in files_to_download
         .iter()
-        .filter(|e| e.download_url.is_some())
-        .map(|e| IndexFileModVersion::new(e.download_url.clone().unwrap(), e.file_name.clone()))
+        .filter(|v| !v.downloaded)
+        .filter_map(|v| {
+            v.download_url
+                .as_ref()
+                .map(|url| IndexFileModVersion::new(url.clone(), v.file_name.clone()))
+        })
     {
         if let Err(err) = download_mod(mods_path, &mod_version) {
             debug!("Failed to download {:?} {:?}", mod_version.file_name, err);
@@ -111,7 +117,7 @@ fn download_mods(mods_path: &Path, files_to_download: &[GameModVersion]) -> Vec<
 
 pub(crate) fn background_work<'data, GC, IC, D: 'data, E: 'static + std::error::Error + Send>(
     config: GC,
-    background_thread_data: BackgroundThreadData,
+    mut background_thread_data: BackgroundThreadData,
     receiver: Receiver<BackgroundThreadMessage>,
 ) -> Result<(), Error>
 where
@@ -273,80 +279,102 @@ where
                 }
             }
             BackgroundThreadMessage::Integrate(time) => {
+                // prevent unneeded integrations
                 if let Some(last_integration_time) = last_integration_time {
                     if time < last_integration_time {
                         continue;
                     }
                 }
-
                 last_integration_time = Some(Instant::now());
 
                 let mut data_guard = background_thread_data.data.lock();
 
-                if data_guard.game_install_path.is_none() {
-                    continue;
-                }
+                let paks_path = data_guard.paks_path.as_ref().unwrap().clone();
+                let install_path = match data_guard.game_install_path {
+                    Some(ref install_path) => install_path.clone(),
+                    None => continue,
+                };
+                #[cfg(feature = "cpp_loader")]
+                let cpp_loader_extract_path = data_guard.cpp_loader_extract_path.clone();
+
                 data_guard.failed = false;
 
-                // TODO this should at somepoint be changed to `-> Result<Vec<ModLoaderWarning>, ModLoaderError>`
-                // to properly convey that some things might critically fail.
-                let integration_work = || -> Result<(), ModLoaderWarning> {
+                // remove all old files
+                if let Err(err) = fs::remove_dir_all(&paks_path) {
+                    if !matches!(err.kind(), io::ErrorKind::NotFound) {
+                        data_guard
+                            .warnings
+                            .push(ModLoaderWarning::io_error_with_message(
+                                "Removing old paks directory failed".to_owned(),
+                                err,
+                            ));
+                    }
+                };
+                if let Err(err) = fs::create_dir_all(&paks_path) {
+                    data_guard.warnings.push(err.into());
+                };
+
+                // cpp loader cleanup
+                #[cfg(feature = "cpp_loader")]
+                {
+                    if let Some(install_manager) = data_guard.get_install_manager() {
+                        install_manager.remove();
+                    };
+                }
+
+                background_thread_data
+                    .working
+                    .store(true, Ordering::Release);
+
+                let start_pre = Instant::now();
+                let mut warnings = Vec::new();
+                background_thread_data.use_cpp_loader = false;
+
+                // gather mods to be installed
+                let mut mods_to_install = data_guard
+                    .game_mods
+                    .iter()
+                    .filter(|(_, m)| m.enabled)
+                    .map(|(_, m)| {
+                        m.versions
+                            .get(&m.selected_version.clone().unwrap())
+                            .unwrap()
+                            .clone()
+                    })
+                    .collect::<Vec<_>>();
+
+                drop(data_guard);
+
+                debug!(
+                    "Mods to install: {:?}",
+                    mods_to_install
+                        .iter()
+                        .map(|m| &m.file_name)
+                        .collect::<Vec<_>>()
+                );
+
+                if mods_to_install.is_empty() {
+                    debug!("Aborting Inteagration because no mods are enabled.");
                     background_thread_data
                         .working
-                        .store(true, Ordering::Release);
+                        .store(false, Ordering::Release);
+                    continue;
+                }
 
-                    let start_pre = Instant::now();
-
-                    // gather mods to be installed
-                    let mut mods_to_install = data_guard
-                        .game_mods
-                        .iter()
-                        .filter(|(_, m)| m.enabled)
-                        .map(|(_, m)| {
-                            m.versions
-                                .get(&m.selected_version.clone().unwrap())
-                                .unwrap()
-                                .clone()
-                        })
-                        .collect::<Vec<_>>();
-
-                    let paks_path = data_guard.paks_path.as_ref().unwrap().to_owned();
-                    let install_path = data_guard.game_install_path.as_ref().unwrap().to_owned();
-                    let refuse_mismatched_connections = data_guard.refuse_mismatched_connections;
-
-                    #[cfg(feature = "cpp_loader")]
-                    let cpp_loader_extract_path = data_guard
-                        .cpp_loader_extract_path
-                        .as_ref()
-                        .unwrap()
-                        .to_owned();
-
-                    drop(data_guard);
-                    debug!(
-                        "Mods to install: {:?}",
-                        mods_to_install
-                            .iter()
-                            .map(|m| &m.file_name)
-                            .collect::<Vec<_>>()
-                    );
-
-                    let warnings = download_mods(&mods_path, &mods_to_install);
-                    background_thread_data.data.lock().warnings.extend(warnings);
+                let integration_work = || -> Result<Vec<ModLoaderWarning>, ModLoaderWarning> {
+                    warnings.extend(download_mods(&mods_path, &mods_to_install));
 
                     // process newly downloaded files
-                    let warnings = process_modfiles(
+                    warnings.extend(process_modfiles(
                         &mods_to_install
                             .iter()
                             .map(|f| FileToProcess::new(mods_path.join(f.file_name.clone()), false))
                             .collect::<Vec<_>>(),
                         &background_thread_data.data,
                         false,
-                    );
-                    debug!("warnings: {:?}", warnings);
-                    background_thread_data.data.lock().warnings.extend(warnings);
+                    ));
 
                     // fetch dependencies
-
                     let mut first_round = Vec::new();
 
                     for (mod_id, enabled_mod) in background_thread_data
@@ -388,11 +416,13 @@ where
                                 .or_insert_with(HashMap::new);
 
                             for download in downloads {
-                                let (_, index_file) =
-                                    download_index_file(mod_id.clone(), download)?;
-
-                                for (version, index_version) in index_file.versions {
-                                    entry.entry(version).or_insert(index_version);
+                                match download_index_file(mod_id.clone(), download) {
+                                    Ok((_, index_file)) => {
+                                        for (version, index_version) in index_file.versions {
+                                            entry.entry(version).or_insert(index_version);
+                                        }
+                                    }
+                                    Err(err) => warnings.push(err),
                                 }
                             }
 
@@ -421,7 +451,8 @@ where
                         }
                     }
 
-                    let (mut to_download, mut warnings) = graph.validate_graph();
+                    let (mut to_download, graph_warnings) = graph.validate_graph();
+                    warnings.extend(graph_warnings);
 
                     for existing_mod in first_round {
                         to_download.remove(&existing_mod.mod_id);
@@ -442,19 +473,23 @@ where
                             download_pool.get(&mod_id).and_then(|e| e.get(&version));
                         match available_versions {
                             Some(available_version) => {
-                                let (metadata, mod_path) =
-                                    download_mod(&mods_path, available_version)?;
+                                match download_mod(&mods_path, available_version) {
+                                    Ok((metadata, mod_path)) => {
+                                        mods_to_install.push(GameModVersion {
+                                            mod_id: metadata.mod_id.clone(),
+                                            file_name: available_version.file_name.clone(),
+                                            downloaded: true,
+                                            download_url: Some(
+                                                available_version.download_url.clone(),
+                                            ),
+                                            metadata: Some(metadata),
+                                        });
 
-                                mods_to_install.push(GameModVersion {
-                                    mod_id: metadata.mod_id.clone(),
-                                    file_name: available_version.file_name.clone(),
-                                    downloaded: true,
-                                    download_url: Some(available_version.download_url.clone()),
-                                    metadata: Some(metadata),
-                                });
-
-                                to_enable.push(mod_id.clone());
-                                downloaded_mods.push(FileToProcess::new(mod_path, false));
+                                        to_enable.push(mod_id.clone());
+                                        downloaded_mods.push(FileToProcess::new(mod_path, false));
+                                    }
+                                    Err(err) => warnings.push(err),
+                                }
                             }
                             None => {
                                 let dependents = graph.find_mod_dependents_with_version(&mod_id);
@@ -466,15 +501,12 @@ where
                         }
                     }
 
-                    let mut data_guard = background_thread_data.data.lock();
-                    data_guard.dependency_graph = Some(graph);
-                    data_guard.warnings.extend(warnings);
-                    drop(data_guard);
+                    background_thread_data.data.lock().dependency_graph = Some(graph);
 
                     // process dependencies
-                    let warnings =
+                    let process_warnings =
                         process_modfiles(&downloaded_mods, &background_thread_data.data, true);
-                    background_thread_data.data.lock().warnings.extend(warnings);
+                    warnings.extend(process_warnings);
 
                     let mut data_guard = background_thread_data.data.lock();
                     for to_enable in to_enable {
@@ -482,20 +514,6 @@ where
                             game_mod.enabled = true;
                         }
                     }
-
-                    // remove all old files
-                    match fs::remove_dir_all(&paks_path) {
-                        Ok(_) => Ok(()),
-                        Err(err) => match err.kind() {
-                            // this is fine
-                            std::io::ErrorKind::NotFound => Ok(()),
-                            _ => Err(ModLoaderWarning::io_error_with_message(
-                                "Removing old paks directory failed".to_owned(),
-                                err,
-                            )),
-                        },
-                    }?;
-                    fs::create_dir_all(&paks_path)?;
 
                     let trusted_mods = data_guard.trusted_mods.clone();
                     let mut untrusted_mods = Vec::new();
@@ -523,6 +541,7 @@ where
                         fs::copy(mods_path.join(mod_version.file_name.as_str()), &dst_path)
                             .map(|_| ())?;
 
+                        // extract DLLS
                         if let Some(ref metadata) = mod_version.metadata {
                             if !metadata.cpp_loader_dlls.is_empty() {
                                 let mut hasher = Sha256::new();
@@ -537,6 +556,8 @@ where
                                         hash,
                                     ));
                                 }
+
+                                background_thread_data.use_cpp_loader = true;
                             }
                         }
 
@@ -569,7 +590,7 @@ where
 
                     // run integrator
                     debug!("Integrating mods");
-                    integrate_mods(
+                    match integrate_mods(
                         config.get_integrator_config(),
                         &mods_to_integrate,
                         &paks_path,
@@ -577,8 +598,17 @@ where
                             .join(IC::GAME_NAME)
                             .join("Content")
                             .join("Paks"),
-                        refuse_mismatched_connections,
-                    )?;
+                        background_thread_data
+                            .data
+                            .lock()
+                            .refuse_mismatched_connections,
+                    ) {
+                        Ok(_) => debug!("Integration successful"),
+                        Err(err) => {
+                            warn!("Integration failed!");
+                            return Err(err.into());
+                        }
+                    };
 
                     debug!(
                         "Integration took {} milliseconds",
@@ -586,12 +616,18 @@ where
                     );
 
                     #[cfg(feature = "cpp_loader")]
-                    {
-                        unreal_cpp_bootstrapper::bootstrap(
+                    if background_thread_data.use_cpp_loader {
+                        match unreal_cpp_bootstrapper::bootstrap(
                             IC::GAME_NAME,
                             &cpp_loader_extract_path,
                             &paks_path,
-                        )?;
+                        ) {
+                            Ok(_) => debug!("Bootstrap successful"),
+                            Err(err) => {
+                                warn!("Bootstrap failed!");
+                                return Err(err.into());
+                            }
+                        }
                     }
 
                     *background_thread_data.last_integration_time.lock() = Instant::now();
@@ -599,13 +635,27 @@ where
                     // update config file
                     write_config(&mut background_thread_data.data.lock());
 
-                    Ok(())
+                    Ok(warnings)
                 };
-                if let Err(err) = integration_work() {
-                    warn!("Integration work error: {}", err);
-                    let mut data_guard = background_thread_data.data.lock();
-                    data_guard.warnings.push(err);
-                    data_guard.failed = true;
+                match integration_work() {
+                    Ok(warnings) => {
+                        if warnings.is_empty() {
+                            debug!("Integration work was successful.");
+                        } else {
+                            debug!("Integration work finished with the following warnings:");
+                            for warning in &warnings {
+                                warn!("{}", warning);
+                            }
+                            let mut data_guard = background_thread_data.data.lock();
+                            data_guard.warnings.extend(warnings);
+                        }
+                    }
+                    Err(err) => {
+                        error!("Mayor Integration work error: {}", err);
+                        let mut data_guard = background_thread_data.data.lock();
+                        data_guard.warnings.push(err);
+                        data_guard.failed = true;
+                    }
                 }
 
                 background_thread_data
@@ -613,14 +663,14 @@ where
                     .store(false, Ordering::Release);
             }
             BackgroundThreadMessage::LaunchGame => {
-                fn start(data: &mut ModLoaderAppData) -> Result<(), ModLoaderWarning> {
+                let start = |data: &mut ModLoaderAppData| -> Result<(), ModLoaderWarning> {
                     let install_manager = data.get_install_manager();
                     let Some(install_manager) = install_manager else {
                         return Err(ModLoaderWarning::other("No install manager".to_string()));
                     };
 
                     #[cfg(feature = "cpp_loader")]
-                    {
+                    if background_thread_data.use_cpp_loader {
                         let config_location = install_manager.get_config_location()?;
 
                         fs::create_dir_all(config_location.parent().unwrap())?;
@@ -638,13 +688,15 @@ where
                     match install_manager.launch_game() {
                         Ok(_) => {
                             #[cfg(feature = "cpp_loader")]
-                            install_manager.load()?;
+                            if background_thread_data.use_cpp_loader {
+                                install_manager.load()?;
+                            }
 
                             Ok(())
                         }
                         Err(warn) => Err(warn),
                     }
-                }
+                };
 
                 let mut data = background_thread_data.data.lock();
                 if let Err(e) = start(&mut data) {

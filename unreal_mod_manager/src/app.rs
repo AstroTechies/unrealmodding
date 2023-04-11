@@ -185,7 +185,7 @@ impl App for ModLoaderApp {
                         };
 
                         if ui.add(button).clicked() {
-                            data.set_game_platform(&platform);
+                            let _ = data.set_game_platform(&platform);
                             self.platform_selector_open = false;
                             let _ = self
                                 .background_tx
