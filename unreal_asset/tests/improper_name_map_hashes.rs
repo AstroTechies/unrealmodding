@@ -19,10 +19,7 @@ const ASSET_BULK_FILE: &[u8] =
 
 #[test]
 fn improper_name_map_hashes() -> Result<(), Error> {
-    let mut asset = Asset::new(
-        Cursor::new(ASSET_FILE.to_vec()),
-        Some(Cursor::new(ASSET_BULK_FILE.to_vec())),
-    );
+    let mut asset = Asset::new(Cursor::new(ASSET_FILE), Some(Cursor::new(ASSET_BULK_FILE)));
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;

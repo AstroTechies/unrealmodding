@@ -21,10 +21,7 @@ const TEST_BULK: &[u8] = include_bytes!(concat!(assets_folder!(), "BP_DetPack_Ch
 
 #[test]
 fn unknown_properties() -> Result<(), Error> {
-    let mut asset = Asset::new(
-        Cursor::new(TEST_ASSET.to_vec()),
-        Some(Cursor::new(TEST_BULK.to_vec())),
-    );
+    let mut asset = Asset::new(Cursor::new(TEST_ASSET), Some(Cursor::new(TEST_BULK)));
     asset.set_engine_version(EngineVersion::VER_UE4_25);
 
     asset.parse_data()?;

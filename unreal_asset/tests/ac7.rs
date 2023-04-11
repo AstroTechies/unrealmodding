@@ -35,8 +35,8 @@ fn ac7() -> Result<(), Error> {
         let (decrypted_data, decrypted_bulk) = ac7::decrypt(asset_data, bulk_data, key);
 
         let mut parsed = Asset::new(
-            Cursor::new(decrypted_data.clone()),
-            Some(Cursor::new(decrypted_bulk.clone())),
+            Cursor::new(decrypted_data.as_slice()),
+            Some(Cursor::new(decrypted_bulk.as_slice())),
         );
         parsed.set_engine_version(EngineVersion::VER_UE4_18);
 

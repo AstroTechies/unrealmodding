@@ -29,10 +29,7 @@ const TEST_ASSETS: [(&[u8], &[u8]); 2] = [
 #[test]
 fn misc426() -> Result<(), Error> {
     for (test_asset, asset_bulk) in TEST_ASSETS {
-        let mut asset = Asset::new(
-            Cursor::new(test_asset.to_vec()),
-            Some(Cursor::new(asset_bulk.to_vec())),
-        );
+        let mut asset = Asset::new(Cursor::new(test_asset), Some(Cursor::new(asset_bulk)));
         asset.set_engine_version(EngineVersion::VER_UE4_26);
 
         asset.parse_data()?;

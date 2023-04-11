@@ -55,7 +55,7 @@ pub(crate) fn verify_binary_equality<C: Read + Seek>(
 }
 
 #[allow(dead_code)]
-pub(crate) fn verify_all_exports_parsed(asset: &Asset<Cursor<Vec<u8>>>) -> bool {
+pub(crate) fn verify_all_exports_parsed(asset: &Asset<Cursor<&[u8]>>) -> bool {
     for export in &asset.exports {
         if cast!(Export, RawExport, export).is_some() {
             return false;

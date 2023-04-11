@@ -24,7 +24,7 @@ const TEST_ASSET: &[u8] = include_bytes!(concat!(test_asset!(), ".uasset"));
 
 #[test]
 fn data_tables() -> Result<(), Error> {
-    let mut asset = Asset::new(Cursor::new(TEST_ASSET.to_vec()), None);
+    let mut asset = Asset::new(Cursor::new(TEST_ASSET), None);
     asset.set_engine_version(EngineVersion::VER_UE4_18);
 
     asset.parse_data()?;
@@ -57,7 +57,7 @@ fn data_tables() -> Result<(), Error> {
     asset.write_data(&mut modified, None)?;
     let modified = modified.into_inner();
 
-    let mut parsed_back = Asset::new(Cursor::new(modified.clone()), None);
+    let mut parsed_back = Asset::new(Cursor::new(modified.as_slice()), None);
     parsed_back.set_engine_version(EngineVersion::VER_UE4_18);
 
     parsed_back.parse_data()?;
