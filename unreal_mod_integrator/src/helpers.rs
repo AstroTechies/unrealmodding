@@ -95,9 +95,9 @@ where
     )?)
 }
 
-pub fn write_asset(
+pub fn write_asset<C: std::io::Read + std::io::Seek>(
     pak: &mut PakMemory,
-    asset: &Asset<Cursor<&[u8]>>,
+    asset: &Asset<C>,
     name: &String,
 ) -> Result<(), Error> {
     let mut uasset_cursor = Cursor::new(Vec::new());

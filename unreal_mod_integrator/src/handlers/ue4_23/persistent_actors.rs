@@ -39,7 +39,7 @@ pub fn handle_persistent_actors(
     mod_paks: &mut Vec<PakReader<File>>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), Error> {
-    let mut level_asset = Asset::new(
+    let level_asset = Asset::new(
         Cursor::new(LEVEL_TEMPLATE_ASSET),
         None,
         EngineVersion::VER_UE4_23,
