@@ -272,7 +272,7 @@ fn read_kismet_unicode_string<Reader: AssetReader>(asset: &mut Reader) -> Result
         if b1 == 0 && b2 == 0 {
             break;
         }
-        data.push(((b1 as u16) << 8) | b2 as u16)
+        data.push(((b2 as u16) << 8) | b1 as u16)
     }
     Ok(String::from_utf16(&data)?)
 }
@@ -284,6 +284,23 @@ fn write_kismet_string<Writer: AssetWriter>(
     let begin = asset.position();
     asset.write_all(string.as_bytes())?;
     asset.write_all(&[0u8; 1])?;
+    Ok((asset.position() - begin) as usize)
+}
+
+fn write_kismet_unicode_string<Writer: AssetWriter>(
+    string: &str,
+    asset: &mut Writer,
+) -> Result<usize, Error> {
+    let begin = asset.position();
+
+    let utf16 = string.encode_utf16().collect::<Vec<_>>();
+    // this is safe because we know that string is utf16 and therefore can easily be aligned to u8
+    // this is also faster than alternatives without unsafe block
+    let (_, aligned, _) = unsafe { utf16.align_to::<u8>() };
+
+    asset.write_all(aligned)?;
+    asset.write_all(&[0u8; 2])?;
+
     Ok((asset.position() - begin) as usize)
 }
 
@@ -2351,7 +2368,7 @@ impl ExUnicodeStringConst {
 }
 impl KismetExpressionTrait for ExUnicodeStringConst {
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        write_kismet_string(&self.value, asset)
+        write_kismet_unicode_string(&self.value, asset)
     }
 }
 

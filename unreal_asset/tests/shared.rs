@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::io::{Cursor, Read, Seek};
 
 use unreal_asset::{cast, engine_version::EngineVersion, error::Error, exports::Export, Asset};
 
@@ -24,10 +24,10 @@ pub(crate) fn verify_reparse(
 }
 
 #[allow(dead_code)]
-pub(crate) fn verify_binary_equality(
+pub(crate) fn verify_binary_equality<C: Read + Seek>(
     data: &[u8],
     bulk: Option<&[u8]>,
-    asset: &mut Asset<Cursor<Vec<u8>>>,
+    asset: &mut Asset<C>,
 ) -> Result<(), Error> {
     let mut cursor = Cursor::new(Vec::new());
 
