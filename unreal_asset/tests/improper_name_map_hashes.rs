@@ -20,12 +20,11 @@ const ASSET_BULK_FILE: &[u8] =
 #[test]
 fn improper_name_map_hashes() -> Result<(), Error> {
     let mut asset = Asset::new(
-        Cursor::new(ASSET_FILE.to_vec()),
-        Some(Cursor::new(ASSET_BULK_FILE.to_vec())),
-    );
-    asset.set_engine_version(EngineVersion::VER_UE4_25);
+        Cursor::new(ASSET_FILE),
+        Some(Cursor::new(ASSET_BULK_FILE)),
+        EngineVersion::VER_UE4_25,
+    )?;
 
-    asset.parse_data()?;
     shared::verify_binary_equality(ASSET_FILE, Some(ASSET_BULK_FILE), &mut asset)?;
 
     let mut testing_entries = HashMap::from([

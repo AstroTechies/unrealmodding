@@ -22,12 +22,10 @@ const TEST_BULK: &[u8] = include_bytes!(concat!(assets_folder!(), "BP_DetPack_Ch
 #[test]
 fn unknown_properties() -> Result<(), Error> {
     let mut asset = Asset::new(
-        Cursor::new(TEST_ASSET.to_vec()),
-        Some(Cursor::new(TEST_BULK.to_vec())),
-    );
-    asset.set_engine_version(EngineVersion::VER_UE4_25);
-
-    asset.parse_data()?;
+        Cursor::new(TEST_ASSET),
+        Some(Cursor::new(TEST_BULK)),
+        EngineVersion::VER_UE4_25,
+    )?;
     shared::verify_binary_equality(TEST_ASSET, Some(TEST_BULK), &mut asset)?;
     assert!(shared::verify_all_exports_parsed(&asset));
 

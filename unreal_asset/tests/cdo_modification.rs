@@ -26,10 +26,8 @@ const TEST_ASSET: &[u8] = include_bytes!(concat!(test_asset!(), ".uasset"));
 
 #[test]
 fn cdo_modification() -> Result<(), Error> {
-    let mut asset = Asset::new(Cursor::new(TEST_ASSET.to_vec()), None);
-    asset.set_engine_version(EngineVersion::VER_UE4_23);
+    let mut asset = Asset::new(Cursor::new(TEST_ASSET), None, EngineVersion::VER_UE4_23)?;
 
-    asset.parse_data()?;
     shared::verify_binary_equality(TEST_ASSET, None, &mut asset)?;
 
     let cdo_export: &mut NormalExport = asset

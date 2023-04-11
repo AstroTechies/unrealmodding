@@ -3,10 +3,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! use std::fs::File;
-//!
-//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), None);
-//! asset.parse_data().unwrap();
+//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), None, EngineVersion::VER_UE4_23);
 //!
 //! println!("{:#?}", asset.engine_version);
 //! ```
@@ -14,11 +11,7 @@
 //! ## Reading an asset that uses bulk data
 //!
 //! ```no_run
-//! use std::fs::File;
-//!
-//!
-//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), Some(File::open("asset.uexp").unwrap()));
-//! asset.parse_data().unwrap();
+//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), Some(File::open("asset.uexp").unwrap(), EngineVersion::VER_UE4_23));
 //!
 //! println!("{:#?}", asset.engine_version);
 //! ```
@@ -619,8 +612,12 @@ impl<C: Read + Seek> AssetReader for Asset<C> {
 
 impl<'a, C: Read + Seek> Asset<C> {
     /// Create an asset from a binary file
-    pub fn new(asset_data: C, bulk_data: Option<C>) -> Self {
-        Asset {
+    pub fn new(
+        asset_data: C,
+        bulk_data: Option<C>,
+        engine_version: EngineVersion,
+    ) -> Result<Self, Error> {
+        let mut asset = Asset {
             use_separate_bulk_data_files: bulk_data.is_some(),
             cursor: Chain::new(asset_data, bulk_data),
             info: String::from("Serialized with unrealmodding/uasset"),
@@ -717,10 +714,13 @@ impl<'a, C: Read + Seek> Asset<C> {
             ]),
             mappings: None,
             parent_class: None,
-        }
+        };
+        asset.set_engine_version(engine_version);
+        asset.parse_data()?;
+        Ok(asset)
     }
 
-    pub fn set_engine_version(&mut self, engine_version: EngineVersion) {
+    fn set_engine_version(&mut self, engine_version: EngineVersion) {
         if engine_version == EngineVersion::UNKNOWN {
             return;
         }
@@ -1078,8 +1078,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Some(&mut self.exports[index as usize])
     }
 
-    /// Parse current asset
-    pub fn parse_data(&mut self) -> Result<(), Error> {
+    fn parse_data(&mut self) -> Result<(), Error> {
         self.parse_header()?;
         self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
 
@@ -1272,7 +1271,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                             // todo: warning?
                             self.cursor
                                 .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
-                            Ok(RawExport::from_base(base_export.clone(), self)?.into())
+                            Ok(RawExport::from_base(base_export, self)?.into())
                         }
                     };
                     self.exports[i] = export?;

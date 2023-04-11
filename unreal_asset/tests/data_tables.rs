@@ -24,10 +24,8 @@ const TEST_ASSET: &[u8] = include_bytes!(concat!(test_asset!(), ".uasset"));
 
 #[test]
 fn data_tables() -> Result<(), Error> {
-    let mut asset = Asset::new(Cursor::new(TEST_ASSET.to_vec()), None);
-    asset.set_engine_version(EngineVersion::VER_UE4_18);
+    let mut asset = Asset::new(Cursor::new(TEST_ASSET), None, EngineVersion::VER_UE4_18)?;
 
-    asset.parse_data()?;
     shared::verify_binary_equality(TEST_ASSET, None, &mut asset)?;
     assert!(shared::verify_all_exports_parsed(&asset));
 
@@ -57,10 +55,12 @@ fn data_tables() -> Result<(), Error> {
     asset.write_data(&mut modified, None)?;
     let modified = modified.into_inner();
 
-    let mut parsed_back = Asset::new(Cursor::new(modified.clone()), None);
-    parsed_back.set_engine_version(EngineVersion::VER_UE4_18);
+    let parsed_back = Asset::new(
+        Cursor::new(modified.as_slice()),
+        None,
+        EngineVersion::VER_UE4_18,
+    )?;
 
-    parsed_back.parse_data()?;
     shared::verify_binary_equality(&modified, None, &mut asset)?;
     assert!(shared::verify_all_exports_parsed(&parsed_back));
     assert!(parsed_back.exports.len() == 1);
