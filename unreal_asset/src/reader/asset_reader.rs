@@ -32,7 +32,7 @@ pub trait AssetReader: AssetTrait {
     fn read_i64<T: ByteOrder>(&mut self) -> io::Result<i64>;
     fn read_f32<T: ByteOrder>(&mut self) -> io::Result<f32>;
     fn read_f64<T: ByteOrder>(&mut self) -> io::Result<f64>;
-    fn read_fstring(&mut self) -> io::Result<Option<String>>;
+    fn read_fstring(&mut self) -> Result<Option<String>, Error>;
     fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()>;
     fn read_bool(&mut self) -> io::Result<bool>;
 }

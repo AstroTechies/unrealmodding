@@ -232,7 +232,7 @@ impl<'reader, Reader: AssetReader> AssetReader for NameTableReader<'reader, Read
         self.reader.read_f64::<T>()
     }
 
-    fn read_fstring(&mut self) -> io::Result<Option<String>> {
+    fn read_fstring(&mut self) -> Result<Option<String>, Error> {
         self.reader.read_fstring()
     }
 

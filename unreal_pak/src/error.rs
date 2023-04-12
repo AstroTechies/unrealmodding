@@ -96,6 +96,9 @@ impl fmt::Display for PakError {
             PakErrorKind::IoError(ref err) => {
                 format!("IO error: {err}")
             }
+            PakErrorKind::FString(ref err) => {
+                format!("FString error: {err}")
+            }
         };
 
         write!(f, "{err_msg}")
@@ -106,6 +109,14 @@ impl From<io::Error> for PakError {
     fn from(error: io::Error) -> Self {
         PakError {
             kind: PakErrorKind::IoError(error),
+        }
+    }
+}
+
+impl From<unreal_helpers::error::FStringError> for PakError {
+    fn from(error: unreal_helpers::error::FStringError) -> Self {
+        PakError {
+            kind: PakErrorKind::FString(error),
         }
     }
 }
@@ -135,4 +146,6 @@ pub enum PakErrorKind {
 
     /// something went wrong during reading
     IoError(io::Error),
+    /// an FString failed to serialize
+    FString(unreal_helpers::error::FStringError),
 }

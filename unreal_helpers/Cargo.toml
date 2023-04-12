@@ -8,6 +8,19 @@ edition = "2021"
 
 [dependencies]
 bitvec.workspace = true
+bitvec.optional = true
+
 byteorder.workspace = true
+byteorder.optional = true
+
 lazy_static.workspace = true
+lazy_static.optional = true
 regex.workspace = true
+regex.optional = true
+
+thiserror = "1.0.40"
+
+[features]
+bitvec = ["dep:bitvec"]
+read_write = ["dep:byteorder"]
+path = ["dep:lazy_static", "dep:regex"]

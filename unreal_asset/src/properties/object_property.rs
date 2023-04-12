@@ -117,7 +117,7 @@ impl PropertyTrait for AssetObjectProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        Ok(asset.write_fstring(self.value.as_deref())?)
+        asset.write_fstring(self.value.as_deref())
     }
 }
 

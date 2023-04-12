@@ -7,6 +7,7 @@ use unreal_helpers::UnrealWriteExt;
 use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
+use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
 use crate::types::{FName, PackageIndex};
@@ -176,8 +177,8 @@ impl<'cursor> AssetWriter for RawWriter<'cursor> {
         self.cursor.write_f64::<T>(value)
     }
 
-    fn write_fstring(&mut self, value: Option<&str>) -> io::Result<usize> {
-        self.cursor.write_fstring(value)
+    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
+        Ok(self.cursor.write_fstring(value)?)
     }
 
     fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {

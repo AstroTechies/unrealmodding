@@ -21,7 +21,7 @@ pub trait AssetWriter: AssetTrait {
     fn write_i64<T: ByteOrder>(&mut self, value: i64) -> io::Result<()>;
     fn write_f32<T: ByteOrder>(&mut self, value: f32) -> io::Result<()>;
     fn write_f64<T: ByteOrder>(&mut self, value: f64) -> io::Result<()>;
-    fn write_fstring(&mut self, value: Option<&str>) -> io::Result<usize>;
+    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error>;
     fn write_all(&mut self, buf: &[u8]) -> io::Result<()>;
     fn write_bool(&mut self, value: bool) -> io::Result<()>;
 }

@@ -210,8 +210,8 @@ impl UsmapReader for Usmap {
         self.cursor.read_f64::<LittleEndian>()
     }
 
-    fn read_fstring(&mut self) -> io::Result<Option<String>> {
-        self.cursor.read_fstring()
+    fn read_fstring(&mut self) -> Result<Option<String>, Error> {
+        Ok(self.cursor.read_fstring()?)
     }
 
     fn read_name(&mut self) -> io::Result<String> {
