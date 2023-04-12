@@ -388,8 +388,8 @@ impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> AssetWriter
         self.cursor.write_f64::<T>(value)
     }
 
-    fn write_fstring(&mut self, value: Option<&str>) -> io::Result<usize> {
-        self.cursor.write_fstring(value)
+    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
+        Ok(self.cursor.write_fstring(value)?)
     }
 
     fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
@@ -604,8 +604,8 @@ impl<C: Read + Seek> AssetReader for Asset<C> {
         self.cursor.read_f64::<T>()
     }
 
-    fn read_fstring(&mut self) -> io::Result<Option<String>> {
-        self.cursor.read_fstring()
+    fn read_fstring(&mut self) -> Result<Option<String>, Error> {
+        Ok(self.cursor.read_fstring()?)
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {

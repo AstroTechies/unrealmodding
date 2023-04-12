@@ -188,8 +188,8 @@ impl AssetReader for RawReader {
         self.cursor.read_f64::<T>()
     }
 
-    fn read_fstring(&mut self) -> io::Result<Option<String>> {
-        self.cursor.read_fstring()
+    fn read_fstring(&mut self) -> Result<Option<String>, Error> {
+        Ok(self.cursor.read_fstring()?)
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {

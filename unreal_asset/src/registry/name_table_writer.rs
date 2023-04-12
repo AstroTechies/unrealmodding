@@ -194,7 +194,7 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
         self.writer.write_f64::<T>(value)
     }
 
-    fn write_fstring(&mut self, value: Option<&str>) -> io::Result<usize> {
+    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
         self.writer.write_fstring(value)
     }
 

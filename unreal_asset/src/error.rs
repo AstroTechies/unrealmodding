@@ -152,6 +152,7 @@ impl Display for PropertyError {
 #[derive(Debug)]
 pub enum ErrorCode {
     Io(io::Error),
+    FString(unreal_helpers::error::FStringError),
     Utf8(FromUtf8Error),
     Utf16(FromUtf16Error),
     NoData(Box<str>),
@@ -207,6 +208,14 @@ impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self {
         Error {
             code: ErrorCode::Io(e),
+        }
+    }
+}
+
+impl From<unreal_helpers::error::FStringError> for Error {
+    fn from(e: unreal_helpers::error::FStringError) -> Self {
+        Error {
+            code: ErrorCode::FString(e),
         }
     }
 }
@@ -279,6 +288,7 @@ impl Display for ErrorCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             ErrorCode::Io(ref err) => Display::fmt(err, f),
+            ErrorCode::FString(ref err) => Display::fmt(err, f),
             ErrorCode::Utf8(ref err) => Display::fmt(err, f),
             ErrorCode::Utf16(ref err) => Display::fmt(err, f),
             ErrorCode::NoData(ref err) => Display::fmt(err, f),
