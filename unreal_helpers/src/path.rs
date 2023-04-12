@@ -10,6 +10,9 @@ lazy_static! {
 }
 
 /// Turn an Unreal game path into an absolute path that can be used to access files on disk.
+/// Examples with game_name: TestGame
+/// /Game/Items/Conveyor -> /TestGame/Content/Items/Conveyor.uasset
+/// /Game/Maps/Planet.umap -> /TestGame/Content/Maps/Planet.umap
 pub fn game_to_absolute(game_name: &str, path: &str) -> Option<String> {
     if !GAME_REGEX.is_match(path) {
         return None;

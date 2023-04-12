@@ -1,20 +1,22 @@
 //! Extension for anything that implements Write to more easily write Unreal data formats.
 
-use std::io::{Result, Write};
+use std::io::{self, Write};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::error::FStringError;
+
 /// Extension for anything that implements Write to more easily write Unreal data formats.
 pub trait UnrealWriteExt {
     /// Write string of format \<length i32\>\<string\>\<null\>
-    fn write_fstring(&mut self, string: Option<&str>) -> Result<usize>;
+    fn write_fstring(&mut self, string: Option<&str>) -> Result<usize, FStringError>;
     /// Write bool as u8
-    fn write_bool(&mut self, value: bool) -> Result<()>;
+    fn write_bool(&mut self, value: bool) -> io::Result<()>;
 }
 
 impl<W: Write> UnrealWriteExt for W {
-    fn write_fstring(&mut self, string: Option<&str>) -> Result<usize> {
+    fn write_fstring(&mut self, string: Option<&str>) -> Result<usize, FStringError> {
         if let Some(string) = string {
             let is_unicode = string.len() != string.chars().count();
 
@@ -44,7 +46,7 @@ impl<W: Write> UnrealWriteExt for W {
         }
     }
 
-    fn write_bool(&mut self, value: bool) -> Result<()> {
+    fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.write_u8(match value {
             true => 1,
             false => 0,
