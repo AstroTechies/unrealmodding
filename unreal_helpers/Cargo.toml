@@ -4,6 +4,8 @@ version.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/unreal_helpers"
 edition = "2021"
 
 [dependencies]

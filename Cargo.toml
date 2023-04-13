@@ -17,6 +17,7 @@ version = "0.1.12"
 authors = ["AstroTechies, localcc, konsti219"]
 license = "MIT"
 description = "Tools for making and loading Unreal Engine Mods."
+homepage = "https://github.com/AstroTechies/unrealmodding"
 
 [workspace.dependencies]
 dll_injector = { path = "./dll_injector" }
