@@ -12,6 +12,12 @@ Crate documentation is published to
 The crate can be added to a Rust project as a dependency by running the command
 `cargo add unreal_helpers`.
 
+## Features
+
+* `read_write` - enables read/write extensions for unreal binary files
+* `bitvec` - enables bitvec extensions commonly used when working with unreal bitvecs
+* `path` - enables path conversion extensions used to convert paths in pak files
+
 ## Examples
 
 The [tests directory](https://github.com/AstroTechies/unrealmodding/tree/main/unreal_helpers/tests) contains
