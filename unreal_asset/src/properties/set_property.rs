@@ -1,21 +1,31 @@
+//! Set property
+
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::properties::{array_property::ArrayProperty, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid, ToFName};
 
+/// Set property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Array type
     pub array_type: Option<FName>,
+    /// Set values
     pub value: ArrayProperty,
+    /// Values to be removed from the set when the engine loads this property
     pub removed_items: ArrayProperty,
 }
 impl_property_data_trait!(SetProperty);
 
 impl SetProperty {
+    /// Read a `SetProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

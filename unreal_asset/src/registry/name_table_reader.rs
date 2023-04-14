@@ -17,12 +17,16 @@ use crate::Import;
 /// Used for reading NameTable entries by modifying the behavior
 /// of some of the value read methods.
 pub struct NameTableReader<'reader, Reader: AssetReader> {
+    /// Reader
     reader: &'reader mut Reader,
+    /// Name map
     pub(crate) name_map: Vec<String>,
+    /// Name map lookup
     pub(crate) name_map_lookup: IndexedMap<u64, i32>,
 }
 
 impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
+    /// Create a new `NameTableReader` from another `Reader`
     pub(crate) fn new(reader: &'reader mut Reader) -> Result<Self, Error> {
         let name_offset = reader.read_i64::<LittleEndian>()?;
         // todo: length checking

@@ -1,3 +1,5 @@
+//! Movie scene float channel property
+
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
@@ -14,23 +16,34 @@ use crate::{
 
 use super::movie_scene_float_value_property::MovieSceneFloatValue;
 
+/// Movie scene float channel
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatChannel {
+    /// Pre infinity extrapolation
     pub pre_infinity_extrap: RichCurveExtrapolation,
+    /// Post infinity extrapolation
     pub post_infinity_extrap: RichCurveExtrapolation,
 
+    /// Frame times structure length
     pub times_struct_length: i32,
+    /// Frame times
     pub times: Vec<FrameNumber>,
 
+    /// Values structure length
     pub values_struct_length: i32,
+    /// Values
     pub values: Vec<MovieSceneFloatValue>,
 
+    /// Default value
     pub default_value: OrderedFloat<f32>,
+    /// Has default value
     pub has_default_value: bool,
+    /// Tick resolution
     pub tick_resolution: FrameRate,
 }
 
 impl MovieSceneFloatChannel {
+    /// Read a `MovieSceneFloatChannel` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let pre_infinity_extrap: RichCurveExtrapolation =
             RichCurveExtrapolation::try_from(asset.read_u8()?)?;
@@ -75,6 +88,7 @@ impl MovieSceneFloatChannel {
         })
     }
 
+    /// Write a `MovieSceneFloatChannel` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_u8(self.pre_infinity_extrap as u8)?;
         asset.write_u8(self.post_infinity_extrap as u8)?;
@@ -106,16 +120,22 @@ impl MovieSceneFloatChannel {
     }
 }
 
+/// Movie scene float channel property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatChannelProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneFloatChannel,
 }
 impl_property_data_trait!(MovieSceneFloatChannelProperty);
 
 impl MovieSceneFloatChannelProperty {
+    /// Read a `MovieSceneFloatChannelProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

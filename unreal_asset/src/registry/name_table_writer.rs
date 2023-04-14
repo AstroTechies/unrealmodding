@@ -17,13 +17,16 @@ use crate::Import;
 /// Used to write NameTable entries by modifying the behavior
 /// of some of the value write methods.
 pub struct NameTableWriter<'name_map, 'writer, Writer: AssetWriter> {
+    /// Writer
     writer: &'writer mut Writer,
-
+    /// Name map
     name_map: &'name_map [String],
+    /// Name map lookup
     name_map_lookup: &'name_map IndexedMap<u64, i32>,
 }
 
 impl<'name_map, 'writer, Writer: AssetWriter> NameTableWriter<'name_map, 'writer, Writer> {
+    /// Create a new `NameTableWriter` instance from another `Writer` and a name map
     pub fn new(
         writer: &'writer mut Writer,
         name_map: &'name_map [String],

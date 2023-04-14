@@ -1,3 +1,5 @@
+//! Asset bundle depends node
+
 use bitvec::{order::Lsb0, prelude::BitVec};
 use byteorder::LittleEndian;
 use lazy_static::lazy_static;
@@ -10,17 +12,23 @@ use crate::flags::EDependencyProperty;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::FName;
 
+/// Asset identifier
 #[derive(Debug, Clone, Default)]
 pub struct AssetIdentifier {
+    /// Package name
     pub package_name: Option<FName>,
+    /// Primary asset type
     pub primary_asset_type: Option<FName>,
+    /// Object name
     pub object_name: Option<FName>,
+    /// Value name
     pub value_name: Option<FName>,
 }
 
 type LoadedDependencyNodes = (Vec<DependsNode>, Vec<DependsNode>, BitVec<u32, Lsb0>);
 
 impl AssetIdentifier {
+    /// Read an `AssetIdentifier` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let field_bits = asset.read_u8()?;
         let package_name = match (field_bits & (1 << 0)) != 0 {
@@ -51,6 +59,7 @@ impl AssetIdentifier {
         })
     }
 
+    /// Write an `AssetIdentifier` to an asset
     pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         #[allow(clippy::identity_op)]
         let field_bits = (self.package_name.is_some() as u8) << 0u8
@@ -75,24 +84,36 @@ impl AssetIdentifier {
     }
 }
 
+/// Depends node
 #[derive(Clone, Debug)]
 pub struct DependsNode {
+    /// Asset identifier
     pub identifier: AssetIdentifier,
 
+    /// Hard dependencies
     pub hard_dependencies: Vec<DependsNode>,
+    /// Soft dependencies
     pub soft_dependencies: Vec<DependsNode>,
 
+    /// Name dependencies
     pub name_dependencies: Vec<DependsNode>,
 
+    /// Hard manage dependencies
     pub hard_manage_dependencies: Vec<DependsNode>,
+    /// Soft manage dependencies
     pub soft_manage_dependencies: Vec<DependsNode>,
 
+    /// Referencers
     pub referencers: Vec<DependsNode>,
 
+    /// Package flags
     pub package_flags: Option<BitVec<u32, Lsb0>>,
+    /// Manage flags
     pub manage_flags: Option<BitVec<u32, Lsb0>>,
 
+    /// Node index
     index: i32,
+    /// Asset registry version
     version: FAssetRegistryVersionType,
 }
 
@@ -119,6 +140,7 @@ const HARD_MANAGE_BITS: u32 = 0x1;
 const SOFT_MANAGE_BITS: u32 = 0x0;
 
 impl DependsNode {
+    /// Package `EDependencyProperty` enum into a byte
     #[allow(clippy::identity_op)] // allow for clarity
     fn package_properties_to_byte(properties: EDependencyProperty) -> u8 {
         (0x1 * (properties & EDependencyProperty::HARD).bits() as u8)
@@ -126,6 +148,7 @@ impl DependsNode {
             | (0x4 * (properties & EDependencyProperty::BUILD).bits() as u8)
     }
 
+    /// Read `DependsNode` dependencies
     fn read_dependencies<Reader: AssetReader>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
@@ -209,6 +232,7 @@ impl DependsNode {
         Ok((hard_dependencies, soft_dependencies, out_flag_bits))
     }
 
+    /// Write `DependsNode` dependencies
     fn write_dependencies<Writer: AssetWriter>(
         writer: &mut Writer,
         flag_set_width: i32,
@@ -267,6 +291,7 @@ impl DependsNode {
         Ok(())
     }
 
+    /// Read `DependsNode` dependencies without flags
     fn read_dependencies_no_flags<Reader: AssetReader>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
@@ -307,6 +332,7 @@ impl DependsNode {
         Ok(out_dependencies)
     }
 
+    /// Write `DependsNode` dependencies without flags
     fn write_dependencies_no_flags<Writer: AssetWriter>(
         writer: &mut Writer,
         dependencies: &Vec<DependsNode>,
@@ -318,6 +344,7 @@ impl DependsNode {
         Ok(())
     }
 
+    /// Create a new `DependsNode` instance
     pub fn new(index: i32, version: FAssetRegistryVersionType) -> Self {
         Self {
             identifier: AssetIdentifier::default(),
@@ -334,6 +361,7 @@ impl DependsNode {
         }
     }
 
+    /// Load `DependsNode` dependencies
     pub fn load_dependencies<Reader: AssetReader>(
         &mut self,
         asset: &mut Reader,
@@ -377,6 +405,7 @@ impl DependsNode {
         Ok(())
     }
 
+    /// Save `DependsNode` dependencies
     pub fn save_dependencies<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         self.identifier.write(writer)?;
 
@@ -413,6 +442,7 @@ impl DependsNode {
         Ok(())
     }
 
+    /// Read `DependsNode` array
     fn read_node_array<Reader: AssetReader>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &[DependsNode],
@@ -432,6 +462,7 @@ impl DependsNode {
         Ok(())
     }
 
+    /// Load `DependsNode` dependencies before flags
     pub fn load_dependencies_before_flags<Reader: AssetReader>(
         &mut self,
         asset: &mut Reader,
@@ -498,6 +529,7 @@ impl DependsNode {
         Ok(())
     }
 
+    /// Save `DependsNode` dependencies before flags
     pub fn save_dependencies_before_flags<Writer: AssetWriter>(
         &self,
         writer: &mut Writer,

@@ -1,3 +1,5 @@
+#![allow(missing_docs)] // this will be replaced by index_map crate
+
 use std::{
     borrow::Borrow, collections::BTreeMap, fmt::Debug, hash::Hash, iter::FusedIterator, rc::Rc,
 };

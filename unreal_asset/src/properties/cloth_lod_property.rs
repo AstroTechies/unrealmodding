@@ -1,3 +1,5 @@
+//! Cloth lod property
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -14,18 +16,25 @@ use super::{
     PropertyTrait,
 };
 
+/// Mesh to mesh vertex data
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MeshToMeshVertData {
+    /// Position barycentric coords and distance
     pub position_bary_coords_and_dist: Vector4Property,
+    /// Normal barycentric coords and distance
     pub normal_bary_coords_and_dist: Vector4Property,
+    /// Tangent barycentric coords and distance
     pub tangent_bary_coords_and_dist: Vector4Property,
+    /// Source mesh vertex indices
     pub source_mesh_vert_indices: Vec<u16>,
+    /// Weight
     pub weight: OrderedFloat<f32>,
     /// Dummy for alignment
     pub padding: u32,
 }
 
 impl MeshToMeshVertData {
+    /// Read `MeshToMeshVertData` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let position_bary_coords_and_dist = Vector4Property::new(
             asset,
@@ -66,6 +75,7 @@ impl MeshToMeshVertData {
         })
     }
 
+    /// Write `MeshToMeshVertData` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut size = 0;
         size += self.position_bary_coords_and_dist.write(asset, false)?;
@@ -89,14 +99,19 @@ impl MeshToMeshVertData {
     }
 }
 
+/// Cloth lod data property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ClothLodDataProperty {
+    /// Base struct property
     pub struct_property: StructProperty,
+    /// Next lod skin data
     pub transition_up_skin_data: Vec<MeshToMeshVertData>,
+    /// Previous lod skin data
     pub transition_down_skin_data: Vec<MeshToMeshVertData>,
 }
 
 impl ClothLodDataProperty {
+    /// Read a `ClothLodDataProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

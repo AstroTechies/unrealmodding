@@ -1,3 +1,5 @@
+//! Function export
+
 use byteorder::LittleEndian;
 
 use crate::error::Error;
@@ -8,13 +10,17 @@ use crate::exports::{
 use crate::flags::EFunctionFlags;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
+/// Function export
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionExport {
+    /// Base struct export
     pub struct_export: StructExport,
+    /// Function flags
     pub function_flags: EFunctionFlags,
 }
 
 impl FunctionExport {
+    /// Read a `FunctionExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: &BaseExport,
         asset: &mut Reader,

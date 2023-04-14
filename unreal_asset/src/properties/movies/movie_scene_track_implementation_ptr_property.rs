@@ -1,3 +1,5 @@
+//! Movie scene track implementation pointer property
+
 use crate::error::Error;
 use crate::properties::str_property::StrProperty;
 use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
@@ -6,16 +8,22 @@ use crate::reader::asset_writer::AssetWriter;
 use crate::types::{FName, Guid};
 use crate::{cast, impl_property_data_trait, optional_guid, optional_guid_write};
 
+/// Movie scene track implementation pointer property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackImplementationPtrProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Properties
     pub value: Vec<Property>,
 }
 impl_property_data_trait!(MovieSceneTrackImplementationPtrProperty);
 
 impl MovieSceneTrackImplementationPtrProperty {
+    /// Read a `MovieSceneTrackImplementationPtrProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

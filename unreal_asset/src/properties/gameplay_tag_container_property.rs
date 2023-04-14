@@ -1,3 +1,5 @@
+//! Gameplay tag container property
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -10,16 +12,22 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Gameplay tag container property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct GameplayTagContainerProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Gameplay tags
     pub value: Vec<FName>,
 }
 impl_property_data_trait!(GameplayTagContainerProperty);
 
 impl GameplayTagContainerProperty {
+    /// Read a `GameplayTagContainerProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

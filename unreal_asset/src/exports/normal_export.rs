@@ -1,14 +1,21 @@
+//! Normal export
+
 use crate::error::Error;
 use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::properties::Property;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::FName;
 
+/// Normal export
+///
+/// This export is usually the base export for all other exports
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NormalExport {
+    /// Base export
     pub base_export: BaseExport,
+    /// Extra data
     pub extras: Vec<u8>,
-
+    /// Properties
     pub properties: Vec<Property>,
 }
 
@@ -33,6 +40,7 @@ impl ExportBaseTrait for NormalExport {
 }
 
 impl NormalExport {
+    /// Read a `NormalExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: &BaseExport,
         asset: &mut Reader,

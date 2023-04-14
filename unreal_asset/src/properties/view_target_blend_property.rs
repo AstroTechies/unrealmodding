@@ -1,3 +1,5 @@
+//! View target blend property
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -12,6 +14,7 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// View target blend function
 #[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(u8)]
 pub enum ViewTargetBlendFunction {
@@ -25,23 +28,32 @@ pub enum ViewTargetBlendFunction {
     VtBlendEaseOut,
     /// Camera smoothly accelerates and decelerates.  Ease amount controlled by BlendExp.
     VtBlendEaseInOut,
+    /// Max
     VtBlendMax,
 }
 
+/// View target blend params property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ViewTargetBlendParamsProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
-
+    /// Blend time
     pub blend_time: OrderedFloat<f32>,
+    /// Blend function
     pub blend_function: ViewTargetBlendFunction,
+    /// Blend exponent
     pub blend_exp: OrderedFloat<f32>,
+    /// Lock outgoing
     pub lock_outgoing: bool,
 }
 impl_property_data_trait!(ViewTargetBlendParamsProperty);
 
 impl ViewTargetBlendParamsProperty {
+    /// Read a `ViewTargetBlendParamsProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

@@ -1,3 +1,5 @@
+//! Movie scene sequence instance data pointer property
+
 use byteorder::LittleEndian;
 
 use crate::{
@@ -8,16 +10,22 @@ use crate::{
     types::{FName, Guid, PackageIndex},
 };
 
+/// Movie scene sequence instance data pointer property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSequenceInstanceDataPtrProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: PackageIndex,
 }
 impl_property_data_trait!(MovieSceneSequenceInstanceDataPtrProperty);
 
 impl MovieSceneSequenceInstanceDataPtrProperty {
+    /// Read a `MovieSceneSequenceInstanceDataPtrProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

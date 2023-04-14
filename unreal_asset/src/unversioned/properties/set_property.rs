@@ -1,3 +1,5 @@
+//! Set property
+
 use crate::{
     error::Error,
     unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter},
@@ -5,12 +7,15 @@ use crate::{
 
 use super::{EPropertyType, UsmapPropertyData, UsmapPropertyDataTrait};
 
+/// Set property data
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapSetPropertyData {
+    /// Inner type
     pub inner_type: Box<UsmapPropertyData>,
 }
 
 impl UsmapSetPropertyData {
+    /// Read a `UsmapSetPropertyData` from an asset
     pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_type = UsmapPropertyData::new(asset)?;
 

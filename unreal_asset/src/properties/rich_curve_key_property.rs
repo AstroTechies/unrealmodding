@@ -1,3 +1,5 @@
+//! Rich curve key property
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -12,64 +14,100 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Rich curve extrapolation
 #[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(u8)]
 pub enum RichCurveExtrapolation {
+    /// Cycle
     Cycle = 0,
+    /// Cycle with offset
     CycleWithOffset = 1,
+    /// Oscillate
     Oscillate = 2,
+    /// Linear
     Linear = 3,
+    /// Constant
     Constant = 4,
+    /// None
     None = 5,
+    /// Max
     MAX = 6,
 }
 
+/// Rich curve interpolation mode
 #[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveInterpMode {
+    /// Linear
     Linear,
+    /// Constant
     Constant,
+    /// Cubic
     Cubic,
+    /// None
     None,
 }
 
+/// Rich curve tangent mode
 #[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveTangentMode {
+    /// Auto
     Auto,
+    /// User
     User,
+    /// Break
     Break,
+    /// None
     None,
 }
 
+/// Rich curve tangent weight mode
 #[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
 #[repr(i8)]
 pub enum RichCurveTangentWeightMode {
+    /// None
     WeightedNone,
+    /// Arrive
     WeightedArrive,
+    /// Leave
     WeightedLeave,
+    /// Both
     WeightedBoth,
 }
 
+/// Rich curve key property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct RichCurveKeyProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
-
+    /// Interpolation mode
     pub interp_mode: RichCurveInterpMode,
+    /// Tangent mode
     pub tangent_mode: RichCurveTangentMode,
+    /// Tangent weight mode
     pub tangent_weight_mode: RichCurveTangentWeightMode,
+    /// Time
     pub time: OrderedFloat<f32>,
+    /// Curve key value
     pub value: OrderedFloat<f32>,
+    /// Arrive tangent
     pub arrive_tangent: OrderedFloat<f32>,
+    /// Arrive tangent weight
     pub arrive_tangent_weight: OrderedFloat<f32>,
+    /// Leave tangent
     pub leave_tangent: OrderedFloat<f32>,
+    /// Leave tangent weight
     pub leave_tangent_weight: OrderedFloat<f32>,
 }
 impl_property_data_trait!(RichCurveKeyProperty);
 
 impl RichCurveKeyProperty {
+    /// Read a `RichCurveKeyProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

@@ -1,3 +1,5 @@
+//! Unreal types
+
 pub mod movie;
 pub mod vector;
 
@@ -10,19 +12,25 @@ use crate::error::Error;
 /// Here we are representing them by a string and an instance number.
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone)]
 pub struct FName {
+    /// FName content
     pub content: String,
+    /// FName index
     pub index: i32,
 }
 
+/// Convert implementer to `FName`
 pub trait ToFName {
+    /// Convert to `FName`
     fn to_fname(&self) -> FName;
 }
 
 impl FName {
+    /// Create a new `FName` instance with an index
     pub fn new(content: String, index: i32) -> Self {
         FName { content, index }
     }
 
+    /// Create a new `FName` instance from a slice with an index of 0
     pub fn from_slice(content: &str) -> Self {
         FName {
             content: content.to_string(),
@@ -42,22 +50,27 @@ impl FName {
 /// When PackageIndex is 0 it makes for a non-existent link.
 #[derive(Debug, Hash, Copy, Clone, Default, PartialEq, Eq)]
 pub struct PackageIndex {
+    /// Index
     pub index: i32,
 }
 
 impl PackageIndex {
+    /// Create a new `PackageIndex`
     pub fn new(index: i32) -> Self {
         PackageIndex { index }
     }
 
+    /// Check if this index is an import
     pub fn is_import(&self) -> bool {
         self.index < 0
     }
 
+    /// Check if this index is an export
     pub fn is_export(&self) -> bool {
         self.index > 0
     }
 
+    /// Create a `PackageIndex` from an import index
     pub fn from_import(import_index: i32) -> Result<Self, Error> {
         match import_index < 0 {
             true => Err(Error::invalid_package_index(
@@ -67,6 +80,7 @@ impl PackageIndex {
         }
     }
 
+    /// Create a `PackageIndex` from an export index
     pub fn from_export(export_index: i32) -> Result<Self, Error> {
         match export_index < 0 {
             true => Err(Error::invalid_package_index(
@@ -77,6 +91,7 @@ impl PackageIndex {
     }
 }
 
+/// Guid
 pub type Guid = [u8; 16];
 
 /// Create a Guid from 4 u32 values
@@ -95,13 +110,17 @@ pub fn default_guid() -> Guid {
     new_guid(0, 0, 0, 0)
 }
 
+/// Asset generation info
 #[derive(Debug)]
 pub struct GenerationInfo {
+    /// Export count
     pub export_count: i32,
+    /// Name count
     pub name_count: i32,
 }
 
 impl GenerationInfo {
+    /// Create a new `GenerationInfo` instance
     pub fn new(export_count: i32, name_count: i32) -> Self {
         GenerationInfo {
             export_count,

@@ -4,10 +4,9 @@ version.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/unreal_asset"
 edition = "2021"
-
-[lib]
-doctest = false
 
 [dependencies]
 unreal_helpers.workspace = true
@@ -23,6 +22,7 @@ ordered-float = "3.4.0"
 # containers/indexed_map
 slab = "0.4.7"
 rustc-hash = "1.1.0"
+thiserror = "1.0.40"
 
 [features]
 oodle = []

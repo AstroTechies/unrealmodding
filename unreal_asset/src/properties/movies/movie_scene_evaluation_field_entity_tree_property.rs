@@ -1,3 +1,5 @@
+//! Movie scene evaluation field entity tree property
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
@@ -8,16 +10,22 @@ use crate::{
 
 use super::movie_scene_evaluation::MovieSceneEvaluationFieldEntityTree;
 
+/// Movie scene evaluation field entity tree property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationFieldEntityTreeProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneEvaluationFieldEntityTree,
 }
 impl_property_data_trait!(MovieSceneEvaluationFieldEntityTreeProperty);
 
 impl MovieSceneEvaluationFieldEntityTreeProperty {
+    /// Read a `MovieSceneEvaluationFieldEntityTreeProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

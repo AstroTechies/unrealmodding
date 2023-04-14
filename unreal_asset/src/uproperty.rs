@@ -8,19 +8,21 @@ use std::hash::Hash;
 use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::flags::EPropertyFlags;
-use crate::inner_trait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, PackageIndex};
 use crate::Error;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
+        /// $prop_name
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
+            /// Generic property
             pub generic_property: UGenericProperty
         }
 
         impl $prop_name {
+            /// Read a `$prop_name` from an asset
             pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: UGenericProperty::new(asset)?
@@ -36,16 +38,27 @@ macro_rules! parse_simple_property {
         }
     };
 
-    ($prop_name:ident, $($field_name:ident),*) => {
+    (
+        $prop_name:ident,
+        $(
+
+            $(#[$inner:ident $($args:tt)*])*
+            $field_name:ident
+        ),*
+    ) => {
+        /// $prop_name
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
+            /// Generic property
             pub generic_property: UGenericProperty,
             $(
+                $(#[$inner $($args)*])*
                 pub $field_name: PackageIndex,
             )*
         }
 
         impl $prop_name {
+            /// Read a `$prop_name` from an asset
             pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: UGenericProperty::new(asset)?,
@@ -71,76 +84,76 @@ macro_rules! parse_simple_property {
 /// This must be implemented for all UProperties
 #[enum_dispatch]
 pub trait UPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
+    /// Write `UProperty` to an asset
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
+/// UProperty
 #[enum_dispatch(UPropertyTrait)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum UProperty {
+    /// Generic UProperty
     UGenericProperty,
+    /// Enum
     UEnumProperty,
+    /// Array
     UArrayProperty,
+    /// Set
     USetProperty,
+    /// Object
     UObjectProperty,
+    /// SoftObject
     USoftObjectProperty,
+    /// LazyObject
     ULazyObjectProperty,
+    /// Class
     UClassProperty,
+    /// SoftClass
     USoftClassProperty,
+    /// Delegate
     UDelegateProperty,
+    /// MulticastDelegate
     UMulticastDelegateProperty,
+    /// MulticastInlineDelegate
     UMulticastInlineDelegateProperty,
+    /// Interface
     UInterfaceProperty,
+    /// Map
     UMapProperty,
+    /// Bool
     UBoolProperty,
+    /// Byte
     UByteProperty,
+    /// Struct
     UStructProperty,
+    /// Double
     UDoubleProperty,
+    /// Float
     UFloatProperty,
+    /// Int
     UIntProperty,
+    /// Int8
     UInt8Property,
+    /// Int16
     UInt16Property,
+    /// Int64
     UInt64Property,
+    /// UInt8
     UUInt8Property,
+    /// UInt16
     UUInt16Property,
+    /// UInt64
     UUInt64Property,
+    /// Name
     UNameProperty,
+    /// String
     UStrProperty,
 }
-
-inner_trait!(
-    UProperty,
-    UGenericProperty,
-    UEnumProperty,
-    UArrayProperty,
-    USetProperty,
-    UObjectProperty,
-    USoftObjectProperty,
-    ULazyObjectProperty,
-    UClassProperty,
-    USoftClassProperty,
-    UDelegateProperty,
-    UMulticastDelegateProperty,
-    UMulticastInlineDelegateProperty,
-    UInterfaceProperty,
-    UMapProperty,
-    UBoolProperty,
-    UByteProperty,
-    UStructProperty,
-    UDoubleProperty,
-    UFloatProperty,
-    UIntProperty,
-    UInt8Property,
-    UInt16Property,
-    UInt64Property,
-    UUInt8Property,
-    UUInt16Property,
-    UUInt64Property,
-    UNameProperty,
-    UStrProperty
-);
 
 impl Eq for UProperty {}
 
 impl UProperty {
+    /// Read a `UProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         serialized_type: FName,
@@ -181,28 +194,41 @@ impl UProperty {
     }
 }
 
+/// UField
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UField {
+    /// Next field package index
     pub next: Option<PackageIndex>,
 }
 
+/// Generic UProperty
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UGenericProperty {
+    /// UField
     pub u_field: UField,
+    /// Array dimension
     pub array_dim: EArrayDim,
+    /// Property flags
     pub property_flags: EPropertyFlags,
+    /// Replication notify function
     pub rep_notify_func: FName,
+    /// Replication condition
     pub blueprint_replication_condition: Option<ELifetimeCondition>,
 }
 
+/// Boolean UProperty
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UBoolProperty {
+    /// Generic property
     pub generic_property: UGenericProperty,
+    /// Element size
     pub element_size: u8,
+    /// Is native boolean
     pub native_bool: bool,
 }
 
 impl UField {
+    /// Read a `UField` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let next = match asset
             .get_custom_version::<FFrameworkObjectVersion>()
@@ -215,6 +241,7 @@ impl UField {
         Ok(UField { next })
     }
 
+    /// Write a `UField` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         if asset
             .get_custom_version::<FFrameworkObjectVersion>()
@@ -237,6 +264,7 @@ impl UField {
 }
 
 impl UGenericProperty {
+    /// Read a `UGenericProperty` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let u_field = UField::new(asset)?;
 
@@ -285,6 +313,7 @@ impl UPropertyTrait for UGenericProperty {
 }
 
 impl UBoolProperty {
+    /// Read a `UBoolProeprty` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = UGenericProperty::new(asset)?;
 
@@ -308,21 +337,89 @@ impl UPropertyTrait for UBoolProperty {
     }
 }
 
-parse_simple_property!(UEnumProperty, value, underlying_prop);
-parse_simple_property!(UArrayProperty, inner);
-parse_simple_property!(USetProperty, element_prop);
-parse_simple_property!(UObjectProperty, property_class);
-parse_simple_property!(USoftObjectProperty, property_class);
-parse_simple_property!(ULazyObjectProperty, property_class);
-parse_simple_property!(UClassProperty, property_class, meta_class);
-parse_simple_property!(USoftClassProperty, property_class, meta_class);
-parse_simple_property!(UDelegateProperty, signature_function);
-parse_simple_property!(UMulticastDelegateProperty, signature_function);
-parse_simple_property!(UMulticastInlineDelegateProperty, signature_function);
-parse_simple_property!(UInterfaceProperty, interface_class);
-parse_simple_property!(UMapProperty, key_prop, value_prop);
-parse_simple_property!(UByteProperty, enum_value);
-parse_simple_property!(UStructProperty, struct_value);
+parse_simple_property!(
+    UEnumProperty,
+    /// Value
+    value,
+    /// Underlying property
+    underlying_prop
+);
+parse_simple_property!(
+    UArrayProperty,
+    /// Inner property
+    inner
+);
+parse_simple_property!(
+    USetProperty,
+    /// Set element
+    element_prop
+);
+parse_simple_property!(
+    UObjectProperty,
+    /// Class index
+    property_class
+);
+parse_simple_property!(
+    USoftObjectProperty,
+    /// Class index
+    property_class
+);
+parse_simple_property!(
+    ULazyObjectProperty,
+    /// Class index
+    property_class
+);
+parse_simple_property!(
+    UClassProperty,
+    /// Class index
+    property_class,
+    /// Meta-class index
+    meta_class
+);
+parse_simple_property!(
+    USoftClassProperty,
+    /// Class index
+    property_class,
+    /// Meta-class index
+    meta_class
+);
+parse_simple_property!(
+    UDelegateProperty,
+    /// Signature function index
+    signature_function
+);
+parse_simple_property!(
+    UMulticastDelegateProperty,
+    /// Signature function index
+    signature_function
+);
+parse_simple_property!(
+    UMulticastInlineDelegateProperty,
+    /// Signature function index
+    signature_function
+);
+parse_simple_property!(
+    UInterfaceProperty,
+    /// Interface class index
+    interface_class
+);
+parse_simple_property!(
+    UMapProperty,
+    /// Key
+    key_prop,
+    /// Value
+    value_prop
+);
+parse_simple_property!(
+    UByteProperty,
+    /// Enum value index
+    enum_value
+);
+parse_simple_property!(
+    UStructProperty,
+    /// Struct value index
+    struct_value
+);
 
 parse_simple_property!(UDoubleProperty);
 parse_simple_property!(UFloatProperty);

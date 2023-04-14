@@ -2,14 +2,19 @@
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+/// Array dimension
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum EArrayDim {
+    /// Not an array
     NotAnArray = 0,
+    /// Generic array
     TArray = 1,
+    /// C Array
     CArray = 2,
 }
 
+/// Property lifetime conditions
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ELifetimeCondition {
@@ -43,5 +48,6 @@ pub enum ELifetimeCondition {
     CondSkipReplay = 13,
     /// This property will never be replicated
     CondNever = 15,
+    /// Max
     CondMax = 16,
 }

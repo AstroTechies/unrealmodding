@@ -1,3 +1,5 @@
+//! Struct export
+
 use std::io::SeekFrom;
 
 use byteorder::LittleEndian;
@@ -16,22 +18,31 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::PackageIndex;
 use crate::uproperty::UField;
 
+/// Struct export
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct StructExport {
+    /// Base normal export
     pub normal_export: NormalExport,
-
+    /// Field
     pub field: UField,
+    /// Super struct
     pub super_struct: PackageIndex,
+    /// Children
     pub children: Vec<PackageIndex>,
+    /// Loaded properties
     pub loaded_properties: Vec<FProperty>,
+    /// Script bytecode, exists if bytecode deserialized successfully
     pub script_bytecode: Option<Vec<KismetExpression>>,
+    /// Script bytecode size
     pub script_bytecode_size: i32,
+    /// Script bytecode raw, exists if bytecode couldn't deserialize successfully
     pub script_bytecode_raw: Option<Vec<u8>>,
 }
 
 implement_get!(StructExport);
 
 impl StructExport {
+    /// Read a `StructExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: &BaseExport,
         asset: &mut Reader,
@@ -94,6 +105,7 @@ impl StructExport {
         })
     }
 
+    /// Read kismet bytecode
     fn read_bytecode<Reader: AssetReader>(
         asset: &mut Reader,
         start_offset: u64,

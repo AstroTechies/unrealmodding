@@ -1,3 +1,5 @@
+//! Enum property
+
 use std::mem::size_of;
 
 use crate::{
@@ -7,13 +9,17 @@ use crate::{
 
 use super::{EPropertyType, UsmapPropertyData, UsmapPropertyDataTrait};
 
+/// Enum property data
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapEnumPropertyData {
+    /// Inner property
     pub inner_property: Box<UsmapPropertyData>,
+    /// Name
     pub name: String,
 }
 
 impl UsmapEnumPropertyData {
+    /// Read a `UsmapEnumPropertyData` from an asset
     pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_property = UsmapPropertyData::new(asset)?;
         let name = asset.read_name()?;

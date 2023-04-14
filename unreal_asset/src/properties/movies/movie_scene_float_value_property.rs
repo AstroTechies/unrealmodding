@@ -1,3 +1,5 @@
+//! Movie scene float value property
+
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
@@ -14,15 +16,21 @@ use crate::{
 
 use super::MovieSceneTangentData;
 
+/// Movie scene float value
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatValue {
+    /// Value
     pub value: OrderedFloat<f32>,
+    /// Tangent
     pub tangent: MovieSceneTangentData,
+    /// Interpolation mode
     pub interp_mode: RichCurveInterpMode,
+    /// Tangent mode
     pub tangent_mode: RichCurveTangentMode,
 }
 
 impl MovieSceneFloatValue {
+    /// Read a `MovieSceneFloatValue` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader, clang_win64: bool) -> Result<Self, Error> {
         let value = asset.read_f32::<LittleEndian>()?;
         let tangent = MovieSceneTangentData::new(asset, clang_win64)?;
@@ -37,6 +45,7 @@ impl MovieSceneFloatValue {
         })
     }
 
+    /// Write a `MovieSceneFloatValue` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_f32::<LittleEndian>(self.value.0)?;
         self.tangent.write(asset)?;
@@ -46,16 +55,22 @@ impl MovieSceneFloatValue {
     }
 }
 
+/// Movie scene float value property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatValueProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneFloatValue,
 }
 impl_property_data_trait!(MovieSceneFloatValueProperty);
 
 impl MovieSceneFloatValueProperty {
+    /// Read a `MovieSceneFloatValueProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

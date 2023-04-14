@@ -1,3 +1,5 @@
+//! String table export
+
 use byteorder::LittleEndian;
 
 use crate::containers::indexed_map::IndexedMap;
@@ -9,17 +11,21 @@ use crate::exports::{
 use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
+/// String table export
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StringTableExport {
-    normal_export: NormalExport,
-
+    /// Base normal export
+    pub normal_export: NormalExport,
+    /// String table namespace
     pub namespace: Option<String>,
+    /// String table
     pub table: IndexedMap<String, String>,
 }
 
 implement_get!(StringTableExport);
 
 impl StringTableExport {
+    /// Read a `StringTableExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: &BaseExport,
         asset: &mut Reader,

@@ -1,3 +1,5 @@
+//! Color properties
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -12,25 +14,36 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::vector::Color;
 use crate::types::{FName, Guid};
 
+/// Color property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ColorProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Color
     pub color: Color<u8>,
 }
 impl_property_data_trait!(ColorProperty);
 
+/// Linear color property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct LinearColorProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Color
     pub color: Color<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(LinearColorProperty);
 
 impl ColorProperty {
+    /// Read a `ColorProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -61,6 +74,7 @@ impl PropertyTrait for ColorProperty {
 }
 
 impl LinearColorProperty {
+    /// Read a `LinearColorProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

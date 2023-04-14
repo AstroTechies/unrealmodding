@@ -1,5 +1,8 @@
+//! AC7 Encryption
+
 use crate::UE4_ASSET_MAGIC;
 
+/// AC7 Encryption xor key
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AC7XorKey {
     name_key: i32,
@@ -11,6 +14,31 @@ pub struct AC7XorKey {
 const AC7_KEY: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/vendor/AC7Key.bin"));
 
 impl AC7XorKey {
+    /// Creates a new AC7XorKey for an asset with the specified name
+    /// Note: name should be without extension
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::{
+    ///     fs::File,
+    ///     io::{Cursor, Read}
+    /// };
+    ///
+    /// use unreal_asset::ac7::{self, AC7XorKey};
+    ///
+    /// let mut file = File::open("ex02_IGC_03_Subtitle.uasset").unwrap();
+    /// let mut bulk_file = File::open("ex02_IGC_03_Subtitle.uexp").unwrap();
+    ///
+    /// let mut data = Vec::new();
+    /// file.read_to_end(&mut data).unwrap();
+    ///
+    /// let mut bulk_data = Vec::new();
+    /// bulk_file.read_to_end(&mut bulk_data).unwrap();
+    ///
+    /// let key = AC7XorKey::new("ex02_IGC_03_Subtitle");
+    /// let (decrypted_data, decrypted_bulk) = ac7::decrypt(&data, &bulk_data, key);
+    /// ```
     pub fn new(name: &str) -> Self {
         let name_key = Self::calc_name_key(name);
         let offset = 4;
@@ -24,6 +52,7 @@ impl AC7XorKey {
         }
     }
 
+    /// Process a single byte with this key
     fn xor_byte(&mut self, byte: u8) -> u8 {
         let byte = byte ^ AC7_KEY[(self.pk1 * 1024 + self.pk2) as usize];
         let byte = byte as u32 ^ 0x77;
@@ -41,6 +70,7 @@ impl AC7XorKey {
         byte as u8
     }
 
+    /// Calculate a name key for a given name
     fn calc_name_key(name: &str) -> i32 {
         let name = name.to_uppercase();
 
@@ -60,6 +90,7 @@ impl AC7XorKey {
         num
     }
 
+    /// Calculate private key from name key
     fn calc_pkey_from_nkey(nkey: u32, data_offset: u32) -> (u32, u32) {
         let mut num = nkey as u128 * 7;
         let big_int = 5440514381186227205u128;
@@ -88,6 +119,7 @@ impl AC7XorKey {
     }
 }
 
+/// Decrypt uasset+uexp files using a given key
 pub fn decrypt(uasset: &[u8], uexp: &[u8], mut key: AC7XorKey) -> (Vec<u8>, Vec<u8>) {
     (
         decrypt_uasset(uasset, &mut key),
@@ -95,6 +127,7 @@ pub fn decrypt(uasset: &[u8], uexp: &[u8], mut key: AC7XorKey) -> (Vec<u8>, Vec<
     )
 }
 
+/// Decrypt a uasset file using a given key
 pub fn decrypt_uasset(uasset: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
     let mut decrypted = vec![0u8; uasset.len()];
     decrypted[..4].copy_from_slice(&u32::to_be_bytes(UE4_ASSET_MAGIC)); // todo: replace with constant
@@ -106,6 +139,7 @@ pub fn decrypt_uasset(uasset: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
     decrypted
 }
 
+/// Decrypt a uexp file using a given key
 pub fn decrypt_uexp(uexp: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
     let mut decrypted = vec![0u8; uexp.len()];
 
@@ -116,6 +150,7 @@ pub fn decrypt_uexp(uexp: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
     decrypted
 }
 
+/// Encrypt uasset+uexp files using a given key
 pub fn encrypt(uasset: &[u8], uexp: &[u8], mut key: AC7XorKey) -> (Vec<u8>, Vec<u8>) {
     (
         encrypt_uasset(uasset, &mut key),
@@ -125,6 +160,7 @@ pub fn encrypt(uasset: &[u8], uexp: &[u8], mut key: AC7XorKey) -> (Vec<u8>, Vec<
 
 const AC7_ASSET_MAGIC: u32 = 0x37454341;
 
+/// Encrypt a uasset file using a given key
 pub fn encrypt_uasset(uasset: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
     let mut encrypted = vec![0u8; uasset.len()];
     encrypted[..4].copy_from_slice(&u32::to_le_bytes(AC7_ASSET_MAGIC));
@@ -136,6 +172,7 @@ pub fn encrypt_uasset(uasset: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
     encrypted
 }
 
+/// Encrypt a uexp file using a given key
 pub fn encrypt_uexp(uexp: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
     let mut encrypted = vec![0u8; uexp.len()];
 

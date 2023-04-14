@@ -1,3 +1,5 @@
+//! World tile properties
+
 use byteorder::LittleEndian;
 
 use crate::custom_version::FFortniteMainBranchObjectVersion;
@@ -12,16 +14,23 @@ use crate::types::vector::Vector;
 use crate::types::FName;
 
 //todo: what is this file even doing in properties?
+/// World tile layer
 #[derive(Clone)]
 pub struct FWorldTileLayer {
+    /// Name
     pub name: Option<String>,
+    /// Reserved
     pub reserved_0: i32,
+    /// Reserved
     pub reserved_1: IntPointProperty,
+    /// Streaming distance
     pub streaming_distance: Option<i32>,
+    /// Is distance streaming enabled
     pub distance_streaming_enabled: Option<bool>,
 }
 
 impl FWorldTileLayer {
+    /// Read an `FWorldTileLayer` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let object_version = asset.get_object_version();
 
@@ -50,6 +59,7 @@ impl FWorldTileLayer {
         })
     }
 
+    /// Write an `FWorldTileLayer` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         let object_version = asset.get_object_version();
 
@@ -81,16 +91,23 @@ impl FWorldTileLayer {
     }
 }
 
+/// World tile lod info
 #[derive(Clone)]
 pub struct FWorldTileLODInfo {
+    /// Relative streaming distance
     pub relative_streaming_distance: i32,
+    /// Reserved
     pub reserved_0: f32,
+    /// Reserved
     pub reserved_1: f32,
+    /// Reserved
     pub reserved_2: i32,
+    /// Reserved
     pub reserved_3: i32,
 }
 
 impl FWorldTileLODInfo {
+    /// Read `FWorldTileLODInfo` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(FWorldTileLODInfo {
             relative_streaming_distance: asset.read_i32::<LittleEndian>()?,
@@ -101,6 +118,7 @@ impl FWorldTileLODInfo {
         })
     }
 
+    /// Write `FWorldTileLODInfo` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.relative_streaming_distance)?;
         asset.write_f32::<LittleEndian>(self.reserved_0)?;
@@ -111,19 +129,28 @@ impl FWorldTileLODInfo {
     }
 }
 
+/// World tile ifno
 #[derive(Clone)]
 pub struct FWorldTileInfo {
-    position: Vector<i32>,
+    /// Position
+    pub position: Vector<i32>,
+    /// Bounds
     pub bounds: BoxProperty,
     //absolute_position: Vector<i32>, // not set in most recent version of uassetapi?
+    /// Tile layer
     pub layer: FWorldTileLayer,
+    /// Should hide in tile view
     pub hide_in_tile_view: Option<bool>,
+    /// Parent tile package name
     pub parent_tile_package_name: Option<String>,
+    /// Lod list
     pub lod_list: Option<Vec<FWorldTileLODInfo>>,
+    /// Z-Order
     pub z_order: Option<i32>,
 }
 
 impl FWorldTileInfo {
+    /// Read `FWorldTileInfo` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let version = asset.get_custom_version::<FFortniteMainBranchObjectVersion>();
         let object_version = asset.get_object_version();
@@ -179,6 +206,7 @@ impl FWorldTileInfo {
         })
     }
 
+    /// Write `FWorldTileInfo` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         let object_version = asset.get_object_version();
 

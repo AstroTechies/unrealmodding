@@ -1,3 +1,5 @@
+//! Font character property
+
 use byteorder::LittleEndian;
 
 use crate::{
@@ -9,17 +11,25 @@ use crate::{
 
 use super::PropertyTrait;
 
+/// Font character
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FontCharacter {
+    /// Start U coordinate
     pub start_u: i32,
+    /// Start V coordinate
     pub start_v: i32,
+    /// U coordinate size
     pub size_u: i32,
+    /// V coordinate size
     pub size_v: i32,
+    /// Texture index
     pub texture_index: u8,
+    /// Vertical offset
     pub vertical_offset: i32,
 }
 
 impl FontCharacter {
+    /// Read a `FontCharacter` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(FontCharacter {
             start_u: asset.read_i32::<LittleEndian>()?,
@@ -31,6 +41,7 @@ impl FontCharacter {
         })
     }
 
+    /// Write a `FontCharacter` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.start_u)?;
         asset.write_i32::<LittleEndian>(self.start_v)?;
@@ -42,16 +53,22 @@ impl FontCharacter {
     }
 }
 
+/// Font character property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FontCharacterProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Font character
     pub value: FontCharacter,
 }
 impl_property_data_trait!(FontCharacterProperty);
 
 impl FontCharacterProperty {
+    /// Read a `FontCharacterProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

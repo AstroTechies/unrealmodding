@@ -1,3 +1,5 @@
+//! Raw struct property
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
@@ -7,16 +9,22 @@ use crate::{
 
 use super::PropertyTrait;
 
+/// Raw struct property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawStructProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Raw data
     pub value: Vec<u8>,
 }
 impl_property_data_trait!(RawStructProperty);
 
 impl RawStructProperty {
+    /// Read a `RawStructProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

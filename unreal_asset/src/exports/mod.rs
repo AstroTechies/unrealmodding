@@ -30,17 +30,22 @@ use self::{
 /// If an export doesn't have one return None
 #[enum_dispatch]
 pub trait ExportNormalTrait {
+    /// Get a reference to `NormalExport`
     fn get_normal_export(&'_ self) -> Option<&'_ NormalExport>;
+    /// Get a mutable reference to `NormalExport`
     fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport>;
 }
 
 /// This must be implemented for all Exports
 #[enum_dispatch]
 pub trait ExportBaseTrait {
+    /// Get a reference to `BaseExport`
     fn get_base_export(&'_ self) -> &'_ BaseExport;
+    /// Get a mutable reference to `BaseExport`
     fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport;
 }
 
+/// Implement `ExportNormalTrait` + `ExportBaseTrait` for an export that contains a `NormalExport`
 #[macro_export]
 macro_rules! implement_get {
     ($name:ident) => {
@@ -69,80 +74,38 @@ macro_rules! implement_get {
 /// This must be implemented for all Exports
 #[enum_dispatch]
 pub trait ExportTrait: Debug + Clone + PartialEq + Eq {
+    /// Write this `Export` to an asset
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
+/// Export
 #[enum_dispatch(ExportTrait, ExportNormalTrait, ExportBaseTrait)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Export {
+    /// Base export
     BaseExport,
+    /// Class export
     ClassExport,
+    /// Enum export
     EnumExport,
+    /// Level export
     LevelExport,
+    /// Normal export, usually the base for all other exports
     NormalExport,
+    /// Property export
     PropertyExport,
+    /// Raw export, exists if an export failed to deserialize
     RawExport,
+    /// String table export
     StringTableExport,
+    /// Struct export
     StructExport,
+    /// Function export
     FunctionExport,
+    /// Data table export
     DataTableExport,
 }
 
 impl Export {}
 
 // todo: impl hash for export
-impl PartialEq for Export {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::BaseExport(l0), Self::BaseExport(r0)) => l0 == r0,
-            (Self::ClassExport(l0), Self::ClassExport(r0)) => l0 == r0,
-            (Self::EnumExport(l0), Self::EnumExport(r0)) => l0 == r0,
-            (Self::LevelExport(l0), Self::LevelExport(r0)) => l0 == r0,
-            (Self::NormalExport(l0), Self::NormalExport(r0)) => l0 == r0,
-            (Self::PropertyExport(l0), Self::PropertyExport(r0)) => l0 == r0,
-            (Self::RawExport(l0), Self::RawExport(r0)) => l0 == r0,
-            (Self::StringTableExport(l0), Self::StringTableExport(r0)) => l0 == r0,
-            (Self::StructExport(l0), Self::StructExport(r0)) => l0 == r0,
-            (Self::FunctionExport(l0), Self::FunctionExport(r0)) => l0 == r0,
-            (Self::DataTableExport(l0), Self::DataTableExport(r0)) => l0 == r0,
-            _ => false,
-        }
-    }
-}
-impl Clone for Export {
-    fn clone(&self) -> Self {
-        match self {
-            Self::BaseExport(arg0) => Self::BaseExport(arg0.clone()),
-            Self::ClassExport(arg0) => Self::ClassExport(arg0.clone()),
-            Self::EnumExport(arg0) => Self::EnumExport(arg0.clone()),
-            Self::LevelExport(arg0) => Self::LevelExport(arg0.clone()),
-            Self::NormalExport(arg0) => Self::NormalExport(arg0.clone()),
-            Self::PropertyExport(arg0) => Self::PropertyExport(arg0.clone()),
-            Self::RawExport(arg0) => Self::RawExport(arg0.clone()),
-            Self::StringTableExport(arg0) => Self::StringTableExport(arg0.clone()),
-            Self::StructExport(arg0) => Self::StructExport(arg0.clone()),
-            Self::FunctionExport(arg0) => Self::FunctionExport(arg0.clone()),
-            Self::DataTableExport(arg0) => Self::DataTableExport(arg0.clone()),
-        }
-    }
-}
-impl Debug for Export {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::BaseExport(arg0) => f.debug_tuple("BaseExport").field(arg0).finish(),
-            Self::ClassExport(arg0) => f.debug_tuple("ClassExport").field(arg0).finish(),
-            Self::EnumExport(arg0) => f.debug_tuple("EnumExport").field(arg0).finish(),
-            Self::LevelExport(arg0) => f.debug_tuple("LevelExport").field(arg0).finish(),
-            Self::NormalExport(arg0) => f.debug_tuple("NormalExport").field(arg0).finish(),
-            Self::PropertyExport(arg0) => f.debug_tuple("PropertyExport").field(arg0).finish(),
-            Self::RawExport(arg0) => f.debug_tuple("RawExport").field(arg0).finish(),
-            Self::StringTableExport(arg0) => {
-                f.debug_tuple("StringTableExport").field(arg0).finish()
-            }
-            Self::StructExport(arg0) => f.debug_tuple("StructExport").field(arg0).finish(),
-            Self::FunctionExport(arg0) => f.debug_tuple("FunctionExport").field(arg0).finish(),
-            Self::DataTableExport(arg0) => f.debug_tuple("DataTableExport").field(arg0).finish(),
-        }
-    }
-}
-
-impl Eq for Export {}

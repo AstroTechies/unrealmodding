@@ -1,3 +1,5 @@
+//! Asset registry objects
+
 pub mod asset_bundle_data;
 pub mod asset_data;
 pub mod asset_package_data;

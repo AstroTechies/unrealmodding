@@ -1,3 +1,5 @@
+//! Delegate properties
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -12,28 +14,38 @@ use crate::{
 
 use super::PropertyTrait;
 
+/// Delegate
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Delegate {
+    /// Delegate object
     pub object: PackageIndex,
+    /// Delegate name
     pub delegate: FName,
 }
 
 impl Delegate {
+    /// Create a new `Delegate` instance
     pub fn new(object: PackageIndex, delegate: FName) -> Self {
         Delegate { object, delegate }
     }
 }
 
+/// Delegate property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DelegateProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Delegate value
     pub value: Delegate,
 }
 impl_property_data_trait!(DelegateProperty);
 
 impl DelegateProperty {
+    /// Read a `DelegateProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -73,15 +85,21 @@ impl PropertyTrait for DelegateProperty {
 // all multicast delegates serialize the same
 macro_rules! impl_multicast {
     ($property_name:ident) => {
+        /// $property_name
         #[derive(Debug, Hash, Clone, PartialEq, Eq)]
         pub struct $property_name {
+            /// Name
             pub name: FName,
+            /// Property guid
             pub property_guid: Option<Guid>,
+            /// Property duplication index
             pub duplication_index: i32,
+            /// Delegates
             pub value: Vec<Delegate>,
         }
         impl_property_data_trait!($property_name);
         impl $property_name {
+            /// Read a `$property_name` from an asset
             pub fn new<Reader: AssetReader>(
                 asset: &mut Reader,
                 name: FName,

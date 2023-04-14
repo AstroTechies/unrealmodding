@@ -1,3 +1,5 @@
+//! Material input property
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -15,84 +17,131 @@ use crate::properties::{
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Material expression
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MaterialExpression {
+    /// Name
     pub name: FName,
+    /// Extra data
     pub extras: Vec<u8>,
+    /// Output index
     pub output_index: i32,
+    /// Input name
     pub input_name: FName,
+    /// Material expression name
     pub expression_name: FName,
 }
 
+/// Color material input property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ColorMaterialInputProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Material expression
     pub material_expression: MaterialExpression,
+    /// Color value
     pub value: ColorProperty,
 }
 impl_property_data_trait!(ColorMaterialInputProperty);
 
+/// Scalar material input property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ScalarMaterialInputProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Material expression
     pub material_expression: MaterialExpression,
+    /// Scalar value
     pub value: OrderedFloat<f32>,
 }
 impl_property_data_trait!(ScalarMaterialInputProperty);
 
+/// Shading model material input property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ShadingModelMaterialInputProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Material expression
     pub material_expression: MaterialExpression,
+    /// Shading model value
     pub value: u32,
 }
 impl_property_data_trait!(ShadingModelMaterialInputProperty);
 
+/// Vector material input property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct VectorMaterialInputProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property index
     pub duplication_index: i32,
+    /// Material expression
     pub material_expression: MaterialExpression,
+    /// Vector value
     pub value: VectorProperty,
 }
 impl_property_data_trait!(VectorMaterialInputProperty);
 
+/// Vector2 material input property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Vector2MaterialInputProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Material expression
     pub material_expression: MaterialExpression,
+    /// Vector2D value
     pub value: Vector2DProperty,
 }
 impl_property_data_trait!(Vector2MaterialInputProperty);
 
+/// Expression input property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ExpressionInputProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Material expression
     pub material_expression: MaterialExpression,
 }
 impl_property_data_trait!(ExpressionInputProperty);
 
+/// Material attributes input property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MaterialAttributesInputProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Material expression
     pub material_expression: MaterialExpression,
 }
 impl_property_data_trait!(MaterialAttributesInputProperty);
 
 impl MaterialExpression {
+    /// Read a `MaterialExpression` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -113,6 +162,7 @@ impl MaterialExpression {
         })
     }
 
+    /// Write a `MaterialExpression` to an asset
     pub fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
@@ -127,6 +177,7 @@ impl MaterialExpression {
 }
 
 impl ColorMaterialInputProperty {
+    /// Read a `ColorMaterialInputProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -164,6 +215,7 @@ impl PropertyTrait for ColorMaterialInputProperty {
 }
 
 impl ScalarMaterialInputProperty {
+    /// Read a `ScalarMaterialInputProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -201,6 +253,7 @@ impl PropertyTrait for ScalarMaterialInputProperty {
 }
 
 impl ShadingModelMaterialInputProperty {
+    /// Read a `ShadingModelMaterialInputProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -237,6 +290,7 @@ impl PropertyTrait for ShadingModelMaterialInputProperty {
 }
 
 impl VectorMaterialInputProperty {
+    /// Read a `VectorMaterialInputProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -273,6 +327,7 @@ impl PropertyTrait for VectorMaterialInputProperty {
 }
 
 impl Vector2MaterialInputProperty {
+    /// Read a `Vector2MaterialInputProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -309,6 +364,7 @@ impl PropertyTrait for Vector2MaterialInputProperty {
 }
 
 impl ExpressionInputProperty {
+    /// Read a `ExpressionInputProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -339,6 +395,7 @@ impl PropertyTrait for ExpressionInputProperty {
 }
 
 impl MaterialAttributesInputProperty {
+    /// Read a `MaterialAttributesInputProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

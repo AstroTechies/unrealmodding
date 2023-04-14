@@ -1,3 +1,5 @@
+//! Object properties
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -10,31 +12,45 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid, PackageIndex};
 
+/// Object property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: PackageIndex,
 }
 impl_property_data_trait!(ObjectProperty);
 
+/// Asset object property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: Option<String>,
 }
 impl_property_data_trait!(AssetObjectProperty);
 
+/// Soft object path
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectPath {
+    /// Asset path name
     pub asset_path_name: FName,
+    /// Sub path string
     pub sub_path_string: Option<String>,
 }
 
 impl SoftObjectPath {
+    /// Read a `SoftObjectPath` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let asset_path_name = asset.read_fname()?;
         let sub_path_string = asset.read_fstring()?;
@@ -45,6 +61,7 @@ impl SoftObjectPath {
         })
     }
 
+    /// Write a `SoftObjectPath` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.asset_path_name)?;
         asset.write_fstring(self.sub_path_string.as_deref())?;
@@ -53,16 +70,22 @@ impl SoftObjectPath {
     }
 }
 
+/// Soft object property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Soft object path value
     pub value: SoftObjectPath,
 }
 impl_property_data_trait!(SoftObjectProperty);
 
 impl ObjectProperty {
+    /// Read an `ObjectProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -93,6 +116,7 @@ impl PropertyTrait for ObjectProperty {
 }
 
 impl AssetObjectProperty {
+    /// Read an `AssetObjectProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -122,6 +146,7 @@ impl PropertyTrait for AssetObjectProperty {
 }
 
 impl SoftObjectProperty {
+    /// Read a `SoftObjectProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

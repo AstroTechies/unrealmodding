@@ -1,3 +1,5 @@
+//! Sampler properties
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -11,38 +13,58 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Weighted random sampler property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Probabilities
     pub prob: Vec<OrderedFloat<f32>>,
+    /// Alias
     pub alias: Vec<i32>,
+    /// Total sampler weight
     pub total_weight: OrderedFloat<f32>,
 }
 impl_property_data_trait!(WeightedRandomSamplerProperty);
 
+/// Skeletal mesh area weighted triangle sampler
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshAreaWeightedTriangleSampler {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Probabilities
     pub prob: Vec<OrderedFloat<f32>>,
+    /// Alias
     pub alias: Vec<i32>,
+    /// Total sampler weight
     pub total_weight: OrderedFloat<f32>,
 }
 impl_property_data_trait!(SkeletalMeshAreaWeightedTriangleSampler);
 
+/// Skeleetal mesh sampling lod built data property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Sampler
     pub sampler_property: WeightedRandomSamplerProperty,
 }
 impl_property_data_trait!(SkeletalMeshSamplingLODBuiltDataProperty);
 
 impl WeightedRandomSamplerProperty {
+    /// Read a `WeightedRandomSamplerProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -104,6 +126,7 @@ impl PropertyTrait for WeightedRandomSamplerProperty {
 }
 
 impl SkeletalMeshAreaWeightedTriangleSampler {
+    /// Read a `SkeletalMeshAreaWeightedTriangleSampler` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -165,6 +188,7 @@ impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
 }
 
 impl SkeletalMeshSamplingLODBuiltDataProperty {
+    /// Read a `SkeletalMeshSamplingLODBuiltDataProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

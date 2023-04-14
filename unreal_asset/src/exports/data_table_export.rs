@@ -1,3 +1,5 @@
+//! Data table export
+
 use byteorder::LittleEndian;
 
 use crate::error::Error;
@@ -10,26 +12,33 @@ use crate::properties::{struct_property::StructProperty, Property, PropertyDataT
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::FName;
 
+/// Data table
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTable {
+    /// Data
     pub data: Vec<StructProperty>,
 }
 
 impl DataTable {
+    /// Create a new `DataTable` instance
     pub fn new(data: Vec<StructProperty>) -> Self {
         DataTable { data }
     }
 }
 
+/// Data table export
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTableExport {
+    /// Base normal export
     pub normal_export: NormalExport,
+    /// Data table
     pub table: DataTable,
 }
 
 implement_get!(DataTableExport);
 
 impl DataTableExport {
+    /// Read a `DataTableExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: &BaseExport,
         asset: &mut Reader,

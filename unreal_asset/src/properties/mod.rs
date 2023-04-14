@@ -8,7 +8,6 @@ use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 
 use crate::error::Error;
-use crate::inner_trait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid, ToFName};
 
@@ -115,6 +114,7 @@ use self::{
     view_target_blend_property::ViewTargetBlendParamsProperty,
 };
 
+/// Read a property guid if reading with header
 #[macro_export]
 macro_rules! optional_guid {
     ($asset:ident, $include_header:ident) => {
@@ -125,6 +125,7 @@ macro_rules! optional_guid {
     };
 }
 
+/// Write a property guid if writing with header
 #[macro_export]
 macro_rules! optional_guid_write {
     ($self:ident, $asset:ident, $include_header:ident) => {
@@ -134,6 +135,7 @@ macro_rules! optional_guid_write {
     };
 }
 
+/// Write a simple one-value property
 #[macro_export]
 macro_rules! simple_property_write {
     ($property_name:ident, $write_func:ident, $value_name:ident, $value_type:ty) => {
@@ -151,6 +153,7 @@ macro_rules! simple_property_write {
     };
 }
 
+/// Default implementations for `PropertyDataTrait`
 #[macro_export]
 macro_rules! impl_property_data_trait {
     ($property_name:ident) => {
@@ -236,17 +239,23 @@ lazy_static! {
     ]);
 }
 
+/// This must be implemented for all properties
 #[enum_dispatch]
 pub trait PropertyDataTrait {
+    /// Get property's name
     fn get_name(&self) -> FName;
+    /// Get a mutable reference to property's name
     fn get_name_mut(&mut self) -> &mut FName;
+    /// Get property's duplication index
     fn get_duplication_index(&self) -> i32;
+    /// Get property's guid
     fn get_property_guid(&self) -> Option<Guid>;
 }
 
 /// This must be implemented for all Properties
 #[enum_dispatch]
 pub trait PropertyTrait: PropertyDataTrait + Debug + Hash + Clone + PartialEq + Eq {
+    /// Write property to an asset
     fn write<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,
@@ -254,189 +263,183 @@ pub trait PropertyTrait: PropertyDataTrait + Debug + Hash + Clone + PartialEq + 
     ) -> Result<usize, Error>;
 }
 
+/// Property
 #[allow(clippy::large_enum_variant)]
 #[enum_dispatch(PropertyTrait, PropertyDataTrait)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Property {
+    /// Bool property
     BoolProperty,
+    /// UInt16 property
     UInt16Property,
+    /// UInt32 property
     UInt32Property,
+    /// UInt64 property
     UInt64Property,
+    /// Float property
     FloatProperty,
+    /// Int16 property
     Int16Property,
+    /// Int64 property
     Int64Property,
+    /// Int8 property
     Int8Property,
+    /// Int32 property
     IntProperty,
+    /// Byte property
     ByteProperty,
+    /// Double property
     DoubleProperty,
+    /// Name property
     NameProperty,
+    /// String property
     StrProperty,
+    /// Text property
     TextProperty,
+    /// Object property
     ObjectProperty,
+    /// Asset object property
     AssetObjectProperty,
+    /// Soft object property
     SoftObjectProperty,
+    /// Int point property
     IntPointProperty,
+    /// Vector property
     VectorProperty,
+    /// Vector4 property
     Vector4Property,
+    /// Vector2D property
     Vector2DProperty,
+    /// Box property
     BoxProperty,
+    /// Box2D property
     Box2DProperty,
+    /// Quaternion property
     QuatProperty,
+    /// Rotator property
     RotatorProperty,
+    /// Linear color property
     LinearColorProperty,
+    /// Color property
     ColorProperty,
+    /// Timespan property
     TimeSpanProperty,
+    /// Datetime property
     DateTimeProperty,
+    /// Guid property
     GuidProperty,
+    /// Set property
     SetProperty,
+    /// Array property
     ArrayProperty,
+    /// Map property
     MapProperty,
+    /// Per-platform bool property
     PerPlatformBoolProperty,
+    /// Per-platform int property
     PerPlatformIntProperty,
+    /// Per-platform float property
     PerPlatformFloatProperty,
+    /// Material attributes input property
     MaterialAttributesInputProperty,
+    /// Expression input property
     ExpressionInputProperty,
+    /// Color material input property
     ColorMaterialInputProperty,
+    /// Scalar material input property
     ScalarMaterialInputProperty,
+    /// Shading model material input property
     ShadingModelMaterialInputProperty,
+    /// Vector material input property
     VectorMaterialInputProperty,
+    /// Vector2 material input property
     Vector2MaterialInputProperty,
+    /// Weighted random sampler property
     WeightedRandomSamplerProperty,
+    /// Skeletal mesh sampling lod built data property
     SkeletalMeshSamplingLODBuiltDataProperty,
+    /// Skeletal mesh area weighted triangle sampler
     SkeletalMeshAreaWeightedTriangleSampler,
+    /// Soft asset path property
     SoftAssetPathProperty,
+    /// Soft object path property
     SoftObjectPathProperty,
+    /// Soft class path property
     SoftClassPathProperty,
+    /// String asset reference property
     StringAssetReferenceProperty,
+    /// Delegate property
     DelegateProperty,
+    /// Multicast delegate property
     MulticastDelegateProperty,
+    /// Multicast sparse delegate property
     MulticastSparseDelegateProperty,
+    /// Multicast inline delegate property
     MulticastInlineDelegateProperty,
+    /// Rich curve key property
     RichCurveKeyProperty,
+    /// View target blend params property
     ViewTargetBlendParamsProperty,
+    /// Gameplay tag container property
     GameplayTagContainerProperty,
+    /// Smart name property
     SmartNameProperty,
+    /// Struct property
     StructProperty,
+    /// Enum property
     EnumProperty,
+    /// Cloth lod data property
     ClothLodDataProperty,
+    /// Font character property
     FontCharacterProperty,
+    /// Unique net identifier property
     UniqueNetIdProperty,
+    /// Niagara variable property
     NiagaraVariableProperty,
+    /// Niagara variable with offset property
     NiagaraVariableWithOffsetProperty,
+    /// Font data property
     FontDataProperty,
+    /// Float range property
     FloatRangeProperty,
+    /// Raw struct property
     RawStructProperty,
-    //
+    /// Movie scene eval template pointer property
     MovieSceneEvalTemplatePtrProperty,
+    /// Movie scene track implementation pointer property
     MovieSceneTrackImplementationPtrProperty,
+    /// Movie scene evaluation field entity tree property
     MovieSceneEvaluationFieldEntityTreeProperty,
+    /// Movie scene sub sequence tree property
     MovieSceneSubSequenceTreeProperty,
+    /// Movie scene sequence instance data ptr property
     MovieSceneSequenceInstanceDataPtrProperty,
+    /// Section evaluation data tree property
     SectionEvaluationDataTreeProperty,
+    /// Movie scene track field data property
     MovieSceneTrackFieldDataProperty,
+    /// Movie scene event parameters property
     MovieSceneEventParametersProperty,
+    /// Movie scene float channel property
     MovieSceneFloatChannelProperty,
+    /// Movie scene float value property
     MovieSceneFloatValueProperty,
+    /// Movie scene frame range property
     MovieSceneFrameRangeProperty,
+    /// Movie scene segment property
     MovieSceneSegmentProperty,
+    /// Movie scene segment identifier property
     MovieSceneSegmentIdentifierProperty,
+    /// Movie scene track identifier property
     MovieSceneTrackIdentifierProperty,
+    /// Movie scene sequence id property
     MovieSceneSequenceIdProperty,
+    /// Movie scene evaluation key property
     MovieSceneEvaluationKeyProperty,
 
-    //
+    /// Unknown property
     UnknownProperty,
 }
-
-inner_trait!(
-    Property,
-    BoolProperty,
-    UInt16Property,
-    UInt32Property,
-    UInt64Property,
-    FloatProperty,
-    Int16Property,
-    Int64Property,
-    Int8Property,
-    IntProperty,
-    ByteProperty,
-    DoubleProperty,
-    NameProperty,
-    StrProperty,
-    TextProperty,
-    ObjectProperty,
-    AssetObjectProperty,
-    SoftObjectProperty,
-    IntPointProperty,
-    VectorProperty,
-    Vector4Property,
-    Vector2DProperty,
-    BoxProperty,
-    Box2DProperty,
-    QuatProperty,
-    RotatorProperty,
-    LinearColorProperty,
-    ColorProperty,
-    TimeSpanProperty,
-    DateTimeProperty,
-    GuidProperty,
-    SetProperty,
-    ArrayProperty,
-    MapProperty,
-    PerPlatformBoolProperty,
-    PerPlatformIntProperty,
-    PerPlatformFloatProperty,
-    MaterialAttributesInputProperty,
-    ExpressionInputProperty,
-    ColorMaterialInputProperty,
-    ScalarMaterialInputProperty,
-    ShadingModelMaterialInputProperty,
-    VectorMaterialInputProperty,
-    Vector2MaterialInputProperty,
-    WeightedRandomSamplerProperty,
-    SkeletalMeshSamplingLODBuiltDataProperty,
-    SkeletalMeshAreaWeightedTriangleSampler,
-    SoftAssetPathProperty,
-    SoftObjectPathProperty,
-    SoftClassPathProperty,
-    StringAssetReferenceProperty,
-    DelegateProperty,
-    MulticastDelegateProperty,
-    MulticastSparseDelegateProperty,
-    MulticastInlineDelegateProperty,
-    RichCurveKeyProperty,
-    ViewTargetBlendParamsProperty,
-    GameplayTagContainerProperty,
-    SmartNameProperty,
-    StructProperty,
-    EnumProperty,
-    ClothLodDataProperty,
-    FontCharacterProperty,
-    UniqueNetIdProperty,
-    NiagaraVariableProperty,
-    NiagaraVariableWithOffsetProperty,
-    FontDataProperty,
-    FloatRangeProperty,
-    RawStructProperty,
-    MovieSceneEvalTemplatePtrProperty,
-    MovieSceneTrackImplementationPtrProperty,
-    MovieSceneEvaluationFieldEntityTreeProperty,
-    MovieSceneSubSequenceTreeProperty,
-    MovieSceneSequenceInstanceDataPtrProperty,
-    SectionEvaluationDataTreeProperty,
-    MovieSceneTrackFieldDataProperty,
-    MovieSceneEventParametersProperty,
-    MovieSceneFloatChannelProperty,
-    MovieSceneFloatValueProperty,
-    MovieSceneFrameRangeProperty,
-    MovieSceneSegmentProperty,
-    MovieSceneSegmentIdentifierProperty,
-    MovieSceneTrackIdentifierProperty,
-    MovieSceneSequenceIdProperty,
-    MovieSceneEvaluationKeyProperty,
-    UnknownProperty
-);
-
-impl Eq for Property {}
 
 impl Property {
     /// Tries to read a property from an AssetReader
@@ -947,6 +950,7 @@ impl Property {
     }
 }
 
+/// Implements `ToFName` trait for properties
 macro_rules! property_inner_fname {
     ($($inner:ident : $name:expr),*) => {
         impl ToFName for Property {

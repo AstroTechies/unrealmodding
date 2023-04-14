@@ -1,3 +1,5 @@
+//! Binary archive reader
+
 use std::io::{self, Cursor, Read, Seek};
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -15,14 +17,19 @@ use crate::Import;
 
 /// A binary reader
 pub struct RawReader {
+    /// Reader cursor
     cursor: Cursor<Vec<u8>>,
+    /// Object version
     object_version: ObjectVersion,
+    /// UE5 object version
     object_version_ue5: ObjectVersionUE5,
 
+    /// Dummy name map
     empty_map: IndexedMap<String, String>,
 }
 
 impl RawReader {
+    /// Create a new instance of `RawReader` with the specified object versions
     pub fn new(
         cursor: Cursor<Vec<u8>>,
         object_version: ObjectVersion,

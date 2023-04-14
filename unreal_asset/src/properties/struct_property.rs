@@ -1,3 +1,5 @@
+//! Struct property
+
 use std::io::SeekFrom;
 use std::mem::size_of;
 
@@ -13,19 +15,28 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 use crate::{cast, impl_property_data_trait};
 
+/// Struct property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct StructProperty {
+    /// Name
     pub name: FName,
+    /// Struct type
     pub struct_type: Option<FName>,
+    /// Struct guid
     pub struct_guid: Option<Guid>,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Should serialize None
     pub serialize_none: bool,
+    /// Struct variables
     pub value: Vec<Property>,
 }
 impl_property_data_trait!(StructProperty);
 
 impl StructProperty {
+    /// Create a dummy `StructProperty`
     pub fn dummy(name: FName, struct_type: FName, struct_guid: Option<Guid>) -> Self {
         StructProperty {
             name,
@@ -38,6 +49,7 @@ impl StructProperty {
         }
     }
 
+    /// Read a `StructProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -72,6 +84,7 @@ impl StructProperty {
         )
     }
 
+    /// Read a `StructProperty` with custom header values set
     #[allow(clippy::too_many_arguments)]
     pub fn custom_header<Reader: AssetReader>(
         asset: &mut Reader,
@@ -184,6 +197,7 @@ impl StructProperty {
         }
     }
 
+    /// Write a `StructProperty` overriding struct type
     pub fn write_with_type<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,

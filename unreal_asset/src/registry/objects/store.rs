@@ -1,3 +1,5 @@
+//! Asset registry store
+
 use std::io::SeekFrom;
 
 use byteorder::LittleEndian;
@@ -7,20 +9,31 @@ use crate::error::Error;
 use crate::reader::asset_reader::AssetReader;
 use crate::types::FName;
 
+/// Value type
 #[repr(u32)]
 #[derive(IntoPrimitive, TryFromPrimitive)]
 pub enum EValueType {
+    /// Ansi string
     AnsiString,
+    /// Wide string
     WideString,
+    /// Numberless FName
     NumberlessName,
+    /// FName
     Name,
+    /// Numberless export path
     NumberlessExportPath,
+    /// Export path
     ExportPath,
+    /// Localized text
     LocalizedText,
 }
 
+/// Value id
 pub struct ValueId {
+    /// Value type
     pub value_type: EValueType,
+    /// Index
     pub index: i32,
 }
 
@@ -28,6 +41,7 @@ const TYPE_BITS: u32 = 3;
 const INDEX_BITS: u32 = 32 - TYPE_BITS;
 
 impl ValueId {
+    /// Read a `ValueId` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let id = asset.read_u32::<LittleEndian>()?;
         let value_type = EValueType::try_from((id << INDEX_BITS) >> INDEX_BITS)?;
@@ -37,12 +51,16 @@ impl ValueId {
     }
 }
 
+/// Numbered pair
 pub struct NumberedPair {
+    /// Key
     pub key: FName,
+    /// Value
     pub value: ValueId,
 }
 
 impl NumberedPair {
+    /// Read a `NumberedPair` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key = asset.read_fname()?;
         let value = ValueId::new(asset)?;
@@ -51,12 +69,16 @@ impl NumberedPair {
     }
 }
 
+/// Numberless pair
 pub struct NumberlessPair {
+    /// Key
     pub key: u32,
+    /// Value
     pub value: ValueId,
 }
 
 impl NumberlessPair {
+    /// Read a `NumberlessPair` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key = asset.read_u32::<LittleEndian>()?;
         let value = ValueId::new(asset)?;
@@ -65,13 +87,18 @@ impl NumberlessPair {
     }
 }
 
+/// Numberless export path
 pub struct NumberlessExportPath {
+    /// Class
     pub class: u32,
+    /// Object
     pub object: u32,
+    /// Package
     pub package: u32,
 }
 
 impl NumberlessExportPath {
+    /// Read a `NumberlessExportPath` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let class = asset.read_u32::<LittleEndian>()?;
         let object = asset.read_u32::<LittleEndian>()?;
@@ -85,13 +112,18 @@ impl NumberlessExportPath {
     }
 }
 
+/// Asset registry export path
 pub struct AssetRegistryExportPath {
+    /// Class
     pub class: FName,
+    /// Object
     pub object: FName,
+    /// Package
     pub package: FName,
 }
 
 impl AssetRegistryExportPath {
+    /// Read an `AssetRegistryExportPath` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let class = asset.read_fname()?;
         let object = asset.read_fname()?;
@@ -105,21 +137,34 @@ impl AssetRegistryExportPath {
     }
 }
 
+/// Load order
 #[derive(PartialEq, Eq)]
 enum ELoadOrder {
+    /// Member
     Member,
+    /// Text first
     TextFirst,
 }
 
+/// Asset registry store
 pub struct Store {
+    /// Numbered pairs
     pub pairs: Vec<NumberedPair>,
+    /// Numberless pairs
     pub numberless_pairs: Vec<NumberlessPair>,
+    /// Ansi strings
     pub ansi_strings: Vec<String>,
+    /// Wide strings
     pub wide_strings: Vec<String>,
+    /// Numberless names
     pub numberless_names: Vec<u32>,
+    /// Numbered names
     pub names: Vec<FName>,
+    /// Numberless export paths
     pub numberless_export_paths: Vec<NumberlessExportPath>,
+    /// Numbered export paths
     pub export_paths: Vec<AssetRegistryExportPath>,
+    /// Texts
     pub texts: Vec<Option<String>>,
 }
 
@@ -127,6 +172,7 @@ const OLD_BEGIN_MAGIC: u32 = 0x12345678;
 const BEGIN_MAGIC: u32 = 0x12345679;
 
 impl Store {
+    /// Get asset registry store load order from magic
     fn get_load_order(magic: u32) -> Result<ELoadOrder, Error> {
         match magic {
             OLD_BEGIN_MAGIC => Ok(ELoadOrder::Member),
@@ -135,6 +181,7 @@ impl Store {
         }
     }
 
+    /// Read a `Store` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let magic = asset.read_u32::<LittleEndian>()?;
         let order = Store::get_load_order(magic)?;

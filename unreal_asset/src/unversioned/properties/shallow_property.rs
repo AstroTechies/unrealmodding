@@ -1,9 +1,13 @@
+//! Shallow property
+
 use crate::{error::Error, unversioned::usmap_writer::UsmapWriter};
 
 use super::{EPropertyType, UsmapPropertyDataTrait};
 
+/// Shallow property data
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapShallowPropertyData {
+    /// Property type
     pub property_type: EPropertyType,
 }
 

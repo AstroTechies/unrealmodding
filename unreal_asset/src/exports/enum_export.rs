@@ -1,3 +1,5 @@
+//! Enum export
+
 use std::collections::HashMap;
 
 use byteorder::LittleEndian;
@@ -14,21 +16,29 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::FName;
 use crate::Error;
 
+/// Enum cpp form
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ECppForm {
+    /// Regular
     Regular,
+    /// Namespaced
     Namespaced,
+    /// Enum class
     EnumClass,
 }
 
+/// Enum
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UEnum {
+    /// Enum names
     pub names: Vec<(FName, i64)>,
+    /// Enum cpp form
     pub cpp_form: ECppForm,
 }
 
 impl UEnum {
+    /// Read a `UEnum` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut names = Vec::new();
 
@@ -72,6 +82,7 @@ impl UEnum {
         Ok(UEnum { names, cpp_form })
     }
 
+    /// Write a `UEnum` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.names.len() as i32)?;
         if asset.get_object_version() < ObjectVersion::VER_UE4_TIGHTLY_PACKED_ENUMS {
@@ -111,16 +122,19 @@ impl UEnum {
     }
 }
 
+/// Enum export
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EnumExport {
+    /// Base normal export
     pub normal_export: NormalExport,
-
+    /// Enum value
     pub value: UEnum,
 }
 
 implement_get!(EnumExport);
 
 impl EnumExport {
+    /// Read an `EnumExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: &BaseExport,
         asset: &mut Reader,
