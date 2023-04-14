@@ -3,40 +3,72 @@
 use bitflags::bitflags;
 
 bitflags! {
+    /// Object instance flags
     pub struct EObjectFlags : u32
     {
+        /// No flags
         const RF_NO_FLAGS = 0x00000000;
+        /// Public
         const RF_PUBLIC = 0x00000001;
+        /// Standalone
         const RF_STANDALONE = 0x00000002;
+        /// Mark as native
         const RF_MARK_AS_NATIVE = 0x00000004;
+        /// Transactional
         const RF_TRANSACTIONAL = 0x00000008;
+        /// Class Default Object
         const RF_CLASS_DEFAULT_OBJECT = 0x00000010;
+        /// Archetype Object
         const RF_ARCHETYPE_OBJECT = 0x00000020;
+        /// Transient
         const RF_TRANSIENT = 0x00000040;
+        /// Mark as root set
         const RF_MARK_AS_ROOT_SET = 0x00000080;
+        /// Tag Garbage Temp
         const RF_TAG_GARBAGE_TEMP = 0x00000100;
+        /// Needs initialization
         const RF_NEED_INITIALIZATION = 0x00000200;
+        /// Needs load
         const RF_NEED_LOAD = 0x00000400;
+        /// Keep object for cooker
         const RF_KEEP_FOR_COOKER = 0x00000800;
+        /// Needed post load
         const RF_NEED_POST_LOAD = 0x00001000;
+        /// Needed post load subobjects
         const RF_NEED_POST_LOAD_SUBOBJECTS = 0x00002000;
+        /// A newer version of the object exists
         const RF_NEWER_VERSION_EXISTS = 0x00004000;
+        /// Set when the object is starting to get destroyed
         const RF_BEGIN_DESTROYED = 0x00008000;
+        /// Set when the object is finished being destroyed
         const RF_FINISH_DESTROYED = 0x00010000;
+        /// Object is being regenerated
         const RF_BEING_REGENERATED = 0x00020000;
+        /// Object is the default sub object
         const RF_DEFAULT_SUB_OBJECT = 0x00040000;
+        /// Object was loaded
         const RF_WAS_LOADED = 0x00080000;
+        /// Text export transient
         const RF_TEXT_EXPORT_TRANSIENT = 0x00100000;
+        /// Load of this object was completed
         const RF_LOAD_COMPLETED = 0x00200000;
+        /// Object is an inheritable component template
         const RF_INHERITABLE_COMPONENT_TEMPLATE = 0x00400000;
+        /// Duplicate transient
         const RF_DUPLICATE_TRANSIENT = 0x00800000;
+        /// Strong ref on frame
         const RF_STRONG_REF_ON_FRAME = 0x01000000;
+        /// Non pie duplicate transient
         const RF_NON_P_I_E_DUPLICATE_TRANSIENT = 0x02000000;
+        /// Object is dynamic
         const RF_DYNAMIC = 0x04000000;
+        /// Object will be loaded
         const RF_WILL_BE_LOADED = 0x08000000;
+        /// Object has an external package
         const RF_HAS_EXTERNAL_PACKAGE = 0x1000000;
     }
 
+    /// Package flags
     pub struct EPackageFlags : u32
     {
         /// No flags
@@ -87,8 +119,10 @@ bitflags! {
         const PKG_FILTER_EDITOR_ONLY = 0x80000000;
     }
 
+    /// Property flags
     pub struct EPropertyFlags : u64
     {
+        /// None
         const CPF_NONE = 0;
 
         /// Property is user-settable in the editor.
@@ -191,6 +225,7 @@ bitflags! {
         const CPF_SKIP_SERIALIZATION = 0x0080000000000000;
     }
 
+    /// Class flags
     pub struct EClassFlags : u32
     {
         /// No Flags
@@ -261,42 +296,77 @@ bitflags! {
         const CLASS_NEWER_VERSION_EXISTS = 0x80000000;
     }
 
+    /// Function flags
     pub struct EFunctionFlags : u32 {
+        /// None
         const FUNC_NONE = 0x00000000;
+        /// Final function
         const FUNC_FINAL = 0x00000001;
+        /// Required api
         const FUNC_REQUIRED_API = 0x00000002;
+        /// Function can only get executed if the executor has authority
         const FUNC_BLUEPRINT_AUTHORITY_ONLY = 0x00000004;
+        /// Cosmetic
         const FUNC_BLUEPRINT_COSMETIC = 0x00000008;
+        /// Networked function
         const FUNC_NET = 0x00000040;
+        /// Networked reliable function
         const FUNC_NET_RELIABLE = 0x00000080;
+        /// Net request function
         const FUNC_NET_REQUEST = 0x00000100;
+        /// Exec
         const FUNC_EXEC = 0x00000200;
+        /// Native function
         const FUNC_NATIVE = 0x00000400;
+        /// Event function
         const FUNC_EVENT = 0x00000800;
+        /// Net response
         const FUNC_NETRESPONSE = 0x00001000;
+        /// Static function
         const FUNC_STATIC = 0x00002000;
+        /// Net multicast
         const FUNC_NETMULTICAST = 0x00004000;
+        /// UberGraph function
         const FUNC_UBERGRAPHFUNCTION = 0x00008000;
+        /// MulticastDelegate function
         const FUNC_MULTICASTDELEGATE = 0x00010000;
+        /// Public function
         const FUNC_PUBLIC = 0x00020000;
+        /// Private function
         const FUNC_PRIVATE = 0x00040000;
+        /// Protected function
         const FUNC_PROTECTED = 0x00080000;
+        /// Delegate function
         const FUNC_DELEGATE = 0x00100000;
+        /// Netserver
         const FUNC_NETSERVER = 0x00200000;
+        /// Set if the function has out parameters
         const FUNC_HASOUTPARMS = 0x00400000;
+        /// Set if the function has default parameters
         const FUNC_HASDEFAULTS = 0x00800000;
+        /// Net client
         const FUNC_NETCLIENT = 0x01000000;
+        /// DllImport function
         const FUNC_DLLIMPORT = 0x02000000;
+        /// Function is blueprint callable UFUNCTION(BlueprintCallable)
         const FUNC_BLUEPRINTCALLABLE = 0x04000000;
+        /// UFUNCTION(BlueprintEvent)
         const FUNC_BLUEPRINTEVENT = 0x08000000;
+        /// UFUNCTION(BlueprintPure)
         const FUNC_BLUEPRINTPURE = 0x10000000;
+        /// Function is editor only
         const FUNC_EDITORONLY = 0x20000000;
+        /// Const function
         const FUNC_CONST = 0x40000000;
+        /// Net validate
         const FUNC_NETVALIDATE = 0x80000000;
+        /// All flags
         const FUNC_ALLFLAGS = 0xFFFFFFFF;
     }
 
+    /// Asset registry dependency propety
     pub struct EDependencyProperty : u32 {
+        /// None
         const NONE = 0;
 
         /// Package Dependencies

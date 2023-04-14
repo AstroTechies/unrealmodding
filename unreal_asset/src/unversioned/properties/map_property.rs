@@ -1,16 +1,22 @@
+//! Map property
+
 use std::mem::size_of;
 
 use crate::{error::Error, unversioned::usmap_reader::UsmapReader};
 
 use super::{EPropertyType, UsmapPropertyData, UsmapPropertyDataTrait};
 
+/// Map property data
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapMapPropertyData {
+    /// Inner type
     pub inner_type: Box<UsmapPropertyData>,
+    /// Value type
     pub value_type: Box<UsmapPropertyData>,
 }
 
 impl UsmapMapPropertyData {
+    /// Read a `UsmapMapPropertyData` from an asset
     pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_type = UsmapPropertyData::new(asset)?;
         let value_type = UsmapPropertyData::new(asset)?;

@@ -1,3 +1,5 @@
+//! Movie scene sequence identifier property
+
 use byteorder::LittleEndian;
 
 use crate::{
@@ -8,34 +10,44 @@ use crate::{
     types::{FName, Guid},
 };
 
+/// Movie scene sequence identifier
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSequenceId {
+    /// Value
     pub value: u32,
 }
 
 impl MovieSceneSequenceId {
+    /// Read a `MovieSceneSequenceId` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let value = asset.read_u32::<LittleEndian>()?;
 
         Ok(MovieSceneSequenceId { value })
     }
 
+    /// Write a `MovieSceneSequenceId` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_u32::<LittleEndian>(self.value)?;
         Ok(())
     }
 }
 
+/// Movie scene sequence identifier property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSequenceIdProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneSequenceId,
 }
 impl_property_data_trait!(MovieSceneSequenceIdProperty);
 
 impl MovieSceneSequenceIdProperty {
+    /// Read a `MovieSceneSequenceIdProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

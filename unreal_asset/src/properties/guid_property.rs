@@ -1,3 +1,5 @@
+//! Guid property
+
 use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::optional_guid;
@@ -6,16 +8,22 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Guid property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct GuidProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Guid value
     pub value: Guid,
 }
 impl_property_data_trait!(GuidProperty);
 
 impl GuidProperty {
+    /// Read a `GuidProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

@@ -9,13 +9,13 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
 use crate::error::KismetError;
-use crate::inner_trait;
 use crate::object_version::ObjectVersion;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::vector::{Transform, Vector, Vector4};
 use crate::types::{FName, PackageIndex};
 use crate::Error;
 
+/// Kismet expression token
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EExprToken {
@@ -101,6 +101,7 @@ pub enum EExprToken {
     ExEndStructConst = 0x30,
     /// Set the value of arbitrary array
     ExSetArray = 0x31,
+    /// End an array
     ExEndArray = 0x32,
     /// FProperty constant.
     ExPropertyConst = 0x33,
@@ -112,13 +113,21 @@ pub enum EExprToken {
     ExUInt64Const = 0x36,
     /// A casting operator for primitives which reads the type as the subsequent byte
     ExPrimitiveCast = 0x38,
+    /// Set the value of an arbitrary set
     ExSetSet = 0x39,
+    /// End a set
     ExEndSet = 0x3A,
+    /// Set the value of an arbitrary map
     ExSetMap = 0x3B,
+    /// End a map
     ExEndMap = 0x3C,
+    /// Set a value of an arbitrary const
     ExSetConst = 0x3D,
+    /// End const
     ExEndSetConst = 0x3E,
+    /// Create a constant map
     ExMapConst = 0x3F,
+    /// End a constant map
     ExEndMapConst = 0x40,
     /// Context expression to address a property within a struct
     ExStructMemberContext = 0x42,
@@ -132,6 +141,7 @@ pub enum EExprToken {
     ExLocalFinalFunction = 0x46,
     /// local out (pass by reference) function parameter
     ExLocalOutVariable = 0x48,
+    /// Deprecated operation
     ExDeprecatedOp4A = 0x4A,
     /// const reference to a delegate or normal function object
     ExInstanceDelegate = 0x4B,
@@ -175,53 +185,85 @@ pub enum EExprToken {
     ExRemoveMulticastDelegate = 0x62,
     /// Call multicast delegate
     ExCallMulticastDelegate = 0x63,
+    /// Let value on persistent frame
     ExLetValueOnPersistentFrame = 0x64,
+    /// Declare an array const
     ExArrayConst = 0x65,
+    /// End an array const
     ExEndArrayConst = 0x66,
+    /// Declare a soft object const
     ExSoftObjectConst = 0x67,
     /// static pure function from on local call space
     ExCallMath = 0x68,
+    /// Switch value
     ExSwitchValue = 0x69,
     /// Instrumentation event
     ExInstrumentationEvent = 0x6A,
+    /// Get array by ref
     ExArrayGetByRef = 0x6B,
     /// Sparse data variable
     ExClassSparseDataVariable = 0x6C,
+    /// Decclare a field path const
     ExFieldPathConst = 0x6D,
+    /// Max
     ExMax = 0xff,
 }
 
+/// Kismet cast token
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum ECastToken {
+    /// Cast object to interface
     ObjectToInterface = 0x46,
+    /// Cast object to bool
     ObjectToBool = 0x47,
+    /// Cast interface to bool
     InterfaceToBool = 0x49,
+    /// Max
     Max = 0xFF,
 }
 
+/// Kismet instrumentation type
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EScriptInstrumentationType {
+    /// Class
     Class = 0,
+    /// Class scope
     ClassScope,
+    /// Instance
     Instance,
+    /// Event
     Event,
+    /// Inline event
     InlineEvent,
+    /// Resume event
     ResumeEvent,
+    /// Pure node entry
     PureNodeEntry,
+    /// Node debug site
     NodeDebugSite,
+    /// Node entry
     NodeEntry,
+    /// Node exit
     NodeExit,
+    /// Push state
     PushState,
+    /// Restore state
     RestoreState,
+    /// Reset state
     ResetState,
+    /// Suspend state
     SuspendState,
+    /// Pop state
     PopState,
+    /// Tunnel end of thread
     TunnelEndOfThread,
+    /// Stop
     Stop,
 }
 
+/// Kismet text literal type
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EBlueprintTextLiteralType {
@@ -237,13 +279,17 @@ pub enum EBlueprintTextLiteralType {
     StringTableEntry,
 }
 
+/// Kismet field path
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FieldPath {
+    /// Path
     pub path: Vec<FName>,
+    /// Path owner
     pub resolved_owner: PackageIndex,
 }
 
 impl FieldPath {
+    /// Create a new `FieldPath` instance
     pub fn new(path: Vec<FName>, resolved_owner: PackageIndex) -> Self {
         FieldPath {
             path,
@@ -252,6 +298,7 @@ impl FieldPath {
     }
 }
 
+/// Read a UTF-8 kismet string
 fn read_kismet_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String, Error> {
     let mut data = Vec::new();
     loop {
@@ -264,6 +311,7 @@ fn read_kismet_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String,
     Ok(String::from_utf8(data)?)
 }
 
+/// Read a UTF-16 kismet string
 fn read_kismet_unicode_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String, Error> {
     let mut data = Vec::new();
     loop {
@@ -277,6 +325,7 @@ fn read_kismet_unicode_string<Reader: AssetReader>(asset: &mut Reader) -> Result
     Ok(String::from_utf16(&data)?)
 }
 
+/// Write a UTF-8 kismet string
 fn write_kismet_string<Writer: AssetWriter>(
     string: &str,
     asset: &mut Writer,
@@ -287,6 +336,7 @@ fn write_kismet_string<Writer: AssetWriter>(
     Ok((asset.position() - begin) as usize)
 }
 
+/// Write a UTF-16 kismet string
 fn write_kismet_unicode_string<Writer: AssetWriter>(
     string: &str,
     asset: &mut Writer,
@@ -305,11 +355,20 @@ fn write_kismet_unicode_string<Writer: AssetWriter>(
 }
 
 macro_rules! declare_expression {
-    ($name:ident, $($v:ident: $t:ty),*) => {
+    (
+        $name:ident,
+        $(
+            $(#[$inner:ident $($args:tt)*])*
+            $v:ident: $t:ty
+        ),*
+    ) => {
+        /// $name
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $name {
+            /// Kismet token
             pub token: EExprToken,
             $(
+                $(#[$inner $($args)*])*
                 pub $v: $t,
             )*
         }
@@ -325,10 +384,19 @@ macro_rules! declare_expression {
 }
 
 macro_rules! implement_expression {
-    ($($name:ident),*) => {
+    (
         $(
+            $(#[$inner:ident $($args:tt)*])*
+            $name:ident
+        ),*
+    ) => {
+        $(
+            $(#[$inner $($args)*])*
             #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-            pub struct $name { pub token: EExprToken }
+            pub struct $name {
+                /// Kismet token
+                pub token: EExprToken
+            }
 
             impl KismetExpressionTrait for $name {
                 fn write<Writer: AssetWriter>(&self, _asset: &mut Writer) -> Result<usize, Error> {
@@ -345,6 +413,7 @@ macro_rules! implement_expression {
             }
 
             impl $name {
+                /// Read `$name` from an asset
                 pub fn new<Reader: AssetReader>(_asset: &mut Reader) -> Result<Self, Error> {
                     Ok($name {
                         token: EExprToken::$name
@@ -363,8 +432,13 @@ macro_rules! implement_expression {
 
 macro_rules! implement_value_expression {
     ($name:ident, $param:ty, $read_func:ident, $write_func:ident) => {
-        declare_expression!($name, value: $param);
+        declare_expression!(
+            $name,
+            /// Value
+            value: $param
+        );
         impl $name {
+            /// Read `$name` from an asset
             pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($name {
                     token: EExprToken::$name,
@@ -382,8 +456,13 @@ macro_rules! implement_value_expression {
     };
 
     ($name:ident, $param:ty, $read_func:ident, $write_func:ident, $endianness:ident) => {
-        declare_expression!($name, value: $param);
+        declare_expression!(
+            $name,
+            /// Value
+            value: $param
+        );
         impl $name {
+            /// Read `$name` from an asset
             pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($name {
                     token: EExprToken::$name,
@@ -401,20 +480,31 @@ macro_rules! implement_value_expression {
     };
 }
 
+/// Kismet script text
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FScriptText {
+    /// Literal type
     text_literal_type: EBlueprintTextLiteralType,
+    /// Localized source
     localized_source: Option<KismetExpression>,
+    /// Localized key
     localized_key: Option<KismetExpression>,
+    /// Localized namespace
     localized_namespace: Option<KismetExpression>,
+    /// Invariant literal string
     invariant_literal_string: Option<KismetExpression>,
+    /// Literal string
     literal_string: Option<KismetExpression>,
+    /// String table asset this text is localized from
     string_table_asset: Option<PackageIndex>,
+    /// String table id in the string table asset
     string_table_id: Option<KismetExpression>,
+    /// String table key in the string table asset
     string_table_key: Option<KismetExpression>,
 }
 
 impl FScriptText {
+    /// Read a `FScriptText` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let text_literal_type: EBlueprintTextLiteralType = asset.read_u8()?.try_into()?;
         let (
@@ -564,6 +654,7 @@ impl KismetPropertyPointer {
     const XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION: ObjectVersion =
         ObjectVersion::VER_UE4_ADDED_PACKAGE_OWNER;
 
+    /// Create an old `KismetPropertyPointer` for an object version smaller than `KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`
     pub fn from_old(old: PackageIndex) -> Self {
         KismetPropertyPointer {
             old: Some(old),
@@ -571,6 +662,7 @@ impl KismetPropertyPointer {
         }
     }
 
+    /// Create a new `KismetPropertyPointer` for an object version >=`KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`
     pub fn from_new(new: FieldPath) -> Self {
         KismetPropertyPointer {
             old: None,
@@ -578,6 +670,7 @@ impl KismetPropertyPointer {
         }
     }
 
+    /// Read a `KismetPropertyPointer` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         if asset.get_object_version()
             >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
@@ -598,6 +691,7 @@ impl KismetPropertyPointer {
         }
     }
 
+    /// Write a `KismetPropertyPointer` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         if asset.get_object_version()
             >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
@@ -623,14 +717,19 @@ impl KismetPropertyPointer {
     }
 }
 
+/// Kismet switch case
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KismetSwitchCase {
+    /// Case value index
     pub case_index_value_term: KismetExpression,
+    /// Next offset
     pub next_offset: u32,
+    /// Case value
     pub case_term: KismetExpression,
 }
 
 impl KismetSwitchCase {
+    /// Create a new `KismetSwitchCase` instance
     pub fn new(
         case_index_value_term: KismetExpression,
         next_offset: u32,
@@ -647,222 +746,224 @@ impl KismetSwitchCase {
 /// This must be implemented for all KismetExpressions
 #[enum_dispatch]
 pub trait KismetExpressionTrait: Debug + Clone + PartialEq + Eq + Hash {
+    /// Write a `KismetExpression` to an asset
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error>;
 }
 
 /// Allows for getting a token from a KismetExpression
 #[enum_dispatch]
 pub trait KismetExpressionDataTrait {
+    /// Get a `KismetExpression`'s kismet token
     fn get_token(&self) -> EExprToken;
 }
 
 /// Allows for comparing two KismetExpressions based on their token
 #[enum_dispatch]
 pub trait KismetExpressionEnumEqTrait {
+    /// Compare two `KismetExpression`s based on their token
     fn enum_eq(&self, token: &EExprToken) -> bool;
 }
 
+/// Kismet expression
 #[enum_dispatch(
     KismetExpressionTrait,
     KismetExpressionEnumEqTrait,
     KismetExpressionDataTrait
 )]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum KismetExpression {
+    /// A local variable.
     ExLocalVariable,
+    /// An object variable.
     ExInstanceVariable,
+    /// Default variable for a class context.
     ExDefaultVariable,
+    /// Return from function.
     ExReturn,
+    /// Goto a local address in code.
     ExJump,
+    /// Goto if not expression.
     ExJumpIfNot,
+    /// Assertion.
     ExAssert,
+    /// No operation.
     ExNothing,
+    /// Assign an arbitrary size value to a variable.
     ExLet,
+    /// Class default object context.
     ExClassContext,
+    /// Metaclass cast.
     ExMetaCast,
+    /// Let boolean variable.
     ExLetBool,
+    /// end of default value for optional function parameter
     ExEndParmValue,
+    /// End of function call parameters.
     ExEndFunctionParms,
+    /// Self object.
     ExSelf,
+    /// Skippable expression.
     ExSkip,
+    /// Call a function through an object context.
     ExContext,
+    /// Call a function through an object context (can fail silently if the context is NULL; only generated for functions that don't have output or return values).
     ExContextFailSilent,
+    /// A function call with parameters.
     ExVirtualFunction,
+    /// A prebound function call with parameters.
     ExFinalFunction,
+    /// Int constant.
     ExIntConst,
+    /// Floating point constant.
     ExFloatConst,
+    /// String constant.
     ExStringConst,
+    /// An object constant.
     ExObjectConst,
+    /// A name constant.
     ExNameConst,
+    /// A rotation constant.
     ExRotationConst,
+    /// A vector constant.
     ExVectorConst,
+    /// A byte constant.
     ExByteConst,
+    /// Zero.
     ExIntZero,
+    /// One.
     ExIntOne,
+    /// Bool True.
     ExTrue,
+    /// Bool False.
     ExFalse,
+    /// FText constant
     ExTextConst,
+    /// NoObject.
     ExNoObject,
+    /// A transform constant
     ExTransformConst,
+    /// Int constant that requires 1 byte.
     ExIntConstByte,
+    /// A null interface (similar to ExNoObject, but for interfaces)
     ExNoInterface,
+    /// Safe dynamic class casting.
     ExDynamicCast,
+    /// An arbitrary UStruct constant
     ExStructConst,
+    /// End of UStruct constant
     ExEndStructConst,
+    /// Set the value of arbitrary array
     ExSetArray,
+    /// End an array
     ExEndArray,
+    /// FProperty constant.
     ExPropertyConst,
+    /// Unicode string constant.
     ExUnicodeStringConst,
+    /// 64-bit integer constant.
     ExInt64Const,
+    /// 64-bit unsigned integer constant.
     ExUInt64Const,
+    /// A casting operator for primitives which reads the type as the subsequent byte
     ExPrimitiveCast,
+    /// Set the value of an arbitrary set
     ExSetSet,
+    /// End a set
     ExEndSet,
+    /// Set the value of an arbitrary map
     ExSetMap,
+    /// End a map
     ExEndMap,
+    /// Set a value of an arbitrary const
     ExSetConst,
+    /// End const
     ExEndSetConst,
+    /// Create a constant map
     ExMapConst,
+    /// End a constant map
     ExEndMapConst,
+    /// Context expression to address a property within a struct
     ExStructMemberContext,
+    /// Assignment to a multi-cast delegate
     ExLetMulticastDelegate,
+    /// Assignment to a delegate
     ExLetDelegate,
+    /// Special instructions to quickly call a virtual function that we know is going to run only locally
     ExLocalVirtualFunction,
+    /// Special instructions to quickly call a final function that we know is going to run only locally
     ExLocalFinalFunction,
+    /// local out (pass by reference) function parameter
     ExLocalOutVariable,
+    /// Deprecated operation
     ExDeprecatedOp4A,
+    /// const reference to a delegate or normal function object
     ExInstanceDelegate,
+    /// push an address on to the execution flow stack for future execution when a ExPopExecutionFlow is executed. Execution continues on normally and doesn't change to the pushed address.
     ExPushExecutionFlow,
+    /// continue execution at the last address previously pushed onto the execution flow stack.
     ExPopExecutionFlow,
+    /// Goto a local address in code, specified by an integer value.
     ExComputedJump,
+    /// continue execution at the last address previously pushed onto the execution flow stack, if the condition is not true.
     ExPopExecutionFlowIfNot,
+    /// Breakpoint. Only observed in the editor, otherwise it behaves like ExNothing.
     ExBreakpoint,
+    /// Call a function through a native interface variable
     ExInterfaceContext,
+    /// Converting an object reference to native interface variable
     ExObjToInterfaceCast,
+    /// Last byte in script code
     ExEndOfScript,
+    /// Converting an interface variable reference to native interface variable
     ExCrossInterfaceCast,
+    /// Converting an interface variable reference to an object
     ExInterfaceToObjCast,
+    /// Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
     ExWireTracepoint,
+    /// A CodeSizeSkipOffset constant
     ExSkipOffsetConst,
+    /// Adds a delegate to a multicast delegate's targets
     ExAddMulticastDelegate,
+    /// Clears all delegates in a multicast target
     ExClearMulticastDelegate,
+    /// Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
     ExTracepoint,
+    /// assign to any object ref pointer
     ExLetObj,
+    /// assign to a weak object pointer
     ExLetWeakObjPtr,
+    /// bind object and name to delegate
     ExBindDelegate,
+    /// Remove a delegate from a multicast delegate's targets
     ExRemoveMulticastDelegate,
+    /// Call multicast delegate
     ExCallMulticastDelegate,
+    /// Let value on persistent frame
     ExLetValueOnPersistentFrame,
+    /// Declare an array const
     ExArrayConst,
+    /// End an array const
     ExEndArrayConst,
+    /// Declare a soft object const
     ExSoftObjectConst,
+    /// static pure function from on local call space
     ExCallMath,
+    /// Switch value
     ExSwitchValue,
+    /// Instrumentation event
     ExInstrumentationEvent,
+    /// Get array by ref
     ExArrayGetByRef,
+    /// Sparse data variable
     ExClassSparseDataVariable,
+    /// Decclare a field path const
     ExFieldPathConst,
 }
-
-inner_trait!(
-    KismetExpression,
-    ExLocalVariable,
-    ExInstanceVariable,
-    ExDefaultVariable,
-    ExReturn,
-    ExJump,
-    ExJumpIfNot,
-    ExAssert,
-    ExNothing,
-    ExLet,
-    ExClassContext,
-    ExMetaCast,
-    ExLetBool,
-    ExEndParmValue,
-    ExEndFunctionParms,
-    ExSelf,
-    ExSkip,
-    ExContext,
-    ExContextFailSilent,
-    ExVirtualFunction,
-    ExFinalFunction,
-    ExIntConst,
-    ExFloatConst,
-    ExStringConst,
-    ExObjectConst,
-    ExNameConst,
-    ExRotationConst,
-    ExVectorConst,
-    ExByteConst,
-    ExIntZero,
-    ExIntOne,
-    ExTrue,
-    ExFalse,
-    ExTextConst,
-    ExNoObject,
-    ExTransformConst,
-    ExIntConstByte,
-    ExNoInterface,
-    ExDynamicCast,
-    ExStructConst,
-    ExEndStructConst,
-    ExSetArray,
-    ExEndArray,
-    ExPropertyConst,
-    ExUnicodeStringConst,
-    ExInt64Const,
-    ExUInt64Const,
-    ExPrimitiveCast,
-    ExSetSet,
-    ExEndSet,
-    ExSetMap,
-    ExEndMap,
-    ExSetConst,
-    ExEndSetConst,
-    ExMapConst,
-    ExEndMapConst,
-    ExStructMemberContext,
-    ExLetMulticastDelegate,
-    ExLetDelegate,
-    ExLocalVirtualFunction,
-    ExLocalFinalFunction,
-    ExLocalOutVariable,
-    ExDeprecatedOp4A,
-    ExInstanceDelegate,
-    ExPushExecutionFlow,
-    ExPopExecutionFlow,
-    ExComputedJump,
-    ExPopExecutionFlowIfNot,
-    ExBreakpoint,
-    ExInterfaceContext,
-    ExObjToInterfaceCast,
-    ExEndOfScript,
-    ExCrossInterfaceCast,
-    ExInterfaceToObjCast,
-    ExWireTracepoint,
-    ExSkipOffsetConst,
-    ExAddMulticastDelegate,
-    ExClearMulticastDelegate,
-    ExTracepoint,
-    ExLetObj,
-    ExLetWeakObjPtr,
-    ExBindDelegate,
-    ExRemoveMulticastDelegate,
-    ExCallMulticastDelegate,
-    ExLetValueOnPersistentFrame,
-    ExArrayConst,
-    ExEndArrayConst,
-    ExSoftObjectConst,
-    ExCallMath,
-    ExSwitchValue,
-    ExInstrumentationEvent,
-    ExArrayGetByRef,
-    ExClassSparseDataVariable,
-    ExFieldPathConst
-);
 
 impl Eq for KismetExpression {}
 
 impl KismetExpression {
+    /// Read a `KismetExpression` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let token: EExprToken = asset.read_u8()?.try_into()?;
         let expr: Result<Self, Error> = match token {
@@ -976,6 +1077,7 @@ impl KismetExpression {
         expr
     }
 
+    /// Read an array of `KismetExpression`s stopping at end_token
     pub fn read_arr<Reader: AssetReader>(
         asset: &mut Reader,
         end_token: EExprToken,
@@ -991,6 +1093,7 @@ impl KismetExpression {
         Ok(data)
     }
 
+    /// Write a `KismetExpression`
     pub fn write<Writer: AssetWriter>(
         expr: &KismetExpression,
         asset: &mut Writer,
@@ -1000,8 +1103,13 @@ impl KismetExpression {
     }
 }
 
-declare_expression!(ExFieldPathConst, value: Box<KismetExpression>);
+declare_expression!(
+    ExFieldPathConst,
+    /// Value
+    value: Box<KismetExpression>
+);
 impl ExFieldPathConst {
+    /// Read a `ExFieldPathConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFieldPathConst {
             token: EExprToken::ExFieldPathConst,
@@ -1014,8 +1122,13 @@ impl KismetExpressionTrait for ExFieldPathConst {
         KismetExpression::write(self.value.as_ref(), asset)
     }
 }
-declare_expression!(ExNameConst, value: FName);
+declare_expression!(
+    ExNameConst,
+    /// Value
+    value: FName
+);
 impl ExNameConst {
+    /// Read a `ExNameConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExNameConst {
             token: EExprToken::ExNameConst,
@@ -1029,8 +1142,13 @@ impl KismetExpressionTrait for ExNameConst {
         Ok(12)
     }
 }
-declare_expression!(ExObjectConst, value: PackageIndex);
+declare_expression!(
+    ExObjectConst,
+    /// Value
+    value: PackageIndex
+);
 impl ExObjectConst {
+    /// Read a `ExObjectConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExObjectConst {
             token: EExprToken::ExObjectConst,
@@ -1044,8 +1162,13 @@ impl KismetExpressionTrait for ExObjectConst {
         Ok(size_of::<u64>())
     }
 }
-declare_expression!(ExSoftObjectConst, value: Box<KismetExpression>);
+declare_expression!(
+    ExSoftObjectConst,
+    /// Value
+    value: Box<KismetExpression>
+);
 impl ExSoftObjectConst {
+    /// Read a `ExSoftObjectConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExSoftObjectConst {
             token: EExprToken::ExSoftObjectConst,
@@ -1058,8 +1181,13 @@ impl KismetExpressionTrait for ExSoftObjectConst {
         KismetExpression::write(self.value.as_ref(), asset)
     }
 }
-declare_expression!(ExTransformConst, value: Transform<OrderedFloat<f32>>);
+declare_expression!(
+    ExTransformConst,
+    /// Value
+    value: Transform<OrderedFloat<f32>>
+);
 impl ExTransformConst {
+    /// Read a `ExTransformConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let rotation = Vector4::new(
             OrderedFloat(asset.read_f32::<LittleEndian>()?),
@@ -1098,8 +1226,13 @@ impl KismetExpressionTrait for ExTransformConst {
         Ok(size_of::<f32>() * 10)
     }
 }
-declare_expression!(ExVectorConst, value: Vector<OrderedFloat<f32>>);
+declare_expression!(
+    ExVectorConst,
+    /// Value
+    value: Vector<OrderedFloat<f32>>
+);
 impl ExVectorConst {
+    /// Read a `ExVectorConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExVectorConst {
             token: EExprToken::ExVectorConst,
@@ -1119,8 +1252,13 @@ impl KismetExpressionTrait for ExVectorConst {
         Ok(size_of::<f32>() * 3)
     }
 }
-declare_expression!(ExTextConst, value: Box<FScriptText>);
+declare_expression!(
+    ExTextConst,
+    /// Value
+    value: Box<FScriptText>
+);
 impl ExTextConst {
+    /// Read a `ExTextConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExTextConst {
             token: EExprToken::ExTextConst,
@@ -1135,10 +1273,13 @@ impl KismetExpressionTrait for ExTextConst {
 }
 declare_expression!(
     ExAddMulticastDelegate,
+    /// Delegate
     delegate: Box<KismetExpression>,
+    /// Delegate to add
     delegate_to_add: Box<KismetExpression>
 );
 impl ExAddMulticastDelegate {
+    /// Read a `ExAddMulticastDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExAddMulticastDelegate {
             token: EExprToken::ExAddMulticastDelegate,
@@ -1156,10 +1297,13 @@ impl KismetExpressionTrait for ExAddMulticastDelegate {
 }
 declare_expression!(
     ExArrayConst,
+    /// Inner property
     inner_property: KismetPropertyPointer,
+    /// Array elements
     elements: Vec<KismetExpression>
 );
 impl ExArrayConst {
+    /// Read a `ExArrayConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_property = KismetPropertyPointer::new(asset)?;
         asset.read_i32::<LittleEndian>()?; // num_entries
@@ -1185,10 +1329,13 @@ impl KismetExpressionTrait for ExArrayConst {
 }
 declare_expression!(
     ExArrayGetByRef,
+    /// Array variable
     array_variable: Box<KismetExpression>,
+    /// Array element index
     array_index: Box<KismetExpression>
 );
 impl ExArrayGetByRef {
+    /// Read a `ExArrayGetByRef` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExArrayGetByRef {
             token: EExprToken::ExArrayGetByRef,
@@ -1206,11 +1353,15 @@ impl KismetExpressionTrait for ExArrayGetByRef {
 }
 declare_expression!(
     ExAssert,
+    /// Line number
     line_number: u16,
+    /// Is debug
     debug_mode: bool,
+    /// Expression to assert on
     assert_expression: Box<KismetExpression>
 );
 impl ExAssert {
+    /// Read a `ExAssert` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExAssert {
             token: EExprToken::ExAssert,
@@ -1232,11 +1383,15 @@ impl KismetExpressionTrait for ExAssert {
 }
 declare_expression!(
     ExBindDelegate,
+    /// Function name
     function_name: FName,
+    /// Delegate to bind
     delegate: Box<KismetExpression>,
+    /// Object term
     object_term: Box<KismetExpression>
 );
 impl ExBindDelegate {
+    /// Read a `ExBindDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExBindDelegate {
             token: EExprToken::ExBindDelegate,
@@ -1257,10 +1412,13 @@ impl KismetExpressionTrait for ExBindDelegate {
 }
 declare_expression!(
     ExCallMath,
+    /// Stack node
     stack_node: PackageIndex,
+    /// Parameters
     parameters: Vec<KismetExpression>
 );
 impl ExCallMath {
+    /// Read a `ExCallMath` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExCallMath {
             token: EExprToken::ExCallMath,
@@ -1282,11 +1440,15 @@ impl KismetExpressionTrait for ExCallMath {
 }
 declare_expression!(
     ExCallMulticastDelegate,
+    /// Stack node
     stack_node: PackageIndex,
+    /// Parameters
     parameters: Vec<KismetExpression>,
+    /// Delegate to call
     delegate: Box<KismetExpression>
 );
 impl ExCallMulticastDelegate {
+    /// Read a `ExCallMulticastDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let stack_node = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
         let delegate = KismetExpression::new(asset)?;
@@ -1313,12 +1475,17 @@ impl KismetExpressionTrait for ExCallMulticastDelegate {
 }
 declare_expression!(
     ExClassContext,
+    /// Object expression
     object_expression: Box<KismetExpression>,
+    /// Offset
     offset: u32,
+    /// r-value pointer
     r_value_pointer: KismetPropertyPointer,
+    /// Context expression
     context_expression: Box<KismetExpression>
 );
 impl ExClassContext {
+    /// Read a `ExClassContext` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExClassContext {
             token: EExprToken::ExClassContext,
@@ -1339,8 +1506,13 @@ impl KismetExpressionTrait for ExClassContext {
         Ok(offset)
     }
 }
-declare_expression!(ExClassSparseDataVariable, variable: KismetPropertyPointer);
+declare_expression!(
+    ExClassSparseDataVariable,
+    /// Variable
+    variable: KismetPropertyPointer
+);
 impl ExClassSparseDataVariable {
+    /// Read a `ExClassSparseDataVariable` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExClassSparseDataVariable {
             token: EExprToken::ExClassSparseDataVariable,
@@ -1355,9 +1527,11 @@ impl KismetExpressionTrait for ExClassSparseDataVariable {
 }
 declare_expression!(
     ExClearMulticastDelegate,
+    /// Delegate to clear
     delegate_to_clear: Box<KismetExpression>
 );
 impl ExClearMulticastDelegate {
+    /// Read a `ExClearMulticastDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExClearMulticastDelegate {
             token: EExprToken::ExClearMulticastDelegate,
@@ -1372,9 +1546,11 @@ impl KismetExpressionTrait for ExClearMulticastDelegate {
 }
 declare_expression!(
     ExComputedJump,
+    /// Code offset expression
     code_offset_expression: Box<KismetExpression>
 );
 impl ExComputedJump {
+    /// Read a `ExComputedJump` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExComputedJump {
             token: EExprToken::ExComputedJump,
@@ -1389,12 +1565,17 @@ impl KismetExpressionTrait for ExComputedJump {
 }
 declare_expression!(
     ExContext,
+    /// Object expression
     object_expression: Box<KismetExpression>,
+    /// Offset
     offset: u32,
+    /// r-value pointer
     r_value_pointer: KismetPropertyPointer,
+    /// Context expression
     context_expression: Box<KismetExpression>
 );
 impl ExContext {
+    /// Read a `ExContext` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExContext {
             token: EExprToken::ExContext,
@@ -1417,12 +1598,17 @@ impl KismetExpressionTrait for ExContext {
 }
 declare_expression!(
     ExContextFailSilent,
+    /// Object expression
     object_expression: Box<KismetExpression>,
+    /// Offset
     offset: u32,
+    /// r-value pointer
     r_value_pointer: KismetPropertyPointer,
+    /// Context expression
     context_expression: Box<KismetExpression>
 );
 impl ExContextFailSilent {
+    /// Read a `ExContextFailSilent` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExContextFailSilent {
             token: EExprToken::ExContextFailSilent,
@@ -1445,10 +1631,13 @@ impl KismetExpressionTrait for ExContextFailSilent {
 }
 declare_expression!(
     ExCrossInterfaceCast,
+    /// Class pointer
     class_ptr: PackageIndex,
+    /// Cast target
     target: Box<KismetExpression>
 );
 impl ExCrossInterfaceCast {
+    /// Read a `ExCrossInterfaceCast` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExCrossInterfaceCast {
             token: EExprToken::ExCrossInterfaceCast,
@@ -1465,8 +1654,13 @@ impl KismetExpressionTrait for ExCrossInterfaceCast {
         Ok(offset)
     }
 }
-declare_expression!(ExDefaultVariable, variable: KismetPropertyPointer);
+declare_expression!(
+    ExDefaultVariable,
+    /// Variable
+    variable: KismetPropertyPointer
+);
 impl ExDefaultVariable {
+    /// Read a `ExDefaultVariable` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExDefaultVariable {
             token: EExprToken::ExDefaultVariable,
@@ -1481,10 +1675,13 @@ impl KismetExpressionTrait for ExDefaultVariable {
 }
 declare_expression!(
     ExDynamicCast,
+    /// Class pointer
     class_ptr: PackageIndex,
+    /// Cast target
     target_expression: Box<KismetExpression>
 );
 impl ExDynamicCast {
+    /// Read a `ExDynamicCast` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExDynamicCast {
             token: EExprToken::ExDynamicCast,
@@ -1503,10 +1700,13 @@ impl KismetExpressionTrait for ExDynamicCast {
 }
 declare_expression!(
     ExFinalFunction,
+    /// Stack node
     stack_node: PackageIndex,
+    /// Parameters
     parameters: Vec<KismetExpression>
 );
 impl ExFinalFunction {
+    /// Read a `ExFinalFunction` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFinalFunction {
             token: EExprToken::ExFinalFunction,
@@ -1526,8 +1726,13 @@ impl KismetExpressionTrait for ExFinalFunction {
         Ok(offset)
     }
 }
-declare_expression!(ExInstanceDelegate, function_name: FName);
+declare_expression!(
+    ExInstanceDelegate,
+    /// Function name
+    function_name: FName
+);
 impl ExInstanceDelegate {
+    /// Read a `ExInstanceDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInstanceDelegate {
             token: EExprToken::ExInstanceDelegate,
@@ -1541,8 +1746,13 @@ impl KismetExpressionTrait for ExInstanceDelegate {
         Ok(12) // FScriptName's iCode offset
     }
 }
-declare_expression!(ExInstanceVariable, variable: KismetPropertyPointer);
+declare_expression!(
+    ExInstanceVariable,
+    /// Variable
+    variable: KismetPropertyPointer
+);
 impl ExInstanceVariable {
+    /// Read a `ExInstanceVariable` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInstanceVariable {
             token: EExprToken::ExInstanceVariable,
@@ -1555,8 +1765,13 @@ impl KismetExpressionTrait for ExInstanceVariable {
         self.variable.write(asset)
     }
 }
-declare_expression!(ExInterfaceContext, interface_value: Box<KismetExpression>);
+declare_expression!(
+    ExInterfaceContext,
+    /// Interface value
+    interface_value: Box<KismetExpression>
+);
 impl ExInterfaceContext {
+    /// Read a `ExInterfaceContext` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInterfaceContext {
             token: EExprToken::ExInterfaceContext,
@@ -1571,10 +1786,13 @@ impl KismetExpressionTrait for ExInterfaceContext {
 }
 declare_expression!(
     ExInterfaceToObjCast,
+    /// Class pointer
     class_ptr: PackageIndex,
+    /// Cast target
     target: Box<KismetExpression>
 );
 impl ExInterfaceToObjCast {
+    /// Read a `ExInterfaceToObjCast` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInterfaceToObjCast {
             token: EExprToken::ExInterfaceToObjCast,
@@ -1591,8 +1809,13 @@ impl KismetExpressionTrait for ExInterfaceToObjCast {
         Ok(offset)
     }
 }
-declare_expression!(ExJump, code_offset: u32);
+declare_expression!(
+    ExJump,
+    /// Code offset
+    code_offset: u32
+);
 impl ExJump {
+    /// Read a `ExJump` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExJump {
             token: EExprToken::ExJump,
@@ -1608,10 +1831,13 @@ impl KismetExpressionTrait for ExJump {
 }
 declare_expression!(
     ExJumpIfNot,
+    /// Code offset
     code_offset: u32,
+    /// Expression to check
     boolean_expression: Box<KismetExpression>
 );
 impl ExJumpIfNot {
+    /// Read a `ExJumpIfNot` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExJumpIfNot {
             token: EExprToken::ExJumpIfNot,
@@ -1630,11 +1856,15 @@ impl KismetExpressionTrait for ExJumpIfNot {
 }
 declare_expression!(
     ExLet,
+    /// Value
     value: KismetPropertyPointer,
+    /// Variable
     variable: Box<KismetExpression>,
+    /// Expression
     expression: Box<KismetExpression>
 );
 impl ExLet {
+    /// Read a `ExLet` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLet {
             token: EExprToken::ExLet,
@@ -1654,10 +1884,13 @@ impl KismetExpressionTrait for ExLet {
 }
 declare_expression!(
     ExLetBool,
+    /// Variable expression
     variable_expression: Box<KismetExpression>,
+    /// Assignment
     assignment_expression: Box<KismetExpression>
 );
 impl ExLetBool {
+    /// Read a `ExLetBool` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetBool {
             token: EExprToken::ExLetBool,
@@ -1675,10 +1908,13 @@ impl KismetExpressionTrait for ExLetBool {
 }
 declare_expression!(
     ExLetDelegate,
+    /// Variable expression
     variable_expression: Box<KismetExpression>,
+    /// Assignment expression
     assignment_expression: Box<KismetExpression>
 );
 impl ExLetDelegate {
+    /// Read a `ExLetDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetDelegate {
             token: EExprToken::ExLetDelegate,
@@ -1696,10 +1932,13 @@ impl KismetExpressionTrait for ExLetDelegate {
 }
 declare_expression!(
     ExLetMulticastDelegate,
+    /// Variable expression
     variable_expression: Box<KismetExpression>,
+    /// Assignment expression
     assignment_expression: Box<KismetExpression>
 );
 impl ExLetMulticastDelegate {
+    /// Read a `ExLetMulticastDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetMulticastDelegate {
             token: EExprToken::ExLetMulticastDelegate,
@@ -1717,10 +1956,13 @@ impl KismetExpressionTrait for ExLetMulticastDelegate {
 }
 declare_expression!(
     ExLetObj,
+    /// Variable expression
     variable_expression: Box<KismetExpression>,
+    /// Assignment expression
     assignment_expression: Box<KismetExpression>
 );
 impl ExLetObj {
+    /// Read a `ExLetObj` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetObj {
             token: EExprToken::ExLetObj,
@@ -1738,10 +1980,13 @@ impl KismetExpressionTrait for ExLetObj {
 }
 declare_expression!(
     ExLetValueOnPersistentFrame,
+    /// Destination property
     destination_property: KismetPropertyPointer,
+    /// Assignment expression
     assignment_expression: Box<KismetExpression>
 );
 impl ExLetValueOnPersistentFrame {
+    /// Read a `ExLetValueOnPersistentFrame` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetValueOnPersistentFrame {
             token: EExprToken::ExLetValueOnPersistentFrame,
@@ -1759,10 +2004,13 @@ impl KismetExpressionTrait for ExLetValueOnPersistentFrame {
 }
 declare_expression!(
     ExLetWeakObjPtr,
+    /// Variable expression
     variable_expression: Box<KismetExpression>,
+    /// Assignment expression
     assignment_expression: Box<KismetExpression>
 );
 impl ExLetWeakObjPtr {
+    /// Read a `ExLetWeakObjPtr` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetWeakObjPtr {
             token: EExprToken::ExLetWeakObjPtr,
@@ -1780,10 +2028,13 @@ impl KismetExpressionTrait for ExLetWeakObjPtr {
 }
 declare_expression!(
     ExLocalFinalFunction,
+    /// Stack node
     stack_node: PackageIndex,
+    /// Function parameters
     parameters: Vec<KismetExpression>
 );
 impl ExLocalFinalFunction {
+    /// Read a `ExLocalFinalFunction` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalFinalFunction {
             token: EExprToken::ExLocalFinalFunction,
@@ -1803,8 +2054,13 @@ impl KismetExpressionTrait for ExLocalFinalFunction {
         Ok(offset)
     }
 }
-declare_expression!(ExLocalOutVariable, variable: KismetPropertyPointer);
+declare_expression!(
+    ExLocalOutVariable,
+    /// Variable
+    variable: KismetPropertyPointer
+);
 impl ExLocalOutVariable {
+    /// Read a `ExLocalOutVariable` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalOutVariable {
             token: EExprToken::ExLocalOutVariable,
@@ -1817,8 +2073,13 @@ impl KismetExpressionTrait for ExLocalOutVariable {
         self.variable.write(asset)
     }
 }
-declare_expression!(ExLocalVariable, variable: KismetPropertyPointer);
+declare_expression!(
+    ExLocalVariable,
+    /// Variable
+    variable: KismetPropertyPointer
+);
 impl ExLocalVariable {
+    /// Read a `ExLocalVariable` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalVariable {
             token: EExprToken::ExLocalVariable,
@@ -1833,10 +2094,13 @@ impl KismetExpressionTrait for ExLocalVariable {
 }
 declare_expression!(
     ExLocalVirtualFunction,
+    /// Virtual function name
     virtual_function_name: FName,
+    /// Function parameters
     parameters: Vec<KismetExpression>
 );
 impl ExLocalVirtualFunction {
+    /// Read a `ExLocalVirtualFunction` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalVirtualFunction {
             token: EExprToken::ExLocalVirtualFunction,
@@ -1858,11 +2122,15 @@ impl KismetExpressionTrait for ExLocalVirtualFunction {
 }
 declare_expression!(
     ExMapConst,
+    /// Key property
     key_property: KismetPropertyPointer,
+    /// Value property
     value_property: KismetPropertyPointer,
+    /// Elements
     elements: Vec<KismetExpression>
 );
 impl ExMapConst {
+    /// Read a `ExMapConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key_property = KismetPropertyPointer::new(asset)?;
         let value_property = KismetPropertyPointer::new(asset)?;
@@ -1891,10 +2159,13 @@ impl KismetExpressionTrait for ExMapConst {
 }
 declare_expression!(
     ExMetaCast,
+    /// Class pointer
     class_ptr: PackageIndex,
+    /// Target expression
     target_expression: Box<KismetExpression>
 );
 impl ExMetaCast {
+    /// Read a `ExMetaCast` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExMetaCast {
             token: EExprToken::ExMetaCast,
@@ -1913,10 +2184,13 @@ impl KismetExpressionTrait for ExMetaCast {
 }
 declare_expression!(
     ExObjToInterfaceCast,
+    /// Class pointer
     class_ptr: PackageIndex,
+    /// Target expression
     target: Box<KismetExpression>
 );
 impl ExObjToInterfaceCast {
+    /// Read a `ExObjToInterfaceCast` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExObjToInterfaceCast {
             token: EExprToken::ExObjToInterfaceCast,
@@ -1935,9 +2209,11 @@ impl KismetExpressionTrait for ExObjToInterfaceCast {
 }
 declare_expression!(
     ExPopExecutionFlowIfNot,
+    /// Boolean expression to check
     boolean_expression: Box<KismetExpression>
 );
 impl ExPopExecutionFlowIfNot {
+    /// Read a `ExPopExecutionFlowIfNot` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPopExecutionFlowIfNot {
             token: EExprToken::ExPopExecutionFlowIfNot,
@@ -1952,10 +2228,13 @@ impl KismetExpressionTrait for ExPopExecutionFlowIfNot {
 }
 declare_expression!(
     ExPrimitiveCast,
+    /// Conversion type
     conversion_type: ECastToken,
+    /// Cast target
     target: Box<KismetExpression>
 );
 impl ExPrimitiveCast {
+    /// Read a `ExPrimitiveCast` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPrimitiveCast {
             token: EExprToken::ExPrimitiveCast,
@@ -1972,8 +2251,13 @@ impl KismetExpressionTrait for ExPrimitiveCast {
         Ok(offset)
     }
 }
-declare_expression!(ExPropertyConst, property: KismetPropertyPointer);
+declare_expression!(
+    ExPropertyConst,
+    /// Property
+    property: KismetPropertyPointer
+);
 impl ExPropertyConst {
+    /// Read a `ExPropertyConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPropertyConst {
             token: EExprToken::ExPropertyConst,
@@ -1986,8 +2270,13 @@ impl KismetExpressionTrait for ExPropertyConst {
         self.property.write(asset)
     }
 }
-declare_expression!(ExPushExecutionFlow, pushing_address: u32);
+declare_expression!(
+    ExPushExecutionFlow,
+    /// Pushing address
+    pushing_address: u32
+);
 impl ExPushExecutionFlow {
+    /// Read a `ExPushExecutionFlow` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPushExecutionFlow {
             token: EExprToken::ExPushExecutionFlow,
@@ -2003,10 +2292,13 @@ impl KismetExpressionTrait for ExPushExecutionFlow {
 }
 declare_expression!(
     ExRemoveMulticastDelegate,
+    /// Delegate
     delegate: Box<KismetExpression>,
+    /// Delegate to add
     delegate_to_add: Box<KismetExpression>
 );
 impl ExRemoveMulticastDelegate {
+    /// Read a `ExRemoveMulticastDelegate` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExRemoveMulticastDelegate {
             token: EExprToken::ExRemoveMulticastDelegate,
@@ -2022,8 +2314,13 @@ impl KismetExpressionTrait for ExRemoveMulticastDelegate {
         Ok(offset)
     }
 }
-declare_expression!(ExReturn, return_expression: Box<KismetExpression>);
+declare_expression!(
+    ExReturn,
+    /// Return expression
+    return_expression: Box<KismetExpression>
+);
 impl ExReturn {
+    /// Read a `ExReturn` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExReturn {
             token: EExprToken::ExReturn,
@@ -2036,8 +2333,17 @@ impl KismetExpressionTrait for ExReturn {
         KismetExpression::write(self.return_expression.as_ref(), asset)
     }
 }
-declare_expression!(ExRotationConst, pitch: i32, yaw: i32, roll: i32);
+declare_expression!(
+    ExRotationConst,
+    /// Pitch
+    pitch: i32,
+    /// Yaw
+    yaw: i32,
+    /// Roll
+    roll: i32
+);
 impl ExRotationConst {
+    /// Read a `ExRotationConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExRotationConst {
             token: EExprToken::ExRotationConst,
@@ -2057,11 +2363,15 @@ impl KismetExpressionTrait for ExRotationConst {
 }
 declare_expression!(
     ExSetArray,
+    /// Assigning property
     assigning_property: Option<Box<KismetExpression>>,
+    /// Array inner prop
     array_inner_prop: Option<PackageIndex>,
+    /// Elements
     elements: Vec<KismetExpression>
 );
 impl ExSetArray {
+    /// Read a `ExSetArray` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let (assigning_property, array_inner_prop) =
             match asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
@@ -2113,10 +2423,13 @@ impl KismetExpressionTrait for ExSetArray {
 }
 declare_expression!(
     ExSetConst,
+    /// Inner property
     inner_property: KismetPropertyPointer,
+    /// Set elements
     elements: Vec<KismetExpression>
 );
 impl ExSetConst {
+    /// Read a `ExSetConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_property = KismetPropertyPointer::new(asset)?;
         let _num_entries = asset.read_i32::<LittleEndian>()?;
@@ -2142,10 +2455,13 @@ impl KismetExpressionTrait for ExSetConst {
 }
 declare_expression!(
     ExSetMap,
+    /// Map property
     map_property: Box<KismetExpression>,
+    /// Map elements
     elements: Vec<KismetExpression>
 );
 impl ExSetMap {
+    /// Read a `ExSetMap` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let map_property = Box::new(KismetExpression::new(asset)?);
         let _num_entries = asset.read_i32::<LittleEndian>()?;
@@ -2171,10 +2487,13 @@ impl KismetExpressionTrait for ExSetMap {
 }
 declare_expression!(
     ExSetSet,
+    /// Set property
     set_property: Box<KismetExpression>,
+    /// Elements to set
     elements: Vec<KismetExpression>
 );
 impl ExSetSet {
+    /// Read a `ExSetSet` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let set_property = Box::new(KismetExpression::new(asset)?);
         let _num_entries = asset.read_i32::<LittleEndian>()?;
@@ -2200,10 +2519,13 @@ impl KismetExpressionTrait for ExSetSet {
 }
 declare_expression!(
     ExSkip,
+    /// Code offset
     code_offset: u32,
+    /// Expression to skip
     skip_expression: Box<KismetExpression>
 );
 impl ExSkip {
+    /// Read a `ExSkip` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExSkip {
             token: EExprToken::ExSkip,
@@ -2222,11 +2544,15 @@ impl KismetExpressionTrait for ExSkip {
 }
 declare_expression!(
     ExStructConst,
+    /// Struct value
     struct_value: PackageIndex,
+    /// Struct size
     struct_size: i32,
+    /// Value
     value: Vec<KismetExpression>
 );
 impl ExStructConst {
+    /// Read a `ExStructConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExStructConst {
             token: EExprToken::ExStructConst,
@@ -2250,10 +2576,13 @@ impl KismetExpressionTrait for ExStructConst {
 }
 declare_expression!(
     ExStructMemberContext,
+    /// Struct member expression
     struct_member_expression: KismetPropertyPointer,
+    /// Struct expression
     struct_expression: Box<KismetExpression>
 );
 impl ExStructMemberContext {
+    /// Read a `ExStructMemberContext` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let struct_member_expression = KismetPropertyPointer::new(asset)?;
         let struct_expression = KismetExpression::new(asset)?;
@@ -2274,12 +2603,17 @@ impl KismetExpressionTrait for ExStructMemberContext {
 }
 declare_expression!(
     ExSwitchValue,
+    /// End goto offset
     end_goto_offset: u32,
+    /// Index term
     index_term: Box<KismetExpression>,
+    /// Default term
     default_term: Box<KismetExpression>,
+    /// Cases
     cases: Vec<KismetSwitchCase>
 );
 impl ExSwitchValue {
+    /// Read a `ExSwitchValue` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let num_cases = asset.read_u16::<LittleEndian>()?;
         let end_goto_offset = asset.read_u32::<LittleEndian>()?;
@@ -2320,10 +2654,13 @@ impl KismetExpressionTrait for ExSwitchValue {
 }
 declare_expression!(
     ExVirtualFunction,
+    /// Virtual function name
     virtual_function_name: FName,
+    /// Function parameters
     parameters: Vec<KismetExpression>
 );
 impl ExVirtualFunction {
+    /// Read a `ExVirtualFunction` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExVirtualFunction {
             token: EExprToken::ExVirtualFunction,
@@ -2343,8 +2680,13 @@ impl KismetExpressionTrait for ExVirtualFunction {
         Ok(offset)
     }
 }
-declare_expression!(ExStringConst, value: String);
+declare_expression!(
+    ExStringConst,
+    /// Value
+    value: String
+);
 impl ExStringConst {
+    /// Read a `ExStringConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExStringConst {
             token: EExprToken::ExStringConst,
@@ -2357,8 +2699,13 @@ impl KismetExpressionTrait for ExStringConst {
         write_kismet_string(&self.value, asset)
     }
 }
-declare_expression!(ExUnicodeStringConst, value: String);
+declare_expression!(
+    ExUnicodeStringConst,
+    /// Value
+    value: String
+);
 impl ExUnicodeStringConst {
+    /// Read a `ExUnicodeStringConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExUnicodeStringConst {
             token: EExprToken::ExUnicodeStringConst,
@@ -2374,10 +2721,13 @@ impl KismetExpressionTrait for ExUnicodeStringConst {
 
 declare_expression!(
     ExInstrumentationEvent,
+    /// Event type
     event_type: EScriptInstrumentationType,
+    /// Event name
     event_name: Option<FName>
 );
 impl ExInstrumentationEvent {
+    /// Read a `ExInstrumentationEvent` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let event_type: EScriptInstrumentationType =
             EScriptInstrumentationType::try_from(asset.read_u8()?)?;
@@ -2409,8 +2759,13 @@ impl KismetExpressionTrait for ExInstrumentationEvent {
     }
 }
 
-declare_expression!(ExFloatConst, value: OrderedFloat<f32>);
+declare_expression!(
+    ExFloatConst,
+    /// Value
+    value: OrderedFloat<f32>
+);
 impl ExFloatConst {
+    /// Read a `ExFloatConst` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFloatConst {
             token: EExprToken::ExFloatConst,
@@ -2426,28 +2781,51 @@ impl KismetExpressionTrait for ExFloatConst {
 }
 
 implement_expression!(
+    /// Breakpoint. Only observed in the editor, otherwise it behaves like ExNothing.
     ExBreakpoint,
+    /// Deprecated operation
     ExDeprecatedOp4A,
+    /// End an array
     ExEndArray,
+    /// End an array const
     ExEndArrayConst,
+    /// End of function call parameters.
     ExEndFunctionParms,
+    /// End a map
     ExEndMap,
+    /// End a constant map
     ExEndMapConst,
+    /// Last byte in script code
     ExEndOfScript,
+    /// end of default value for optional function parameter
     ExEndParmValue,
+    /// End a set
     ExEndSet,
+    /// End a set const
     ExEndSetConst,
+    /// End of UStruct constant
     ExEndStructConst,
+    /// Bool False.
     ExFalse,
+    /// One.
     ExIntOne,
+    /// Zero.
     ExIntZero,
+    /// A null interface (similar to ExNoObject, but for interfaces)
     ExNoInterface,
+    /// NoObject.
     ExNoObject,
+    /// No operation.
     ExNothing,
+    /// continue execution at the last address previously pushed onto the execution flow stack.
     ExPopExecutionFlow,
+    /// Self object.
     ExSelf,
+    /// Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
     ExTracepoint,
+    /// Bool True.
     ExTrue,
+    /// Trace point.  Only observed in the editor, otherwise it behaves like ExNothing.
     ExWireTracepoint
 );
 

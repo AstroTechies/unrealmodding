@@ -1,3 +1,5 @@
+//! Unreal Engine version
+
 use lazy_static::lazy_static;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -16,7 +18,9 @@ use crate::{
 #[repr(i32)]
 #[allow(non_camel_case_types)]
 pub enum EngineVersion {
+    /// Unknown
     UNKNOWN,
+    /// Oldest loadable package
     VER_UE4_OLDEST_LOADABLE_PACKAGE,
 
     /// 4.0
@@ -81,6 +85,7 @@ pub enum EngineVersion {
 
     /// The newest specified version of the Unreal Engine.
     VER_UE4_AUTOMATIC_VERSION,
+    /// Version plus one
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE,
 }
 
@@ -210,6 +215,7 @@ lazy_static! {
         )]);
 }
 
+/// Get possible engine versions for given object versions
 pub fn get_possible_versions(
     object_version: ObjectVersion,
     object_version_ue5: ObjectVersionUE5,
@@ -233,6 +239,7 @@ pub fn get_possible_versions(
     possible_versions
 }
 
+/// Get object versions for a given engine version
 pub fn get_object_versions(engine_version: EngineVersion) -> (ObjectVersion, ObjectVersionUE5) {
     if engine_version == EngineVersion::UNKNOWN {
         return (ObjectVersion::UNKNOWN, ObjectVersionUE5::UNKNOWN);
@@ -253,6 +260,7 @@ pub fn get_object_versions(engine_version: EngineVersion) -> (ObjectVersion, Obj
     (object_version, object_version_ue5)
 }
 
+/// Guess the engine version from the object versions and an array of custom versions
 pub fn guess_engine_version(
     object_version: ObjectVersion,
     object_version_ue5: ObjectVersionUE5,

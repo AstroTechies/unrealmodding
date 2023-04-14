@@ -1,3 +1,5 @@
+//! Font data property
+
 use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -10,6 +12,7 @@ use crate::{
     types::{FName, Guid, PackageIndex},
 };
 
+/// Font hinting
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum EFontHinting {
@@ -25,6 +28,7 @@ pub enum EFontHinting {
     None,
 }
 
+/// Font loading policy
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum EFontLoadingPolicy {
@@ -36,18 +40,25 @@ pub enum EFontLoadingPolicy {
     Inline,
 }
 
+/// Font data
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FontData {
     /// UObject
     local_font_face_asset: PackageIndex,
+    /// Font filename
     font_filename: Option<String>,
+    /// Hinting
     hinting: Option<EFontHinting>,
+    /// Loading policy
     loading_policy: Option<EFontLoadingPolicy>,
+    /// Sub face index
     sub_face_index: Option<i32>,
+    /// Is cooked
     is_cooked: bool,
 }
 
 impl FontData {
+    /// Read `FontData` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Option<Self>, Error> {
         if asset.get_custom_version::<FEditorObjectVersion>().version
             < FEditorObjectVersion::AddedFontFaceAssets as i32
@@ -85,6 +96,7 @@ impl FontData {
         }))
     }
 
+    /// Write `FontData` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         if asset.get_custom_version::<FEditorObjectVersion>().version
             < FEditorObjectVersion::AddedFontFaceAssets as i32
@@ -114,16 +126,22 @@ impl FontData {
     }
 }
 
+/// Font data property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FontDataProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Font data
     pub value: Option<FontData>,
 }
 impl_property_data_trait!(FontDataProperty);
 
 impl FontDataProperty {
+    /// Read a `FontDataProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

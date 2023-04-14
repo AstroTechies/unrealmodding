@@ -1,3 +1,5 @@
+//! Array property
+
 use std::io::SeekFrom;
 
 use byteorder::LittleEndian;
@@ -9,19 +11,26 @@ use crate::properties::{struct_property::StructProperty, Property, PropertyTrait
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{default_guid, FName, Guid, ToFName};
 
+/// Array property
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Array type
     pub array_type: Option<FName>,
+    /// Array values
     pub value: Vec<Property>,
-
+    /// Dummy property
     dummy_property: Option<StructProperty>,
 }
 impl_property_data_trait!(ArrayProperty);
 
 impl ArrayProperty {
+    /// Read an `ArrayProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -48,6 +57,7 @@ impl ArrayProperty {
         )
     }
 
+    /// Create an `ArrayProperty` from an array of properties
     pub fn from_arr(name: FName, array_type: Option<FName>, value: Vec<Property>) -> Self {
         ArrayProperty {
             name,
@@ -59,6 +69,7 @@ impl ArrayProperty {
         }
     }
 
+    /// Read an `ArrayProperty` from an asset without reading the property header
     #[allow(clippy::too_many_arguments)]
     pub fn new_no_header<Reader: AssetReader>(
         asset: &mut Reader,
@@ -169,6 +180,7 @@ impl ArrayProperty {
         })
     }
 
+    /// Write an `ArrayProperty` to an asset
     pub fn write_full<Writer: AssetWriter>(
         &self,
         asset: &mut Writer,

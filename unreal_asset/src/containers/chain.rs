@@ -1,5 +1,8 @@
+//! Chain for chaining two `Read` + `Seek` implementations
+
 use std::io::{Read, Result, Seek, SeekFrom};
 
+/// Chain for chaining two `Read` + `Seek` implementations
 pub struct Chain<C: Read + Seek> {
     first: C,
     second: Option<C>,
@@ -9,6 +12,7 @@ pub struct Chain<C: Read + Seek> {
 }
 
 impl<C: Read + Seek> Chain<C> {
+    /// Create a new chain
     pub fn new(mut first: C, mut second: Option<C>) -> Self {
         // ignore errors for now
         let first_len = first.seek(SeekFrom::End(0)).unwrap_or_default();

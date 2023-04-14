@@ -1,3 +1,5 @@
+//! Property export
+
 use byteorder::LittleEndian;
 
 use crate::exports::{
@@ -9,16 +11,21 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::uproperty::{UProperty, UPropertyTrait};
 use crate::Error;
 
+/// Property export
+///
+/// This is a `UProperty` export
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PropertyExport {
+    /// Base normal export
     pub normal_export: NormalExport,
-
+    /// Property
     pub property: UProperty,
 }
 
 implement_get!(PropertyExport);
 
 impl PropertyExport {
+    /// Read a `PropertyExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: &BaseExport,
         asset: &mut Reader,

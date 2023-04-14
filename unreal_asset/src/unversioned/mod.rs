@@ -1,3 +1,5 @@
+//! Allows reading unversioned assets using mappings
+
 use std::hash::Hash;
 use std::io::{self, Cursor};
 
@@ -18,46 +20,67 @@ pub mod usmap_writer;
 #[cfg(feature = "oodle")]
 pub(crate) mod oodle;
 
+/// Usmap file version
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum UsmapVersion {
+    /// Initial
     INITIAL,
+    /// Latest
     LATEST,
+    /// Latest plus one
     LATEST_PLUS_ONE,
 }
 
+/// Usmap file compression method
 #[derive(Debug, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ECompressionMethod {
+    /// None
     None,
+    /// Oodle
     Oodle,
+    /// Brotli
     Brotli,
 
+    /// Unknown
     Unknown = 0xFF,
 }
 
+/// Usmap file schema
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapSchema {
+    /// Name
     pub name: String,
+    /// Super type
     pub super_type: String,
+    /// Properties count
     pub prop_count: u16,
+    /// Properties
     pub properties: Vec<UsmapProperty>,
 }
 
+/// Usmap file
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Usmap {
+    /// File version
     pub version: UsmapVersion,
+    /// Name map
     pub name_map: Vec<String>,
+    /// Enum map
     pub enum_map: IndexedMap<String, Vec<String>>,
+    /// Schemas
     pub schemas: IndexedMap<String, UsmapSchema>,
 
+    /// Binary cursor
     cursor: Cursor<Vec<u8>>,
 }
 
 impl Usmap {
     const ASSET_MAGIC: u16 = u16::from_be_bytes([0xc4, 0x30]);
 
+    /// Parse usmap file header
     fn parse_header(&mut self) -> Result<(), Error> {
         let magic = self.cursor.read_u16::<LittleEndian>()?;
         if magic != Usmap::ASSET_MAGIC {
@@ -107,6 +130,7 @@ impl Usmap {
         Ok(())
     }
 
+    /// Parse usmap file
     pub fn parse_data(&mut self) -> Result<(), Error> {
         self.parse_header()?;
 
@@ -158,6 +182,7 @@ impl Usmap {
         Ok(())
     }
 
+    /// Create a new usmap file
     pub fn new(cursor: Cursor<Vec<u8>>) -> Result<Self, Error> {
         Ok(Usmap {
             version: UsmapVersion::INITIAL,

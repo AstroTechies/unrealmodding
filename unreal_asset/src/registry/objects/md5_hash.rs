@@ -1,14 +1,19 @@
+//! MD5 hash
+//!
 use byteorder::LittleEndian;
 
 use crate::error::Error;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
+/// Unreal MD5 hash
 #[derive(Debug)]
 pub struct FMD5Hash {
+    /// Hash
     pub hash: Option<[u8; 16]>,
 }
 
 impl FMD5Hash {
+    /// Read a `FMD5Hash` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut hash = None;
 
@@ -22,6 +27,7 @@ impl FMD5Hash {
         Ok(Self { hash })
     }
 
+    /// Write a `FMD5Hash` to an asset
     pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         if let Some(hash) = &self.hash {
             writer.write_u32::<LittleEndian>(1)?;

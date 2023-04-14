@@ -1,3 +1,5 @@
+//! Smart name property
+
 use byteorder::LittleEndian;
 
 use crate::custom_version::FAnimPhysObjectVersion;
@@ -10,19 +12,26 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 use crate::Error;
 
+/// Smart name property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SmartNameProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
-
+    /// Display name
     pub display_name: FName,
+    /// Smart name id
     pub smart_name_id: Option<u16>,
+    /// Temporary guid
     pub temp_guid: Option<Guid>,
 }
 impl_property_data_trait!(SmartNameProperty);
 
 impl SmartNameProperty {
+    /// Read a `SmartNameProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

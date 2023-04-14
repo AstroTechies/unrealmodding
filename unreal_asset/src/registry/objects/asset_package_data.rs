@@ -1,3 +1,5 @@
+//! Asset bundle asset package data
+
 use byteorder::LittleEndian;
 
 use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
@@ -6,23 +8,36 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::registry::objects::md5_hash::FMD5Hash;
 use crate::types::{FName, Guid};
 
+/// Asset package data
 #[derive(Debug)]
 pub struct AssetPackageData {
+    /// Package name
     pub package_name: FName,
+    /// Package guid
     pub package_guid: Guid,
+    /// Cooked hash
     pub cooked_hash: Option<FMD5Hash>,
+    /// Imported classes
     pub imported_classes: Option<Vec<FName>>,
+    /// Size on disk
     pub disk_size: i64,
+    /// File version
     pub file_version: i32,
+    /// UE5 file version
     pub ue5_version: Option<i32>,
+    /// File version licensee
     pub file_version_licensee_ue: i32,
+    /// Custom versions
     pub custom_versions: Option<Vec<CustomVersion>>,
+    /// Flags
     pub flags: u32,
 
+    /// Asset registry version
     version: FAssetRegistryVersionType,
 }
 
 impl AssetPackageData {
+    /// Read `AssetPackageData` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
@@ -77,6 +92,7 @@ impl AssetPackageData {
         })
     }
 
+    /// Write `AssetPackageData` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.package_name)?;
         asset.write_i64::<LittleEndian>(self.disk_size)?;

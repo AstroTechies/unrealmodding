@@ -1,8 +1,11 @@
+//! Oodle decompresion
+
 #[cfg(feature = "oodle")]
 // #[cfg(all(target_os = "win32", target_arch = "x64"))]
 #[link(name = "oo2core_9_win64")]
 #[allow(non_snake_case)]
 extern "C" {
+    /// Decompress an oodle compressed buffer
     pub fn OodleLZ_Decompress(
         buffer: *const u8,
         buffer_size: u64,
@@ -21,6 +24,7 @@ extern "C" {
     ) -> i32;
 }
 
+/// Decompress an oodle compressed buffer
 #[cfg(feature = "oodle")]
 pub fn decompress(buffer: &[u8], size: u64, uncompressed_size: u64) -> Option<Vec<u8>> {
     let mut decompressed_buffer = Vec::with_capacity(uncompressed_size as usize);

@@ -1,3 +1,5 @@
+//! Binary archive writer
+
 use std::io::{self, Cursor, Seek, Write};
 
 use byteorder::WriteBytesExt;
@@ -15,14 +17,19 @@ use crate::Import;
 
 /// A binary writer
 pub struct RawWriter<'cursor> {
+    /// Writer cursor
     cursor: &'cursor mut Cursor<Vec<u8>>,
+    /// Object version
     object_version: ObjectVersion,
+    /// UE5 object version
     object_version_ue5: ObjectVersionUE5,
 
+    /// Dummy name map
     empty_map: IndexedMap<String, String>,
 }
 
 impl<'cursor> RawWriter<'cursor> {
+    /// Create a new instance of `RawWriter` with the specified object versions
     pub fn new(
         cursor: &'cursor mut Cursor<Vec<u8>>,
         object_version: ObjectVersion,

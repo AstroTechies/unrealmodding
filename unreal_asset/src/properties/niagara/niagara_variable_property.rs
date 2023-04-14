@@ -1,3 +1,5 @@
+//! Niagara variable property
+
 use byteorder::LittleEndian;
 
 use crate::{
@@ -7,14 +9,19 @@ use crate::{
     types::FName,
 };
 
+/// Niagara variable property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableProperty {
+    /// Base struct property
     pub struct_property: StructProperty,
+    /// Variable name
     pub variable_name: FName,
+    /// Variable offset
     pub variable_offset: i32,
 }
 
 impl NiagaraVariableProperty {
+    /// Read a `NiagaraVariableProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -86,12 +93,15 @@ impl PropertyTrait for NiagaraVariableProperty {
     }
 }
 
+/// Niagara variable with offset property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableWithOffsetProperty {
+    /// Variable
     pub niagara_variable: NiagaraVariableProperty,
 }
 
 impl NiagaraVariableWithOffsetProperty {
+    /// Read a `NiagaraVariableWithOffsetProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

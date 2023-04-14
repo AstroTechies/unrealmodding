@@ -1,12 +1,15 @@
+//! Raw export
+
 use crate::error::Error;
 use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 
-/// An export that failed to deserialize is storead as `Vec<u8>`
+/// An export that failed to deserialize is stored as `Vec<u8>`
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawExport {
+    /// Base export
     pub base_export: BaseExport,
-
+    /// Raw data
     pub data: Vec<u8>,
 }
 
@@ -31,6 +34,7 @@ impl ExportBaseTrait for RawExport {
 }
 
 impl RawExport {
+    /// Read `RawExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         base: BaseExport,
         asset: &mut Reader,

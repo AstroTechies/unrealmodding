@@ -1,3 +1,5 @@
+//! Level export
+
 use byteorder::LittleEndian;
 
 use crate::error::Error;
@@ -9,20 +11,28 @@ use crate::implement_get;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::PackageIndex;
 
+/// Level export
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
+    /// Base normal export
     pub normal_export: NormalExport,
 
+    /// Level actors
     pub actors: Vec<PackageIndex>,
+    /// Level namespace
     pub namespace: Option<String>,
+    /// Value
     pub value: Option<String>,
+    /// Flags?
     pub flags_probably: u64,
+    /// Misc category data
     pub misc_category_data: Vec<PackageIndex>,
 }
 
 implement_get!(LevelExport);
 
 impl LevelExport {
+    /// Read a `LevelExport` from an asset
     pub fn from_base<Reader: AssetReader>(
         unk: &BaseExport,
         asset: &mut Reader,

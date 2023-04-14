@@ -1,3 +1,5 @@
+//! Vector properties
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -12,85 +14,132 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::vector::{Vector, Vector4};
 use crate::types::{FName, Guid};
 
+/// Vector property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct VectorProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Vector value
     pub value: Vector<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(VectorProperty);
 
+/// Int point property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct IntPointProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// X component
     pub x: i32,
+    /// Y component
     pub y: i32,
 }
 impl_property_data_trait!(IntPointProperty);
 
+/// Vector4 property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector4Property {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Vector4 value
     pub value: Vector4<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(Vector4Property);
 
+/// Vector2D property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector2DProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// X component
     pub x: OrderedFloat<f32>,
+    /// Y component
     pub y: OrderedFloat<f32>,
 }
 impl_property_data_trait!(Vector2DProperty);
 
+/// Quaternion property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct QuatProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Quaternion value
     pub value: Vector4<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(QuatProperty);
 
+/// Rotator property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct RotatorProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Rotator value
     pub value: Vector<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(RotatorProperty);
 
+/// Box property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct BoxProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// First box corner
     pub v1: VectorProperty,
+    /// Second box corner
     pub v2: VectorProperty,
+    /// Is box valid
     pub is_valid: bool,
 }
 impl_property_data_trait!(BoxProperty);
 
+/// Box2D property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Box2DProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Top-left box corner
     pub v1: Vector2DProperty,
+    /// Bottom-right box corner
     pub v2: Vector2DProperty,
+    /// Is box valid
     pub is_valid: bool,
 }
 impl_property_data_trait!(Box2DProperty);
 
 impl VectorProperty {
+    /// Read a `VectorProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -127,6 +176,7 @@ impl PropertyTrait for VectorProperty {
 }
 
 impl IntPointProperty {
+    /// Read an `IntPointProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -161,6 +211,7 @@ impl PropertyTrait for IntPointProperty {
 }
 
 impl Vector4Property {
+    /// Read a `Vector4Property` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -199,6 +250,7 @@ impl PropertyTrait for Vector4Property {
 }
 
 impl Vector2DProperty {
+    /// Read a `Vector2DProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -234,6 +286,7 @@ impl PropertyTrait for Vector2DProperty {
 }
 
 impl QuatProperty {
+    /// Read a `QuatProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -273,6 +326,7 @@ impl PropertyTrait for QuatProperty {
 }
 
 impl RotatorProperty {
+    /// Read a `RotatorProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -310,6 +364,7 @@ impl PropertyTrait for RotatorProperty {
 }
 
 impl BoxProperty {
+    /// Read a `BoxProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -351,6 +406,7 @@ impl PropertyTrait for BoxProperty {
 }
 
 impl Box2DProperty {
+    /// Read a `Box2DProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

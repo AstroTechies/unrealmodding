@@ -1,3 +1,5 @@
+//! Int properties
+
 use std::io::SeekFrom;
 use std::mem::size_of;
 
@@ -13,9 +15,11 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::simple_property_write;
 use crate::types::{FName, Guid};
 
+/// Implement a simple integer property
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {
         impl $property_type {
+            /// Read `$property_type` from an asset
             pub fn new<Reader: AssetReader>(
                 asset: &mut Reader,
                 name: FName,
@@ -38,113 +42,173 @@ macro_rules! impl_int_property {
     };
 }
 
+/// Int8 property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int8Property {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Int8 value
     pub value: i8,
 }
 impl_property_data_trait!(Int8Property);
 
+/// Byte property value
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum BytePropertyValue {
+    /// Byte variant
     Byte(u8),
+    /// FName variant
     FName(FName),
 }
 
+/// Byte property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ByteProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Enum type
     pub enum_type: Option<FName>,
+    /// Byte value
     pub value: BytePropertyValue,
 }
 impl_property_data_trait!(ByteProperty);
 
+/// Bool property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct BoolProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Boolean value
     pub value: bool,
 }
 impl_property_data_trait!(BoolProperty);
 
+/// Int32 property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct IntProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Int32 value
     pub value: i32,
 }
 impl_property_data_trait!(IntProperty);
 
+/// Int16 property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int16Property {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Int16 value
     pub value: i16,
 }
 impl_property_data_trait!(Int16Property);
 
+/// Int64 property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int64Property {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Int64 value
     pub value: i64,
 }
 impl_property_data_trait!(Int64Property);
 
+/// UInt16 property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt16Property {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// UInt16 value
     pub value: u16,
 }
 impl_property_data_trait!(UInt16Property);
 
+/// UInt32 property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt32Property {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// UInt32 value
     pub value: u32,
 }
 impl_property_data_trait!(UInt32Property);
 
+/// UInt64 property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt64Property {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// UInt64 value
     pub value: u64,
 }
 impl_property_data_trait!(UInt64Property);
 
+/// Float property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FloatProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Float value
     pub value: OrderedFloat<f32>,
 }
 impl_property_data_trait!(FloatProperty);
 
+/// Double property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DoubleProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Double value
     pub value: OrderedFloat<f64>,
 }
 impl_property_data_trait!(DoubleProperty);
 
 impl BoolProperty {
+    /// Read a `BoolProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -177,6 +241,7 @@ impl PropertyTrait for BoolProperty {
 }
 
 impl Int8Property {
+    /// Read an `Int8Property` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -207,6 +272,7 @@ impl PropertyTrait for Int8Property {
 }
 
 impl ByteProperty {
+    /// Read byte property value
     fn read_value<Reader: AssetReader>(
         asset: &mut Reader,
         length: i64,
@@ -240,6 +306,7 @@ impl ByteProperty {
         })
     }
 
+    /// Read a `ByteProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -295,6 +362,7 @@ impl PropertyTrait for ByteProperty {
 }
 
 impl FloatProperty {
+    /// Read a `FloatProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -326,6 +394,7 @@ impl PropertyTrait for FloatProperty {
 }
 
 impl DoubleProperty {
+    /// Read a `DoubleProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

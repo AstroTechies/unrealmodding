@@ -1,3 +1,5 @@
+//! Unreal movies
+
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
@@ -26,19 +28,27 @@ pub mod movie_scene_track_identifier_property;
 pub mod movie_scene_track_implementation_ptr_property;
 pub mod section_evaluation_data_tree_property;
 
+/// Movie scene tangent data
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneTangentData {
+    /// Arrive tangent
     pub arrive_tangent: OrderedFloat<f32>,
+    /// Leave tangent
     pub leave_tangent: OrderedFloat<f32>,
+    /// Arrive tangent weight
     pub arrive_tangent_weight: OrderedFloat<f32>,
+    /// Leave tangent weight
     pub leave_tangent_weight: OrderedFloat<f32>,
+    /// Tangent weight mode
     pub tangent_weight_mode: RichCurveTangentWeightMode,
+    /// Padding
     pub padding: Vec<u8>,
-
+    /// Is compiled with clang win64
     clang_win64: bool,
 }
 
 impl MovieSceneTangentData {
+    /// Read `MovieSceneTangentData` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader, clang_win64: bool) -> Result<Self, Error> {
         let arrive_tangent = asset.read_f32::<LittleEndian>()?;
         let leave_tangent = asset.read_f32::<LittleEndian>()?;
@@ -65,6 +75,7 @@ impl MovieSceneTangentData {
         })
     }
 
+    /// Write `MovieSceneTangentData` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_f32::<LittleEndian>(self.arrive_tangent.0)?;
         asset.write_f32::<LittleEndian>(self.leave_tangent.0)?;

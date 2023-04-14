@@ -1,3 +1,5 @@
+//! Struct property
+
 use std::mem::size_of;
 
 use crate::{
@@ -7,12 +9,15 @@ use crate::{
 
 use super::{EPropertyType, UsmapPropertyDataTrait};
 
+/// Struct property data
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapStructPropertyData {
+    /// Struct type
     pub struct_type: String,
 }
 
 impl UsmapStructPropertyData {
+    /// Read a `UsmapStructPropertyData` from an asset
     pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
         let struct_type = asset.read_name()?;
 

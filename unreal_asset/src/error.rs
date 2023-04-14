@@ -184,22 +184,27 @@ pub enum Error {
 }
 
 impl Error {
+    /// Create an `Error` for a case where expected data was not found
     pub fn no_data(msg: String) -> Self {
         Error::NoData(msg.into_boxed_str())
     }
 
+    /// Create an `Error` when an FName pointer was out of range
     pub fn fname(index: i32, name_map_size: usize) -> Self {
         Error::FName(index, name_map_size)
     }
 
+    /// Create an `Error` when the file was invalid
     pub fn invalid_file(msg: String) -> Self {
         Error::InvalidFile(msg.into_boxed_str())
     }
 
+    /// Create an `Error` when a package index is invalid
     pub fn invalid_package_index(msg: String) -> Self {
         Error::InvalidPackageIndex(msg.into_boxed_str())
     }
 
+    /// Create an `Error` when a part of the library is not implemented
     pub fn unimplemented(msg: String) -> Self {
         Error::Unimplemented(msg.into_boxed_str())
     }

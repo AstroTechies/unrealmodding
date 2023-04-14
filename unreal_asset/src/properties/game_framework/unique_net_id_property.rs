@@ -1,3 +1,5 @@
+//! Unique network id property
+
 use std::{io::SeekFrom, mem::size_of};
 
 use byteorder::LittleEndian;
@@ -10,22 +12,31 @@ use crate::{
     types::{FName, Guid},
 };
 
+/// Unique network id
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UniqueNetId {
+    /// Type
     pub ty: FName,
+    /// Contents
     pub contents: Option<String>,
 }
 
+/// Unique network id property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UniqueNetIdProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: Option<UniqueNetId>,
 }
 impl_property_data_trait!(UniqueNetIdProperty);
 
 impl UniqueNetIdProperty {
+    /// Read a `UniqueNetIdProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

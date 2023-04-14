@@ -1,3 +1,5 @@
+//! Per platform properties
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -11,34 +13,50 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Per platform bool property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Values for each platform
     pub value: Vec<bool>,
 }
 impl_property_data_trait!(PerPlatformBoolProperty);
 
+/// Per platform int property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Values for each platform
     pub value: Vec<i32>,
 }
 impl_property_data_trait!(PerPlatformIntProperty);
 
+/// Per platform float property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Values for each platform
     pub value: Vec<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(PerPlatformFloatProperty);
 
 impl PerPlatformBoolProperty {
+    /// Read a `PerPlatformBoolProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -80,6 +98,7 @@ impl PropertyTrait for PerPlatformBoolProperty {
 }
 
 impl PerPlatformIntProperty {
+    /// Read a `PerPlatformIntProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -121,6 +140,7 @@ impl PropertyTrait for PerPlatformIntProperty {
 }
 
 impl PerPlatformFloatProperty {
+    /// Read a `PerPlatformFloatProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

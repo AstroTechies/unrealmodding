@@ -1,19 +1,39 @@
+#![deny(missing_docs)]
 //! This crate is used for parsing Unreal Engine uasset files
 //!
 //! # Examples
 //!
-//! ```no_run
-//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), None, EngineVersion::VER_UE4_23);
+//! ## Reading an asset that doesn't use bulk data
 //!
-//! println!("{:#?}", asset.engine_version);
+//! ```no_run
+//! use std::fs::File;
+//!
+//! use unreal_asset::{
+//!     Asset,
+//!     engine_version::EngineVersion,
+//! };
+//!
+//! let mut file = File::open("asset.uasset").unwrap();
+//! let mut asset = Asset::new(file, None, EngineVersion::VER_UE4_23).unwrap();
+//!
+//! println!("{:#?}", asset);
 //! ```
 //!
 //! ## Reading an asset that uses bulk data
 //!
 //! ```no_run
-//! let mut asset = Asset:new(File::open("asset.uasset").unwrap(), Some(File::open("asset.uexp").unwrap(), EngineVersion::VER_UE4_23));
+//! use std::fs::File;
 //!
-//! println!("{:#?}", asset.engine_version);
+//! use unreal_asset::{
+//!     Asset,
+//!     engine_version::EngineVersion,
+//! };
+//!
+//! let mut file = File::open("asset.uasset").unwrap();
+//! let mut bulk_file = File::open("asset.uexp").unwrap();
+//! let mut asset = Asset::new(file, Some(bulk_file), EngineVersion::VER_UE4_23).unwrap();
+//!
+//! println!("{:#?}", asset);
 //! ```
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Formatter};
@@ -36,7 +56,6 @@ pub mod exports;
 pub mod flags;
 pub mod fproperty;
 pub mod kismet;
-pub(crate) mod macros;
 pub mod object_version;
 pub mod properties;
 pub mod reader;
@@ -68,7 +87,14 @@ use unversioned::Usmap;
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```no_run,ignore
+/// use unreal_asset::{
+///     cast,
+///     properties::{
+///         Property,
+///         int_property::DoubleProperty,
+///     },
+/// };
 /// let a: Property = ...;
 /// let b: &DoubleProperty = cast!(Property, DoubleProperty, &a).unwrap();
 /// ```
@@ -87,13 +113,18 @@ macro_rules! cast {
 /// This is used for referencing other assets
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Import {
+    /// Class package
     pub class_package: FName,
+    /// Class name
     pub class_name: FName,
+    /// Outer index
     pub outer_index: PackageIndex,
+    /// Object name
     pub object_name: FName,
 }
 
 impl Import {
+    /// Create a new `Import` instance
     pub fn new(
         class_package: FName,
         class_name: FName,
@@ -112,23 +143,37 @@ impl Import {
 /// Parent Class Info
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ParentClassInfo {
+    /// Parent classpath
     pub parent_class_path: FName,
+    /// Parent class export name
     pub parent_class_export_name: FName,
 }
 
 const UE4_ASSET_MAGIC: u32 = u32::from_be_bytes([0xc1, 0x83, 0x2a, 0x9e]);
 
+/// Asset header
 struct AssetHeader {
+    /// Name map offset
     name_offset: i32,
+    /// Imports offset
     import_offset: i32,
+    /// Exports offset
     export_offset: i32,
+    /// Dependencies offset
     depends_offset: i32,
+    /// Soft package references offset
     soft_package_reference_offset: i32,
+    /// Asset registry data offset
     asset_registry_data_offset: i32,
+    /// World tile info offset
     world_tile_info_offset: i32,
+    /// Preload dependency count
     preload_dependency_count: i32,
+    /// Preload dependency offset
     preload_dependency_offset: i32,
+    /// Header offset
     header_offset: i32,
+    /// Bulk data start offset
     bulk_data_start_offset: i64,
 }
 
@@ -139,14 +184,23 @@ pub struct Asset<C: Read + Seek> {
     cursor: Chain<C>,
 
     // parsed data
+    /// Asset info
     pub info: String,
+    /// Does asset use .uexp files
     pub use_separate_bulk_data_files: bool,
+    /// Object version
     pub object_version: ObjectVersion,
+    /// UE5 object version
     pub object_version_ue5: ObjectVersionUE5,
+    /// Legacy file version
     pub legacy_file_version: i32,
+    /// Is asset unversioned
     pub unversioned: bool,
+    /// File license version
     pub file_license_version: i32,
+    /// Custom versions
     pub custom_versions: Vec<CustomVersion>,
+
     // imports
     // exports
     // depends map
@@ -154,51 +208,94 @@ pub struct Asset<C: Read + Seek> {
     // asset registry data
     // world tile info
     // preload dependencies
+    /// Generations
     pub generations: Vec<GenerationInfo>,
+    /// Asset guid
     pub package_guid: Guid,
+    /// Recorded engine version
     pub engine_version_recorded: FEngineVersion,
+    /// Compatible engine version
     pub engine_version_compatible: FEngineVersion,
+    /// Chunk ids
     chunk_ids: Vec<i32>,
+    /// Asset flags
     pub package_flags: u32,
+    /// Asset source
     pub package_source: u32,
+    /// Folder name
     pub folder_name: String,
+
     // map struct type override
     // override name map hashes
+    // todo: isn't this just AssetHeader?
+    /// Header offset
     header_offset: i32,
+    /// Name count
     name_count: i32,
+    /// Name offset
     name_offset: i32,
+    /// Gatherable text data count
     gatherable_text_data_count: i32,
+    /// Gatherable text data offset
     gatherable_text_data_offset: i32,
+    /// Export count
     export_count: i32,
+    /// Exports offset
     export_offset: i32,
+    /// Import count
     import_count: i32,
+    /// Imports offset
     import_offset: i32,
+    /// Depends offset
     depends_offset: i32,
+    /// Soft package reference count
     soft_package_reference_count: i32,
+    /// Soft package reference offset
     soft_package_reference_offset: i32,
+    /// Searchable names offset
     searchable_names_offset: i32,
+    /// Thumbnail table offset
     thumbnail_table_offset: i32,
+    /// Compression flags
     compression_flags: u32,
+    /// Asset registry data offset
     asset_registry_data_offset: i32,
+    /// Bulk data start offset
     bulk_data_start_offset: i64,
+    /// World tile info offset
     world_tile_info_offset: i32,
+    /// Preload dependency count
     preload_dependency_count: i32,
+    /// Preload dependency offset
     preload_dependency_offset: i32,
 
+    /// Overriden name map hashes
     pub override_name_map_hashes: IndexedMap<String, u32>,
+    /// Name map index list
     name_map_index_list: Vec<String>,
+    /// Name map lookup
     name_map_lookup: IndexedMap<u64, i32>,
+    /// Imports
     pub imports: Vec<Import>,
+    /// Exports
     pub exports: Vec<Export>,
+    /// Depends map
     depends_map: Option<Vec<Vec<i32>>>,
+    /// Soft package reference list
     soft_package_reference_list: Option<Vec<String>>,
+    /// World tile info
     pub world_tile_info: Option<FWorldTileInfo>,
 
+    /// Array struct type overrides
     pub array_struct_type_override: IndexedMap<String, String>,
+    /// Map key overrides
     pub map_key_override: IndexedMap<String, String>,
+    /// Map value overrides
     pub map_value_override: IndexedMap<String, String>,
+    /// .usmap mappings
     pub mappings: Option<Usmap>,
 
+    /// Parent class
     parent_class: Option<ParentClassInfo>,
 }
 
@@ -720,6 +817,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Ok(asset)
     }
 
+    /// Set asset engine version
     fn set_engine_version(&mut self, engine_version: EngineVersion) {
         if engine_version == EngineVersion::UNKNOWN {
             return;
@@ -731,6 +829,8 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.object_version_ue5 = object_version_ue5;
         self.custom_versions = CustomVersion::get_default_custom_version_container(engine_version);
     }
+
+    /// Parse asset header
     fn parse_header(&mut self) -> Result<(), Error> {
         // reuseable buffers for reading
 
@@ -906,6 +1006,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Ok(())
     }
 
+    /// Asset data length
     pub fn data_length(&mut self) -> u64 {
         let pos = self.cursor.stream_position().unwrap_or_default();
         let len = self.cursor.seek(SeekFrom::End(0)).unwrap_or_default();
@@ -913,6 +1014,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         len
     }
 
+    /// Read a name map string
     fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
         let s = self
             .cursor
@@ -925,6 +1027,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Ok((hashes, s))
     }
 
+    /// Search an FName reference
     pub fn search_name_reference(&self, name: &String) -> Option<i32> {
         let mut s = DefaultHasher::new();
         name.hash(&mut s);
@@ -932,6 +1035,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.name_map_lookup.get_by_key(&s.finish()).copied()
     }
 
+    /// Add an FName reference
     pub fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
         if !force_add_duplicates {
             let existing = self.search_name_reference(&name);
@@ -950,10 +1054,12 @@ impl<'a, C: Read + Seek> Asset<C> {
         (self.name_map_lookup.len() - 1) as i32
     }
 
+    /// Get all FNames
     pub fn get_name_map_index_list(&self) -> &[String] {
         &self.name_map_index_list
     }
 
+    /// Get a name reference by an FName map index
     pub fn get_name_reference(&self, index: i32) -> String {
         if index < 0 {
             return (-index).to_string(); // is this right even?
@@ -964,16 +1070,19 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.name_map_index_list[index as usize].to_owned()
     }
 
+    /// Get a mutable name reference by an FName map index
     pub fn get_name_reference_mut(&mut self, index: i32) -> &mut String {
         &mut self.name_map_index_list[index as usize]
     }
 
+    /// Add an `FName`
     pub fn add_fname(&mut self, slice: &str) -> FName {
         let name = FName::from_slice(slice);
         self.add_name_reference(name.content.clone(), false);
         name
     }
 
+    /// Add an `Import`
     pub fn add_import(&mut self, import: Import) -> PackageIndex {
         let index = -(self.imports.len() as i32) - 1;
         let import = import;
@@ -1012,6 +1121,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.parent_class.as_ref()
     }
 
+    /// Find an import
     pub fn find_import(
         &self,
         class_package: &FName,
@@ -1032,6 +1142,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         None
     }
 
+    /// Find an import without specifying outer index
     pub fn find_import_no_index(
         &self,
         class_package: &FName,
@@ -1050,6 +1161,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         None
     }
 
+    /// Get an export
     pub fn get_export(&'a self, index: PackageIndex) -> Option<&'a Export> {
         if !index.is_export() {
             return None;
@@ -1064,6 +1176,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Some(&self.exports[index as usize])
     }
 
+    /// Get a mutable export reference
     pub fn get_export_mut(&'a mut self, index: PackageIndex) -> Option<&'a mut Export> {
         if !index.is_export() {
             return None;
@@ -1078,6 +1191,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Some(&mut self.exports[index as usize])
     }
 
+    /// Parse asset data
     fn parse_data(&mut self) -> Result<(), Error> {
         self.parse_header()?;
         self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
@@ -1282,6 +1396,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Ok(())
     }
 
+    /// Read an `Export`
     fn read_export(&mut self, base_export: &BaseExport, i: usize) -> Result<Export, Error> {
         let next_starting = match i < (self.exports.len() - 1) {
             true => match &self.exports[i + 1] {
@@ -1376,6 +1491,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Ok(export)
     }
 
+    /// Write asset header
     fn write_header<Writer: AssetWriter>(
         &self,
         cursor: &mut Writer,
@@ -1493,6 +1609,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Ok(())
     }
 
+    /// Write `Export` header
     fn write_export_header<Writer: AssetWriter>(
         &self,
         unk: &BaseExport,
@@ -1565,6 +1682,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         Ok(())
     }
 
+    /// Write asset data
     pub fn write_data<W: Read + Seek + Write>(
         &self,
         cursor: &mut W,

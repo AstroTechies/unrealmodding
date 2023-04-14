@@ -30,20 +30,30 @@ pub(crate) mod name_table_reader;
 pub(crate) mod name_table_writer;
 pub mod objects;
 
+/// Asset registry state
 #[derive(Debug)]
 pub struct AssetRegistryState {
+    /// Assets data
     pub assets_data: Vec<AssetData>,
+    /// Depends nodes
     pub depends_nodes: Vec<DependsNode>,
+    /// Package data
     pub package_data: Vec<AssetPackageData>,
 
+    /// Name map
     name_map: Option<Vec<String>>,
+    /// Object version
     object_version: ObjectVersion,
+    /// UE5 Object version
     object_version_ue5: ObjectVersionUE5,
+    /// Name map lookup
     name_map_lookup: Option<IndexedMap<u64, i32>>,
+    /// Asset registry version
     version: FAssetRegistryVersionType,
 }
 
 impl AssetRegistryState {
+    /// Read an `AssetRegistryState` from an asset
     fn load<Reader: AssetReader>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
@@ -93,6 +103,7 @@ impl AssetRegistryState {
         Ok(())
     }
 
+    /// Write an `AssetRegistryState` to an asset
     fn write_data<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_i32::<LittleEndian>(self.assets_data.len() as i32)?;
         for asset_data in &self.assets_data {
@@ -148,13 +159,20 @@ impl AssetRegistryState {
     ///     path::Path,
     /// };
     ///
+    /// use unreal_asset::{
+    ///     engine_version::{self, EngineVersion},
+    ///     registry::AssetRegistryState,
+    ///     reader::raw_reader::RawReader,
+    /// };
+    ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();
     /// let mut data = Vec::new();
     /// file.read_to_end(&mut data).unwrap();
     ///
     /// let cursor = Cursor::new(data);
-    /// let raw_reader = RawReader::new(cursor, UE4_VER_23);
-    /// let asset_registry = AssetRegistryState::new(raw_reader).unwrap();
+    /// let (object_version, object_version_ue5) = engine_version::get_object_versions(EngineVersion::VER_UE4_25);
+    /// let mut raw_reader = RawReader::new(cursor, object_version, object_version_ue5);
+    /// let asset_registry = AssetRegistryState::new(&mut raw_reader).unwrap();
     ///
     /// println!("{:#?}", asset_registry);
     /// ```
@@ -228,13 +246,20 @@ impl AssetRegistryState {
     ///     path::Path,
     /// };
     ///
+    /// use unreal_asset::{
+    ///     engine_version::{self, EngineVersion},
+    ///     registry::AssetRegistryState,
+    ///     reader::raw_reader::RawReader,
+    /// };
+    ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();
     /// let mut data = Vec::new();
     /// file.read_to_end(&mut data).unwrap();
     ///
     /// let cursor = Cursor::new(data);
-    /// let raw_reader = RawReader::new(cursor, UE4_VER_23);
-    /// let asset_registry = AssetRegistryState::new(raw_reader).unwrap();
+    /// let (object_version, object_version_ue5) = engine_version::get_object_versions(EngineVersion::VER_UE4_25);
+    /// let mut raw_reader = RawReader::new(cursor, object_version, object_version_ue5);
+    /// let asset_registry = AssetRegistryState::new(&mut raw_reader).unwrap();
     ///
     /// let mut cursor = Cursor::new(Vec::new());
     /// asset_registry.write(&mut cursor).unwrap();

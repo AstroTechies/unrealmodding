@@ -9,18 +9,20 @@ use enum_dispatch::enum_dispatch;
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
-use crate::inner_trait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, PackageIndex, ToFName};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
+        /// $prop_name
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
+            /// Generic property
             pub generic_property: FGenericProperty,
         }
 
         impl $prop_name {
+            /// Read an `$prop_name` from an asset
             pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
@@ -38,16 +40,26 @@ macro_rules! parse_simple_property {
 }
 
 macro_rules! parse_simple_property_index {
-    ($prop_name:ident, $($index_name:ident),*) => {
+    (
+        $prop_name:ident,
+        $(
+            $(#[$inner:ident $($args:tt)*])*
+            $index_name:ident
+        ),*
+    ) => {
+        /// $prop_name
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
+            /// Generic property
             pub generic_property: FGenericProperty,
             $(
+                $(#[$inner $($args)*])*
                 pub $index_name: PackageIndex,
             )*
         }
 
         impl $prop_name {
+            /// Read an `$prop_name` from an asset
             pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
@@ -71,16 +83,26 @@ macro_rules! parse_simple_property_index {
 }
 
 macro_rules! parse_simple_property_prop {
-    ($prop_name:ident, $($prop:ident),*) => {
+    (
+        $prop_name:ident,
+        $(
+            $(#[$inner:ident $($args:tt)*])*
+            $prop:ident
+        ),*
+    ) => {
+        /// $prop_name
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
+            /// Generic property
             pub generic_property: FGenericProperty,
             $(
+                $(#[$inner $($args)*])*
                 pub $prop: Box<FProperty>,
             )*
         }
 
         impl $prop_name {
+            /// Read an `$prop_name` from an asset
             pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
@@ -106,54 +128,54 @@ macro_rules! parse_simple_property_prop {
 /// This must be implemented for all FProperties
 #[enum_dispatch]
 pub trait FPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
+    /// Write `FProperty` to an asset
     fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
+/// FProperty
 #[enum_dispatch(FPropertyTrait)]
+#[derive(Hash, PartialEq, Clone, Debug)]
 pub enum FProperty {
+    /// Generic FProperty
     FGenericProperty,
+    /// Enum
     FEnumProperty,
+    /// Array
     FArrayProperty,
+    /// Set
     FSetProperty,
+    /// Object
     FObjectProperty,
+    /// SoftObject
     FSoftObjectProperty,
+    /// Class
     FClassProperty,
+    /// SoftClass
     FSoftClassProperty,
+    /// Delegate
     FDelegateProperty,
+    /// MulticastDelegate
     FMulticastDelegateProperty,
+    /// MulticastInlineDelegate
     FMulticastInlineDelegateProperty,
+    /// Interface
     FInterfaceProperty,
+    /// Map
     FMapProperty,
+    /// Bool
     FBoolProperty,
+    /// Byte
     FByteProperty,
+    /// Struct
     FStructProperty,
+    /// Numeric
     FNumericProperty,
 }
-
-inner_trait!(
-    FProperty,
-    FGenericProperty,
-    FEnumProperty,
-    FArrayProperty,
-    FSetProperty,
-    FObjectProperty,
-    FSoftObjectProperty,
-    FClassProperty,
-    FSoftClassProperty,
-    FDelegateProperty,
-    FMulticastDelegateProperty,
-    FMulticastInlineDelegateProperty,
-    FInterfaceProperty,
-    FMapProperty,
-    FBoolProperty,
-    FByteProperty,
-    FStructProperty,
-    FNumericProperty
-);
 
 impl Eq for FProperty {}
 
 impl FProperty {
+    /// Read an `FProperty` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let serialized_type = asset.read_fname()?;
         let res: FProperty = match serialized_type.content.as_str() {
@@ -183,6 +205,7 @@ impl FProperty {
         Ok(res)
     }
 
+    /// Write an `FProperty` to an asset
     pub fn write<Writer: AssetWriter>(
         property: &FProperty,
         asset: &mut Writer,
@@ -224,39 +247,62 @@ impl ToFName for FProperty {
     }
 }
 
+/// Generic FProperty
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FGenericProperty {
+    /// Property name
     pub name: FName,
+    /// Object flags
     pub flags: EObjectFlags,
+    /// Array dimension
     pub array_dim: EArrayDim,
+    /// Array element size
     pub element_size: i32,
+    /// Property flags
     pub property_flags: EPropertyFlags,
+    /// Replication index
     pub rep_index: u16,
+    /// Replication notify function
     pub rep_notify_func: FName,
+    /// Replication condition
     pub blueprint_replication_condition: ELifetimeCondition,
+    /// Serialized type
     pub serialized_type: Option<FName>,
 }
 
+/// Enum FProperty
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FEnumProperty {
+    /// Generic property
     generic_property: FGenericProperty,
+    /// Enum value
     enum_value: PackageIndex,
+    /// Underlying property
     underlying_prop: Box<FProperty>,
 }
 
+/// Boolean FProperty
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FBoolProperty {
+    /// Generic property
     generic_property: FGenericProperty,
 
+    /// Field size
     field_size: u8,
+    /// Byte offset
     byte_offset: u8,
+    /// Byte mask
     byte_mask: u8,
+    /// Field mask
     field_mask: u8,
+    /// Is native boolean
     native_bool: bool,
+    /// Value
     value: bool,
 }
 
 impl FGenericProperty {
+    /// Read an `FGenericProperty` from an asset with a serialized type
     pub fn with_serialized_type<Reader: AssetReader>(
         asset: &mut Reader,
         serialized_type: Option<FName>,
@@ -286,6 +332,7 @@ impl FGenericProperty {
         })
     }
 
+    /// Read an `FGenericProperty` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         FGenericProperty::with_serialized_type(asset, None)
     }
@@ -306,6 +353,7 @@ impl FPropertyTrait for FGenericProperty {
 }
 
 impl FEnumProperty {
+    /// Read an `FEnumProperty` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
         let enum_value = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
@@ -329,6 +377,7 @@ impl FPropertyTrait for FEnumProperty {
 }
 
 impl FBoolProperty {
+    /// Read an `FBoolProperty` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
         let field_size = asset.read_u8()?;
@@ -363,17 +412,77 @@ impl FPropertyTrait for FBoolProperty {
     }
 }
 
-parse_simple_property_prop!(FArrayProperty, inner);
-parse_simple_property_prop!(FSetProperty, element_prop);
-parse_simple_property_index!(FObjectProperty, property_class);
-parse_simple_property_index!(FSoftObjectProperty, property_class);
-parse_simple_property_index!(FClassProperty, property_class, meta_class);
-parse_simple_property_index!(FSoftClassProperty, property_class, meta_class);
-parse_simple_property_index!(FDelegateProperty, signature_function);
-parse_simple_property_index!(FMulticastDelegateProperty, signature_function);
-parse_simple_property_index!(FMulticastInlineDelegateProperty, signature_function);
-parse_simple_property_index!(FInterfaceProperty, interface_class);
-parse_simple_property_prop!(FMapProperty, key_prop, value_prop);
-parse_simple_property_index!(FByteProperty, enum_value);
-parse_simple_property_index!(FStructProperty, struct_value);
+parse_simple_property_prop!(
+    FArrayProperty,
+    /// Inner property
+    inner
+);
+parse_simple_property_prop!(
+    FSetProperty,
+    /// Set element
+    element_prop
+);
+parse_simple_property_prop!(
+    FMapProperty,
+    /// Key
+    key_prop,
+    /// Value
+    value_prop
+);
+
+parse_simple_property_index!(
+    FObjectProperty,
+    /// Class index
+    property_class
+);
+parse_simple_property_index!(
+    FSoftObjectProperty,
+    /// Class index
+    property_class
+);
+parse_simple_property_index!(
+    FClassProperty,
+    /// Class index
+    property_class,
+    /// Meta-class index
+    meta_class
+);
+parse_simple_property_index!(
+    FSoftClassProperty,
+    /// Class index
+    property_class,
+    /// Meta-class index
+    meta_class
+);
+parse_simple_property_index!(
+    FDelegateProperty,
+    /// Signature function index
+    signature_function
+);
+parse_simple_property_index!(
+    FMulticastDelegateProperty,
+    /// Signature function index
+    signature_function
+);
+parse_simple_property_index!(
+    FMulticastInlineDelegateProperty,
+    /// Signature function index
+    signature_function
+);
+parse_simple_property_index!(
+    FInterfaceProperty,
+    /// Interface class index
+    interface_class
+);
+parse_simple_property_index!(
+    FByteProperty,
+    /// Enum value index
+    enum_value
+);
+parse_simple_property_index!(
+    FStructProperty,
+    /// Struct value index
+    struct_value
+);
+
 parse_simple_property!(FNumericProperty);

@@ -1,3 +1,5 @@
+//! Movie scene evaluation key property
+
 use byteorder::LittleEndian;
 
 use crate::{
@@ -13,14 +15,19 @@ use super::{
     movie_scene_track_identifier_property::MovieSceneTrackIdentifier,
 };
 
+/// Movie scene evaluation key
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationKey {
+    /// Movie sequence id
     pub sequence_id: MovieSceneSequenceId,
+    /// Movie track identifier
     pub track_identifier: MovieSceneTrackIdentifier,
+    /// Movie section index
     pub section_index: u32,
 }
 
 impl MovieSceneEvaluationKey {
+    /// Read a `MovieSceneEvaluationKey` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let sequence_id = MovieSceneSequenceId::new(asset)?;
         let track_identifier = MovieSceneTrackIdentifier::new(asset)?;
@@ -33,6 +40,7 @@ impl MovieSceneEvaluationKey {
         })
     }
 
+    /// Write a `MovieSceneEvaluationKey` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.sequence_id.write(asset)?;
         self.track_identifier.write(asset)?;
@@ -42,16 +50,22 @@ impl MovieSceneEvaluationKey {
     }
 }
 
+/// Movie scene evaluation key property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationKeyProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneEvaluationKey,
 }
 impl_property_data_trait!(MovieSceneEvaluationKeyProperty);
 
 impl MovieSceneEvaluationKeyProperty {
+    /// Read a `MovieSceneEvaluationKeyProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

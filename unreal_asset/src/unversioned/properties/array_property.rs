@@ -1,3 +1,5 @@
+//! Array property
+
 use std::mem::size_of;
 
 use crate::{
@@ -7,12 +9,15 @@ use crate::{
 
 use super::{EPropertyType, UsmapPropertyData, UsmapPropertyDataTrait};
 
+/// Array property data
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapArrayPropertyData {
+    /// Inner array type
     pub inner_type: Box<UsmapPropertyData>,
 }
 
 impl UsmapArrayPropertyData {
+    /// Read a `UsmapArrayPropertyData` from an asset
     pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_type = UsmapPropertyData::new(asset)?;
 

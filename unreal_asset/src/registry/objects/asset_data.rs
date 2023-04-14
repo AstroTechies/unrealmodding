@@ -1,3 +1,5 @@
+//! Asset bundle asset data
+
 use byteorder::LittleEndian;
 
 use crate::containers::indexed_map::IndexedMap;
@@ -8,13 +10,17 @@ use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::registry::objects::asset_bundle_data::AssetBundleData;
 use crate::types::FName;
 
+/// Top level asset path
 #[derive(Clone, Debug)]
 pub struct TopLevelAssetPath {
+    /// Package name
     pub package_name: FName,
+    /// Asset name
     pub asset_name: FName,
 }
 
 impl TopLevelAssetPath {
+    /// Read a `TopLevelAssetPath` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let package_name = asset.read_fname()?;
         let asset_name = asset.read_fname()?;
@@ -25,6 +31,7 @@ impl TopLevelAssetPath {
         })
     }
 
+    /// Write a `TopLevelAssetPath` to an asset
     pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_fname(&self.package_name)?;
         writer.write_fname(&self.asset_name)?;
@@ -32,25 +39,38 @@ impl TopLevelAssetPath {
     }
 }
 
+/// Asset data
 #[derive(Debug, Clone)]
 pub struct AssetData {
+    /// Object path
     pub object_path: FName,
+    /// Package name
     pub package_name: FName,
+    /// Package path
     pub package_path: FName,
+    /// Asset name
     pub asset_name: FName,
 
+    /// Asset class
     pub asset_class: Option<FName>,
+    /// Asset path
     pub asset_path: Option<TopLevelAssetPath>,
 
+    /// Tags and values
     pub tags_and_values: IndexedMap<FName, Option<String>>,
+    /// Tagged asset bundles
     pub tagged_asset_bundles: AssetBundleData,
+    /// Chunk ids
     pub chunk_ids: Vec<i32>,
+    /// Package flags
     pub package_flags: EPackageFlags,
 
+    /// Asset registry version
     version: FAssetRegistryVersionType,
 }
 
 impl AssetData {
+    /// Read `AssetData` tags
     fn read_tags<Reader: AssetReader>(
         asset: &mut Reader,
     ) -> Result<IndexedMap<FName, Option<String>>, Error> {
@@ -63,6 +83,7 @@ impl AssetData {
         Ok(tags_and_values)
     }
 
+    /// Write `AssetData` tags
     fn write_tags<Writer: AssetWriter>(
         asset: &mut Writer,
         tags_and_values: &IndexedMap<FName, Option<String>>,
@@ -75,6 +96,7 @@ impl AssetData {
         Ok(())
     }
 
+    /// Read `AssetData` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
@@ -111,6 +133,7 @@ impl AssetData {
         })
     }
 
+    /// Create a new `AssetData` instance
     #[allow(clippy::too_many_arguments)]
     pub fn from_data(
         object_path: FName,
@@ -142,6 +165,7 @@ impl AssetData {
         }
     }
 
+    /// Write `AssetData` to an asset
     pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_fname(&self.object_path)?;
         writer.write_fname(&self.package_path)?;

@@ -1,3 +1,5 @@
+//! Map property
+
 use std::hash::Hash;
 
 use byteorder::LittleEndian;
@@ -11,14 +13,22 @@ use crate::unversioned::properties::map_property::UsmapMapPropertyData;
 use crate::unversioned::properties::UsmapPropertyData;
 use crate::{cast, impl_property_data_trait};
 
+/// Map property
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Key type
     pub key_type: FName,
+    /// Value type
     pub value_type: FName,
+    /// Map values
     pub value: IndexedMap<Property, Property>,
+    /// Keys to be removed from the map when the engine loads the property
     pub keys_to_remove: Option<Vec<Property>>,
 }
 impl_property_data_trait!(MapProperty);
@@ -35,6 +45,7 @@ impl Hash for MapProperty {
 }
 
 impl MapProperty {
+    /// Map type_name to a `Property` and read it from an asset
     fn map_type_to_class<Reader: AssetReader>(
         asset: &mut Reader,
         type_name: FName,
@@ -115,6 +126,7 @@ impl MapProperty {
         }
     }
 
+    /// Read a `MapProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

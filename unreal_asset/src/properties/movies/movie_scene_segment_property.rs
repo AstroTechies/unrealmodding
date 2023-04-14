@@ -1,3 +1,5 @@
+//! Movie scene segment property
+
 use byteorder::LittleEndian;
 
 use crate::{
@@ -9,33 +11,43 @@ use crate::{
     types::{FName, Guid},
 };
 
+/// Movie scene segment identifier
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentIdentifier {
+    /// Identifier index
     pub identifier_index: i32,
 }
 
 impl MovieSceneSegmentIdentifier {
+    /// Read a `MovieSceneSegmentIdentifier` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let identifier_index = asset.read_i32::<LittleEndian>()?;
 
         Ok(MovieSceneSegmentIdentifier { identifier_index })
     }
 
+    /// Write a `MovieSceneSegmentIdentifier` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.identifier_index)?;
         Ok(())
     }
 }
 
+/// Movie scene segment
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegment {
+    /// range
     pub range: FFrameNumberRange,
+    /// Identifier
     pub id: MovieSceneSegmentIdentifier,
+    /// Allow empty
     pub allow_empty: bool,
+    /// Implementations
     pub impls: Vec<Vec<Property>>,
 }
 
 impl MovieSceneSegment {
+    /// Read a `MovieSceneSegment` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         parent_name: Option<&FName>,
@@ -64,6 +76,7 @@ impl MovieSceneSegment {
         })
     }
 
+    /// Write a `MovieSceneSegment` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.range.write(asset)?;
         self.id.write(asset)?;
@@ -89,16 +102,22 @@ impl MovieSceneSegment {
     }
 }
 
+/// Movie scene segment property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneSegment,
 }
 impl_property_data_trait!(MovieSceneSegmentProperty);
 
 impl MovieSceneSegmentProperty {
+    /// Read a `MovieSceneSegmentProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -134,16 +153,22 @@ impl PropertyTrait for MovieSceneSegmentProperty {
     }
 }
 
+/// Movie scene segment identifier property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentIdentifierProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneSegmentIdentifier,
 }
 impl_property_data_trait!(MovieSceneSegmentIdentifierProperty);
 
 impl MovieSceneSegmentIdentifierProperty {
+    /// Read a `MovieSceneSegmentIdentifierProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

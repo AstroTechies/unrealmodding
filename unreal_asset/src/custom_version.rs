@@ -16,9 +16,17 @@ use crate::types::{new_guid, Guid};
 /// They are used to parse some propeties differently
 #[derive(Debug, Clone)]
 pub struct CustomVersion {
+    /// Custom veresion guid
     pub guid: Guid,
+    /// Friendly name of the custom version
     pub friendly_name: Option<String>,
+    /// Version number
     pub version: i32,
+    /// Mappings from engine version to version number of this custom version
+    ///
+    /// # Example
+    /// UE4_27 -> 13
+    /// UE4_23 -> 12
     pub version_mappings: &'static [(EngineVersion, i32)],
 }
 
@@ -74,6 +82,7 @@ lazy_static! {
 }
 
 impl CustomVersion {
+    /// Create a new custom version
     pub fn new(guid: Guid, version: i32) -> Self {
         let version_info = GUID_TO_VERSION_INFO.get(&guid).map(|e| e.to_owned());
         CustomVersion {
@@ -84,6 +93,7 @@ impl CustomVersion {
         }
     }
 
+    /// Read a custom version from an asset
     pub fn read<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut key = [0u8; 16];
         asset.read_exact(&mut key)?;
@@ -98,12 +108,14 @@ impl CustomVersion {
         })
     }
 
+    /// Write a custom version to an asset
     pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_all(&self.guid)?;
         writer.write_i32::<LittleEndian>(self.version)?;
         Ok(())
     }
 
+    /// Create a custom version from a predefined custom version
     pub fn from_version<T>(version: T) -> Self
     where
         T: CustomVersionTrait + Into<i32>,
@@ -116,6 +128,7 @@ impl CustomVersion {
         }
     }
 
+    /// Get an engine version that corresponds to this version number
     pub fn get_engine_version_from_version_number(
         &self,
         version_number: i32,
@@ -126,6 +139,7 @@ impl CustomVersion {
             .map(|(engine_version, _)| *engine_version)
     }
 
+    /// Get a version number for a given engine version
     pub fn get_version_number_from_engine_version(
         &self,
         engine_version: EngineVersion,
@@ -136,6 +150,7 @@ impl CustomVersion {
             .map(|(_, version)| *version)
     }
 
+    /// Get all custom versions for a given engine version
     pub fn get_default_custom_version_container(
         engine_version: EngineVersion,
     ) -> Vec<CustomVersion> {
@@ -155,9 +170,17 @@ impl CustomVersion {
     }
 }
 
+/// Used for predefining custom versions for nicer checking when parsing
 pub trait CustomVersionTrait {
+    /// Mappings from engine version to version number of this custom version
+    ///
+    /// # Example
+    /// UE4_27 -> 13
+    /// UE4_23 -> 12
     const VERSION_MAPPINGS: &'static [(EngineVersion, i32)];
+    /// Custom version friendly name
     const FRIENDLY_NAME: &'static str;
+    /// Custom version guid
     const GUID: Guid;
 }
 
@@ -175,6 +198,7 @@ macro_rules! impl_custom_version_trait {
     }
 }
 
+/// Custom serialization version for changes made in the //Fortnite/Main stream
 #[derive(IntoPrimitive)]
 #[repr(i32)]
 pub enum FFortniteMainBranchObjectVersion {
@@ -438,9 +462,7 @@ impl_custom_version_trait!(
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
-//
-// Custom serialization version for changes made in Dev-Framework stream.
-
+/// Custom serialization version for changes made in Dev-Framework stream.
 #[derive(IntoPrimitive)]
 #[repr(i32)]
 pub enum FFrameworkObjectVersion {
@@ -623,8 +645,7 @@ impl_custom_version_trait!(
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
-//
-// Custom serialization version for changes made in Dev-Core stream.
+/// Custom serialization version for changes made in Dev-Core stream.
 #[derive(IntoPrimitive)]
 #[repr(i32)]
 pub enum FCoreObjectVersion {
@@ -663,8 +684,7 @@ impl_custom_version_trait!(
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
-//
-// Custom serialization version for changes made in Dev-Editor stream.
+/// Custom serialization version for changes made in Dev-Editor stream.
 #[derive(IntoPrimitive)]
 #[repr(i32)]
 pub enum FEditorObjectVersion {
@@ -1170,6 +1190,7 @@ impl_custom_version_trait!(
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
+/// Custom serialization version for changes made in Dev-Sequencer stream
 #[derive(IntoPrimitive)]
 #[repr(i32)]
 pub enum FSequencerObjectVersion {
@@ -1229,9 +1250,9 @@ pub enum FSequencerObjectVersion {
     /// Introduced: EngineVersion.VER_UE4_27
     SpawnableImprovements,
 
-    // Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION
     LatestVersion,
-    // Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
+    /// Introduced: EngineVersion.VER_UE4_AUTOMATIC_VERSION_PLUS_ONE
     VersionPlusOne,
 }
 
@@ -1252,6 +1273,7 @@ impl_custom_version_trait!(
     VER_UE4_OLDEST_LOADABLE_PACKAGE: BeforeCustomVersionWasAdded
 );
 
+/// Asset registry version
 #[derive(IntoPrimitive, TryFromPrimitive, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
 #[repr(i32)]
 pub enum FAssetRegistryVersionType {
@@ -1259,7 +1281,7 @@ pub enum FAssetRegistryVersionType {
     PreVersioning = 0,
     /// The first version of the runtime asset registry to include file versioning.
     HardSoftDependencies,
-    // Added FAssetRegistryState and support for piecemeal serialization
+    /// Added FAssetRegistryState and support for piecemeal serialization
     AddAssetRegistryState,
     /// AssetData serialization format changed, versions before this are not readable
     ChangedAssetData,
@@ -1298,7 +1320,9 @@ pub enum FAssetRegistryVersionType {
     ClassPaths,
 
     // -----<new versions can be added above this line>-------------------------------------------------
+    /// Latest version
     LatestVersion,
+    /// Version plus one
     VersionPlusOne,
 }
 
@@ -1308,6 +1332,7 @@ lazy_static! {
 }
 
 impl FAssetRegistryVersionType {
+    /// Read an asset registry version from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut guid = [0u8; 16];
         asset.read_exact(&mut guid)?;
@@ -1319,6 +1344,7 @@ impl FAssetRegistryVersionType {
         Ok(FAssetRegistryVersionType::LatestVersion)
     }
 
+    /// Write an asset registry version to an asset
     pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_all(&*ASSET_REGISTRY_VERSION_GUID)?;
         writer.write_i32::<LittleEndian>((*self).into())?;

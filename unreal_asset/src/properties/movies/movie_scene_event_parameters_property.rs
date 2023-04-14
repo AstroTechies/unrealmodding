@@ -1,3 +1,4 @@
+//! Movie scene event parameters property
 use byteorder::LittleEndian;
 
 use crate::{
@@ -8,13 +9,17 @@ use crate::{
     types::{FName, Guid},
 };
 
+/// Movie scene event parameters
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParameters {
+    /// Struct type
     pub struct_type: SoftObjectPath,
+    /// Struct raw data
     pub struct_bytes: Vec<u8>,
 }
 
 impl MovieSceneEventParameters {
+    /// Read `MovieSceneEventParameters` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let struct_type = SoftObjectPath::new(asset)?;
 
@@ -28,6 +33,7 @@ impl MovieSceneEventParameters {
         })
     }
 
+    /// Write `MovieSceneEventParameters` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_type.write(asset)?;
 
@@ -38,16 +44,22 @@ impl MovieSceneEventParameters {
     }
 }
 
+/// Movie scene event parameters property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParametersProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Value
     pub value: MovieSceneEventParameters,
 }
 impl_property_data_trait!(MovieSceneEventParametersProperty);
 
 impl MovieSceneEventParametersProperty {
+    /// Read `MovieSceneEventParametersProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

@@ -1,3 +1,5 @@
+//! Float range property
+
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
 
@@ -10,17 +12,24 @@ use crate::{
 
 use super::PropertyTrait;
 
+/// Float range property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FloatRangeProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Lower bound
     pub lower_bound: OrderedFloat<f32>,
+    /// Upper bound
     pub upper_bound: OrderedFloat<f32>,
 }
 impl_property_data_trait!(FloatRangeProperty);
 
 impl FloatRangeProperty {
+    /// Read a `FloatRangeProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

@@ -1,3 +1,5 @@
+//! String properties
+
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
@@ -13,24 +15,40 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Text history type
 #[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(i8)]
 pub enum TextHistoryType {
+    /// None
     None = -1,
+    /// Base
     Base = 0,
+    /// Named format
     NamedFormat,
+    /// Ordered format
     OrderedFormat,
+    /// Argument format
     ArgumentFormat,
+    /// As number
     AsNumber,
+    /// As percentage
     AsPercent,
+    /// As currency
     AsCurrency,
+    /// As date
     AsDate,
+    /// As time
     AsTime,
+    /// As datetime
     AsDateTime,
+    /// Transform
     Transform,
+    /// String table entry
     StringTableEntry,
+    /// Text generator
     TextGenerator,
-    RawText, // Uncertain, Back 4 Blood specific serialization
+    /// Uncertain, Back 4 Blood specific serialization
+    RawText,
 }
 
 impl Default for TextHistoryType {
@@ -39,39 +57,60 @@ impl Default for TextHistoryType {
     }
 }
 
+/// String property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct StrProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// FString value
     pub value: Option<String>,
 }
 impl_property_data_trait!(StrProperty);
 
+/// Text property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TextProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Culture invariant string
     pub culture_invariant_string: Option<String>,
+    /// Namespace
     pub namespace: Option<String>,
+    /// String table id
     pub table_id: Option<FName>,
+    /// Flags
     pub flags: u32,
+    /// History type
     pub history_type: TextHistoryType,
+    /// FString value
     pub value: Option<String>,
 }
 impl_property_data_trait!(TextProperty);
 
+/// Name property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct NameProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// FName value
     pub value: FName,
 }
 impl_property_data_trait!(NameProperty);
 
 impl StrProperty {
+    /// Read a `StrProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -103,6 +142,7 @@ impl PropertyTrait for StrProperty {
 }
 
 impl TextProperty {
+    /// Read a `TextProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
@@ -248,6 +288,7 @@ impl PropertyTrait for TextProperty {
 }
 
 impl NameProperty {
+    /// Read a `NameProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

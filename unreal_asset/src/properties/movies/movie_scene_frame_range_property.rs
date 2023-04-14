@@ -1,3 +1,5 @@
+//! Movie scene frame range property
+
 use byteorder::LittleEndian;
 
 use crate::{
@@ -9,13 +11,17 @@ use crate::{
     types::{FName, Guid},
 };
 
+/// Int32 value bound by a range
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Int32RangeBound {
+    /// Type
     pub ty: ERangeBoundTypes,
+    /// Value
     pub value: i32,
 }
 
 impl Int32RangeBound {
+    /// Read an `Int32RangeBound` from an asset
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let ty: ERangeBoundTypes = ERangeBoundTypes::try_from(asset.read_i8()?)?;
         let value = asset.read_i32::<LittleEndian>()?;
@@ -23,6 +29,7 @@ impl Int32RangeBound {
         Ok(Int32RangeBound { ty, value })
     }
 
+    /// Write an `Int32RangeBound` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i8(self.ty as i8)?;
         asset.write_i32::<LittleEndian>(self.value)?;
@@ -31,18 +38,24 @@ impl Int32RangeBound {
     }
 }
 
+/// Movie scene frame range property
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFrameRangeProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
-
+    /// Lower bound
     pub lower_bound: Int32RangeBound,
+    /// Upper bound
     pub upper_bound: Int32RangeBound,
 }
 impl_property_data_trait!(MovieSceneFrameRangeProperty);
 
 impl MovieSceneFrameRangeProperty {
+    /// Read a `MovieSceneFrameRangeProperty` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,

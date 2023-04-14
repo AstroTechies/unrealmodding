@@ -1,3 +1,5 @@
+//! Soft path properties
+
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
@@ -7,46 +9,74 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
 
+/// Soft asset path property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Asset path name
     pub asset_path_name: Option<FName>,
+    /// Sub-path
     pub sub_path: Option<String>,
+    /// Path
     pub path: Option<String>,
 }
 impl_property_data_trait!(SoftAssetPathProperty);
 
+/// Soft object path property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftObjectPathProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Asset path name
     pub asset_path_name: Option<FName>,
+    /// Sub-path
     pub sub_path: Option<String>,
+    /// Path
     pub path: Option<String>,
 }
 impl_property_data_trait!(SoftObjectPathProperty);
 
+/// Soft class path property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftClassPathProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Asset path name
     pub asset_path_name: Option<FName>,
+    /// Sub-path
     pub sub_path: Option<String>,
+    /// Path
     pub path: Option<String>,
 }
 impl_property_data_trait!(SoftClassPathProperty);
 
+/// String asset reference property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct StringAssetReferenceProperty {
+    /// Name
     pub name: FName,
+    /// Property guid
     pub property_guid: Option<Guid>,
+    /// Property duplication index
     pub duplication_index: i32,
+    /// Asset path name
     pub asset_path_name: Option<FName>,
+    /// Sub-path
     pub sub_path: Option<String>,
+    /// Path
     pub path: Option<String>,
 }
 impl_property_data_trait!(StringAssetReferenceProperty);
@@ -54,6 +84,7 @@ impl_property_data_trait!(StringAssetReferenceProperty);
 macro_rules! impl_soft_path_property {
     ($property_name:ident) => {
         impl $property_name {
+            /// Read `$property_name` from an asset
             pub fn new<Reader: AssetReader>(
                 asset: &mut Reader,
                 name: FName,

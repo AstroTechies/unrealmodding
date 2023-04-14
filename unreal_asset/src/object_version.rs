@@ -1,3 +1,5 @@
+//! Unreal object versions
+
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 /// An enum used to represent the global object version of UE4.
@@ -7,7 +9,9 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[repr(i32)]
 #[allow(non_camel_case_types)]
 pub enum ObjectVersion {
+    /// Unknown
     UNKNOWN = 0,
+    /// Oldest loadable package
     VER_UE4_OLDEST_LOADABLE_PACKAGE = 214,
 
     /// Removed restriction on blueprint-exposed variables from being read-only
@@ -210,7 +214,7 @@ pub enum ObjectVersion {
     VER_UE4_K2NODE_REFERENCEGUIDS,
     /// Fix up the 0th bone's parent bone index.
     VER_UE4_FIXUP_ROOTBONE_PARENT,
-    //Allow setting of TextRenderComponents size in world space.
+    /// Allow setting of TextRenderComponents size in world space.
     VER_UE4_TEXT_RENDER_COMPONENTS_WORLD_SPACE_SIZING,
     /// Material Instances overriding base material properties #2.
     VER_UE4_MATERIAL_INSTANCE_BASE_PROPERTY_OVERRIDES_PHASE_2,
@@ -648,6 +652,7 @@ pub enum ObjectVersion {
     VER_UE4_CORRECT_LICENSEE_FLAG,
     /// The newest specified version of the Unreal Engine.
     VER_UE4_AUTOMATIC_VERSION,
+    /// Automatic version plus one
     VER_UE4_AUTOMATIC_VERSION_PLUS_ONE,
 }
 
@@ -658,24 +663,26 @@ pub enum ObjectVersion {
 #[repr(i32)]
 #[allow(non_camel_case_types)]
 pub enum ObjectVersionUE5 {
+    /// Unknown
     UNKNOWN = 0,
 
-    // The original UE5 version, at the time this was added the UE4 version was 522, so UE5 will start from 1000 to show a clear difference
+    /// The original UE5 version, at the time this was added the UE4 version was 522, so UE5 will start from 1000 to show a clear difference
     INITIAL_VERSION = 1000,
 
-    // Support stripping names that are not referenced from export data
+    /// Support stripping names that are not referenced from export data
     NAMES_REFERENCED_FROM_EXPORT_DATA,
 
-    // Added a payload table of contents to the package summary
+    /// Added a payload table of contents to the package summary
     PAYLOAD_TOC,
 
-    // Added data to identify references from and to optional package
+    /// Added data to identify references from and to optional package
     OPTIONAL_RESOURCES,
 
-    // Large world coordinates converts a number of core types to double components by default.
+    /// Large world coordinates converts a number of core types to double components by default.
     LARGE_WORLD_COORDINATES,
 
-    // -----<new versions can be added before this line>-------------------------------------------------
+    /// -----<new versions can be added before this line>-------------------------------------------------
     AUTOMATIC_VERSION,
+    /// Automatic version plus one
     AUTOMATIC_VERSION_PLUS_ONE,
 }
