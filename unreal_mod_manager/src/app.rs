@@ -25,7 +25,6 @@ use crate::profile::{Profile, ProfileMod};
 use crate::update_info::UpdateInfo;
 use crate::{FileToProcess, ModLoaderAppData};
 
-#[derive(Debug)]
 pub(crate) struct ModLoaderApp {
     pub data: Arc<Mutex<ModLoaderAppData>>,
     pub background_tx: Sender<BackgroundThreadMessage>,
@@ -48,6 +47,8 @@ pub(crate) struct ModLoaderApp {
 
     pub about_text: String,
     pub about_open: Cell<bool>,
+
+    markdown_cache: CommonMarkCache,
 }
 
 impl ModLoaderApp {
@@ -86,6 +87,8 @@ impl ModLoaderApp {
 
             about_text,
             about_open: Cell::new(false),
+
+            markdown_cache: CommonMarkCache::default(),
         }
     }
 }
@@ -1017,10 +1020,11 @@ impl ModLoaderApp {
                     });
 
                 egui::CentralPanel::default().show_inside(ui, |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        let mut cache = CommonMarkCache::default();
-                        CommonMarkViewer::new("viewer").show(ui, &mut cache, &self.about_text);
-                    });
+                    CommonMarkViewer::new("viewer").show_scrollable(
+                        ui,
+                        &mut self.markdown_cache,
+                        &self.about_text,
+                    );
                 });
             });
     }
