@@ -429,7 +429,7 @@ impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> AssetWriter
                 .search_name_reference(&fname.content)
                 .ok_or_else(|| {
                     Error::no_data(format!(
-                        "name reference for {} not found",
+                        "name reference for {} not found, you might want to rebuild the name map",
                         fname.content.to_owned()
                     ))
                 })?,
