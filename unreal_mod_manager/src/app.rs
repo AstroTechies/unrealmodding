@@ -142,23 +142,20 @@ impl App for ModLoaderApp {
 
         // "popup" windows
 
-        let mut data = self.data.lock();
-
         let mut darken_background = false;
 
         let mut update_cancelled = false;
-        let mut newer_update = self.newer_update.lock();
-        if let Some(newer_update) = newer_update.as_ref() {
-            self.show_update_window(ctx, newer_update, &mut update_cancelled);
+        let has_newer_update = self.newer_update.lock().is_some();
+        if has_newer_update {
+            self.show_update_window(ctx, &mut update_cancelled);
             darken_background = true;
         }
 
         if update_cancelled {
-            *newer_update = None;
+            *self.newer_update.lock() = None;
         }
 
-        drop(newer_update);
-
+        let mut data = self.data.lock();
         if let Some(error) = &data.error {
             self.show_error(ctx, frame, error);
             darken_background = true;
@@ -664,12 +661,9 @@ impl ModLoaderApp {
 
     // "popup" windows
 
-    fn show_update_window(
-        &self,
-        ctx: &egui::Context,
-        newer_update: &UpdateInfo,
-        update_cancelled: &mut bool,
-    ) {
+    fn show_update_window(&mut self, ctx: &egui::Context, update_cancelled: &mut bool) {
+        let newer_update = self.newer_update.lock();
+        let newer_update = newer_update.as_ref().unwrap();
         egui::Window::new("A new update is available")
             .resizable(false)
             .collapsible(false)
@@ -690,7 +684,12 @@ impl ModLoaderApp {
                         });
 
                         strip.cell(|ui| {
-                            ui.label(format!("Changelog:\n {}", newer_update.changelog));
+                            ui.heading("Changelog");
+                            CommonMarkViewer::new("update_viewer").show_scrollable(
+                                ui,
+                                &mut self.markdown_cache,
+                                &newer_update.changelog,
+                            );
                         });
 
                         strip.cell(|ui| {
