@@ -491,6 +491,260 @@ impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> AssetWriter
     }
 }
 
+/// FName collector is used for rebuilding the name map
+/// This is useful when it's hard to keep track of asset changes
+/// And you want to ensure the name map contains all the new FNames
+struct FNameCollector<'asset, C: Read + Seek> {
+    /// Asset
+    asset: &'asset Asset<C>,
+    /// Position
+    position: u64,
+    /// Name map index list
+    name_map_index_list: Vec<String>,
+    /// Name map lookup
+    name_map_lookup: IndexedMap<u64, i32>,
+    /// Cached parent info
+    cached_parent_info: Option<ParentClassInfo>,
+}
+
+impl<'asset, C: Read + Seek> FNameCollector<'asset, C> {
+    /// Create a new `FNameCollector` instance
+    pub fn new(asset: &'asset Asset<C>) -> Self {
+        FNameCollector {
+            asset,
+            position: 0,
+            name_map_index_list: asset.get_name_map_index_list().to_vec(),
+            name_map_lookup: asset.name_map_lookup.clone(),
+            cached_parent_info: None,
+        }
+    }
+
+    /// Search an FName reference
+    pub fn search_name_reference(&self, name: &String) -> Option<i32> {
+        let mut s = DefaultHasher::new();
+        name.hash(&mut s);
+
+        self.name_map_lookup.get_by_key(&s.finish()).copied()
+    }
+
+    /// Add an FName reference
+    pub fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
+        if !force_add_duplicates {
+            let existing = self.search_name_reference(&name);
+            if let Some(existing) = existing {
+                return existing;
+            }
+        }
+
+        let mut s = DefaultHasher::new();
+        name.hash(&mut s);
+
+        let hash = s.finish();
+        self.name_map_index_list.push(name.clone());
+        self.name_map_lookup
+            .insert(hash, (self.name_map_index_list.len() - 1) as i32);
+        (self.name_map_lookup.len() - 1) as i32
+    }
+}
+
+impl<'asset, C: Read + Seek> AssetTrait for FNameCollector<'asset, C> {
+    fn get_custom_version<T>(&self) -> CustomVersion
+    where
+        T: CustomVersionTrait + Into<i32>,
+    {
+        self.asset.get_custom_version::<T>()
+    }
+
+    fn position(&mut self) -> u64 {
+        self.position
+    }
+
+    fn set_position(&mut self, position: u64) {
+        self.position = position;
+    }
+
+    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
+        match style {
+            SeekFrom::Start(e) => self.position = e,
+            SeekFrom::Current(e) => self.position += e as u64,
+            SeekFrom::End(_) => {}
+        };
+
+        Ok(self.position)
+    }
+
+    fn add_fname(&mut self, value: &str) -> FName {
+        let name = FName::from_slice(value);
+        self.add_name_reference(name.content.clone(), false);
+        name
+    }
+
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        let name = FName::new(value.to_string(), number);
+        self.add_name_reference(value.to_string(), false);
+        name
+    }
+
+    fn get_name_map_index_list(&self) -> &[String] {
+        &self.name_map_index_list
+    }
+
+    fn get_name_reference(&self, index: i32) -> String {
+        self.asset.get_name_reference(index)
+    }
+
+    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
+        self.asset.get_array_struct_type_override()
+    }
+
+    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
+        self.asset.get_map_key_override()
+    }
+
+    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
+        self.asset.get_map_value_override()
+    }
+
+    fn get_parent_class(&self) -> Option<ParentClassInfo> {
+        self.asset.get_parent_class()
+    }
+
+    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
+        if let Some(ref cached_info) = self.cached_parent_info {
+            return Some(cached_info);
+        }
+
+        self.cached_parent_info = self.get_parent_class();
+        self.cached_parent_info.as_ref()
+    }
+
+    #[inline(always)]
+    fn get_engine_version(&self) -> EngineVersion {
+        self.asset.get_engine_version()
+    }
+
+    #[inline(always)]
+    fn get_object_version(&self) -> ObjectVersion {
+        self.asset.get_object_version()
+    }
+
+    #[inline(always)]
+    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
+        self.asset.get_object_version_ue5()
+    }
+
+    fn get_mappings(&self) -> Option<&Usmap> {
+        self.asset.get_mappings()
+    }
+
+    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
+        self.asset.get_import(index)
+    }
+
+    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
+        self.asset.get_export_class_type(index)
+    }
+}
+
+impl<'asset, C: Read + Seek> AssetWriter for FNameCollector<'asset, C> {
+    fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
+        if self.asset.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
+            self.position += size_of::<bool>() as u64;
+            if let Some(ref data) = guid {
+                self.position += data.len() as u64;
+            }
+        }
+        Ok(())
+    }
+
+    fn write_fname(&mut self, fname: &FName) -> Result<(), Error> {
+        self.position += size_of::<u32>() as u64 * 2;
+        if self.search_name_reference(&fname.content).is_none() {
+            self.add_name_reference(fname.content.clone(), false);
+        }
+        Ok(())
+    }
+
+    fn write_u8(&mut self, _: u8) -> io::Result<()> {
+        self.position += size_of::<u8>() as u64;
+        Ok(())
+    }
+
+    fn write_i8(&mut self, _: i8) -> io::Result<()> {
+        self.position += size_of::<i8>() as u64;
+        Ok(())
+    }
+
+    fn write_u16<T: byteorder::ByteOrder>(&mut self, _: u16) -> io::Result<()> {
+        self.position += size_of::<u16>() as u64;
+        Ok(())
+    }
+
+    fn write_i16<T: byteorder::ByteOrder>(&mut self, _: i16) -> io::Result<()> {
+        self.position += size_of::<i16>() as u64;
+        Ok(())
+    }
+
+    fn write_u32<T: byteorder::ByteOrder>(&mut self, _: u32) -> io::Result<()> {
+        self.position += size_of::<u32>() as u64;
+        Ok(())
+    }
+
+    fn write_i32<T: byteorder::ByteOrder>(&mut self, _: i32) -> io::Result<()> {
+        self.position += size_of::<i32>() as u64;
+        Ok(())
+    }
+
+    fn write_u64<T: byteorder::ByteOrder>(&mut self, _: u64) -> io::Result<()> {
+        self.position += size_of::<u64>() as u64;
+        Ok(())
+    }
+
+    fn write_i64<T: byteorder::ByteOrder>(&mut self, _: i64) -> io::Result<()> {
+        self.position += size_of::<i64>() as u64;
+        Ok(())
+    }
+
+    fn write_f32<T: byteorder::ByteOrder>(&mut self, _: f32) -> io::Result<()> {
+        self.position += size_of::<f32>() as u64;
+        Ok(())
+    }
+
+    fn write_f64<T: byteorder::ByteOrder>(&mut self, _: f64) -> io::Result<()> {
+        self.position += size_of::<f64>() as u64;
+        Ok(())
+    }
+
+    fn write_fstring(&mut self, string: Option<&str>) -> Result<usize, Error> {
+        let length = if let Some(string) = string {
+            let is_unicode = string.len() != string.chars().count();
+
+            if is_unicode {
+                let utf16 = string.encode_utf16().collect::<Vec<_>>();
+                size_of::<i32>() + utf16.len() * 2 /* multiplying by 2 to get size in bytes */
+            } else {
+                let bytes = string.as_bytes();
+                size_of::<i32>() + bytes.len() + 1
+            }
+        } else {
+            size_of::<i32>()
+        };
+
+        self.position += length as u64;
+        Ok(length)
+    }
+
+    fn write_all(&mut self, data: &[u8]) -> io::Result<()> {
+        self.position += data.len() as u64;
+        Ok(())
+    }
+
+    fn write_bool(&mut self, _: bool) -> io::Result<()> {
+        self.position += size_of::<u8>() as u64;
+        Ok(())
+    }
+}
+
 impl<C: Read + Seek> AssetTrait for Asset<C> {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
@@ -1679,6 +1933,33 @@ impl<'a, C: Read + Seek> Asset<C> {
             )?;
             cursor.write_i32::<LittleEndian>(unk.create_before_create_dependencies.len() as i32)?;
         }
+        Ok(())
+    }
+
+    /// Rebuild the FName map
+    /// This can be used if it's too complicated to keep track of all FNames that were added into the asset
+    /// This is useful when copying export from one asset into another
+    /// This will automatically figure out every new FName and add them to the name map
+    pub fn rebuild_name_map(&mut self) -> Result<(), Error> {
+        let mut collector = FNameCollector::new(self);
+
+        for import in &self.imports {
+            collector.write_fname(&import.class_package)?;
+            collector.write_fname(&import.class_name)?;
+            collector.write_fname(&import.object_name)?;
+        }
+
+        for export in &self.exports {
+            self.write_export_header(export.get_base_export(), &mut collector, 0, 0, 0)?;
+            export.write(&mut collector)?;
+        }
+
+        let name_map_index_list = collector.name_map_index_list;
+        let name_map_lookup = collector.name_map_lookup;
+
+        self.name_map_index_list = name_map_index_list;
+        self.name_map_lookup = name_map_lookup;
+
         Ok(())
     }
 
