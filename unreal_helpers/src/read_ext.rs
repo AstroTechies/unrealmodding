@@ -1,6 +1,6 @@
 //! Extension for anything that implements Read to more easily read Unreal data formats.
 
-use std::io::{self, Read};
+use std::io::{self, Read, Seek};
 use std::mem::size_of;
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -15,12 +15,15 @@ pub trait UnrealReadExt {
     fn read_bool(&mut self) -> io::Result<bool>;
 }
 
-impl<R: Read> UnrealReadExt for R {
+impl<R: Read + Seek> UnrealReadExt for R {
     fn read_fstring(&mut self) -> Result<Option<String>, FStringError> {
         let len = self.read_i32::<LittleEndian>()?;
 
         if !(-131072..=131072).contains(&len) {
-            return Err(FStringError::InvalidStringSize(len));
+            return Err(FStringError::InvalidStringSize(
+                len,
+                self.stream_position()?,
+            ));
         }
 
         if len == 0 {
@@ -36,7 +39,10 @@ impl<R: Read> UnrealReadExt for R {
 
             let terminator = self.read_u16::<LittleEndian>()?;
             if terminator != 0 {
-                return Err(FStringError::InvalidStringTerminator);
+                return Err(FStringError::InvalidStringTerminator(
+                    terminator,
+                    self.stream_position()?,
+                ));
             }
 
             String::from_utf16(
@@ -52,7 +58,10 @@ impl<R: Read> UnrealReadExt for R {
 
             let terminator = self.read_u8()?;
             if terminator != 0 {
-                return Err(FStringError::InvalidStringTerminator);
+                return Err(FStringError::InvalidStringTerminator(
+                    terminator as u16,
+                    self.stream_position()?,
+                ));
             }
 
             String::from_utf8(buf).map(Some).map_err(|e| e.into())

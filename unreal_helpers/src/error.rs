@@ -11,11 +11,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum FStringError {
     /// String has invalid size
-    #[error("Invalid string size {0}")]
-    InvalidStringSize(i32),
+    #[error("Invalid string size {0} at position {1}")]
+    InvalidStringSize(i32, u64),
     /// String has invalid terminator
-    #[error("Invalid string terminator")]
-    InvalidStringTerminator,
+    #[error("Invalid string terminator {0} at position {1}")]
+    InvalidStringTerminator(u16, u64),
     /// String is not in the expected UTF-8 format
     #[error("Utf8 Error {0}")]
     Utf8(#[from] FromUtf8Error),

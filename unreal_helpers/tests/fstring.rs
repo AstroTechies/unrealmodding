@@ -24,12 +24,15 @@ fn test_read_fstring() -> Result<(), FStringError> {
     // Missing null terminator
     let mut cursor = Cursor::new(vec![1u8, 0u8, 0u8, 0u8, b't']);
     let err = cursor.read_fstring().expect_err("Expected err");
-    assert!(matches!(err, FStringError::InvalidStringTerminator));
+    assert!(matches!(err, FStringError::InvalidStringTerminator(116, 5)));
 
     // Missing null terminator, UTF-16
     let mut cursor = Cursor::new(vec![0xffu8, 0xffu8, 0xffu8, 0xffu8, b't', b'e']);
     let err = cursor.read_fstring().expect_err("Expected err");
-    assert!(matches!(err, FStringError::InvalidStringTerminator));
+    assert!(matches!(
+        err,
+        FStringError::InvalidStringTerminator(25972, 6)
+    ));
 
     Ok(())
 }
