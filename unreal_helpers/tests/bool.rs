@@ -9,8 +9,8 @@ fn test_read_bool() -> Result<(), FStringError> {
     let mut cursor = Cursor::new(vec![0u8, 1u8]);
     let (first, second) = (cursor.read_bool()?, cursor.read_bool()?);
 
-    assert_eq!(first, false);
-    assert_eq!(second, true);
+    assert!(!first);
+    assert!(second);
 
     Ok(())
 }

@@ -50,21 +50,21 @@ pub trait ExportBaseTrait {
 macro_rules! implement_get {
     ($name:ident) => {
         impl ExportNormalTrait for $name {
-            fn get_normal_export<'a>(&'a self) -> Option<&'a NormalExport> {
+            fn get_normal_export(&self) -> Option<&NormalExport> {
                 Some(&self.normal_export)
             }
 
-            fn get_normal_export_mut<'a>(&'a mut self) -> Option<&'a mut NormalExport> {
+            fn get_normal_export_mut(&mut self) -> Option<&mut NormalExport> {
                 Some(&mut self.normal_export)
             }
         }
 
         impl ExportBaseTrait for $name {
-            fn get_base_export<'a>(&'a self) -> &'a BaseExport {
+            fn get_base_export(&self) -> &BaseExport {
                 &self.normal_export.base_export
             }
 
-            fn get_base_export_mut<'a>(&'a mut self) -> &'a mut BaseExport {
+            fn get_base_export_mut(&mut self) -> &mut BaseExport {
                 &mut self.normal_export.base_export
             }
         }
