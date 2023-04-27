@@ -13,12 +13,15 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::vector::{Vector, Vector4};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Vector property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct VectorProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -33,6 +36,8 @@ impl_property_data_trait!(VectorProperty);
 pub struct IntPointProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -49,6 +54,8 @@ impl_property_data_trait!(IntPointProperty);
 pub struct Vector4Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -63,6 +70,8 @@ impl_property_data_trait!(Vector4Property);
 pub struct Vector2DProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -79,6 +88,8 @@ impl_property_data_trait!(Vector2DProperty);
 pub struct QuatProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -93,6 +104,8 @@ impl_property_data_trait!(QuatProperty);
 pub struct RotatorProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -107,6 +120,8 @@ impl_property_data_trait!(RotatorProperty);
 pub struct BoxProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -125,6 +140,8 @@ impl_property_data_trait!(BoxProperty);
 pub struct Box2DProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -143,6 +160,7 @@ impl VectorProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -154,6 +172,7 @@ impl VectorProperty {
         );
         Ok(VectorProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -180,6 +199,7 @@ impl IntPointProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -189,6 +209,7 @@ impl IntPointProperty {
 
         Ok(IntPointProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             x,
@@ -215,6 +236,7 @@ impl Vector4Property {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -227,6 +249,7 @@ impl Vector4Property {
         let value = Vector4::new(x, y, z, w);
         Ok(Vector4Property {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -254,6 +277,7 @@ impl Vector2DProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -264,6 +288,7 @@ impl Vector2DProperty {
 
         Ok(Vector2DProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             x,
@@ -290,6 +315,7 @@ impl QuatProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -303,6 +329,7 @@ impl QuatProperty {
 
         Ok(QuatProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -330,6 +357,7 @@ impl RotatorProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -342,6 +370,7 @@ impl RotatorProperty {
 
         Ok(RotatorProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -368,6 +397,7 @@ impl BoxProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -376,12 +406,14 @@ impl BoxProperty {
             false => None,
         };
 
-        let v1 = VectorProperty::new(asset, name.clone(), false, 0)?;
-        let v2 = VectorProperty::new(asset, name.clone(), false, 0)?;
+        let new_ancestry = ancestry.with_parent(name.clone());
+        let v1 = VectorProperty::new(asset, name.clone(), new_ancestry.clone(), false, 0)?;
+        let v2 = VectorProperty::new(asset, name.clone(), new_ancestry, false, 0)?;
         let is_valid = asset.read_bool()?;
 
         Ok(BoxProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             v1,
@@ -410,17 +442,20 @@ impl Box2DProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
+        let new_ancestry = ancestry.with_parent(name.clone());
         Ok(Box2DProperty {
             name: name.clone(),
+            ancestry,
             property_guid,
             duplication_index,
-            v1: Vector2DProperty::new(asset, name.clone(), false, 0)?,
-            v2: Vector2DProperty::new(asset, name, false, 0)?,
+            v1: Vector2DProperty::new(asset, name.clone(), new_ancestry.clone(), false, 0)?,
+            v2: Vector2DProperty::new(asset, name, new_ancestry, false, 0)?,
             is_valid: asset.read_bool()?,
         })
     }

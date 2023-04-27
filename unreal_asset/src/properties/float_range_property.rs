@@ -8,6 +8,7 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     types::{FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::PropertyTrait;
@@ -17,6 +18,8 @@ use super::PropertyTrait;
 pub struct FloatRangeProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -33,6 +36,7 @@ impl FloatRangeProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -43,6 +47,7 @@ impl FloatRangeProperty {
 
         Ok(FloatRangeProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             lower_bound: OrderedFloat(lower_bound),

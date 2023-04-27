@@ -10,6 +10,7 @@ use crate::{
     properties::PropertyTrait,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     types::{FName, Guid, PackageIndex},
+    unversioned::ancestry::Ancestry,
 };
 
 /// Font hinting
@@ -131,6 +132,8 @@ impl FontData {
 pub struct FontDataProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -145,6 +148,7 @@ impl FontDataProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -155,6 +159,7 @@ impl FontDataProperty {
 
         Ok(FontDataProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

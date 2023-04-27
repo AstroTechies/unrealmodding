@@ -7,6 +7,7 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     types::{FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::PropertyTrait;
@@ -58,6 +59,8 @@ impl FontCharacter {
 pub struct FontCharacterProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -72,6 +75,7 @@ impl FontCharacterProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -82,6 +86,7 @@ impl FontCharacterProperty {
 
         Ok(FontCharacterProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

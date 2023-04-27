@@ -11,12 +11,15 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid, PackageIndex};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Object property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -31,6 +34,8 @@ impl_property_data_trait!(ObjectProperty);
 pub struct AssetObjectProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -75,6 +80,8 @@ impl SoftObjectPath {
 pub struct SoftObjectProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -89,6 +96,7 @@ impl ObjectProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -96,6 +104,7 @@ impl ObjectProperty {
         let value = asset.read_i32::<LittleEndian>()?;
         Ok(ObjectProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: PackageIndex::new(value),
@@ -120,6 +129,7 @@ impl AssetObjectProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -127,6 +137,7 @@ impl AssetObjectProperty {
         let value = asset.read_fstring()?;
         Ok(AssetObjectProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -150,6 +161,7 @@ impl SoftObjectProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -158,6 +170,7 @@ impl SoftObjectProperty {
 
         Ok(SoftObjectProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

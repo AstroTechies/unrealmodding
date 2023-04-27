@@ -10,6 +10,7 @@ use crate::{
     reader::asset_reader::AssetReader,
     reader::asset_writer::AssetWriter,
     types::{FName, Guid, PackageIndex},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::PropertyTrait;
@@ -35,6 +36,8 @@ impl Delegate {
 pub struct DelegateProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -49,6 +52,7 @@ impl DelegateProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -57,6 +61,7 @@ impl DelegateProperty {
 
         Ok(DelegateProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: Delegate::new(
@@ -90,6 +95,8 @@ macro_rules! impl_multicast {
         pub struct $property_name {
             /// Name
             pub name: FName,
+            /// Property ancestry
+            pub ancestry: Ancestry,
             /// Property guid
             pub property_guid: Option<Guid>,
             /// Property duplication index
@@ -103,6 +110,7 @@ macro_rules! impl_multicast {
             pub fn new<Reader: AssetReader>(
                 asset: &mut Reader,
                 name: FName,
+                ancestry: Ancestry,
                 include_header: bool,
                 _length: i64,
                 duplication_index: i32,
@@ -120,6 +128,7 @@ macro_rules! impl_multicast {
 
                 Ok($property_name {
                     name,
+                    ancestry,
                     property_guid,
                     duplication_index,
                     value,

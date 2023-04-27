@@ -14,6 +14,7 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::simple_property_write;
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Implement a simple integer property
 macro_rules! impl_int_property {
@@ -23,6 +24,7 @@ macro_rules! impl_int_property {
             pub fn new<Reader: AssetReader>(
                 asset: &mut Reader,
                 name: FName,
+                ancestry: Ancestry,
                 include_header: bool,
                 _length: i64,
                 duplication_index: i32,
@@ -31,6 +33,7 @@ macro_rules! impl_int_property {
 
                 Ok($property_type {
                     name,
+                    ancestry,
                     property_guid,
                     duplication_index,
                     value: asset.$read_func::<LittleEndian>()?,
@@ -47,6 +50,8 @@ macro_rules! impl_int_property {
 pub struct Int8Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -70,6 +75,8 @@ pub enum BytePropertyValue {
 pub struct ByteProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -86,6 +93,8 @@ impl_property_data_trait!(ByteProperty);
 pub struct BoolProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -100,6 +109,8 @@ impl_property_data_trait!(BoolProperty);
 pub struct IntProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -114,6 +125,8 @@ impl_property_data_trait!(IntProperty);
 pub struct Int16Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -128,6 +141,8 @@ impl_property_data_trait!(Int16Property);
 pub struct Int64Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -142,6 +157,8 @@ impl_property_data_trait!(Int64Property);
 pub struct UInt16Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -156,6 +173,8 @@ impl_property_data_trait!(UInt16Property);
 pub struct UInt32Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -170,6 +189,8 @@ impl_property_data_trait!(UInt32Property);
 pub struct UInt64Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -184,6 +205,8 @@ impl_property_data_trait!(UInt64Property);
 pub struct FloatProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -198,6 +221,8 @@ impl_property_data_trait!(FloatProperty);
 pub struct DoubleProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -212,6 +237,7 @@ impl BoolProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -221,6 +247,7 @@ impl BoolProperty {
 
         Ok(BoolProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -245,6 +272,7 @@ impl Int8Property {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -252,6 +280,7 @@ impl Int8Property {
         let property_guid = optional_guid!(asset, include_header);
         Ok(Int8Property {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: asset.read_i8()?,
@@ -310,6 +339,7 @@ impl ByteProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         fallback_length: i64,
@@ -325,6 +355,7 @@ impl ByteProperty {
 
         Ok(ByteProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             enum_type,
@@ -366,6 +397,7 @@ impl FloatProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -374,6 +406,7 @@ impl FloatProperty {
 
         Ok(FloatProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
@@ -398,6 +431,7 @@ impl DoubleProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -406,6 +440,7 @@ impl DoubleProperty {
 
         Ok(DoubleProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: OrderedFloat(asset.read_f64::<LittleEndian>()?),

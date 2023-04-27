@@ -8,6 +8,7 @@ use crate::{
     properties::PropertyTrait,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     types::{FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 /// Movie scene track identifier
@@ -37,6 +38,8 @@ impl MovieSceneTrackIdentifier {
 pub struct MovieSceneTrackIdentifierProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -51,6 +54,7 @@ impl MovieSceneTrackIdentifierProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -60,6 +64,7 @@ impl MovieSceneTrackIdentifierProperty {
 
         Ok(MovieSceneTrackIdentifierProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

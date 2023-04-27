@@ -1,6 +1,9 @@
 //! CRC implementation
 
 use lazy_static::lazy_static;
+use naive_cityhash::cityhash64;
+
+use crate::types::package_object_index::PackageObjectIndex;
 
 #[rustfmt::skip]
 lazy_static! {
@@ -178,12 +181,32 @@ pub fn generate_hash(string: &str) -> u32 {
     (algo1 & 0xffff) | ((algo2 & 0xffff) << 16)
 }
 
+pub fn generate_import_hash_from_object_path(string: &str) -> u64 {
+    let encoded = string.encode_utf16().map(to_lower).collect::<Vec<_>>();
+    // this is safe because we know that this is a u16 array, therefore it can safely be aligned to u8
+    // this is also faster than alternatives without unsafe block
+    let (_, aligned, _) = unsafe { encoded.align_to::<u8>() };
+    cityhash64(aligned) & PackageObjectIndex::INDEX_MASK
+}
+
 fn to_upper(character: u16) -> u16 {
     if character.saturating_sub('a' as u16) < 26u16 {
         (character as u8 as char).to_uppercase().next().unwrap() as u16
     } else {
         character
     }
+}
+
+fn to_lower(character: u16) -> u16 {
+    if character.saturating_sub('a' as u16) < 26u16 {
+        (character as u8 as char).to_lowercase().next().unwrap() as u16
+    } else {
+        character
+    }
+}
+
+pub fn to_lower_string(string: &str) -> String {
+    String::from_utf16(&string.encode_utf16().map(to_lower).collect::<Vec<_>>()).unwrap()
 }
 
 fn generate_hash_deprecated(string: &str) -> u32 {

@@ -6,6 +6,8 @@ use crate::properties::{Property, PropertyTrait};
 use crate::reader::asset_reader::AssetReader;
 use crate::reader::asset_writer::AssetWriter;
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
+use crate::unversioned::header::UnversionedHeader;
 use crate::{impl_property_data_trait, optional_guid, optional_guid_write};
 
 /// Section evaluation tree
@@ -20,7 +22,13 @@ impl SectionEvaluationTree {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let tree = TMovieSceneEvaluationTree::read(asset, |reader| {
             let mut resulting_list = Vec::new();
-            while let Some(property) = Property::new(reader, None, true)? {
+            let mut unversioned_header = UnversionedHeader::new(reader)?;
+            while let Some(property) = Property::new(
+                reader,
+                Ancestry::default(),
+                unversioned_header.as_mut(),
+                true,
+            )? {
                 resulting_list.push(property);
             }
 
@@ -33,7 +41,20 @@ impl SectionEvaluationTree {
     /// Write a `SectionEvaluationTree` to an asset
     pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.tree.write(asset, |writer, node| {
-            for property in node {
+            let (unversioned_header, sorted_properties) = match writer.generate_unversioned_header(
+                node,
+                &FName::from_slice("SectionEvaluationDataTree"),
+            )? {
+                Some((a, b)) => (Some(a), Some(b)),
+                None => (None, None),
+            };
+
+            if let Some(unversioned_header) = unversioned_header {
+                unversioned_header.write(writer)?;
+            }
+
+            let properties = sorted_properties.as_ref().unwrap_or(node);
+            for property in properties.iter() {
                 Property::write(property, writer, true)?;
             }
 
@@ -51,6 +72,8 @@ impl SectionEvaluationTree {
 pub struct SectionEvaluationDataTreeProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -65,6 +88,7 @@ impl SectionEvaluationDataTreeProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -74,6 +98,7 @@ impl SectionEvaluationDataTreeProperty {
 
         Ok(SectionEvaluationDataTreeProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

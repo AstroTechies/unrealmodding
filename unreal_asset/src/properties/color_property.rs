@@ -13,12 +13,15 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::vector::Color;
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Color property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ColorProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -33,6 +36,8 @@ impl_property_data_trait!(ColorProperty);
 pub struct LinearColorProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -47,6 +52,7 @@ impl ColorProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -54,6 +60,7 @@ impl ColorProperty {
         let color = Color::from_argb(asset.read_i32::<LittleEndian>()?);
         Ok(ColorProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             color,
@@ -78,6 +85,7 @@ impl LinearColorProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -90,6 +98,7 @@ impl LinearColorProperty {
         );
         Ok(LinearColorProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             color,

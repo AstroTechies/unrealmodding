@@ -13,6 +13,9 @@ use crate::object_version::ObjectVersion;
 use crate::properties::{Property, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
+use crate::unversioned::header::UnversionedHeader;
+use crate::unversioned::properties::UsmapPropertyData;
 use crate::{cast, impl_property_data_trait};
 
 /// Struct property
@@ -20,6 +23,8 @@ use crate::{cast, impl_property_data_trait};
 pub struct StructProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Struct type
     pub struct_type: Option<FName>,
     /// Struct guid
@@ -37,9 +42,15 @@ impl_property_data_trait!(StructProperty);
 
 impl StructProperty {
     /// Create a dummy `StructProperty`
-    pub fn dummy(name: FName, struct_type: FName, struct_guid: Option<Guid>) -> Self {
+    pub fn dummy(
+        name: FName,
+        ancestry: Ancestry,
+        struct_type: FName,
+        struct_guid: Option<Guid>,
+    ) -> Self {
         StructProperty {
             name,
+            ancestry,
             struct_type: Some(struct_type),
             struct_guid,
             property_guid: None,
@@ -53,7 +64,7 @@ impl StructProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -62,7 +73,7 @@ impl StructProperty {
         let mut struct_guid = None;
         let mut property_guid = None;
 
-        if include_header {
+        if include_header && !asset.has_unversioned_properties() {
             struct_type = Some(asset.read_fname()?);
             if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
                 let mut guid = [0u8; 16];
@@ -75,7 +86,7 @@ impl StructProperty {
         StructProperty::custom_header(
             asset,
             name,
-            parent_name,
+            ancestry,
             length,
             duplication_index,
             struct_type,
@@ -89,20 +100,45 @@ impl StructProperty {
     pub fn custom_header<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        _parent_name: Option<&FName>,
+        ancestry: Ancestry,
         length: i64,
         duplication_index: i32,
-        struct_type: Option<FName>,
+        mut struct_type: Option<FName>,
         struct_guid: Option<[u8; 16]>,
         property_guid: Option<[u8; 16]>,
     ) -> Result<Self, Error> {
+        if let Some(struct_mapping) = asset
+            .get_mappings()
+            .and_then(|e| e.get_property(&name, &ancestry))
+            .and_then(|e| cast!(UsmapPropertyData, UsmapStructPropertyData, &e.property_data))
+        {
+            if struct_type
+                .as_ref()
+                .map(|e| e.content == "Generic")
+                .unwrap_or(true)
+            {
+                struct_type = Some(FName::new(
+                    struct_mapping.struct_type.clone().unwrap_or_default(),
+                    0,
+                ));
+            }
+        }
+
+        if asset.has_unversioned_properties() && struct_type.is_none() {
+            return Err(PropertyError::no_type(&name.content, &ancestry).into());
+        }
+
         let mut custom_serialization = match struct_type {
             Some(ref e) => Property::has_custom_serialization(&e.content),
             None => false,
         };
 
-        if let Some(ref e) = struct_type {
-            if e.content == "FloatRange" {
+        match struct_type
+            .as_ref()
+            .map(|e| e.content.as_str())
+            .unwrap_or_default()
+        {
+            "FloatRange" => {
                 // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
                 // The best solution is to just check and see if the next bit is an FName or not
 
@@ -117,37 +153,37 @@ impl StructProperty {
                     custom_serialization = true;
                 }
             }
-
-            if e.content == "RichCurveKey"
-                && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
+            "RichCurveKey"
+                if asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY =>
             {
                 custom_serialization = false;
             }
-
-            if e.content == "MovieSceneTrackIdentifier"
-                && asset.get_custom_version::<FEditorObjectVersion>().version
-                    < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32
+            "MovieSceneTrackIdentifier"
+                if asset.get_custom_version::<FEditorObjectVersion>().version
+                    < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32 =>
             {
                 custom_serialization = false;
             }
-
-            if e.content == "MovieSceneFloatChannel"
-                && asset
+            "MovieSceneFloatChannel" => {
+                if asset
                     .get_custom_version::<FSequencerObjectVersion>()
                     .version
                     < FSequencerObjectVersion::SerializeFloatChannelCompletely as i32
-                && asset
-                    .get_custom_version::<FFortniteMainBranchObjectVersion>()
-                    .version
-                    < FFortniteMainBranchObjectVersion::SerializeFloatChannelShowCurve as i32
-            {
-                custom_serialization = false;
+                    && asset
+                        .get_custom_version::<FFortniteMainBranchObjectVersion>()
+                        .version
+                        < FFortniteMainBranchObjectVersion::SerializeFloatChannelShowCurve as i32
+                {
+                    custom_serialization = false;
+                }
             }
+            _ => {}
         }
 
         if length == 0 {
             return Ok(StructProperty {
                 name,
+                ancestry,
                 struct_type,
                 struct_guid,
                 property_guid,
@@ -158,20 +194,23 @@ impl StructProperty {
         }
 
         if custom_serialization {
+            let new_ancestry = ancestry.with_parent(name.clone());
             let property = Property::from_type(
                 asset,
                 struct_type.as_ref().unwrap(),
                 name.clone(),
-                struct_type.as_ref(),
+                new_ancestry,
                 false,
                 0,
                 0,
                 0,
+                false,
             )?;
             let value = vec![property];
 
             Ok(StructProperty {
                 name,
+                ancestry,
                 struct_type,
                 struct_guid,
                 property_guid,
@@ -181,12 +220,20 @@ impl StructProperty {
             })
         } else {
             let mut values = Vec::new();
-            while let Some(property) = Property::new(asset, struct_type.as_ref(), true)? {
+            let mut unversioned_header = UnversionedHeader::new(asset)?;
+            let new_ancestry = ancestry.with_parent(struct_type.clone().unwrap());
+            while let Some(property) = Property::new(
+                asset,
+                new_ancestry.clone(),
+                unversioned_header.as_mut(),
+                true,
+            )? {
                 values.push(property);
             }
 
             Ok(StructProperty {
                 name,
+                ancestry,
                 struct_type,
                 struct_guid,
                 property_guid,
@@ -266,10 +313,27 @@ impl StructProperty {
             Ok(0)
         } else {
             let begin = asset.position();
-            for entry in &self.value {
+
+            let (unversioned_header, sorted_properties) = match asset.generate_unversioned_header(
+                &self.value,
+                self.struct_type.as_ref().unwrap_or(&FName::default()),
+            )? {
+                Some((a, b)) => (Some(a), Some(b)),
+                None => (None, None),
+            };
+
+            if let Some(unversioned_header) = unversioned_header {
+                unversioned_header.write(asset)?;
+            }
+
+            let properties = sorted_properties.as_ref().unwrap_or(&self.value);
+            for entry in properties.iter() {
                 Property::write(entry, asset, true)?;
             }
-            asset.write_fname(&FName::from_slice("None"))?;
+
+            if !asset.has_unversioned_properties() {
+                asset.write_fname(&FName::from_slice("None"))?;
+            }
             Ok((asset.position() - begin) as usize)
         }
     }

@@ -13,6 +13,7 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Rich curve extrapolation
 #[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
@@ -81,6 +82,8 @@ pub enum RichCurveTangentWeightMode {
 pub struct RichCurveKeyProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -111,6 +114,7 @@ impl RichCurveKeyProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -130,6 +134,7 @@ impl RichCurveKeyProperty {
 
         Ok(RichCurveKeyProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             interp_mode,

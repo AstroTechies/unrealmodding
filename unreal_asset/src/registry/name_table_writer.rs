@@ -10,8 +10,10 @@ use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
+use crate::properties::Property;
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
 use crate::types::{FName, PackageIndex};
+use crate::unversioned::header::UnversionedHeader;
 use crate::Import;
 
 /// Used to write NameTable entries by modifying the behavior
@@ -129,6 +131,10 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
     fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
         self.writer.get_mappings()
     }
+
+    fn has_unversioned_properties(&self) -> bool {
+        self.writer.has_unversioned_properties()
+    }
 }
 
 impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
@@ -207,5 +213,14 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
 
     fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.writer.write_bool(value)
+    }
+
+    fn generate_unversioned_header(
+        &mut self,
+        properties: &[Property],
+        parent_name: &FName,
+    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
+        self.writer
+            .generate_unversioned_header(properties, parent_name)
     }
 }

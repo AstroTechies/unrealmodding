@@ -7,12 +7,15 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Guid property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct GuidProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -27,6 +30,7 @@ impl GuidProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -35,6 +39,7 @@ impl GuidProperty {
         asset.read_exact(&mut value)?;
         Ok(GuidProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

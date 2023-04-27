@@ -11,6 +11,7 @@ use crate::implement_get;
 use crate::properties::{struct_property::StructProperty, Property, PropertyDataTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::FName;
+use crate::unversioned::ancestry::Ancestry;
 
 /// Data table
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -60,9 +61,7 @@ impl DataTableExport {
         let num_entries = asset.read_i32::<LittleEndian>()? as usize;
         let mut data = Vec::with_capacity(num_entries);
 
-        let parent_name = asset
-            .get_parent_class_cached()
-            .map(|e| e.parent_class_export_name.clone());
+        let ancestry = Ancestry::new(base.get_class_type_for_ancestry(asset));
 
         for _i in 0..num_entries {
             let row_name = asset.read_fname()?;
@@ -70,7 +69,7 @@ impl DataTableExport {
             let next_struct = StructProperty::custom_header(
                 asset,
                 row_name,
-                parent_name.as_ref(),
+                ancestry.clone(),
                 1,
                 0,
                 Some(decided_struct_type.clone()),

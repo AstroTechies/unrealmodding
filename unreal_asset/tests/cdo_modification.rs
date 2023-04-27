@@ -8,6 +8,7 @@ use unreal_asset::{
     flags::EObjectFlags,
     properties::{object_property::ObjectProperty, PropertyDataTrait},
     types::{FName, PackageIndex},
+    unversioned::ancestry::Ancestry,
     Asset,
 };
 
@@ -51,6 +52,7 @@ fn cdo_modification() -> Result<(), Error> {
         property_guid: None,
         duplication_index: 0,
         value: PackageIndex::new(0),
+        ancestry: Ancestry::default(),
     }
     .into();
 

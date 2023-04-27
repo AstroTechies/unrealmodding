@@ -16,6 +16,7 @@ use crate::properties::{
 };
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Material expression
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -37,6 +38,8 @@ pub struct MaterialExpression {
 pub struct ColorMaterialInputProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -53,6 +56,8 @@ impl_property_data_trait!(ColorMaterialInputProperty);
 pub struct ScalarMaterialInputProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -69,6 +74,8 @@ impl_property_data_trait!(ScalarMaterialInputProperty);
 pub struct ShadingModelMaterialInputProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -85,6 +92,8 @@ impl_property_data_trait!(ShadingModelMaterialInputProperty);
 pub struct VectorMaterialInputProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property index
@@ -101,6 +110,8 @@ impl_property_data_trait!(VectorMaterialInputProperty);
 pub struct Vector2MaterialInputProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -117,6 +128,8 @@ impl_property_data_trait!(Vector2MaterialInputProperty);
 pub struct ExpressionInputProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -131,6 +144,8 @@ impl_property_data_trait!(ExpressionInputProperty);
 pub struct MaterialAttributesInputProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -181,6 +196,7 @@ impl ColorMaterialInputProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -188,10 +204,17 @@ impl ColorMaterialInputProperty {
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
         asset.read_i32::<LittleEndian>()?;
 
-        let value = ColorProperty::new(asset, name.clone(), false, 0)?;
+        let value = ColorProperty::new(
+            asset,
+            name.clone(),
+            ancestry.with_parent(name.clone()),
+            false,
+            0,
+        )?;
 
         Ok(ColorMaterialInputProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             material_expression,
@@ -219,6 +242,7 @@ impl ScalarMaterialInputProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -230,6 +254,7 @@ impl ScalarMaterialInputProperty {
 
         Ok(ScalarMaterialInputProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             material_expression,
@@ -257,6 +282,7 @@ impl ShadingModelMaterialInputProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -267,6 +293,7 @@ impl ShadingModelMaterialInputProperty {
         let value = asset.read_u32::<LittleEndian>()?;
         Ok(ShadingModelMaterialInputProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             material_expression,
@@ -294,6 +321,7 @@ impl VectorMaterialInputProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -301,9 +329,16 @@ impl VectorMaterialInputProperty {
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
         asset.read_i32::<LittleEndian>()?;
-        let value = VectorProperty::new(asset, name.clone(), false, 0)?;
+        let value = VectorProperty::new(
+            asset,
+            name.clone(),
+            ancestry.with_parent(name.clone()),
+            false,
+            0,
+        )?;
         Ok(VectorMaterialInputProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             material_expression,
@@ -331,6 +366,7 @@ impl Vector2MaterialInputProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -338,9 +374,16 @@ impl Vector2MaterialInputProperty {
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
         asset.read_i32::<LittleEndian>()?;
-        let value = Vector2DProperty::new(asset, name.clone(), false, 0)?;
+        let value = Vector2DProperty::new(
+            asset,
+            name.clone(),
+            ancestry.with_parent(name.clone()),
+            false,
+            0,
+        )?;
         Ok(Vector2MaterialInputProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             material_expression,
@@ -368,6 +411,7 @@ impl ExpressionInputProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -376,6 +420,7 @@ impl ExpressionInputProperty {
 
         Ok(ExpressionInputProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             material_expression,
@@ -399,6 +444,7 @@ impl MaterialAttributesInputProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -407,6 +453,7 @@ impl MaterialAttributesInputProperty {
 
         Ok(MaterialAttributesInputProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             material_expression,

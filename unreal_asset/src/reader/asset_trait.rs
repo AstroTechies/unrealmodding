@@ -28,6 +28,9 @@ pub trait AssetTrait {
     where
         T: CustomVersionTrait + Into<i32>;
 
+    /// Check if the asset has unversioned properties
+    fn has_unversioned_properties(&self) -> bool;
+
     /// Current archive cursor position
     fn position(&mut self) -> u64;
     /// Set archive cursor position

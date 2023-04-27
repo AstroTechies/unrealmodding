@@ -23,6 +23,7 @@ ordered-float = "3.4.0"
 slab = "0.4.7"
 rustc-hash = "1.1.0"
 thiserror = "1.0.40"
+naive-cityhash = "0.2.0"
 
 [features]
 oodle = []

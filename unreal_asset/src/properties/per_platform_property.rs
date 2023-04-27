@@ -12,12 +12,15 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Per platform bool property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -32,6 +35,8 @@ impl_property_data_trait!(PerPlatformBoolProperty);
 pub struct PerPlatformIntProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -46,6 +51,8 @@ impl_property_data_trait!(PerPlatformIntProperty);
 pub struct PerPlatformFloatProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -60,6 +67,7 @@ impl PerPlatformBoolProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -75,6 +83,7 @@ impl PerPlatformBoolProperty {
 
         Ok(PerPlatformBoolProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -102,6 +111,7 @@ impl PerPlatformIntProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -117,6 +127,7 @@ impl PerPlatformIntProperty {
 
         Ok(PerPlatformIntProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -144,6 +155,7 @@ impl PerPlatformFloatProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -159,6 +171,7 @@ impl PerPlatformFloatProperty {
 
         Ok(PerPlatformFloatProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

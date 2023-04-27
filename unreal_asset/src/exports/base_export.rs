@@ -2,6 +2,7 @@
 
 use crate::error::Error;
 use crate::exports::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
+use crate::reader::asset_trait::AssetTrait;
 use crate::reader::asset_writer::AssetWriter;
 use crate::types::{FName, Guid, PackageIndex};
 
@@ -55,6 +56,19 @@ pub struct BaseExport {
     /// Dependencies that should be created before this export is created
     pub create_before_create_dependencies: Vec<PackageIndex>,
     pub(crate) create_before_create_dependencies_size: i32,
+}
+
+impl BaseExport {
+    /// Gets class type for first ancestry parent
+    pub fn get_class_type_for_ancestry<Asset: AssetTrait>(&self, asset: &Asset) -> FName {
+        match self.class_index.is_import() {
+            true => asset
+                .get_import(self.class_index)
+                .map(|e| e.object_name.clone()),
+            false => asset.get_parent_class().map(|e| e.parent_class_export_name),
+        }
+        .unwrap_or_default()
+    }
 }
 
 impl ExportNormalTrait for BaseExport {

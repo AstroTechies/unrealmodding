@@ -86,9 +86,47 @@ pub enum EPropertyType {
     Unknown = 0xFF,
 }
 
+impl ToString for EPropertyType {
+    fn to_string(&self) -> String {
+        match *self {
+            EPropertyType::ByteProperty => "ByteProperty".to_string(),
+            EPropertyType::BoolProperty => "BoolProperty".to_string(),
+            EPropertyType::IntProperty => "IntProperty".to_string(),
+            EPropertyType::FloatProperty => "FloatProperty".to_string(),
+            EPropertyType::ObjectProperty => "ObjectProperty".to_string(),
+            EPropertyType::NameProperty => "NameProperty".to_string(),
+            EPropertyType::DelegateProperty => "DelegateProperty".to_string(),
+            EPropertyType::DoubleProperty => "DoubleProperty".to_string(),
+            EPropertyType::ArrayProperty => "ArrayProperty".to_string(),
+            EPropertyType::StructProperty => "StructProperty".to_string(),
+            EPropertyType::StrProperty => "StrProperty".to_string(),
+            EPropertyType::TextProperty => "TextProperty".to_string(),
+            EPropertyType::InterfaceProperty => "InterfaceProperty".to_string(),
+            EPropertyType::MulticastDelegateProperty => "MulticastDelegateProperty".to_string(),
+            EPropertyType::WeakObjectProperty => "WeakObjectProperty".to_string(),
+            EPropertyType::LazyObjectProperty => "LazyObjectProperty".to_string(),
+            EPropertyType::AssetObjectProperty => "AssetObjectProperty".to_string(),
+            EPropertyType::SoftObjectProperty => "SoftObjectProperty".to_string(),
+            EPropertyType::UInt64Property => "UInt64Property".to_string(),
+            EPropertyType::UInt32Property => "UInt32Property".to_string(),
+            EPropertyType::UInt16Property => "UInt16Property".to_string(),
+            EPropertyType::Int64Property => "Int64Property".to_string(),
+            EPropertyType::Int16Property => "Int16Property".to_string(),
+            EPropertyType::Int8Property => "Int8Property".to_string(),
+            EPropertyType::MapProperty => "MapProperty".to_string(),
+            EPropertyType::SetProperty => "SetProperty".to_string(),
+            EPropertyType::EnumProperty => "EnumProperty".to_string(),
+            EPropertyType::FieldPathProperty => "FieldPathProperty".to_string(),
+            EPropertyType::Unknown => "Unknown".to_string(),
+        }
+    }
+}
+
 /// This must be implemented for all UsmapPropertyDatas
 #[enum_dispatch]
 pub trait UsmapPropertyDataTrait: Debug + Hash + Clone + PartialEq + Eq {
+    /// Get `UsmapPropertyData` property type
+    fn get_property_type(&self) -> EPropertyType;
     /// Write `UsmapPropertyData` to an asset
     fn write<Writer: UsmapWriter>(&self, writer: &mut Writer) -> Result<usize, Error>;
 }
@@ -137,11 +175,13 @@ impl UsmapPropertyData {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapProperty {
     /// Name
-    pub name: String,
+    pub name: Option<String>,
     /// Schema index
     pub schema_index: u16,
     /// Array size
     pub array_size: u8,
+    /// Array index (not serialized)
+    pub array_index: u16,
     /// Property data
     pub property_data: UsmapPropertyData,
 }
@@ -158,6 +198,7 @@ impl UsmapProperty {
             name,
             schema_index,
             array_size,
+            array_index: 0,
             property_data,
         })
     }

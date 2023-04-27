@@ -5,17 +5,21 @@ use std::io::SeekFrom;
 use byteorder::LittleEndian;
 
 use crate::error::{Error, PropertyError};
-use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{default_guid, FName, Guid, ToFName};
+use crate::unversioned::ancestry::Ancestry;
+use crate::unversioned::properties::{UsmapPropertyData, UsmapPropertyDataTrait};
+use crate::{cast, impl_property_data_trait};
 
 /// Array property
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -34,7 +38,7 @@ impl ArrayProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -47,7 +51,7 @@ impl ArrayProperty {
         ArrayProperty::new_no_header(
             asset,
             name,
-            parent_name,
+            ancestry,
             include_header,
             length,
             duplication_index,
@@ -58,9 +62,15 @@ impl ArrayProperty {
     }
 
     /// Create an `ArrayProperty` from an array of properties
-    pub fn from_arr(name: FName, array_type: Option<FName>, value: Vec<Property>) -> Self {
+    pub fn from_arr(
+        name: FName,
+        ancestry: Ancestry,
+        array_type: Option<FName>,
+        value: Vec<Property>,
+    ) -> Self {
         ArrayProperty {
             name,
+            ancestry,
             property_guid: None,
             array_type,
             value,
@@ -74,12 +84,12 @@ impl ArrayProperty {
     pub fn new_no_header<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         _include_header: bool,
         length: i64,
         duplication_index: i32,
         serialize_struct_differently: bool,
-        array_type: Option<FName>,
+        mut array_type: Option<FName>,
         property_guid: Option<Guid>,
     ) -> Result<Self, Error> {
         let num_entries = asset.read_i32::<LittleEndian>()?;
@@ -90,9 +100,41 @@ impl ArrayProperty {
         let mut struct_guid = None;
 
         let mut dummy_struct = None;
+
+        let mut array_struct_type = None;
+        if array_type.is_none() {
+            if let Some(struct_data) = asset
+                .get_mappings()
+                .and_then(|e| e.get_property(&name, &ancestry))
+                .and_then(|e| cast!(UsmapPropertyData, UsmapArrayPropertyData, &e.property_data))
+            {
+                array_type = Some(FName::new(
+                    struct_data.inner_type.get_property_type().to_string(),
+                    0,
+                ));
+                if let Some(inner_struct_data) = cast!(
+                    UsmapPropertyData,
+                    UsmapStructPropertyData,
+                    struct_data.inner_type.as_ref()
+                ) {
+                    array_struct_type = Some(FName::new(
+                        inner_struct_data.struct_type.clone().unwrap_or_default(),
+                        0,
+                    ));
+                }
+            }
+        }
+
+        if asset.has_unversioned_properties() && array_type.is_none() {
+            return Err(PropertyError::no_type(&name.content, &ancestry).into());
+        }
+
+        let new_ancestry = ancestry.with_parent(name.clone());
+
         if (array_type.is_some()
             && array_type.as_ref().unwrap().content.as_str() == "StructProperty")
             && serialize_struct_differently
+            && !asset.has_unversioned_properties()
         {
             let mut full_type = FName::new(String::from("Generic"), 0);
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
@@ -132,6 +174,7 @@ impl ArrayProperty {
             if num_entries == 0 {
                 dummy_struct = Some(StructProperty::dummy(
                     name.clone(),
+                    ancestry.with_parent(name.clone()),
                     full_type.clone(),
                     struct_guid,
                 ));
@@ -140,7 +183,7 @@ impl ArrayProperty {
                 let data = StructProperty::custom_header(
                     asset,
                     name.clone(),
-                    parent_name,
+                    new_ancestry.clone(),
                     struct_length,
                     0,
                     Some(full_type.clone()),
@@ -156,22 +199,43 @@ impl ArrayProperty {
                 .as_ref()
                 .ok_or_else(|| Error::invalid_file("Unknown array type".to_string()))?;
             for i in 0..num_entries {
-                let entry = Property::from_type(
-                    asset,
-                    array_type,
-                    FName::new(i.to_string(), i32::MIN),
-                    parent_name,
-                    false,
-                    size_est_1,
-                    size_est_2,
-                    0,
-                )?;
+                let entry: Property = if array_type.content == "StructProperty" {
+                    let struct_type = match array_struct_type {
+                        Some(ref e) => Some(e.clone()),
+                        None => Some(FName::from_slice("Generic")),
+                    };
+                    StructProperty::custom_header(
+                        asset,
+                        FName::new(i.to_string(), i32::MIN),
+                        new_ancestry.clone(),
+                        size_est_1,
+                        0,
+                        struct_type,
+                        None,
+                        None,
+                    )?
+                    .into()
+                } else {
+                    Property::from_type(
+                        asset,
+                        array_type,
+                        FName::new(i.to_string(), i32::MIN),
+                        ancestry.clone(),
+                        false,
+                        size_est_1,
+                        size_est_2,
+                        0,
+                        false,
+                    )?
+                };
+
                 entries.push(entry);
             }
         }
 
         Ok(ArrayProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             array_type,

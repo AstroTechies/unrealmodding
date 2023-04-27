@@ -159,6 +159,10 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
     fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
         self.reader.get_mappings()
     }
+
+    fn has_unversioned_properties(&self) -> bool {
+        self.reader.has_unversioned_properties()
+    }
 }
 
 impl<'reader, Reader: AssetReader> AssetReader for NameTableReader<'reader, Reader> {

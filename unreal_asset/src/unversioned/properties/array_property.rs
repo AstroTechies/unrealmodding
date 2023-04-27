@@ -33,4 +33,8 @@ impl UsmapPropertyDataTrait for UsmapArrayPropertyData {
         let size = self.inner_type.write(asset)?;
         Ok(size + size_of::<u8>())
     }
+
+    fn get_property_type(&self) -> EPropertyType {
+        EPropertyType::ArrayProperty
+    }
 }

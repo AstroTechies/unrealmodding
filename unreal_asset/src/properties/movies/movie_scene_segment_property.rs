@@ -9,6 +9,7 @@ use crate::{
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     types::movie::FFrameNumberRange,
     types::{FName, Guid},
+    unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
 
 /// Movie scene segment identifier
@@ -36,6 +37,8 @@ impl MovieSceneSegmentIdentifier {
 /// Movie scene segment
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegment {
+    /// Name
+    pub name: FName,
     /// range
     pub range: FFrameNumberRange,
     /// Identifier
@@ -50,7 +53,8 @@ impl MovieSceneSegment {
     /// Read a `MovieSceneSegment` from an asset
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
-        parent_name: Option<&FName>,
+        name: FName,
+        ancestry: Ancestry,
     ) -> Result<Self, Error> {
         let range = FFrameNumberRange::new(asset)?;
         let id = MovieSceneSegmentIdentifier::new(asset)?;
@@ -61,7 +65,10 @@ impl MovieSceneSegment {
 
         for _ in 0..impls_length {
             let mut properties_list = Vec::new();
-            while let Some(property) = Property::new(asset, parent_name, true)? {
+            let mut unversioned_header = UnversionedHeader::new(asset)?;
+            while let Some(property) =
+                Property::new(asset, ancestry.clone(), unversioned_header.as_mut(), true)?
+            {
                 properties_list.push(property);
             }
 
@@ -69,6 +76,7 @@ impl MovieSceneSegment {
         }
 
         Ok(MovieSceneSegment {
+            name,
             range,
             id,
             allow_empty,
@@ -91,7 +99,18 @@ impl MovieSceneSegment {
         let none_fname = asset.add_fname("None");
 
         for imp in &self.impls {
-            for property in imp {
+            let (unversioned_header, sorted_properties) =
+                match asset.generate_unversioned_header(imp, &self.name)? {
+                    Some((a, b)) => (Some(a), Some(b)),
+                    None => (None, None),
+                };
+
+            if let Some(unversioned_header) = unversioned_header {
+                unversioned_header.write(asset)?;
+            }
+
+            let properties = sorted_properties.as_ref().unwrap_or(imp);
+            for property in properties.iter() {
                 Property::write(property, asset, true)?;
             }
 
@@ -107,6 +126,8 @@ impl MovieSceneSegment {
 pub struct MovieSceneSegmentProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -121,15 +142,18 @@ impl MovieSceneSegmentProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let value = MovieSceneSegment::new(asset, Some(&name))?;
+        let value =
+            MovieSceneSegment::new(asset, name.clone(), ancestry.with_parent(name.clone()))?;
 
         Ok(MovieSceneSegmentProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -158,6 +182,8 @@ impl PropertyTrait for MovieSceneSegmentProperty {
 pub struct MovieSceneSegmentIdentifierProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -172,6 +198,7 @@ impl MovieSceneSegmentIdentifierProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -181,6 +208,7 @@ impl MovieSceneSegmentIdentifierProperty {
 
         Ok(MovieSceneSegmentIdentifierProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

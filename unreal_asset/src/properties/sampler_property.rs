@@ -12,12 +12,15 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Weighted random sampler property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -36,6 +39,8 @@ impl_property_data_trait!(WeightedRandomSamplerProperty);
 pub struct SkeletalMeshAreaWeightedTriangleSampler {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -54,6 +59,8 @@ impl_property_data_trait!(SkeletalMeshAreaWeightedTriangleSampler);
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -68,6 +75,7 @@ impl WeightedRandomSamplerProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -90,6 +98,7 @@ impl WeightedRandomSamplerProperty {
 
         Ok(WeightedRandomSamplerProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             prob,
@@ -130,6 +139,7 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -152,6 +162,7 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
 
         Ok(SkeletalMeshAreaWeightedTriangleSampler {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             prob,
@@ -192,16 +203,24 @@ impl SkeletalMeshSamplingLODBuiltDataProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let sampler_property =
-            WeightedRandomSamplerProperty::new(asset, name.clone(), false, 0, 0)?;
+        let sampler_property = WeightedRandomSamplerProperty::new(
+            asset,
+            name.clone(),
+            ancestry.with_parent(name.clone()),
+            false,
+            0,
+            0,
+        )?;
 
         Ok(SkeletalMeshSamplingLODBuiltDataProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             sampler_property,

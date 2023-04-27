@@ -30,4 +30,8 @@ impl UsmapPropertyDataTrait for UsmapSetPropertyData {
         asset.write_u8(EPropertyType::SetProperty as u8)?;
         todo!()
     }
+
+    fn get_property_type(&self) -> EPropertyType {
+        EPropertyType::SetProperty
+    }
 }

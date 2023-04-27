@@ -5,12 +5,15 @@ use crate::impl_property_data_trait;
 use crate::properties::{array_property::ArrayProperty, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid, ToFName};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Set property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -29,7 +32,7 @@ impl SetProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -42,7 +45,7 @@ impl SetProperty {
         let removed_items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
-            parent_name,
+            ancestry.with_parent(name.clone()),
             false,
             length,
             0,
@@ -54,7 +57,7 @@ impl SetProperty {
         let items = ArrayProperty::new_no_header(
             asset,
             name.clone(),
-            parent_name,
+            ancestry.clone(),
             false,
             length,
             0,
@@ -65,6 +68,7 @@ impl SetProperty {
 
         Ok(SetProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             array_type,

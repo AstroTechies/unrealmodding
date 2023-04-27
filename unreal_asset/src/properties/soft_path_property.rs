@@ -8,12 +8,15 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Soft asset path property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -32,6 +35,8 @@ impl_property_data_trait!(SoftAssetPathProperty);
 pub struct SoftObjectPathProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -50,6 +55,8 @@ impl_property_data_trait!(SoftObjectPathProperty);
 pub struct SoftClassPathProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -68,6 +75,8 @@ impl_property_data_trait!(SoftClassPathProperty);
 pub struct StringAssetReferenceProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -88,6 +97,7 @@ macro_rules! impl_soft_path_property {
             pub fn new<Reader: AssetReader>(
                 asset: &mut Reader,
                 name: FName,
+                ancestry: Ancestry,
                 include_header: bool,
                 _length: i64,
                 duplication_index: i32,
@@ -107,6 +117,7 @@ macro_rules! impl_soft_path_property {
 
                 Ok($property_name {
                     name,
+                    ancestry,
                     property_guid,
                     duplication_index,
                     asset_path_name,

@@ -6,6 +6,8 @@ use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
 use crate::reader::asset_reader::AssetReader;
 use crate::reader::asset_writer::AssetWriter;
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
+use crate::unversioned::header::UnversionedHeader;
 use crate::{cast, impl_property_data_trait, optional_guid, optional_guid_write};
 
 /// Movie scene track implementation pointer property
@@ -13,6 +15,8 @@ use crate::{cast, impl_property_data_trait, optional_guid, optional_guid_write};
 pub struct MovieSceneTrackImplementationPtrProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -27,7 +31,7 @@ impl MovieSceneTrackImplementationPtrProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -36,17 +40,31 @@ impl MovieSceneTrackImplementationPtrProperty {
         let mut value: Vec<Property> = Vec::new();
 
         let type_name_fname = asset.add_fname("TypeName");
-        let type_name = StrProperty::new(asset, type_name_fname, include_header, 0)?;
+        let new_ancestry = ancestry.with_parent(name.clone());
+        let type_name = StrProperty::new(
+            asset,
+            type_name_fname,
+            new_ancestry.clone(),
+            include_header,
+            0,
+        )?;
 
         if type_name.value.is_some() {
             value.push(type_name.into());
-            while let Some(data) = Property::new(asset, parent_name, true)? {
+            let mut unversioned_header = UnversionedHeader::new(asset)?;
+            while let Some(data) = Property::new(
+                asset,
+                new_ancestry.clone(),
+                unversioned_header.as_mut(),
+                true,
+            )? {
                 value.push(data);
             }
         }
 
         Ok(MovieSceneTrackImplementationPtrProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

@@ -11,12 +11,15 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Gameplay tag container property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct GameplayTagContainerProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -31,6 +34,7 @@ impl GameplayTagContainerProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -45,6 +49,7 @@ impl GameplayTagContainerProperty {
 
         Ok(GameplayTagContainerProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

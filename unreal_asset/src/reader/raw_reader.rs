@@ -123,6 +123,10 @@ impl AssetTrait for RawReader {
     fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
         None
     }
+
+    fn has_unversioned_properties(&self) -> bool {
+        false
+    }
 }
 
 impl AssetReader for RawReader {

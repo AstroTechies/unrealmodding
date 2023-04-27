@@ -12,12 +12,15 @@ use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::simple_property_write;
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Time span property
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TimeSpanProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -32,6 +35,8 @@ impl_property_data_trait!(TimeSpanProperty);
 pub struct DateTimeProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -46,6 +51,7 @@ impl TimeSpanProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -53,6 +59,7 @@ impl TimeSpanProperty {
         let ticks = asset.read_i64::<LittleEndian>()?;
         Ok(TimeSpanProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             ticks,
@@ -67,6 +74,7 @@ impl DateTimeProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -74,6 +82,7 @@ impl DateTimeProperty {
         let ticks = asset.read_i64::<LittleEndian>()?;
         Ok(DateTimeProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             ticks,

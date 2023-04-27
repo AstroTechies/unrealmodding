@@ -2,8 +2,10 @@
 
 use std::io;
 
+use super::usmap_trait::UsmapTrait;
+
 /// .usmap Writer trait
-pub trait UsmapWriter {
+pub trait UsmapWriter: UsmapTrait {
     /// write an `i8` in LE order
     fn write_i8(&mut self, value: i8) -> io::Result<()>;
     /// write an `u8` in LE order
@@ -27,5 +29,5 @@ pub trait UsmapWriter {
     /// write an FString
     fn write_fstring(&mut self, value: &str) -> io::Result<usize>;
     /// write a name
-    fn write_name(&mut self, name: &str) -> io::Result<()>;
+    fn write_name(&mut self, name: Option<&str>) -> io::Result<()>;
 }

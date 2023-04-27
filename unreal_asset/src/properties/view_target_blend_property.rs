@@ -13,6 +13,7 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// View target blend function
 #[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
@@ -37,6 +38,8 @@ pub enum ViewTargetBlendFunction {
 pub struct ViewTargetBlendParamsProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -57,6 +60,7 @@ impl ViewTargetBlendParamsProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -71,6 +75,7 @@ impl ViewTargetBlendParamsProperty {
         Ok(ViewTargetBlendParamsProperty {
             name,
             property_guid,
+            ancestry,
             duplication_index,
             blend_time,
             blend_function,

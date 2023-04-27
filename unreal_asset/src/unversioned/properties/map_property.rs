@@ -38,4 +38,8 @@ impl UsmapPropertyDataTrait for UsmapMapPropertyData {
         size += self.value_type.write(asset)?;
         Ok(size + size_of::<u8>())
     }
+
+    fn get_property_type(&self) -> EPropertyType {
+        EPropertyType::MapProperty
+    }
 }

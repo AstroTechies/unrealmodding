@@ -7,12 +7,15 @@ use crate::impl_property_data_trait;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Enum property
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub struct EnumProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -29,6 +32,7 @@ impl EnumProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -41,6 +45,7 @@ impl EnumProperty {
 
         Ok(EnumProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             enum_type,

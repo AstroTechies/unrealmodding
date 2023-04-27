@@ -36,13 +36,16 @@
 //! println!("{:#?}", asset);
 //! ```
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
+use bitvec::prelude::*;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
+use properties::Property;
 use unreal_helpers::{UnrealReadExt, UnrealWriteExt};
 
 pub mod ac7;
@@ -68,7 +71,7 @@ use containers::chain::Chain;
 use containers::indexed_map::IndexedMap;
 use custom_version::{CustomVersion, CustomVersionTrait};
 use engine_version::{get_object_versions, guess_engine_version, EngineVersion};
-use error::Error;
+use error::{Error, PropertyError};
 use exports::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
     enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
@@ -76,12 +79,14 @@ use exports::{
     string_table_export::StringTableExport, Export, ExportBaseTrait, ExportNormalTrait,
     ExportTrait,
 };
+use flags::EPackageFlags;
 use fproperty::FProperty;
 use object_version::{ObjectVersion, ObjectVersionUE5};
-use properties::world_tile_property::FWorldTileInfo;
+use properties::{world_tile_property::FWorldTileInfo, PropertyDataTrait};
 use reader::{asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter};
 use types::{FName, GenerationInfo, Guid, PackageIndex};
-use unversioned::Usmap;
+use unversioned::header::UnversionedHeaderFragment;
+use unversioned::{header::UnversionedHeader, Usmap};
 
 /// Cast a Property/Export to a more specific type
 ///
@@ -219,7 +224,7 @@ pub struct Asset<C: Read + Seek> {
     /// Chunk ids
     chunk_ids: Vec<i32>,
     /// Asset flags
-    pub package_flags: u32,
+    pub package_flags: EPackageFlags,
     /// Asset source
     pub package_source: u32,
     /// Folder name
@@ -408,6 +413,10 @@ impl<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek> AssetTrait
     fn get_mappings(&self) -> Option<&Usmap> {
         self.asset.get_mappings()
     }
+
+    fn has_unversioned_properties(&self) -> bool {
+        self.asset.has_unversioned_properties()
+    }
 }
 
 impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> AssetWriter
@@ -488,6 +497,15 @@ impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> AssetWriter
 
     fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.cursor.write_bool(value)
+    }
+
+    fn generate_unversioned_header(
+        &mut self,
+        properties: &[properties::Property],
+        parent_name: &FName,
+    ) -> Result<Option<(UnversionedHeader, Vec<properties::Property>)>, Error> {
+        self.asset
+            .generate_unversioned_header(properties, parent_name)
     }
 }
 
@@ -644,6 +662,10 @@ impl<'asset, C: Read + Seek> AssetTrait for FNameCollector<'asset, C> {
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         self.asset.get_export_class_type(index)
     }
+
+    fn has_unversioned_properties(&self) -> bool {
+        self.asset.has_unversioned_properties()
+    }
 }
 
 impl<'asset, C: Read + Seek> AssetWriter for FNameCollector<'asset, C> {
@@ -742,6 +764,15 @@ impl<'asset, C: Read + Seek> AssetWriter for FNameCollector<'asset, C> {
     fn write_bool(&mut self, _: bool) -> io::Result<()> {
         self.position += size_of::<u8>() as u64;
         Ok(())
+    }
+
+    fn generate_unversioned_header(
+        &mut self,
+        properties: &[properties::Property],
+        parent_name: &FName,
+    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
+        self.asset
+            .generate_unversioned_header(properties, parent_name)
     }
 }
 
@@ -855,6 +886,11 @@ impl<C: Read + Seek> AssetTrait for Asset<C> {
 
     fn get_mappings(&self) -> Option<&Usmap> {
         self.mappings.as_ref()
+    }
+
+    fn has_unversioned_properties(&self) -> bool {
+        self.package_flags
+            .contains(EPackageFlags::PKG_UNVERSIONED_PROPERTIES)
     }
 }
 
@@ -983,7 +1019,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             engine_version_recorded: FEngineVersion::unknown(),
             engine_version_compatible: FEngineVersion::unknown(),
             chunk_ids: Vec::new(),
-            package_flags: 0,
+            package_flags: EPackageFlags::PKG_NONE,
             package_source: 0,
             folder_name: String::from(""),
             header_offset: 0,
@@ -1149,7 +1185,8 @@ impl<'a, C: Read + Seek> Asset<C> {
             .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
-        self.package_flags = self.cursor.read_u32::<LittleEndian>()?;
+        self.package_flags = EPackageFlags::from_bits(self.cursor.read_u32::<LittleEndian>()?)
+            .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
         // read name count and offset
         self.name_count = self.cursor.read_i32::<LittleEndian>()?;
@@ -1782,7 +1819,7 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         cursor.write_i32::<LittleEndian>(asset_header.header_offset)?;
         cursor.write_fstring(Some(&self.folder_name))?;
-        cursor.write_u32::<LittleEndian>(self.package_flags)?;
+        cursor.write_u32::<LittleEndian>(self.package_flags.bits())?;
         cursor.write_i32::<LittleEndian>(self.name_map_index_list.len() as i32)?;
         cursor.write_i32::<LittleEndian>(asset_header.name_offset)?;
 
@@ -2207,6 +2244,160 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         serializer.seek(SeekFrom::Start(0))?;
         Ok(())
+    }
+
+    /// Generate `UnversionedHeader` for properties and sort the properties into a new array
+    fn generate_unversioned_header(
+        &self,
+        properties: &[Property],
+        parent_name: &FName,
+    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
+        if !self.has_unversioned_properties() {
+            return Ok(None);
+        }
+
+        let Some(mappings) = self.get_mappings() else {
+            return Ok(None);
+        };
+
+        let mut first_global_index = u32::MAX;
+        let mut last_global_index = u32::MIN;
+
+        let mut properties_to_process = HashSet::new();
+        let mut zero_properties: HashSet<u32> = HashSet::new();
+
+        for property in properties {
+            let Some((_, global_index)) = mappings.get_property_with_duplication_index(
+                &property.get_name(),
+                property.get_ancestry(),
+                property.get_duplication_index() as u32,
+            ) else {
+                return Err(PropertyError::no_mapping(&property.get_name().content, property.get_ancestry()).into());
+            };
+
+            if matches!(property, Property::EmptyProperty(_)) {
+                zero_properties.insert(global_index);
+            }
+
+            first_global_index = first_global_index.min(global_index);
+            last_global_index = last_global_index.max(global_index);
+            properties_to_process.insert(global_index);
+        }
+
+        // Sort properties and generate header fragments
+        let mut sorted_properties = Vec::new();
+
+        let mut fragments: Vec<UnversionedHeaderFragment> = Vec::new();
+        let mut last_num_before_fragment = 0;
+
+        if !properties_to_process.is_empty() {
+            loop {
+                let mut has_zeros = false;
+
+                // Find next contiguous properties chunk
+                let mut start_index = last_num_before_fragment;
+                while !properties_to_process.contains(&start_index)
+                    && start_index <= last_global_index
+                {
+                    start_index += 1;
+                }
+
+                if start_index > last_global_index {
+                    break;
+                }
+
+                // Process contiguous properties chunk
+                let mut end_index = start_index;
+                while properties_to_process.contains(&end_index) {
+                    if zero_properties.contains(&end_index) {
+                        has_zeros = true;
+                    }
+
+                    // todo: clone might not be needed
+                    sorted_properties.push(properties[end_index as usize].clone());
+                    end_index += 1;
+                }
+
+                // Create extra fragments for this chunk
+                let mut skip_num = start_index - last_num_before_fragment - 1;
+                let mut value_num = (end_index - 1) - start_index + 1;
+
+                while skip_num > i8::MAX as u32 {
+                    fragments.push(UnversionedHeaderFragment {
+                        skip_num: i8::MAX as u8,
+                        value_num: 0,
+                        first_num: 0,
+                        is_last: false,
+                        has_zeros: false,
+                    });
+                    skip_num -= i8::MAX as u32;
+                }
+                while value_num > i8::MAX as u32 {
+                    fragments.push(UnversionedHeaderFragment {
+                        skip_num: 0,
+                        value_num: i8::MAX as u8,
+                        first_num: 0,
+                        is_last: false,
+                        has_zeros: false,
+                    });
+                    value_num -= i8::MAX as u32;
+                }
+
+                // Create the main fragment for this chunk
+                let fragment = UnversionedHeaderFragment {
+                    skip_num: skip_num as u8,
+                    value_num: value_num as u8,
+                    first_num: start_index as u8,
+                    is_last: false,
+                    has_zeros,
+                };
+
+                fragments.push(fragment);
+                last_num_before_fragment = end_index - 1;
+            }
+        } else {
+            fragments.push(UnversionedHeaderFragment {
+                skip_num: usize::min(
+                    mappings.get_all_properties(&parent_name.content).len(),
+                    i8::MAX as usize,
+                ) as u8,
+                value_num: 0,
+                first_num: 0,
+                is_last: true,
+                has_zeros: false,
+            });
+        }
+
+        if let Some(fragment) = fragments.last_mut() {
+            fragment.is_last = true;
+        }
+
+        let mut has_non_zero_values = false;
+        let mut zero_mask = BitVec::<u8, Lsb0>::new();
+
+        for fragment in fragments.iter().filter(|e| e.has_zeros) {
+            for i in 0..fragment.value_num {
+                let is_zero = zero_properties.contains(&((fragment.first_num + i) as u32));
+                if !is_zero {
+                    has_non_zero_values = true;
+                }
+                zero_mask.push(is_zero);
+            }
+        }
+
+        let unversioned_property_index =
+            fragments.first().map(|e| e.first_num).unwrap_or_default() as usize;
+
+        let header = UnversionedHeader {
+            fragments,
+            zero_mask,
+            has_non_zero_values,
+            unversioned_property_index,
+            current_fragment_index: 0,
+            zero_mask_index: 0,
+        };
+
+        Ok(Some((header, sorted_properties)))
     }
 }
 

@@ -12,6 +12,7 @@ use crate::properties::{
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::vector::Vector;
 use crate::types::FName;
+use crate::unversioned::ancestry::Ancestry;
 
 //todo: what is this file even doing in properties?
 /// World tile layer
@@ -34,9 +35,16 @@ impl FWorldTileLayer {
     pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
         let object_version = asset.get_object_version();
 
+        let new_ancestry = Ancestry::new(
+            asset
+                .get_parent_class()
+                .as_ref()
+                .map(|e| e.parent_class_export_name.clone())
+                .unwrap_or_default(),
+        );
         let name = asset.read_fstring()?;
         let reserved_0 = asset.read_i32::<LittleEndian>()?;
-        let reserved_1 = IntPointProperty::new(asset, FName::default(), false, 0)?;
+        let reserved_1 = IntPointProperty::new(asset, FName::default(), new_ancestry, false, 0)?;
 
         let streaming_distance =
             match object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO_UPDATED {
@@ -170,7 +178,14 @@ impl FWorldTileInfo {
             ),
         };
 
-        let bounds = BoxProperty::new(asset, FName::default(), false, 0)?;
+        let new_ancestry = Ancestry::new(
+            asset
+                .get_parent_class()
+                .as_ref()
+                .map(|e| e.parent_class_export_name.clone())
+                .unwrap_or_default(),
+        );
+        let bounds = BoxProperty::new(asset, FName::default(), new_ancestry, false, 0)?;
         let layer = FWorldTileLayer::new(asset)?;
 
         let mut hide_in_tile_view = None;

@@ -7,6 +7,7 @@ use crate::{
     properties::{str_property::StrProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::asset_reader::AssetReader,
     types::{FName, Guid},
+    unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
 
 /// Movie scene evaluation template pointer property
@@ -14,6 +15,8 @@ use crate::{
 pub struct MovieSceneEvalTemplatePtrProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -28,6 +31,7 @@ impl MovieSceneEvalTemplatePtrProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -36,17 +40,31 @@ impl MovieSceneEvalTemplatePtrProperty {
         let mut value: Vec<Property> = Vec::new();
 
         let type_name_fname = asset.add_fname("TypeName");
-        let type_name = StrProperty::new(asset, type_name_fname, include_header, 0)?;
+        let new_ancestry = ancestry.with_parent(name.clone());
+        let type_name = StrProperty::new(
+            asset,
+            type_name_fname,
+            new_ancestry.clone(),
+            include_header,
+            0,
+        )?;
 
         if type_name.value.is_some() {
             value.push(type_name.into());
-            while let Some(data) = Property::new(asset, Some(&name), true)? {
+            let mut unversioned_header = UnversionedHeader::new(asset)?;
+            while let Some(data) = Property::new(
+                asset,
+                new_ancestry.clone(),
+                unversioned_header.as_mut(),
+                true,
+            )? {
                 value.push(data);
             }
         }
 
         Ok(MovieSceneEvalTemplatePtrProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -66,7 +84,19 @@ impl PropertyTrait for MovieSceneEvalTemplatePtrProperty {
 
         let mut had_typename = false;
 
-        for property in &self.value {
+        let (unversioned_header, sorted_properties) =
+            match asset.generate_unversioned_header(&self.value, &self.name)? {
+                Some((a, b)) => (Some(a), Some(b)),
+                None => (None, None),
+            };
+
+        if let Some(unversioned_header) = unversioned_header {
+            unversioned_header.write(asset)?;
+        }
+
+        let properties = sorted_properties.as_ref().unwrap_or(&self.value);
+
+        for property in properties.iter() {
             if property.get_name().content == "TypeName" {
                 let str_property: &StrProperty = cast!(Property, StrProperty, property)
                     .ok_or_else(|| {
@@ -79,7 +109,7 @@ impl PropertyTrait for MovieSceneEvalTemplatePtrProperty {
             }
         }
 
-        if had_typename {
+        if had_typename && !asset.has_unversioned_properties() {
             let none_fname = asset.add_fname("None");
             asset.write_fname(&none_fname)?;
         }

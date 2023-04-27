@@ -6,6 +6,7 @@ use crate::error::Error;
 use crate::properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::FName;
+use crate::unversioned::ancestry::Ancestry;
 
 /// Bundle entry
 #[derive(Debug, Clone)]
@@ -24,7 +25,14 @@ impl AssetBundleEntry {
     {
         let bundle_name = asset.read_fname()?;
         let bundle_assets = asset.read_array(|asset: &mut Reader| {
-            SoftObjectPathProperty::new(asset, FName::from_slice("None"), false, 0, 0)
+            SoftObjectPathProperty::new(
+                asset,
+                FName::from_slice("None"),
+                Ancestry::default(),
+                false,
+                0,
+                0,
+            )
         })?;
 
         Ok(Self {

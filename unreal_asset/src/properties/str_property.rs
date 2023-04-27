@@ -14,6 +14,7 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
 use crate::types::{FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Text history type
 #[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
@@ -62,6 +63,8 @@ impl Default for TextHistoryType {
 pub struct StrProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -76,6 +79,8 @@ impl_property_data_trait!(StrProperty);
 pub struct TextProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -100,6 +105,8 @@ impl_property_data_trait!(TextProperty);
 pub struct NameProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -114,6 +121,7 @@ impl StrProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -121,6 +129,7 @@ impl StrProperty {
 
         Ok(StrProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: asset.read_fstring()?,
@@ -146,6 +155,7 @@ impl TextProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -207,6 +217,7 @@ impl TextProperty {
 
         Ok(TextProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             culture_invariant_string,
@@ -292,6 +303,7 @@ impl NameProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -299,6 +311,7 @@ impl NameProperty {
         let value = asset.read_fname()?;
         Ok(NameProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,

@@ -1,6 +1,7 @@
 //! Unreal types
 
 pub mod movie;
+pub mod package_object_index;
 pub mod vector;
 
 use crate::error::Error;
@@ -105,7 +106,7 @@ pub const fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     ]
 }
 
-/// Create a default Guid filled with all zeroes
+/// Create a default Guid filled with all zeros
 pub fn default_guid() -> Guid {
     new_guid(0, 0, 0, 0)
 }

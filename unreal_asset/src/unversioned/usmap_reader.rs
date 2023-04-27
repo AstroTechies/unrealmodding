@@ -4,8 +4,10 @@ use std::io;
 
 use crate::error::Error;
 
+use super::usmap_trait::UsmapTrait;
+
 /// .usmap Reader trait
-pub trait UsmapReader {
+pub trait UsmapReader: UsmapTrait {
     /// read an `i8` in LE order
     fn read_i8(&mut self) -> io::Result<i8>;
     /// read an `u8` in LE order
@@ -29,5 +31,5 @@ pub trait UsmapReader {
     /// read an FString
     fn read_fstring(&mut self) -> Result<Option<String>, Error>;
     /// read a name
-    fn read_name(&mut self) -> io::Result<String>;
+    fn read_name(&mut self) -> io::Result<Option<String>>;
 }

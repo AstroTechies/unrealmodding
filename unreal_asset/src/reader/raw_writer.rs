@@ -11,8 +11,10 @@ use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
+use crate::properties::Property;
 use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
 use crate::types::{FName, PackageIndex};
+use crate::unversioned::header::UnversionedHeader;
 use crate::Import;
 
 /// A binary writer
@@ -123,6 +125,10 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
     fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
         None
     }
+
+    fn has_unversioned_properties(&self) -> bool {
+        false
+    }
 }
 
 impl<'cursor> AssetWriter for RawWriter<'cursor> {
@@ -194,5 +200,13 @@ impl<'cursor> AssetWriter for RawWriter<'cursor> {
 
     fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.cursor.write_bool(value)
+    }
+
+    fn generate_unversioned_header(
+        &mut self,
+        _properties: &[Property],
+        _parent_name: &FName,
+    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
+        Ok(None)
     }
 }

@@ -8,6 +8,7 @@ use thiserror::Error;
 use unreal_helpers::error::FStringError;
 
 use crate::custom_version::FAssetRegistryVersionType;
+use crate::unversioned::ancestry::Ancestry;
 
 /// Thrown when kismet bytecode failed to deserialize
 #[derive(Error, Debug)]
@@ -41,6 +42,12 @@ pub enum UsmapError {
     /// Invalid compressiondata
     #[error("Invalid compression data")]
     InvalidCompressionData,
+    /// Name is None
+    #[error("read_name returned None, expected Some(...)")]
+    NameNone,
+    /// Cityhash64 hash collision
+    #[error("Cityhash64 name collision for hash {0}, string {1}")]
+    Cityhash64Collision(u64, Box<str>),
 }
 
 impl UsmapError {
@@ -52,6 +59,16 @@ impl UsmapError {
     /// Create an `UsmapError` for invalid compression data
     pub fn invalid_compression_data() -> Self {
         UsmapError::InvalidCompressionData
+    }
+
+    /// Create an `UsmapError` for a case where a Some(...) name was expected, but None was returned
+    pub fn name_none() -> Self {
+        UsmapError::NameNone
+    }
+
+    /// Create an `UsmapError` for a Cityhash64 hash collision
+    pub fn cityhash64_collision(hash: u64, value: String) -> Self {
+        UsmapError::Cityhash64Collision(hash, value.into_boxed_str())
     }
 }
 
@@ -101,6 +118,24 @@ pub enum PropertyError {
     /// An `ArrayProperty` is invalid
     #[error("{0}")]
     InvalidArrayType(Box<str>),
+    /// An unversioned property's type could not be determined
+    #[error("Cannot determine property type for property {0} ancestry {1}")]
+    NoType(Box<str>, Box<str>),
+    /// An unversioned property was found without loaded mappings
+    #[error("Cannot deseralize an unversioned property without loaded mappings")]
+    NoMappings,
+    /// A usmap mapping for an unversioned property was not found
+    #[error("No mapping for unversioned property {0} ancestry {1}")]
+    NoMapping(Box<str>, Box<str>),
+    /// Tried to read an unversioned property with no parent_name specified
+    #[error("Tried to read an unversioned property with parent_name: None")]
+    NoParent,
+    /// An unversioned property was found, but no unversioned header was provided
+    #[error("Tried to read an unversioned property without an unversioned header")]
+    NoUnversionedHeader,
+    /// An unversioned property schema was not found
+    #[error("Unversioned property schema for {0} at index {1} was not found")]
+    NoSchema(Box<str>, usize),
     /// Other
     #[error("{0}")]
     Other(Box<str>),
@@ -110,6 +145,54 @@ impl PropertyError {
     /// Create a `PropertyError` for a property where a header was expected when serializing, but none was found
     pub fn headerless() -> Self {
         PropertyError::HeaderlessProperty
+    }
+
+    /// Create a `PropertyError` for an unversioned property for which type could not be determined
+    pub fn no_type(name: &str, ancestry: &Ancestry) -> Self {
+        PropertyError::NoType(
+            name.to_string().into_boxed_str(),
+            ancestry
+                .ancestry
+                .iter()
+                .map(|e| e.content.as_str())
+                .collect::<Vec<_>>()
+                .join("/")
+                .into_boxed_str(),
+        )
+    }
+
+    /// Create a `PropertyError` for an unversioned property that failed to deserialize because no mappings were loaded
+    pub fn no_mappings() -> Self {
+        PropertyError::NoMappings
+    }
+
+    /// Create a `PropertyError` for an unversioned property that did not have a mapping for a certain ancestry
+    pub fn no_mapping(name: &str, ancestry: &Ancestry) -> Self {
+        PropertyError::NoMapping(
+            name.to_string().into_boxed_str(),
+            ancestry
+                .ancestry
+                .iter()
+                .map(|e| e.content.as_str())
+                .collect::<Vec<_>>()
+                .join("/")
+                .into_boxed_str(),
+        )
+    }
+
+    /// Create a `PropertyError` for an unversioned property with no parent name specified
+    pub fn no_parent() -> Self {
+        PropertyError::NoParent
+    }
+
+    /// Create a `PropertyError` for an unversioned property with no unversioned header specified
+    pub fn no_unversioned_header() -> Self {
+        PropertyError::NoUnversionedHeader
+    }
+
+    /// Create a `PropertyError` for an unversioned property for which a schema entry was not found
+    pub fn no_schema(name: String, index: usize) -> Self {
+        PropertyError::NoSchema(name.into_boxed_str(), index)
     }
 
     /// Create a `PropertyError` for a field that was expected to have a value, but was None

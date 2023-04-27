@@ -9,6 +9,7 @@ use crate::{
     error::Error,
     reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
     types::FName,
+    unversioned::ancestry::Ancestry,
 };
 
 use super::{
@@ -39,6 +40,7 @@ impl MeshToMeshVertData {
         let position_bary_coords_and_dist = Vector4Property::new(
             asset,
             FName::from_slice("PositionBaryCoordsAndDist"),
+            Ancestry::default(),
             false,
             0,
         )?;
@@ -46,6 +48,7 @@ impl MeshToMeshVertData {
         let normal_bary_coords_and_dist = Vector4Property::new(
             asset,
             FName::from_slice("NormalBaryCoordsAndDist"),
+            Ancestry::default(),
             false,
             0,
         )?;
@@ -53,6 +56,7 @@ impl MeshToMeshVertData {
         let tangent_bary_coords_and_dist = Vector4Property::new(
             asset,
             FName::from_slice("TangentBaryCoordsAndDist"),
+            Ancestry::default(),
             false,
             0,
         )?;
@@ -115,7 +119,7 @@ impl ClothLodDataProperty {
     pub fn new<Reader: AssetReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         _include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -123,7 +127,7 @@ impl ClothLodDataProperty {
         let struct_property = StructProperty::custom_header(
             asset,
             name,
-            parent_name,
+            ancestry,
             1,
             duplication_index,
             Some(FName::from_slice("Generic")),
@@ -167,6 +171,14 @@ impl PropertyDataTrait for ClothLodDataProperty {
 
     fn get_property_guid(&self) -> Option<crate::types::Guid> {
         self.struct_property.get_property_guid()
+    }
+
+    fn get_ancestry(&self) -> &Ancestry {
+        self.struct_property.get_ancestry()
+    }
+
+    fn get_ancestry_mut(&mut self) -> &mut Ancestry {
+        self.struct_property.get_ancestry_mut()
     }
 }
 

@@ -5,8 +5,10 @@ use std::io;
 use byteorder::ByteOrder;
 
 use crate::error::Error;
+use crate::properties::Property;
 use crate::reader::asset_trait::AssetTrait;
 use crate::types::{FName, Guid};
+use crate::unversioned::header::UnversionedHeader;
 
 /// A trait that allows for writing to an archive in an asset-specific way
 pub trait AssetWriter: AssetTrait {
@@ -14,6 +16,13 @@ pub trait AssetWriter: AssetTrait {
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error>;
     /// Write an `FName`
     fn write_fname(&mut self, fname: &FName) -> Result<(), Error>;
+
+    /// Generate an unversioned header for an unversioned package
+    fn generate_unversioned_header(
+        &mut self,
+        properties: &[Property],
+        parent_name: &FName,
+    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error>;
 
     /// Write `u8`
     fn write_u8(&mut self, value: u8) -> io::Result<()>;
