@@ -11,7 +11,7 @@ use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::simple_property_write;
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
@@ -21,7 +21,7 @@ macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {
         impl $property_type {
             /// Read `$property_type` from an asset
-            pub fn new<Reader: AssetReader>(
+            pub fn new<Reader: ArchiveReader>(
                 asset: &mut Reader,
                 name: FName,
                 ancestry: Ancestry,
@@ -234,7 +234,7 @@ impl_property_data_trait!(DoubleProperty);
 
 impl BoolProperty {
     /// Read a `BoolProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -256,7 +256,7 @@ impl BoolProperty {
 }
 
 impl PropertyTrait for BoolProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -269,7 +269,7 @@ impl PropertyTrait for BoolProperty {
 
 impl Int8Property {
     /// Read an `Int8Property` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -289,7 +289,7 @@ impl Int8Property {
 }
 
 impl PropertyTrait for Int8Property {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -302,7 +302,7 @@ impl PropertyTrait for Int8Property {
 
 impl ByteProperty {
     /// Read byte property value
-    fn read_value<Reader: AssetReader>(
+    fn read_value<Reader: ArchiveReader>(
         asset: &mut Reader,
         length: i64,
     ) -> Result<BytePropertyValue, Error> {
@@ -316,7 +316,12 @@ impl ByteProperty {
                 asset.seek(SeekFrom::Current(-(size_of::<i32>() as i64 * 2)))?;
 
                 let byte_value = if name_map_pointer >= 0
-                    && name_map_pointer < asset.get_name_map_index_list().len() as i32
+                    && name_map_pointer
+                        < asset
+                            .get_name_map()
+                            .get_ref()
+                            .get_name_map_index_list()
+                            .len() as i32
                     && name_map_index == 0
                     && !asset.get_name_reference(name_map_index).contains('/')
                 {
@@ -336,7 +341,7 @@ impl ByteProperty {
     }
 
     /// Read a `ByteProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -365,7 +370,7 @@ impl ByteProperty {
 }
 
 impl PropertyTrait for ByteProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -394,7 +399,7 @@ impl PropertyTrait for ByteProperty {
 
 impl FloatProperty {
     /// Read a `FloatProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -415,7 +420,7 @@ impl FloatProperty {
 }
 
 impl PropertyTrait for FloatProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -428,7 +433,7 @@ impl PropertyTrait for FloatProperty {
 
 impl DoubleProperty {
     /// Read a `DoubleProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -449,7 +454,7 @@ impl DoubleProperty {
 }
 
 impl PropertyTrait for DoubleProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

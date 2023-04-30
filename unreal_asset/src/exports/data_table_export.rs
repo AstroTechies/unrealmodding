@@ -9,7 +9,7 @@ use crate::exports::{
 };
 use crate::implement_get;
 use crate::properties::{struct_property::StructProperty, Property, PropertyDataTrait};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::FName;
 use crate::unversioned::ancestry::Ancestry;
 
@@ -40,16 +40,17 @@ implement_get!(DataTableExport);
 
 impl DataTableExport {
     /// Read a `DataTableExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
 
-        let mut decided_struct_type = FName::new(String::from("Generic"), 0);
+        let mut decided_struct_type = FName::from_slice("Generic");
         for data in &normal_export.properties {
             if let Property::ObjectProperty(property) = data {
-                if property.name.content.as_str() == "RowStruct" && property.value.is_import() {
+                if property.name.get_content().as_str() == "RowStruct" && property.value.is_import()
+                {
                     if let Some(import) = asset.get_import(property.value) {
                         decided_struct_type = import.object_name.clone();
                     }
@@ -90,12 +91,12 @@ impl DataTableExport {
 }
 
 impl ExportTrait for DataTableExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
 
         let mut decided_struct_type = FName::from_slice("Generic");
         for data in &self.normal_export.properties {
-            if data.get_name().content.as_str() == "RowStruct" {
+            if data.get_name().get_content().as_str() == "RowStruct" {
                 if let Property::ObjectProperty(prop) = data {
                     if let Some(import) = asset.get_import(prop.value) {
                         decided_struct_type = import.object_name.clone();

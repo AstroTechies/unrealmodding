@@ -5,7 +5,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     error::Error,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
 };
 
 use super::rich_curve_key_property::RichCurveTangentWeightMode;
@@ -49,7 +49,10 @@ pub struct MovieSceneTangentData {
 
 impl MovieSceneTangentData {
     /// Read `MovieSceneTangentData` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader, clang_win64: bool) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(
+        asset: &mut Reader,
+        clang_win64: bool,
+    ) -> Result<Self, Error> {
         let arrive_tangent = asset.read_f32::<LittleEndian>()?;
         let leave_tangent = asset.read_f32::<LittleEndian>()?;
         let arrive_tangent_weight = asset.read_f32::<LittleEndian>()?;
@@ -76,7 +79,7 @@ impl MovieSceneTangentData {
     }
 
     /// Write `MovieSceneTangentData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_f32::<LittleEndian>(self.arrive_tangent.0)?;
         asset.write_f32::<LittleEndian>(self.leave_tangent.0)?;
         asset.write_f32::<LittleEndian>(self.arrive_tangent_weight.0)?;

@@ -6,7 +6,7 @@ use ordered_float::OrderedFloat;
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -33,7 +33,7 @@ impl_property_data_trait!(FloatRangeProperty);
 
 impl FloatRangeProperty {
     /// Read a `FloatRangeProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -57,7 +57,7 @@ impl FloatRangeProperty {
 }
 
 impl PropertyTrait for FloatRangeProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

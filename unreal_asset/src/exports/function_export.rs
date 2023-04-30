@@ -8,7 +8,7 @@ use crate::exports::{
     ExportTrait,
 };
 use crate::flags::EFunctionFlags;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 
 /// Function export
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21,7 +21,7 @@ pub struct FunctionExport {
 
 impl FunctionExport {
     /// Read a `FunctionExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
@@ -36,7 +36,7 @@ impl FunctionExport {
 }
 
 impl ExportTrait for FunctionExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_export.write(asset)?;
         asset.write_u32::<LittleEndian>(self.function_flags.bits())?;
         Ok(())

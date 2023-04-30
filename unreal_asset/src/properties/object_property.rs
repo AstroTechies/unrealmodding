@@ -9,7 +9,7 @@ use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{FName, Guid, PackageIndex};
 use crate::unversioned::ancestry::Ancestry;
 
@@ -56,7 +56,7 @@ pub struct SoftObjectPath {
 
 impl SoftObjectPath {
     /// Read a `SoftObjectPath` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let asset_path_name = asset.read_fname()?;
         let sub_path_string = asset.read_fstring()?;
 
@@ -67,7 +67,7 @@ impl SoftObjectPath {
     }
 
     /// Write a `SoftObjectPath` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.asset_path_name)?;
         asset.write_fstring(self.sub_path_string.as_deref())?;
 
@@ -93,7 +93,7 @@ impl_property_data_trait!(SoftObjectProperty);
 
 impl ObjectProperty {
     /// Read an `ObjectProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -113,7 +113,7 @@ impl ObjectProperty {
 }
 
 impl PropertyTrait for ObjectProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -126,7 +126,7 @@ impl PropertyTrait for ObjectProperty {
 
 impl AssetObjectProperty {
     /// Read an `AssetObjectProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -146,7 +146,7 @@ impl AssetObjectProperty {
 }
 
 impl PropertyTrait for AssetObjectProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -158,7 +158,7 @@ impl PropertyTrait for AssetObjectProperty {
 
 impl SoftObjectProperty {
     /// Read a `SoftObjectProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -179,7 +179,7 @@ impl SoftObjectProperty {
 }
 
 impl PropertyTrait for SoftObjectProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

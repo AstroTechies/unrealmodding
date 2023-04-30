@@ -1,7 +1,8 @@
 //! Empty unversioned property
 
 use crate::{
-    error::Error, reader::asset_writer::AssetWriter, types::FName, unversioned::ancestry::Ancestry,
+    error::Error, reader::archive_writer::ArchiveWriter, types::FName,
+    unversioned::ancestry::Ancestry,
 };
 
 use super::{PropertyDataTrait, PropertyTrait};
@@ -55,7 +56,7 @@ impl PropertyDataTrait for EmptyProperty {
 }
 
 impl PropertyTrait for EmptyProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         _asset: &mut Writer,
         _include_header: bool,

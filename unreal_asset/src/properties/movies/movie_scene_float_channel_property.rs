@@ -7,7 +7,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{rich_curve_key_property::RichCurveExtrapolation, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{
         movie::{FrameNumber, FrameRate},
         FName, Guid,
@@ -45,7 +45,7 @@ pub struct MovieSceneFloatChannel {
 
 impl MovieSceneFloatChannel {
     /// Read a `MovieSceneFloatChannel` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let pre_infinity_extrap: RichCurveExtrapolation =
             RichCurveExtrapolation::try_from(asset.read_u8()?)?;
         let post_infinity_extrap: RichCurveExtrapolation =
@@ -90,7 +90,7 @@ impl MovieSceneFloatChannel {
     }
 
     /// Write a `MovieSceneFloatChannel` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_u8(self.pre_infinity_extrap as u8)?;
         asset.write_u8(self.post_infinity_extrap as u8)?;
 
@@ -139,7 +139,7 @@ impl_property_data_trait!(MovieSceneFloatChannelProperty);
 
 impl MovieSceneFloatChannelProperty {
     /// Read a `MovieSceneFloatChannelProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -161,7 +161,7 @@ impl MovieSceneFloatChannelProperty {
 }
 
 impl PropertyTrait for MovieSceneFloatChannelProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

@@ -27,3 +27,4 @@ naive-cityhash = "0.2.0"
 
 [features]
 oodle = []
+threading = []

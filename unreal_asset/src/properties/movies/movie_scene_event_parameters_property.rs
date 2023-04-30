@@ -5,7 +5,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{object_property::SoftObjectPath, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -21,7 +21,7 @@ pub struct MovieSceneEventParameters {
 
 impl MovieSceneEventParameters {
     /// Read `MovieSceneEventParameters` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let struct_type = SoftObjectPath::new(asset)?;
 
         let struct_bytes_length = asset.read_i32::<LittleEndian>()?;
@@ -35,7 +35,7 @@ impl MovieSceneEventParameters {
     }
 
     /// Write `MovieSceneEventParameters` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_type.write(asset)?;
 
         asset.write_i32::<LittleEndian>(self.struct_bytes.len() as i32)?;
@@ -63,7 +63,7 @@ impl_property_data_trait!(MovieSceneEventParametersProperty);
 
 impl MovieSceneEventParametersProperty {
     /// Read `MovieSceneEventParametersProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -84,7 +84,7 @@ impl MovieSceneEventParametersProperty {
 }
 
 impl PropertyTrait for MovieSceneEventParametersProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

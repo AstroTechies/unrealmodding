@@ -11,7 +11,7 @@ use crate::custom_version::{
 use crate::error::{Error, PropertyError};
 use crate::object_version::ObjectVersion;
 use crate::properties::{Property, PropertyTrait};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
@@ -61,7 +61,7 @@ impl StructProperty {
     }
 
     /// Read a `StructProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -97,7 +97,7 @@ impl StructProperty {
 
     /// Read a `StructProperty` with custom header values set
     #[allow(clippy::too_many_arguments)]
-    pub fn custom_header<Reader: AssetReader>(
+    pub fn custom_header<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -114,10 +114,10 @@ impl StructProperty {
         {
             if struct_type
                 .as_ref()
-                .map(|e| e.content == "Generic")
+                .map(|e| e.get_content() == "Generic")
                 .unwrap_or(true)
             {
-                struct_type = Some(FName::new(
+                struct_type = Some(FName::new_dummy(
                     struct_mapping.struct_type.clone().unwrap_or_default(),
                     0,
                 ));
@@ -125,18 +125,19 @@ impl StructProperty {
         }
 
         if asset.has_unversioned_properties() && struct_type.is_none() {
-            return Err(PropertyError::no_type(&name.content, &ancestry).into());
+            return Err(PropertyError::no_type(&name.get_content(), &ancestry).into());
         }
 
         let mut custom_serialization = match struct_type {
-            Some(ref e) => Property::has_custom_serialization(&e.content),
+            Some(ref e) => Property::has_custom_serialization(&e.get_content()),
             None => false,
         };
 
         match struct_type
             .as_ref()
-            .map(|e| e.content.as_str())
+            .map(|e| e.get_content())
             .unwrap_or_default()
+            .as_str()
         {
             "FloatRange" => {
                 // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
@@ -146,7 +147,12 @@ impl StructProperty {
                 asset.seek(SeekFrom::Current(-(size_of::<u32>() as i64)))?;
 
                 if name_map_index >= 0
-                    && name_map_index < asset.get_name_map_index_list().len() as i32
+                    && name_map_index
+                        < asset
+                            .get_name_map()
+                            .get_ref()
+                            .get_name_map_index_list()
+                            .len() as i32
                 {
                     custom_serialization = asset.get_name_reference(name_map_index) != "LowerBound";
                 } else {
@@ -245,7 +251,7 @@ impl StructProperty {
     }
 
     /// Write a `StructProperty` overriding struct type
-    pub fn write_with_type<Writer: AssetWriter>(
+    pub fn write_with_type<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -260,30 +266,30 @@ impl StructProperty {
         }
 
         let mut has_custom_serialization = match struct_type {
-            Some(ref e) => Property::has_custom_serialization(&e.content),
+            Some(ref e) => Property::has_custom_serialization(&e.get_content()),
             None => false,
         };
 
         if let Some(ref struct_type) = struct_type {
-            if struct_type.content == "FloatRange" {
+            if struct_type.get_content() == "FloatRange" {
                 has_custom_serialization = self.value.len() == 1
                     && cast!(Property, FloatRangeProperty, &self.value[0]).is_some();
             }
 
-            if struct_type.content == "RichCurveKey"
+            if struct_type.get_content() == "RichCurveKey"
                 && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
             {
                 has_custom_serialization = false;
             }
 
-            if struct_type.content == "MovieSceneTrackIdentifier"
+            if struct_type.get_content() == "MovieSceneTrackIdentifier"
                 && asset.get_custom_version::<FEditorObjectVersion>().version
                     < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32
             {
                 has_custom_serialization = false;
             }
 
-            if struct_type.content == "MovieSceneFloatChannel"
+            if struct_type.get_content() == "MovieSceneFloatChannel"
                 && asset
                     .get_custom_version::<FSequencerObjectVersion>()
                     .version
@@ -303,7 +309,7 @@ impl StructProperty {
                     "Structs with type {} must have exactly 1 entry",
                     struct_type
                         .as_ref()
-                        .map(|e| e.content.to_owned())
+                        .map(|e| e.get_content())
                         .unwrap_or_else(|| "Generic".to_string())
                 ))
                 .into());
@@ -332,7 +338,7 @@ impl StructProperty {
             }
 
             if !asset.has_unversioned_properties() {
-                asset.write_fname(&FName::from_slice("None"))?;
+                asset.write_fname(&asset.get_name_map().get_mut().add_fname("None"))?;
             }
             Ok((asset.position() - begin) as usize)
         }
@@ -340,7 +346,7 @@ impl StructProperty {
 }
 
 impl PropertyTrait for StructProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

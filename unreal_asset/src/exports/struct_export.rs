@@ -14,7 +14,7 @@ use crate::exports::{
 use crate::fproperty::FProperty;
 use crate::implement_get;
 use crate::kismet::KismetExpression;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::PackageIndex;
 use crate::uproperty::UField;
 
@@ -43,7 +43,7 @@ implement_get!(StructExport);
 
 impl StructExport {
     /// Read a `StructExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
@@ -106,7 +106,7 @@ impl StructExport {
     }
 
     /// Read kismet bytecode
-    fn read_bytecode<Reader: AssetReader>(
+    fn read_bytecode<Reader: ArchiveReader>(
         asset: &mut Reader,
         start_offset: u64,
         storage_size: i32,
@@ -120,7 +120,7 @@ impl StructExport {
 }
 
 impl ExportTrait for StructExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
         asset.write_i32::<LittleEndian>(0)?;
         self.field.write(asset)?;

@@ -2,8 +2,8 @@
 
 use crate::error::Error;
 use crate::exports::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
-use crate::reader::asset_trait::AssetTrait;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::archive_trait::ArchiveTrait;
+use crate::reader::archive_writer::ArchiveWriter;
 use crate::types::{FName, Guid, PackageIndex};
 
 /// Minimal information about an export
@@ -60,7 +60,7 @@ pub struct BaseExport {
 
 impl BaseExport {
     /// Gets class type for first ancestry parent
-    pub fn get_class_type_for_ancestry<Asset: AssetTrait>(&self, asset: &Asset) -> FName {
+    pub fn get_class_type_for_ancestry<Asset: ArchiveTrait>(&self, asset: &Asset) -> FName {
         match self.class_index.is_import() {
             true => asset
                 .get_import(self.class_index)
@@ -92,7 +92,7 @@ impl ExportBaseTrait for BaseExport {
 }
 
 impl ExportTrait for BaseExport {
-    fn write<Writer: AssetWriter>(&self, _asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, _asset: &mut Writer) -> Result<(), Error> {
         Ok(())
     }
 }

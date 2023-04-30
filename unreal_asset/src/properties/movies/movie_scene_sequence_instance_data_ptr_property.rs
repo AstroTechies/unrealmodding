@@ -6,8 +6,9 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::{FName, Guid, PackageIndex}, unversioned::ancestry::Ancestry,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::{FName, Guid, PackageIndex},
+    unversioned::ancestry::Ancestry,
 };
 
 /// Movie scene sequence instance data pointer property
@@ -28,7 +29,7 @@ impl_property_data_trait!(MovieSceneSequenceInstanceDataPtrProperty);
 
 impl MovieSceneSequenceInstanceDataPtrProperty {
     /// Read a `MovieSceneSequenceInstanceDataPtrProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -50,7 +51,7 @@ impl MovieSceneSequenceInstanceDataPtrProperty {
 }
 
 impl PropertyTrait for MovieSceneSequenceInstanceDataPtrProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

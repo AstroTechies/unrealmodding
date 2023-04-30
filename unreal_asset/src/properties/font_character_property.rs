@@ -5,7 +5,7 @@ use byteorder::LittleEndian;
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -31,7 +31,7 @@ pub struct FontCharacter {
 
 impl FontCharacter {
     /// Read a `FontCharacter` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(FontCharacter {
             start_u: asset.read_i32::<LittleEndian>()?,
             start_v: asset.read_i32::<LittleEndian>()?,
@@ -43,7 +43,7 @@ impl FontCharacter {
     }
 
     /// Write a `FontCharacter` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.start_u)?;
         asset.write_i32::<LittleEndian>(self.start_v)?;
         asset.write_i32::<LittleEndian>(self.size_u)?;
@@ -72,7 +72,7 @@ impl_property_data_trait!(FontCharacterProperty);
 
 impl FontCharacterProperty {
     /// Read a `FontCharacterProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -95,7 +95,7 @@ impl FontCharacterProperty {
 }
 
 impl PropertyTrait for FontCharacterProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

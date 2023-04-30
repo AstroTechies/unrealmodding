@@ -5,7 +5,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{str_property::StrProperty, Property, PropertyDataTrait, PropertyTrait},
-    reader::asset_reader::AssetReader,
+    reader::archive_reader::ArchiveReader,
     types::{FName, Guid},
     unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
@@ -28,7 +28,7 @@ impl_property_data_trait!(MovieSceneEvalTemplatePtrProperty);
 
 impl MovieSceneEvalTemplatePtrProperty {
     /// Read a `MovieSceneEvalTemplatePtrProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -73,7 +73,7 @@ impl MovieSceneEvalTemplatePtrProperty {
 }
 
 impl PropertyTrait for MovieSceneEvalTemplatePtrProperty {
-    fn write<Writer: crate::reader::asset_writer::AssetWriter>(
+    fn write<Writer: crate::reader::archive_writer::ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -97,7 +97,7 @@ impl PropertyTrait for MovieSceneEvalTemplatePtrProperty {
         let properties = sorted_properties.as_ref().unwrap_or(&self.value);
 
         for property in properties.iter() {
-            if property.get_name().content == "TypeName" {
+            if property.get_name().get_content() == "TypeName" {
                 let str_property: &StrProperty = cast!(Property, StrProperty, property)
                     .ok_or_else(|| {
                         Error::no_data("TypeName property is not StrProperty".to_string())

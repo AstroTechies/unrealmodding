@@ -3,19 +3,18 @@
 //! Asset Registry is used for storing information about assets
 //! The information from Asset Registry is primarily used in Content Browser,
 //! but some games might require modifying it before your assets will get loaded
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::io::{Cursor, SeekFrom};
 
 use byteorder::LittleEndian;
 
-use crate::containers::indexed_map::IndexedMap;
+use crate::asset::name_map::NameMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::crc;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{
-    asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter,
+    archive_reader::ArchiveReader, archive_trait::ArchiveTrait, archive_writer::ArchiveWriter,
     raw_writer::RawWriter,
 };
 use crate::registry::{
@@ -41,20 +40,18 @@ pub struct AssetRegistryState {
     pub package_data: Vec<AssetPackageData>,
 
     /// Name map
-    name_map: Option<Vec<String>>,
+    name_map: Option<SharedResource<NameMap>>,
     /// Object version
     object_version: ObjectVersion,
     /// UE5 Object version
     object_version_ue5: ObjectVersionUE5,
-    /// Name map lookup
-    name_map_lookup: Option<IndexedMap<u64, i32>>,
     /// Asset registry version
     version: FAssetRegistryVersionType,
 }
 
 impl AssetRegistryState {
     /// Read an `AssetRegistryState` from an asset
-    fn load<Reader: AssetReader>(
+    fn load<Reader: ArchiveReader>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
         assets_data: &mut Vec<AssetData>,
@@ -104,7 +101,7 @@ impl AssetRegistryState {
     }
 
     /// Write an `AssetRegistryState` to an asset
-    fn write_data<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    fn write_data<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_i32::<LittleEndian>(self.assets_data.len() as i32)?;
         for asset_data in &self.assets_data {
             asset_data.write(writer)?;
@@ -176,14 +173,13 @@ impl AssetRegistryState {
     ///
     /// println!("{:#?}", asset_registry);
     /// ```
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let version = FAssetRegistryVersionType::new(asset)?;
         let mut assets_data = Vec::new();
         let mut depends_nodes = Vec::new();
         let mut package_data = Vec::new();
 
         let mut name_map = None;
-        let mut name_map_lookup = None;
 
         if version < FAssetRegistryVersionType::RemovedMD5Hash {
             return Err(Error::invalid_file(format!(
@@ -193,8 +189,6 @@ impl AssetRegistryState {
         } else if version < FAssetRegistryVersionType::FixedTags {
             // name table reader
             let mut name_table_reader = NameTableReader::new(asset)?;
-            name_map = Some(name_table_reader.name_map.clone()); // todo: something else instead of cloning?
-            name_map_lookup = Some(name_table_reader.name_map_lookup.clone());
             Self::load(
                 &mut name_table_reader,
                 version,
@@ -202,6 +196,7 @@ impl AssetRegistryState {
                 &mut depends_nodes,
                 &mut package_data,
             )?;
+            name_map = Some(name_table_reader.name_map);
         } else {
             Self::load(
                 asset,
@@ -219,7 +214,6 @@ impl AssetRegistryState {
             package_data,
 
             name_map,
-            name_map_lookup,
 
             object_version: asset.get_object_version(),
             object_version_ue5: asset.get_object_version_ue5(),
@@ -279,23 +273,20 @@ impl AssetRegistryState {
             let pos = writer.position();
             writer.write_i64::<LittleEndian>(0)?;
 
-            let name_map_lookup = self.name_map_lookup.as_ref().ok_or_else(|| {
-                RegistryError::version("Name map lookup".to_string(), self.version)
-            })?;
-
             let name_map = self
                 .name_map
                 .as_ref()
                 .ok_or_else(|| RegistryError::version("Name map".to_string(), self.version))?;
 
-            let mut name_table_writer =
-                NameTableWriter::new(&mut writer, name_map, name_map_lookup);
+            let mut name_table_writer = NameTableWriter::new(&mut writer, name_map.clone());
 
             self.write_data(&mut name_table_writer)?;
 
             let offset = writer.position();
-            writer.write_i32::<LittleEndian>(name_map.len() as i32)?;
-            for name in name_map {
+            writer.write_i32::<LittleEndian>(
+                name_map.get_ref().get_name_map_index_list().len() as i32
+            )?;
+            for name in name_map.get_ref().get_name_map_index_list() {
                 writer.write_fstring(Some(name))?;
 
                 match writer.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
@@ -321,24 +312,11 @@ impl AssetRegistryState {
 
     /// Adds a name reference to the string lookup table
     pub fn add_name_reference(&mut self, string: &str, add_duplicates: bool) -> i32 {
-        let mut hasher = DefaultHasher::new();
-        string.hash(&mut hasher);
-
-        let hash = hasher.finish();
-
-        if let Some(lookup) = self.name_map_lookup.as_mut() {
-            if !add_duplicates {
-                if let Some(index) = lookup.get_by_key(&hash) {
-                    return *index;
-                }
-            }
-
-            let name_map = self.name_map.as_mut().expect("Corrupted memory");
-            name_map.push(string.to_string());
-            lookup.insert(hash, name_map.len() as i32 - 1);
-
-            return name_map.len() as i32 - 1;
-        }
+        if let Some(ref mut name_map) = self.name_map {
+            return name_map
+                .get_mut()
+                .add_name_reference(string.to_string(), add_duplicates);
+        };
 
         0
     }

@@ -31,6 +31,7 @@ const TEST_ASSETS: [(&str, &[u8], &[u8]); 2] = [
 #[test]
 fn ac7() -> Result<(), Error> {
     for (name, asset_data, bulk_data) in TEST_ASSETS {
+        println!("{}", name);
         let key = AC7XorKey::new(name);
         let (decrypted_data, decrypted_bulk) = ac7::decrypt(asset_data, bulk_data, key);
 

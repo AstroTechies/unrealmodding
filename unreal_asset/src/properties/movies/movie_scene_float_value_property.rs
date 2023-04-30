@@ -10,7 +10,7 @@ use crate::{
         rich_curve_key_property::{RichCurveInterpMode, RichCurveTangentMode},
         PropertyTrait,
     },
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -32,7 +32,10 @@ pub struct MovieSceneFloatValue {
 
 impl MovieSceneFloatValue {
     /// Read a `MovieSceneFloatValue` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader, clang_win64: bool) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(
+        asset: &mut Reader,
+        clang_win64: bool,
+    ) -> Result<Self, Error> {
         let value = asset.read_f32::<LittleEndian>()?;
         let tangent = MovieSceneTangentData::new(asset, clang_win64)?;
         let interp_mode: RichCurveInterpMode = RichCurveInterpMode::try_from(asset.read_i8()?)?;
@@ -47,7 +50,7 @@ impl MovieSceneFloatValue {
     }
 
     /// Write a `MovieSceneFloatValue` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_f32::<LittleEndian>(self.value.0)?;
         self.tangent.write(asset)?;
         asset.write_i8(self.interp_mode as i8)?;
@@ -74,7 +77,7 @@ impl_property_data_trait!(MovieSceneFloatValueProperty);
 
 impl MovieSceneFloatValueProperty {
     /// Read a `MovieSceneFloatValueProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -97,7 +100,7 @@ impl MovieSceneFloatValueProperty {
 }
 
 impl PropertyTrait for MovieSceneFloatValueProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

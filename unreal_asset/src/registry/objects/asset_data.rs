@@ -6,7 +6,7 @@ use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::Error;
 use crate::flags::EPackageFlags;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::registry::objects::asset_bundle_data::AssetBundleData;
 use crate::types::FName;
 
@@ -21,7 +21,7 @@ pub struct TopLevelAssetPath {
 
 impl TopLevelAssetPath {
     /// Read a `TopLevelAssetPath` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let package_name = asset.read_fname()?;
         let asset_name = asset.read_fname()?;
 
@@ -32,7 +32,7 @@ impl TopLevelAssetPath {
     }
 
     /// Write a `TopLevelAssetPath` to an asset
-    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_fname(&self.package_name)?;
         writer.write_fname(&self.asset_name)?;
         Ok(())
@@ -71,7 +71,7 @@ pub struct AssetData {
 
 impl AssetData {
     /// Read `AssetData` tags
-    fn read_tags<Reader: AssetReader>(
+    fn read_tags<Reader: ArchiveReader>(
         asset: &mut Reader,
     ) -> Result<IndexedMap<FName, Option<String>>, Error> {
         let size = asset.read_i32::<LittleEndian>()?;
@@ -84,7 +84,7 @@ impl AssetData {
     }
 
     /// Write `AssetData` tags
-    fn write_tags<Writer: AssetWriter>(
+    fn write_tags<Writer: ArchiveWriter>(
         asset: &mut Writer,
         tags_and_values: &IndexedMap<FName, Option<String>>,
     ) -> Result<(), Error> {
@@ -97,7 +97,7 @@ impl AssetData {
     }
 
     /// Read `AssetData` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
     ) -> Result<Self, Error> {
@@ -166,7 +166,7 @@ impl AssetData {
     }
 
     /// Write `AssetData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_fname(&self.object_path)?;
         writer.write_fname(&self.package_path)?;
 

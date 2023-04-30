@@ -6,7 +6,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{Property, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::movie::FFrameNumberRange,
     types::{FName, Guid},
     unversioned::{ancestry::Ancestry, header::UnversionedHeader},
@@ -21,14 +21,14 @@ pub struct MovieSceneSegmentIdentifier {
 
 impl MovieSceneSegmentIdentifier {
     /// Read a `MovieSceneSegmentIdentifier` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let identifier_index = asset.read_i32::<LittleEndian>()?;
 
         Ok(MovieSceneSegmentIdentifier { identifier_index })
     }
 
     /// Write a `MovieSceneSegmentIdentifier` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.identifier_index)?;
         Ok(())
     }
@@ -51,7 +51,7 @@ pub struct MovieSceneSegment {
 
 impl MovieSceneSegment {
     /// Read a `MovieSceneSegment` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -85,7 +85,7 @@ impl MovieSceneSegment {
     }
 
     /// Write a `MovieSceneSegment` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.range.write(asset)?;
         self.id.write(asset)?;
 
@@ -139,7 +139,7 @@ impl_property_data_trait!(MovieSceneSegmentProperty);
 
 impl MovieSceneSegmentProperty {
     /// Read a `MovieSceneSegmentProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -162,7 +162,7 @@ impl MovieSceneSegmentProperty {
 }
 
 impl PropertyTrait for MovieSceneSegmentProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -195,7 +195,7 @@ impl_property_data_trait!(MovieSceneSegmentIdentifierProperty);
 
 impl MovieSceneSegmentIdentifierProperty {
     /// Read a `MovieSceneSegmentIdentifierProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -217,7 +217,7 @@ impl MovieSceneSegmentIdentifierProperty {
 }
 
 impl PropertyTrait for MovieSceneSegmentIdentifierProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

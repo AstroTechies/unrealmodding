@@ -8,7 +8,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::asset_reader::AssetReader,
+    reader::archive_reader::ArchiveReader,
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -40,7 +40,7 @@ impl_property_data_trait!(UniqueNetIdProperty);
 
 impl UniqueNetIdProperty {
     /// Read a `UniqueNetIdProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -70,7 +70,7 @@ impl UniqueNetIdProperty {
 }
 
 impl PropertyTrait for UniqueNetIdProperty {
-    fn write<Writer: crate::reader::asset_writer::AssetWriter>(
+    fn write<Writer: crate::reader::archive_writer::ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

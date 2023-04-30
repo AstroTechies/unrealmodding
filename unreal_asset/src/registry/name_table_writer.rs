@@ -1,50 +1,38 @@
 //! Asset registry NameTableWriter
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::io::{self, SeekFrom};
 
 use byteorder::LittleEndian;
 
+use crate::asset::name_map::NameMap;
 use crate::containers::indexed_map::IndexedMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
-use crate::error::Error;
+use crate::error::{Error, FNameError};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::properties::Property;
-use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
+use crate::reader::{archive_trait::ArchiveTrait, archive_writer::ArchiveWriter};
 use crate::types::{FName, PackageIndex};
 use crate::unversioned::header::UnversionedHeader;
 use crate::Import;
 
 /// Used to write NameTable entries by modifying the behavior
 /// of some of the value write methods.
-pub struct NameTableWriter<'name_map, 'writer, Writer: AssetWriter> {
+pub struct NameTableWriter<'writer, Writer: ArchiveWriter> {
     /// Writer
     writer: &'writer mut Writer,
     /// Name map
-    name_map: &'name_map [String],
-    /// Name map lookup
-    name_map_lookup: &'name_map IndexedMap<u64, i32>,
+    name_map: SharedResource<NameMap>,
 }
 
-impl<'name_map, 'writer, Writer: AssetWriter> NameTableWriter<'name_map, 'writer, Writer> {
+impl<'writer, Writer: ArchiveWriter> NameTableWriter<'writer, Writer> {
     /// Create a new `NameTableWriter` instance from another `Writer` and a name map
-    pub fn new(
-        writer: &'writer mut Writer,
-        name_map: &'name_map [String],
-        name_map_lookup: &'name_map IndexedMap<u64, i32>,
-    ) -> Self {
-        NameTableWriter {
-            writer,
-            name_map,
-            name_map_lookup,
-        }
+    pub fn new(writer: &'writer mut Writer, name_map: SharedResource<NameMap>) -> Self {
+        NameTableWriter { writer, name_map }
     }
 }
 
-impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
-    for NameTableWriter<'name_map, 'writer, Writer>
-{
+impl<'writer, Writer: ArchiveWriter> ArchiveTrait for NameTableWriter<'writer, Writer> {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -64,20 +52,12 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
         self.writer.seek(style)
     }
 
-    fn get_name_map_index_list(&self) -> &[String] {
-        self.name_map
+    fn get_name_map(&self) -> SharedResource<NameMap> {
+        self.name_map.clone()
     }
 
     fn get_name_reference(&self, index: i32) -> String {
-        if index < 0 {
-            return (-index).to_string();
-        }
-
-        if index >= self.name_map.len() as i32 {
-            return index.to_string();
-        }
-
-        self.name_map[index as usize].to_owned()
+        self.name_map.get_ref().get_name_reference(index)
     }
 
     fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
@@ -137,9 +117,7 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetTrait
     }
 }
 
-impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
-    for NameTableWriter<'name_map, 'writer, Writer>
-{
+impl<'writer, Writer: ArchiveWriter> ArchiveWriter for NameTableWriter<'writer, Writer> {
     fn write_property_guid(
         &mut self,
         guid: &Option<crate::types::Guid>,
@@ -148,19 +126,20 @@ impl<'name_map, 'writer, Writer: AssetWriter> AssetWriter
     }
 
     fn write_fname(&mut self, fname: &FName) -> Result<(), crate::error::Error> {
-        let mut hasher = DefaultHasher::new();
-        fname.content.hash(&mut hasher);
-
-        let hash = hasher.finish();
-        let index = self
-            .name_map_lookup
-            .get_by_key(&hash)
-            .ok_or_else(|| Error::no_data(format!("No name reference for {}", fname.content)))?;
-
-        self.writer.write_i32::<LittleEndian>(*index)?;
-        self.writer.write_i32::<LittleEndian>(fname.index)?;
-
-        Ok(())
+        match fname {
+            FName::Backed {
+                index,
+                number,
+                name_map: _,
+            } => {
+                self.writer.write_i32::<LittleEndian>(*index)?;
+                self.writer.write_i32::<LittleEndian>(*number)?;
+                Ok(())
+            }
+            FName::Dummy { value, number } => {
+                Err(FNameError::dummy_serialize(value, *number).into())
+            }
+        }
     }
 
     fn write_u8(&mut self, value: u8) -> io::Result<()> {

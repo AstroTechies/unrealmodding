@@ -6,12 +6,12 @@ use byteorder::ByteOrder;
 
 use crate::error::Error;
 use crate::properties::Property;
-use crate::reader::asset_trait::AssetTrait;
+use crate::reader::archive_trait::ArchiveTrait;
 use crate::types::{FName, Guid};
 use crate::unversioned::header::UnversionedHeader;
 
 /// A trait that allows for writing to an archive in an asset-specific way
-pub trait AssetWriter: AssetTrait {
+pub trait ArchiveWriter: ArchiveTrait {
     /// Write a `Guid` property
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error>;
     /// Write an `FName`

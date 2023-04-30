@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -25,7 +25,7 @@ pub struct MovieSceneSubSequenceTreeEntry {
 
 impl MovieSceneSubSequenceTreeEntry {
     /// Read a `MovieSceneSubSequenceTreeEntry` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let sequence_id = MovieSceneSequenceId::new(asset)?;
         let flags: ESectionEvaluationFlags = ESectionEvaluationFlags::try_from(asset.read_u8()?)?;
 
@@ -33,7 +33,7 @@ impl MovieSceneSubSequenceTreeEntry {
     }
 
     /// Write a `MovieSceneSubSequenceTreeEntry` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.sequence_id.write(asset)?;
         asset.write_u8(self.flags as u8)?;
 
@@ -50,7 +50,7 @@ pub struct MovieSceneSubSequenceTree {
 
 impl MovieSceneSubSequenceTree {
     /// Read a `MovieSceneSubSequenceTree` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let data = TMovieSceneEvaluationTree::read(asset, |reader| {
             MovieSceneSubSequenceTreeEntry::new(reader)
         })?;
@@ -59,7 +59,7 @@ impl MovieSceneSubSequenceTree {
     }
 
     /// Write a `MovieSceneSubSequenceTree` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.data.write(asset, |writer, node| {
             node.write(writer)?;
             Ok(())
@@ -87,7 +87,7 @@ impl_property_data_trait!(MovieSceneSubSequenceTreeProperty);
 
 impl MovieSceneSubSequenceTreeProperty {
     /// Read a `MovieSceneSubSequenceTreeProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -109,7 +109,7 @@ impl MovieSceneSubSequenceTreeProperty {
 }
 
 impl PropertyTrait for MovieSceneSubSequenceTreeProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

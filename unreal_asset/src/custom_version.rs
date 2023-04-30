@@ -9,12 +9,12 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::engine_version::EngineVersion;
 use crate::error::Error;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{new_guid, Guid};
 
 /// CustomVersions are engine "sub-versions"
 /// They are used to parse some propeties differently
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CustomVersion {
     /// Custom veresion guid
     pub guid: Guid,
@@ -94,7 +94,7 @@ impl CustomVersion {
     }
 
     /// Read a custom version from an asset
-    pub fn read<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn read<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut key = [0u8; 16];
         asset.read_exact(&mut key)?;
         let version = asset.read_i32::<LittleEndian>()?;
@@ -109,7 +109,7 @@ impl CustomVersion {
     }
 
     /// Write a custom version to an asset
-    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_all(&self.guid)?;
         writer.write_i32::<LittleEndian>(self.version)?;
         Ok(())
@@ -1333,7 +1333,7 @@ lazy_static! {
 
 impl FAssetRegistryVersionType {
     /// Read an asset registry version from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut guid = [0u8; 16];
         asset.read_exact(&mut guid)?;
 
@@ -1345,7 +1345,7 @@ impl FAssetRegistryVersionType {
     }
 
     /// Write an asset registry version to an asset
-    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_all(&*ASSET_REGISTRY_VERSION_GUID)?;
         writer.write_i32::<LittleEndian>((*self).into())?;
         Ok(())

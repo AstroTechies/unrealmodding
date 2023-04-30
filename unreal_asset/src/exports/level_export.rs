@@ -8,7 +8,7 @@ use crate::exports::{
     ExportTrait,
 };
 use crate::implement_get;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::PackageIndex;
 
 /// Level export
@@ -33,7 +33,7 @@ implement_get!(LevelExport);
 
 impl LevelExport {
     /// Read a `LevelExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         unk: &BaseExport,
         asset: &mut Reader,
         next_starting: u64,
@@ -72,7 +72,7 @@ impl LevelExport {
 }
 
 impl ExportTrait for LevelExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
 
         asset.write_i32::<LittleEndian>(0)?;

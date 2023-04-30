@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -23,7 +23,7 @@ pub struct MovieSceneTrackFieldData {
 
 impl MovieSceneTrackFieldData {
     /// Read `MovieSceneTrackFieldData` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let field = TMovieSceneEvaluationTree::read(asset, |reader| {
             MovieSceneTrackIdentifier::new(reader)
         })?;
@@ -32,7 +32,7 @@ impl MovieSceneTrackFieldData {
     }
 
     /// Write `MovieSceneTrackFieldData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.field.write(asset, |writer, node| {
             node.write(writer)?;
             Ok(())
@@ -60,7 +60,7 @@ impl_property_data_trait!(MovieSceneTrackFieldDataProperty);
 
 impl MovieSceneTrackFieldDataProperty {
     /// Read a `MovieSceneTrackFieldDataProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -82,7 +82,7 @@ impl MovieSceneTrackFieldDataProperty {
 }
 
 impl PropertyTrait for MovieSceneTrackFieldDataProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

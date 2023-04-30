@@ -7,7 +7,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     error::Error,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::FName,
     unversioned::ancestry::Ancestry,
 };
@@ -36,10 +36,13 @@ pub struct MeshToMeshVertData {
 
 impl MeshToMeshVertData {
     /// Read `MeshToMeshVertData` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let position_bary_coords_and_dist = Vector4Property::new(
             asset,
-            FName::from_slice("PositionBaryCoordsAndDist"),
+            asset
+                .get_name_map()
+                .get_mut()
+                .add_fname("PositionBaryCoordsAndDist"),
             Ancestry::default(),
             false,
             0,
@@ -47,7 +50,10 @@ impl MeshToMeshVertData {
 
         let normal_bary_coords_and_dist = Vector4Property::new(
             asset,
-            FName::from_slice("NormalBaryCoordsAndDist"),
+            asset
+                .get_name_map()
+                .get_mut()
+                .add_fname("NormalBaryCoordsAndDist"),
             Ancestry::default(),
             false,
             0,
@@ -55,7 +61,10 @@ impl MeshToMeshVertData {
 
         let tangent_bary_coords_and_dist = Vector4Property::new(
             asset,
-            FName::from_slice("TangentBaryCoordsAndDist"),
+            asset
+                .get_name_map()
+                .get_mut()
+                .add_fname("TangentBaryCoordsAndDist"),
             Ancestry::default(),
             false,
             0,
@@ -80,7 +89,7 @@ impl MeshToMeshVertData {
     }
 
     /// Write `MeshToMeshVertData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut size = 0;
         size += self.position_bary_coords_and_dist.write(asset, false)?;
         size += self.normal_bary_coords_and_dist.write(asset, false)?;
@@ -116,7 +125,7 @@ pub struct ClothLodDataProperty {
 
 impl ClothLodDataProperty {
     /// Read a `ClothLodDataProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -183,7 +192,7 @@ impl PropertyDataTrait for ClothLodDataProperty {
 }
 
 impl PropertyTrait for ClothLodDataProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

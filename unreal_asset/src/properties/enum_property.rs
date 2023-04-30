@@ -5,7 +5,7 @@ use std::mem::size_of;
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
@@ -29,7 +29,7 @@ impl_property_data_trait!(EnumProperty);
 
 impl EnumProperty {
     /// Read an `EnumProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -55,7 +55,7 @@ impl EnumProperty {
 }
 
 impl PropertyTrait for EnumProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

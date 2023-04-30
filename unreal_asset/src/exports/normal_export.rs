@@ -3,8 +3,7 @@
 use crate::error::Error;
 use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::properties::Property;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::FName;
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 
@@ -43,7 +42,7 @@ impl ExportBaseTrait for NormalExport {
 
 impl NormalExport {
     /// Read a `NormalExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
@@ -67,7 +66,7 @@ impl NormalExport {
 }
 
 impl ExportTrait for NormalExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         let (unversioned_header, sorted_properties) = match asset.generate_unversioned_header(
             &self.properties,
             &self.base_export.get_class_type_for_ancestry(asset),
@@ -86,7 +85,8 @@ impl ExportTrait for NormalExport {
             Property::write(entry, asset, true)?;
         }
         if !asset.has_unversioned_properties() {
-            asset.write_fname(&FName::from_slice("None"))?;
+            let none = asset.get_name_map().get_mut().add_fname("None");
+            asset.write_fname(&none)?;
         }
 
         Ok(())

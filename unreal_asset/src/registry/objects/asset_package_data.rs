@@ -4,7 +4,7 @@ use byteorder::LittleEndian;
 
 use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
 use crate::error::{Error, RegistryError};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::registry::objects::md5_hash::FMD5Hash;
 use crate::types::{FName, Guid};
 
@@ -38,7 +38,7 @@ pub struct AssetPackageData {
 
 impl AssetPackageData {
     /// Read `AssetPackageData` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
     ) -> Result<Self, Error> {
@@ -93,7 +93,7 @@ impl AssetPackageData {
     }
 
     /// Write `AssetPackageData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.package_name)?;
         asset.write_i64::<LittleEndian>(self.disk_size)?;
         asset.write_all(&self.package_guid)?;

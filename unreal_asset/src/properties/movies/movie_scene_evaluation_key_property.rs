@@ -6,7 +6,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -29,7 +29,7 @@ pub struct MovieSceneEvaluationKey {
 
 impl MovieSceneEvaluationKey {
     /// Read a `MovieSceneEvaluationKey` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let sequence_id = MovieSceneSequenceId::new(asset)?;
         let track_identifier = MovieSceneTrackIdentifier::new(asset)?;
         let section_index = asset.read_u32::<LittleEndian>()?;
@@ -42,7 +42,7 @@ impl MovieSceneEvaluationKey {
     }
 
     /// Write a `MovieSceneEvaluationKey` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.sequence_id.write(asset)?;
         self.track_identifier.write(asset)?;
         asset.write_u32::<LittleEndian>(self.section_index)?;
@@ -69,7 +69,7 @@ impl_property_data_trait!(MovieSceneEvaluationKeyProperty);
 
 impl MovieSceneEvaluationKeyProperty {
     /// Read a `MovieSceneEvaluationKeyProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -91,7 +91,7 @@ impl MovieSceneEvaluationKeyProperty {
 }
 
 impl PropertyTrait for MovieSceneEvaluationKeyProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

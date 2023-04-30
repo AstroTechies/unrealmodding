@@ -6,7 +6,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::movie::ERangeBoundTypes,
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
@@ -23,7 +23,7 @@ pub struct Int32RangeBound {
 
 impl Int32RangeBound {
     /// Read an `Int32RangeBound` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let ty: ERangeBoundTypes = ERangeBoundTypes::try_from(asset.read_i8()?)?;
         let value = asset.read_i32::<LittleEndian>()?;
 
@@ -31,7 +31,7 @@ impl Int32RangeBound {
     }
 
     /// Write an `Int32RangeBound` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i8(self.ty as i8)?;
         asset.write_i32::<LittleEndian>(self.value)?;
 
@@ -59,7 +59,7 @@ impl_property_data_trait!(MovieSceneFrameRangeProperty);
 
 impl MovieSceneFrameRangeProperty {
     /// Read a `MovieSceneFrameRangeProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -83,7 +83,7 @@ impl MovieSceneFrameRangeProperty {
 }
 
 impl PropertyTrait for MovieSceneFrameRangeProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

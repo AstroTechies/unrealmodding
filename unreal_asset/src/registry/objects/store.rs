@@ -6,7 +6,7 @@ use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::error::Error;
-use crate::reader::asset_reader::AssetReader;
+use crate::reader::archive_reader::ArchiveReader;
 use crate::types::FName;
 
 /// Value type
@@ -42,7 +42,7 @@ const INDEX_BITS: u32 = 32 - TYPE_BITS;
 
 impl ValueId {
     /// Read a `ValueId` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let id = asset.read_u32::<LittleEndian>()?;
         let value_type = EValueType::try_from((id << INDEX_BITS) >> INDEX_BITS)?;
         let index = id as i32 >> TYPE_BITS;
@@ -61,7 +61,7 @@ pub struct NumberedPair {
 
 impl NumberedPair {
     /// Read a `NumberedPair` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key = asset.read_fname()?;
         let value = ValueId::new(asset)?;
 
@@ -79,7 +79,7 @@ pub struct NumberlessPair {
 
 impl NumberlessPair {
     /// Read a `NumberlessPair` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key = asset.read_u32::<LittleEndian>()?;
         let value = ValueId::new(asset)?;
 
@@ -99,7 +99,7 @@ pub struct NumberlessExportPath {
 
 impl NumberlessExportPath {
     /// Read a `NumberlessExportPath` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let class = asset.read_u32::<LittleEndian>()?;
         let object = asset.read_u32::<LittleEndian>()?;
         let package = asset.read_u32::<LittleEndian>()?;
@@ -124,7 +124,7 @@ pub struct AssetRegistryExportPath {
 
 impl AssetRegistryExportPath {
     /// Read an `AssetRegistryExportPath` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let class = asset.read_fname()?;
         let object = asset.read_fname()?;
         let package = asset.read_fname()?;
@@ -182,7 +182,7 @@ impl Store {
     }
 
     /// Read a `Store` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let magic = asset.read_u32::<LittleEndian>()?;
         let order = Store::get_load_order(magic)?;
 

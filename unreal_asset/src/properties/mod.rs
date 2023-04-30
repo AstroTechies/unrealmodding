@@ -8,8 +8,8 @@ use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 
 use crate::error::{Error, PropertyError};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{FName, Guid, ToFName};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{FName, Guid, ToSerializedName};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 use crate::unversioned::properties::UsmapPropertyDataTrait;
@@ -145,7 +145,7 @@ macro_rules! optional_guid_write {
 macro_rules! simple_property_write {
     ($property_name:ident, $write_func:ident, $value_name:ident, $value_type:ty) => {
         impl PropertyTrait for $property_name {
-            fn write<Writer: AssetWriter>(
+            fn write<Writer: ArchiveWriter>(
                 &self,
                 asset: &mut Writer,
                 include_header: bool,
@@ -273,7 +273,7 @@ pub trait PropertyDataTrait {
 #[enum_dispatch]
 pub trait PropertyTrait: PropertyDataTrait + Debug + Hash + Clone + PartialEq + Eq {
     /// Write property to an asset
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -461,8 +461,8 @@ pub enum Property {
 }
 
 impl Property {
-    /// Tries to read a property from an AssetReader
-    pub fn new<Reader: AssetReader>(
+    /// Tries to read a property from an ArchiveReader
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         ancestry: Ancestry,
         unversioned_header: Option<&mut UnversionedHeader>,
@@ -495,10 +495,10 @@ impl Property {
             let mut practicing_unversioned_property_index = header.unversioned_property_index;
             let mut schema = mappings
                 .schemas
-                .get_by_key(&parent_name.content)
+                .get_by_key(&parent_name.get_content())
                 .ok_or_else(|| {
                     PropertyError::no_schema(
-                        parent_name.content.clone(),
+                        parent_name.get_content(),
                         practicing_unversioned_property_index,
                     )
                 })?;
@@ -512,7 +512,7 @@ impl Property {
                 }
                 .ok_or_else(|| {
                     PropertyError::no_schema(
-                        parent_name.content.clone(),
+                        parent_name.get_content(),
                         practicing_unversioned_property_index,
                     )
                 })?;
@@ -526,8 +526,9 @@ impl Property {
                 .unwrap();
             header.unversioned_property_index += 1;
 
-            name = FName::new(property.name.clone().unwrap_or_default(), 0);
-            property_type = FName::new(property.property_data.get_property_type().to_string(), 0);
+            name = FName::new_dummy(property.name.clone().unwrap_or_default(), 0);
+            property_type =
+                FName::new_dummy(property.property_data.get_property_type().to_string(), 0);
             length = 1;
             duplication_index = property.array_index as i32;
 
@@ -542,7 +543,7 @@ impl Property {
             }
         } else {
             name = asset.read_fname()?;
-            if &name.content == "None" {
+            if &name.get_content() == "None" {
                 return Ok(None);
             }
 
@@ -565,9 +566,9 @@ impl Property {
         .map(Some)
     }
 
-    /// Tries to read a property from an AssetReader while specified a type and length
+    /// Tries to read a property from an ArchiveReader while specified a type and length
     #[allow(clippy::too_many_arguments)]
-    pub fn from_type<Reader: AssetReader>(
+    pub fn from_type<Reader: ArchiveReader>(
         asset: &mut Reader,
         type_name: &FName,
         name: FName,
@@ -582,7 +583,7 @@ impl Property {
             return Ok(EmptyProperty::new(type_name.clone(), name, ancestry).into());
         }
 
-        let res = match type_name.content.as_str() {
+        let res = match type_name.get_content().as_str() {
             "BoolProperty" => BoolProperty::new(
                 asset,
                 name,
@@ -1235,14 +1236,21 @@ impl Property {
         Ok(res)
     }
 
-    /// Writes a property to an AssetWriter
-    pub fn write<Writer: AssetWriter>(
+    /// Writes a property to an ArchiveWriter
+    pub fn write<Writer: ArchiveWriter>(
         property: &Property,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         asset.write_fname(&property.get_name())?;
-        asset.write_fname(&property.to_fname())?;
+
+        let property_serialized_name = property.to_serialized_name();
+        asset.write_fname(
+            &asset
+                .get_name_map()
+                .get_mut()
+                .add_fname(&property_serialized_name),
+        )?;
 
         let begin = asset.position();
         asset.write_i32::<LittleEndian>(0)?; // initial length
@@ -1262,25 +1270,25 @@ impl Property {
     }
 }
 
-/// Implements `ToFName` trait for properties
-macro_rules! property_inner_fname {
+/// Implements `ToSerializedName` trait for properties
+macro_rules! property_inner_serialized_name {
     ($($inner:ident : $name:expr),*) => {
-        impl ToFName for Property {
-            fn to_fname(&self) -> FName {
+        impl ToSerializedName for Property {
+            fn to_serialized_name(&self) -> String {
                 match self {
                     $(
-                        Self::$inner(_) => FName::from_slice($name),
+                        Self::$inner(_) => String::from($name),
                     )*
                     Self::UnknownProperty(unk) => unk
-                        .serialized_type.clone(),
-                    Self::EmptyProperty(empty) => empty.type_name.clone()
+                        .serialized_type.get_content(),
+                    Self::EmptyProperty(empty) => empty.type_name.get_content()
                 }
             }
         }
     };
 }
 
-property_inner_fname! {
+property_inner_serialized_name! {
     SkeletalMeshSamplingLODBuiltDataProperty: "SkeletalMeshSamplingLODBuiltData",
     SkeletalMeshAreaWeightedTriangleSampler: "SkeletalMeshAreaWeightedTriangleSampler",
     SmartNameProperty: "SmartName",

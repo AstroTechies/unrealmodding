@@ -3,8 +3,8 @@
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::properties::{array_property::ArrayProperty, PropertyTrait};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{FName, Guid, ToFName};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{FName, Guid, ToSerializedName};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Set property
@@ -29,7 +29,7 @@ impl_property_data_trait!(SetProperty);
 
 impl SetProperty {
     /// Read a `SetProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -79,13 +79,16 @@ impl SetProperty {
 }
 
 impl PropertyTrait for SetProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         let array_type = match !self.value.value.is_empty() {
-            true => Some(self.value.value[0].to_fname()),
+            true => {
+                let value = self.value.value[0].to_serialized_name();
+                Some(asset.get_name_map().get_mut().add_fname(&value))
+            }
             false => self.array_type.clone(),
         };
 

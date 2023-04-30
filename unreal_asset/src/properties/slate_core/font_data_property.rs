@@ -8,7 +8,7 @@ use crate::{
     error::{Error, PropertyError},
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid, PackageIndex},
     unversioned::ancestry::Ancestry,
 };
@@ -60,7 +60,7 @@ pub struct FontData {
 
 impl FontData {
     /// Read `FontData` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Option<Self>, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Option<Self>, Error> {
         if asset.get_custom_version::<FEditorObjectVersion>().version
             < FEditorObjectVersion::AddedFontFaceAssets as i32
         {
@@ -98,7 +98,7 @@ impl FontData {
     }
 
     /// Write `FontData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         if asset.get_custom_version::<FEditorObjectVersion>().version
             < FEditorObjectVersion::AddedFontFaceAssets as i32
         {
@@ -145,7 +145,7 @@ impl_property_data_trait!(FontDataProperty);
 
 impl FontDataProperty {
     /// Read a `FontDataProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -168,7 +168,7 @@ impl FontDataProperty {
 }
 
 impl PropertyTrait for FontDataProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

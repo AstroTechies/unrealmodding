@@ -6,12 +6,14 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use unreal_helpers::UnrealReadExt;
 
+use crate::asset::name_map::NameMap;
 use crate::containers::indexed_map::IndexedMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
+use crate::reader::{archive_reader::ArchiveReader, archive_trait::ArchiveTrait};
 use crate::types::{FName, Guid, PackageIndex};
 use crate::Import;
 
@@ -25,6 +27,8 @@ pub struct RawReader {
     object_version_ue5: ObjectVersionUE5,
 
     /// Dummy name map
+    dummy_name_map: SharedResource<NameMap>,
+    /// Empty map
     empty_map: IndexedMap<String, String>,
 }
 
@@ -39,12 +43,13 @@ impl RawReader {
             cursor,
             object_version,
             object_version_ue5,
+            dummy_name_map: NameMap::new(),
             empty_map: IndexedMap::new(),
         }
     }
 }
 
-impl AssetTrait for RawReader {
+impl ArchiveTrait for RawReader {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -64,8 +69,8 @@ impl AssetTrait for RawReader {
         self.cursor.seek(style)
     }
 
-    fn get_name_map_index_list(&self) -> &[String] {
-        &[]
+    fn get_name_map(&self) -> SharedResource<NameMap> {
+        self.dummy_name_map.clone()
     }
 
     fn get_name_reference(&self, _: i32) -> String {
@@ -113,11 +118,11 @@ impl AssetTrait for RawReader {
     }
 
     fn add_fname(&mut self, value: &str) -> FName {
-        FName::new(value.to_string(), 0)
+        FName::new_dummy(value.to_string(), 0)
     }
 
     fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
-        FName::new(value.to_string(), number)
+        FName::new_dummy(value.to_string(), number)
     }
 
     fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
@@ -129,14 +134,14 @@ impl AssetTrait for RawReader {
     }
 }
 
-impl AssetReader for RawReader {
+impl ArchiveReader for RawReader {
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
         Ok(None)
     }
 
     fn read_fname(&mut self) -> Result<FName, Error> {
         let string = self.read_fstring()?.unwrap_or_else(|| "None".to_string());
-        Ok(FName::new(string, 0))
+        Ok(FName::new_dummy(string, 0))
     }
 
     fn read_array_with_length<T>(

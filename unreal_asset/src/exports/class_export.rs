@@ -13,7 +13,7 @@ use crate::exports::{
 };
 use crate::flags::EClassFlags;
 use crate::object_version::ObjectVersion;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{FName, PackageIndex};
 
 /// Serialized interface reference
@@ -66,7 +66,7 @@ pub struct ClassExport {
 
 impl ClassExport {
     /// Read a `ClassExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
@@ -154,7 +154,7 @@ impl ClassExport {
     }
 
     /// Serialize a `ClassExport` interface
-    fn serialize_interfaces<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn serialize_interfaces<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.interfaces.len() as i32)?;
         for interface in &self.interfaces {
             asset.write_i32::<LittleEndian>(interface.class)?;
@@ -189,7 +189,7 @@ impl ExportBaseTrait for ClassExport {
 }
 
 impl ExportTrait for ClassExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_export.write(asset)?;
 
         asset.write_i32::<LittleEndian>(self.func_map.len() as i32)?;
@@ -225,7 +225,7 @@ impl ExportTrait for ClassExport {
             true => 1,
             false => 0,
         })?;
-        asset.write_fname(&FName::from_slice("None"))?;
+        asset.write_fname(&asset.get_name_map().get_mut().add_fname("None"))?;
 
         if asset.get_object_version() >= ObjectVersion::VER_UE4_ADD_COOKED_TO_UCLASS {
             asset.write_i32::<LittleEndian>(

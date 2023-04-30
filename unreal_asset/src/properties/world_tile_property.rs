@@ -1,6 +1,7 @@
 //! World tile properties
 
 use byteorder::LittleEndian;
+use ordered_float::OrderedFloat;
 
 use crate::custom_version::FFortniteMainBranchObjectVersion;
 use crate::error::Error;
@@ -9,14 +10,14 @@ use crate::properties::{
     vector_property::{BoxProperty, IntPointProperty},
     PropertyTrait,
 };
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::vector::Vector;
 use crate::types::FName;
 use crate::unversioned::ancestry::Ancestry;
 
 //todo: what is this file even doing in properties?
 /// World tile layer
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FWorldTileLayer {
     /// Name
     pub name: Option<String>,
@@ -32,7 +33,7 @@ pub struct FWorldTileLayer {
 
 impl FWorldTileLayer {
     /// Read an `FWorldTileLayer` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let object_version = asset.get_object_version();
 
         let new_ancestry = Ancestry::new(
@@ -68,7 +69,7 @@ impl FWorldTileLayer {
     }
 
     /// Write an `FWorldTileLayer` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         let object_version = asset.get_object_version();
 
         asset.write_fstring(self.name.as_deref())?;
@@ -100,14 +101,14 @@ impl FWorldTileLayer {
 }
 
 /// World tile lod info
-#[derive(Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FWorldTileLODInfo {
     /// Relative streaming distance
     pub relative_streaming_distance: i32,
     /// Reserved
-    pub reserved_0: f32,
+    pub reserved_0: OrderedFloat<f32>,
     /// Reserved
-    pub reserved_1: f32,
+    pub reserved_1: OrderedFloat<f32>,
     /// Reserved
     pub reserved_2: i32,
     /// Reserved
@@ -116,21 +117,21 @@ pub struct FWorldTileLODInfo {
 
 impl FWorldTileLODInfo {
     /// Read `FWorldTileLODInfo` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(FWorldTileLODInfo {
             relative_streaming_distance: asset.read_i32::<LittleEndian>()?,
-            reserved_0: asset.read_f32::<LittleEndian>()?,
-            reserved_1: asset.read_f32::<LittleEndian>()?,
+            reserved_0: OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            reserved_1: OrderedFloat(asset.read_f32::<LittleEndian>()?),
             reserved_2: asset.read_i32::<LittleEndian>()?,
             reserved_3: asset.read_i32::<LittleEndian>()?,
         })
     }
 
     /// Write `FWorldTileLODInfo` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.relative_streaming_distance)?;
-        asset.write_f32::<LittleEndian>(self.reserved_0)?;
-        asset.write_f32::<LittleEndian>(self.reserved_1)?;
+        asset.write_f32::<LittleEndian>(self.reserved_0.0)?;
+        asset.write_f32::<LittleEndian>(self.reserved_1.0)?;
         asset.write_i32::<LittleEndian>(self.reserved_2)?;
         asset.write_i32::<LittleEndian>(self.reserved_3)?;
         Ok(())
@@ -138,7 +139,7 @@ impl FWorldTileLODInfo {
 }
 
 /// World tile ifno
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FWorldTileInfo {
     /// Position
     pub position: Vector<i32>,
@@ -159,7 +160,7 @@ pub struct FWorldTileInfo {
 
 impl FWorldTileInfo {
     /// Read `FWorldTileInfo` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let version = asset.get_custom_version::<FFortniteMainBranchObjectVersion>();
         let object_version = asset.get_object_version();
 
@@ -222,7 +223,7 @@ impl FWorldTileInfo {
     }
 
     /// Write `FWorldTileInfo` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         let object_version = asset.get_object_version();
 
         if asset

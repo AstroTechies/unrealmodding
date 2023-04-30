@@ -10,7 +10,7 @@ use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::vector::{Vector, Vector4};
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
@@ -157,7 +157,7 @@ impl_property_data_trait!(Box2DProperty);
 
 impl VectorProperty {
     /// Read a `VectorProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -181,7 +181,7 @@ impl VectorProperty {
 }
 
 impl PropertyTrait for VectorProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -196,7 +196,7 @@ impl PropertyTrait for VectorProperty {
 
 impl IntPointProperty {
     /// Read an `IntPointProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -219,7 +219,7 @@ impl IntPointProperty {
 }
 
 impl PropertyTrait for IntPointProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -233,7 +233,7 @@ impl PropertyTrait for IntPointProperty {
 
 impl Vector4Property {
     /// Read a `Vector4Property` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -258,7 +258,7 @@ impl Vector4Property {
 }
 
 impl PropertyTrait for Vector4Property {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -274,7 +274,7 @@ impl PropertyTrait for Vector4Property {
 
 impl Vector2DProperty {
     /// Read a `Vector2DProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -298,7 +298,7 @@ impl Vector2DProperty {
 }
 
 impl PropertyTrait for Vector2DProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -312,7 +312,7 @@ impl PropertyTrait for Vector2DProperty {
 
 impl QuatProperty {
     /// Read a `QuatProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -338,7 +338,7 @@ impl QuatProperty {
 }
 
 impl PropertyTrait for QuatProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -354,7 +354,7 @@ impl PropertyTrait for QuatProperty {
 
 impl RotatorProperty {
     /// Read a `RotatorProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -379,7 +379,7 @@ impl RotatorProperty {
 }
 
 impl PropertyTrait for RotatorProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -394,7 +394,7 @@ impl PropertyTrait for RotatorProperty {
 
 impl BoxProperty {
     /// Read a `BoxProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -424,7 +424,7 @@ impl BoxProperty {
 }
 
 impl PropertyTrait for BoxProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -439,7 +439,7 @@ impl PropertyTrait for BoxProperty {
 
 impl Box2DProperty {
     /// Read a `Box2DProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -462,7 +462,7 @@ impl Box2DProperty {
 }
 
 impl PropertyTrait for Box2DProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

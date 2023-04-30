@@ -5,11 +5,11 @@ use std::io;
 use byteorder::ByteOrder;
 
 use crate::error::Error;
-use crate::reader::asset_trait::AssetTrait;
+use crate::reader::archive_trait::ArchiveTrait;
 use crate::types::{FName, Guid};
 
 /// A trait that allows reading from an archive in an asset-specific way
-pub trait AssetReader: AssetTrait {
+pub trait ArchiveReader: ArchiveTrait {
     /// Read a `Guid` property
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error>;
     /// Read an `FName`
@@ -21,10 +21,10 @@ pub trait AssetReader: AssetTrait {
     ///
     /// This reads an array of 12 ints
     /// ```no_run,ignore
-    /// use unreal_asset::reader::asset_reader::AssetReader;
+    /// use unreal_asset::reader::asset_reader::ArchiveReader;
     /// use byteorder::LittleEndian;
     ///
-    /// let reader: AssetReader = ...;
+    /// let reader: ArchiveReader = ...;
     /// let ints = reader.read_array_with_length(12, |e| e.read_i32::<LittleEndian>()?)?;
     /// ```
     fn read_array_with_length<T>(

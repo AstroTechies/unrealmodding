@@ -2,7 +2,9 @@
 
 use std::io::{self, SeekFrom};
 
+use crate::asset::name_map::NameMap;
 use crate::containers::indexed_map::IndexedMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
@@ -11,17 +13,17 @@ use crate::unversioned::Usmap;
 use crate::{Import, ParentClassInfo};
 
 /// A trait that allows accessing data about the archive that is currently being read
-pub trait AssetTrait {
+pub trait ArchiveTrait {
     /// Get a custom version from this archive
     ///
     /// # Example
     ///
     /// ```no_run,ignore
     /// use unreal_asset::{
-    ///     reader::asset_trait::AssetTrait,
+    ///     reader::asset_trait::ArchiveTrait,
     ///     custom_version::FFrameworkObjectVersion,
     /// };
-    /// let archive: impl AssetTrait = ...;
+    /// let archive: impl ArchiveTrait = ...;
     /// println!("{:?}", archive.get_custom_version::<FFrameworkObjectVersion>());
     /// ```
     fn get_custom_version<T>(&self) -> CustomVersion
@@ -43,8 +45,8 @@ pub trait AssetTrait {
     /// Add a string slice to this archive as an `FName`
     fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName;
 
-    /// Get FName name map index list
-    fn get_name_map_index_list(&self) -> &[String];
+    /// Get FName name map
+    fn get_name_map(&self) -> SharedResource<NameMap>;
     /// Get FName name reference by name map index
     fn get_name_reference(&self, index: i32) -> String;
 

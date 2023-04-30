@@ -10,7 +10,7 @@ use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
@@ -72,7 +72,7 @@ impl_property_data_trait!(SkeletalMeshSamplingLODBuiltDataProperty);
 
 impl WeightedRandomSamplerProperty {
     /// Read a `WeightedRandomSamplerProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -109,7 +109,7 @@ impl WeightedRandomSamplerProperty {
 }
 
 impl PropertyTrait for WeightedRandomSamplerProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -136,7 +136,7 @@ impl PropertyTrait for WeightedRandomSamplerProperty {
 
 impl SkeletalMeshAreaWeightedTriangleSampler {
     /// Read a `SkeletalMeshAreaWeightedTriangleSampler` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -173,7 +173,7 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
 }
 
 impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -200,7 +200,7 @@ impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
 
 impl SkeletalMeshSamplingLODBuiltDataProperty {
     /// Read a `SkeletalMeshSamplingLODBuiltDataProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -229,7 +229,7 @@ impl SkeletalMeshSamplingLODBuiltDataProperty {
 }
 
 impl PropertyTrait for SkeletalMeshSamplingLODBuiltDataProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

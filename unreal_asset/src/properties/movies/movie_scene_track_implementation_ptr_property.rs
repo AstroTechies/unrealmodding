@@ -3,8 +3,8 @@
 use crate::error::Error;
 use crate::properties::str_property::StrProperty;
 use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::archive_reader::ArchiveReader;
+use crate::reader::archive_writer::ArchiveWriter;
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
@@ -28,7 +28,7 @@ impl_property_data_trait!(MovieSceneTrackImplementationPtrProperty);
 
 impl MovieSceneTrackImplementationPtrProperty {
     /// Read a `MovieSceneTrackImplementationPtrProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -73,7 +73,7 @@ impl MovieSceneTrackImplementationPtrProperty {
 }
 
 impl PropertyTrait for MovieSceneTrackImplementationPtrProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -85,7 +85,7 @@ impl PropertyTrait for MovieSceneTrackImplementationPtrProperty {
         let mut had_typename = false;
 
         for property in &self.value {
-            if property.get_name().content == "TypeName" {
+            if property.get_name().get_content() == "TypeName" {
                 let str_property: &StrProperty = cast!(Property, StrProperty, property)
                     .ok_or_else(|| {
                         Error::no_data("TypeName property is not StrProperty".to_string())

@@ -1,38 +1,35 @@
 //! Asset registry NameTableReader
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::io::{self, SeekFrom};
 
 use byteorder::LittleEndian;
 
+use crate::asset::name_map::NameMap;
 use crate::containers::indexed_map::IndexedMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
+use crate::reader::{archive_reader::ArchiveReader, archive_trait::ArchiveTrait};
 use crate::types::{FName, Guid, PackageIndex};
 use crate::Import;
 
 /// Used for reading NameTable entries by modifying the behavior
 /// of some of the value read methods.
-pub struct NameTableReader<'reader, Reader: AssetReader> {
+pub struct NameTableReader<'reader, Reader: ArchiveReader> {
     /// Reader
     reader: &'reader mut Reader,
     /// Name map
-    pub(crate) name_map: Vec<String>,
-    /// Name map lookup
-    pub(crate) name_map_lookup: IndexedMap<u64, i32>,
+    pub(crate) name_map: SharedResource<NameMap>,
 }
 
-impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
+impl<'reader, Reader: ArchiveReader> NameTableReader<'reader, Reader> {
     /// Create a new `NameTableReader` from another `Reader`
     pub(crate) fn new(reader: &'reader mut Reader) -> Result<Self, Error> {
         let name_offset = reader.read_i64::<LittleEndian>()?;
         // todo: length checking
 
-        let mut name_map = Vec::new();
-        let mut name_map_lookup = IndexedMap::new();
+        let mut name_map = NameMap::new();
         if name_offset > 0 {
             let original_offset = reader.position();
             reader.seek(SeekFrom::Start(name_offset as u64))?;
@@ -43,36 +40,24 @@ impl<'reader, Reader: AssetReader> NameTableReader<'reader, Reader> {
             }
 
             for i in 0..name_count {
-                let mut s = DefaultHasher::new();
-
                 let name = reader.read_fstring()?.ok_or_else(|| {
                     Error::invalid_file(format!("Name table entry {i} is missing a name"))
                 })?;
-                name.hash(&mut s);
-                name_map_lookup.insert(s.finish(), i);
+                name_map.get_mut().add_name_reference(name, false);
 
-                match reader.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
-                    true => {
-                        let _non_case_preserving_hash = reader.read_u16::<LittleEndian>()?;
-                        let _case_preserving_hash = reader.read_u16::<LittleEndian>()?;
-                    }
-                    false => {}
-                };
-
-                name_map.push(name);
+                if reader.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
+                    let _non_case_preserving_hash = reader.read_u16::<LittleEndian>()?;
+                    let _case_preserving_hash = reader.read_u16::<LittleEndian>()?;
+                }
             }
 
             reader.seek(SeekFrom::Start(original_offset))?;
         }
-        Ok(NameTableReader {
-            name_map,
-            reader,
-            name_map_lookup,
-        })
+        Ok(NameTableReader { reader, name_map })
     }
 }
 
-impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reader> {
+impl<'reader, Reader: ArchiveReader> ArchiveTrait for NameTableReader<'reader, Reader> {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -92,20 +77,12 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
         self.reader.seek(style)
     }
 
-    fn get_name_map_index_list(&self) -> &[String] {
-        &self.name_map
+    fn get_name_map(&self) -> SharedResource<NameMap> {
+        self.name_map.clone()
     }
 
     fn get_name_reference(&self, index: i32) -> String {
-        if index < 0 {
-            return (-index).to_string();
-        }
-
-        if index >= self.name_map_lookup.len() as i32 {
-            return index.to_string();
-        }
-
-        self.name_map[index as usize].to_owned()
+        self.name_map.get_ref().get_name_reference(index)
     }
 
     fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
@@ -165,19 +142,15 @@ impl<'reader, Reader: AssetReader> AssetTrait for NameTableReader<'reader, Reade
     }
 }
 
-impl<'reader, Reader: AssetReader> AssetReader for NameTableReader<'reader, Reader> {
+impl<'reader, Reader: ArchiveReader> ArchiveReader for NameTableReader<'reader, Reader> {
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
         self.reader.read_property_guid()
     }
 
     fn read_fname(&mut self) -> Result<FName, Error> {
-        let name_index = self.reader.read_i32::<LittleEndian>()?;
+        let index = self.reader.read_i32::<LittleEndian>()?;
         let number = self.reader.read_i32::<LittleEndian>()?;
-        // todo: length checks
-
-        let name = self.name_map[name_index as usize].clone();
-
-        Ok(FName::new(name, number))
+        Ok(self.name_map.get_ref().create_fname(index, number))
     }
 
     fn read_array_with_length<T>(

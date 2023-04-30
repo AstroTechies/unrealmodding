@@ -12,7 +12,7 @@ use crate::object_version::ObjectVersion;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
@@ -118,7 +118,7 @@ impl_property_data_trait!(NameProperty);
 
 impl StrProperty {
     /// Read a `StrProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -138,7 +138,7 @@ impl StrProperty {
 }
 
 impl PropertyTrait for StrProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -152,7 +152,7 @@ impl PropertyTrait for StrProperty {
 
 impl TextProperty {
     /// Read a `TextProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -231,7 +231,7 @@ impl TextProperty {
 }
 
 impl PropertyTrait for TextProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -300,7 +300,7 @@ impl PropertyTrait for TextProperty {
 
 impl NameProperty {
     /// Read a `NameProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -320,7 +320,7 @@ impl NameProperty {
 }
 
 impl PropertyTrait for NameProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

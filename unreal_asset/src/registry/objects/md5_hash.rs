@@ -3,7 +3,7 @@
 use byteorder::LittleEndian;
 
 use crate::error::Error;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 
 /// Unreal MD5 hash
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub struct FMD5Hash {
 
 impl FMD5Hash {
     /// Read a `FMD5Hash` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut hash = None;
 
         let has_hash = asset.read_u32::<LittleEndian>()?;
@@ -28,7 +28,7 @@ impl FMD5Hash {
     }
 
     /// Write a `FMD5Hash` to an asset
-    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         if let Some(hash) = &self.hash {
             writer.write_u32::<LittleEndian>(1)?;
             writer.write_all(hash)?;

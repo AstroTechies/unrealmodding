@@ -3,8 +3,8 @@
 use super::movie_scene_evaluation::TMovieSceneEvaluationTree;
 use crate::error::Error;
 use crate::properties::{Property, PropertyTrait};
-use crate::reader::asset_reader::AssetReader;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::archive_reader::ArchiveReader;
+use crate::reader::archive_writer::ArchiveWriter;
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
@@ -19,7 +19,7 @@ pub struct SectionEvaluationTree {
 
 impl SectionEvaluationTree {
     /// Read a `SectionEvaluationTree` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let tree = TMovieSceneEvaluationTree::read(asset, |reader| {
             let mut resulting_list = Vec::new();
             let mut unversioned_header = UnversionedHeader::new(reader)?;
@@ -39,11 +39,14 @@ impl SectionEvaluationTree {
     }
 
     /// Write a `SectionEvaluationTree` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.tree.write(asset, |writer, node| {
             let (unversioned_header, sorted_properties) = match writer.generate_unversioned_header(
                 node,
-                &FName::from_slice("SectionEvaluationDataTree"),
+                &writer
+                    .get_name_map()
+                    .get_mut()
+                    .add_fname("SectionEvaluationDataTree"),
             )? {
                 Some((a, b)) => (Some(a), Some(b)),
                 None => (None, None),
@@ -85,7 +88,7 @@ impl_property_data_trait!(SectionEvaluationDataTreeProperty);
 
 impl SectionEvaluationDataTreeProperty {
     /// Read a `SectionEvaluationDataTreeProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -107,7 +110,7 @@ impl SectionEvaluationDataTreeProperty {
 }
 
 impl PropertyTrait for SectionEvaluationDataTreeProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

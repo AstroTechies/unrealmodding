@@ -154,7 +154,7 @@ impl PropertyError {
             ancestry
                 .ancestry
                 .iter()
-                .map(|e| e.content.as_str())
+                .map(|e| e.get_content())
                 .collect::<Vec<_>>()
                 .join("/")
                 .into_boxed_str(),
@@ -173,7 +173,7 @@ impl PropertyError {
             ancestry
                 .ancestry
                 .iter()
-                .map(|e| e.content.as_str())
+                .map(|e| e.get_content())
                 .collect::<Vec<_>>()
                 .join("/")
                 .into_boxed_str(),
@@ -219,6 +219,40 @@ impl PropertyError {
     }
 }
 
+/// Thrown when an FName error occured
+#[derive(Error, Debug)]
+pub enum FNameError {
+    /// An FName pointer was out of range
+    #[error("Cannot read FName, index: {0}, name map size: {1}")]
+    OutOfRange(i32, usize),
+    /// Tried to serialize a "dummy" FName
+    #[error("Cannot serialize a dummy FName, content: {0}, number: {1}")]
+    DummySerialize(Box<str>, i32),
+}
+
+impl FNameError {
+    /// Create an `FNameError` when an FName pointer was out of range
+    pub fn out_of_range(index: i32, name_map_size: usize) -> Self {
+        FNameError::OutOfRange(index, name_map_size)
+    }
+
+    /// Create an `FNameError` when a "dummy" FName tried to serialize
+    pub fn dummy_serialize(content: &str, number: i32) -> Self {
+        Self::DummySerialize(content.to_string().into_boxed_str(), number)
+    }
+}
+
+/// Zen-specific error type
+#[derive(Error, Debug)]
+pub enum ZenError {
+    /// No mappings were provided before serialization
+    #[error("No mappings were provided before serialization")]
+    NoMappings,
+    /// Object version was not set before serialization
+    #[error("No engine version was set before serialization")]
+    NoObjectVersion,
+}
+
 /// Error type
 #[derive(Error, Debug)]
 pub enum Error {
@@ -237,9 +271,9 @@ pub enum Error {
     /// Expected data was not found
     #[error("{0}")]
     NoData(Box<str>),
-    /// An FName pointer was out of range
-    #[error("Cannot read FName, index: {0}, name map size: {1}")]
-    FName(i32, usize),
+    /// An `FNameError` occured
+    #[error(transparent)]
+    FName(#[from] FNameError),
     /// The file is invalid
     #[error("{0}")]
     InvalidFile(Box<str>),
@@ -264,17 +298,15 @@ pub enum Error {
     /// A `UsmapError` occured
     #[error(transparent)]
     Usmap(#[from] UsmapError),
+    /// A `ZenError` occured
+    #[error(transparent)]
+    Zen(#[from] ZenError),
 }
 
 impl Error {
     /// Create an `Error` for a case where expected data was not found
     pub fn no_data(msg: String) -> Self {
         Error::NoData(msg.into_boxed_str())
-    }
-
-    /// Create an `Error` when an FName pointer was out of range
-    pub fn fname(index: i32, name_map_size: usize) -> Self {
-        Error::FName(index, name_map_size)
     }
 
     /// Create an `Error` when the file was invalid

@@ -6,7 +6,7 @@ use crate::object_version::ObjectVersion;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
@@ -94,7 +94,7 @@ macro_rules! impl_soft_path_property {
     ($property_name:ident) => {
         impl $property_name {
             /// Read `$property_name` from an asset
-            pub fn new<Reader: AssetReader>(
+            pub fn new<Reader: ArchiveReader>(
                 asset: &mut Reader,
                 name: FName,
                 ancestry: Ancestry,
@@ -128,7 +128,7 @@ macro_rules! impl_soft_path_property {
         }
 
         impl PropertyTrait for $property_name {
-            fn write<Writer: AssetWriter>(
+            fn write<Writer: ArchiveWriter>(
                 &self,
                 asset: &mut Writer,
                 include_header: bool,

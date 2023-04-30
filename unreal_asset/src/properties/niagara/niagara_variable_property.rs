@@ -5,7 +5,7 @@ use byteorder::LittleEndian;
 use crate::{
     error::Error,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::FName,
     unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
@@ -23,7 +23,7 @@ pub struct NiagaraVariableProperty {
 
 impl NiagaraVariableProperty {
     /// Read a `NiagaraVariableProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -91,7 +91,7 @@ impl PropertyDataTrait for NiagaraVariableProperty {
 }
 
 impl PropertyTrait for NiagaraVariableProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         _include_header: bool,
@@ -119,7 +119,7 @@ impl PropertyTrait for NiagaraVariableProperty {
         }
 
         if !asset.has_unversioned_properties() {
-            asset.write_fname(&FName::from_slice("None"))?;
+            asset.write_fname(&asset.get_name_map().get_mut().add_fname("None"))?;
         }
         asset.write_i32::<LittleEndian>(self.variable_offset)?;
 
@@ -136,7 +136,7 @@ pub struct NiagaraVariableWithOffsetProperty {
 
 impl NiagaraVariableWithOffsetProperty {
     /// Read a `NiagaraVariableWithOffsetProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -184,7 +184,7 @@ impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
 }
 
 impl PropertyTrait for NiagaraVariableWithOffsetProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

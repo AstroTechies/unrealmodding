@@ -6,7 +6,7 @@ use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{FName, Guid},
     unversioned::ancestry::Ancestry,
 };
@@ -20,14 +20,14 @@ pub struct MovieSceneTrackIdentifier {
 
 impl MovieSceneTrackIdentifier {
     /// Read a `MovieSceneTrackIdentifier` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let value = asset.read_u32::<LittleEndian>()?;
 
         Ok(MovieSceneTrackIdentifier { value })
     }
 
     /// Write a `MovieSceneTrackIdentifier` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_u32::<LittleEndian>(self.value)?;
         Ok(())
     }
@@ -51,7 +51,7 @@ impl_property_data_trait!(MovieSceneTrackIdentifierProperty);
 
 impl MovieSceneTrackIdentifierProperty {
     /// Read a `MovieSceneTrackIdentifierProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -73,7 +73,7 @@ impl MovieSceneTrackIdentifierProperty {
 }
 
 impl PropertyTrait for MovieSceneTrackIdentifierProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

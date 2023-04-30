@@ -12,7 +12,7 @@ use crate::exports::{
 };
 use crate::implement_get;
 use crate::object_version::ObjectVersion;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::FName;
 use crate::Error;
 
@@ -39,7 +39,7 @@ pub struct UEnum {
 
 impl UEnum {
     /// Read a `UEnum` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut names = Vec::new();
 
         if asset.get_object_version() < ObjectVersion::VER_UE4_TIGHTLY_PACKED_ENUMS {
@@ -83,7 +83,7 @@ impl UEnum {
     }
 
     /// Write a `UEnum` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LittleEndian>(self.names.len() as i32)?;
         if asset.get_object_version() < ObjectVersion::VER_UE4_TIGHTLY_PACKED_ENUMS {
             // todo: a better algorithm?
@@ -135,7 +135,7 @@ implement_get!(EnumExport);
 
 impl EnumExport {
     /// Read an `EnumExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
@@ -151,7 +151,7 @@ impl EnumExport {
 }
 
 impl ExportTrait for EnumExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
         asset.write_i32::<LittleEndian>(0)?;
         self.value.write(asset)?;

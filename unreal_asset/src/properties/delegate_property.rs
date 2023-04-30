@@ -7,8 +7,8 @@ use byteorder::LittleEndian;
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    reader::asset_reader::AssetReader,
-    reader::asset_writer::AssetWriter,
+    reader::archive_reader::ArchiveReader,
+    reader::archive_writer::ArchiveWriter,
     types::{FName, Guid, PackageIndex},
     unversioned::ancestry::Ancestry,
 };
@@ -49,7 +49,7 @@ impl_property_data_trait!(DelegateProperty);
 
 impl DelegateProperty {
     /// Read a `DelegateProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -73,7 +73,7 @@ impl DelegateProperty {
 }
 
 impl PropertyTrait for DelegateProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -107,7 +107,7 @@ macro_rules! impl_multicast {
         impl_property_data_trait!($property_name);
         impl $property_name {
             /// Read a `$property_name` from an asset
-            pub fn new<Reader: AssetReader>(
+            pub fn new<Reader: ArchiveReader>(
                 asset: &mut Reader,
                 name: FName,
                 ancestry: Ancestry,
@@ -137,7 +137,7 @@ macro_rules! impl_multicast {
         }
 
         impl PropertyTrait for $property_name {
-            fn write<Writer: AssetWriter>(
+            fn write<Writer: ArchiveWriter>(
                 &self,
                 asset: &mut Writer,
                 include_header: bool,

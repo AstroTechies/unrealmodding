@@ -6,13 +6,15 @@ use byteorder::WriteBytesExt;
 
 use unreal_helpers::UnrealWriteExt;
 
+use crate::asset::name_map::NameMap;
 use crate::containers::indexed_map::IndexedMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::properties::Property;
-use crate::reader::{asset_trait::AssetTrait, asset_writer::AssetWriter};
+use crate::reader::{archive_trait::ArchiveTrait, archive_writer::ArchiveWriter};
 use crate::types::{FName, PackageIndex};
 use crate::unversioned::header::UnversionedHeader;
 use crate::Import;
@@ -27,6 +29,8 @@ pub struct RawWriter<'cursor> {
     object_version_ue5: ObjectVersionUE5,
 
     /// Dummy name map
+    dummy_name_map: SharedResource<NameMap>,
+    /// Empty map
     empty_map: IndexedMap<String, String>,
 }
 
@@ -41,12 +45,13 @@ impl<'cursor> RawWriter<'cursor> {
             cursor,
             object_version,
             object_version_ue5,
+            dummy_name_map: NameMap::new(),
             empty_map: IndexedMap::new(),
         }
     }
 }
 
-impl<'cursor> AssetTrait for RawWriter<'cursor> {
+impl<'cursor> ArchiveTrait for RawWriter<'cursor> {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -66,8 +71,8 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
         self.cursor.seek(style)
     }
 
-    fn get_name_map_index_list(&self) -> &[String] {
-        &[]
+    fn get_name_map(&self) -> SharedResource<NameMap> {
+        self.dummy_name_map.clone()
     }
 
     fn get_name_reference(&self, _: i32) -> String {
@@ -115,11 +120,11 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
     }
 
     fn add_fname(&mut self, value: &str) -> FName {
-        FName::new(value.to_string(), 0)
+        FName::new_dummy(value.to_string(), 0)
     }
 
     fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
-        FName::new(value.to_string(), number)
+        FName::new_dummy(value.to_string(), number)
     }
 
     fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
@@ -131,7 +136,7 @@ impl<'cursor> AssetTrait for RawWriter<'cursor> {
     }
 }
 
-impl<'cursor> AssetWriter for RawWriter<'cursor> {
+impl<'cursor> ArchiveWriter for RawWriter<'cursor> {
     fn write_property_guid(
         &mut self,
         guid: &Option<crate::types::Guid>,
@@ -146,7 +151,7 @@ impl<'cursor> AssetWriter for RawWriter<'cursor> {
     }
 
     fn write_fname(&mut self, fname: &FName) -> Result<(), crate::error::Error> {
-        self.cursor.write_fstring(Some(&fname.content))?;
+        self.cursor.write_fstring(Some(&fname.get_content()))?;
         Ok(())
     }
 
