@@ -1,17 +1,18 @@
 //! Niagara variable property
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::FName,
+    types::fname::FName,
     unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
 
 /// Niagara variable property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableProperty {
     /// Base struct property
     pub struct_property: StructProperty,
@@ -128,7 +129,7 @@ impl PropertyTrait for NiagaraVariableProperty {
 }
 
 /// Niagara variable with offset property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableWithOffsetProperty {
     /// Variable
     pub niagara_variable: NiagaraVariableProperty,

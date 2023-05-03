@@ -5,6 +5,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
@@ -13,7 +14,7 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::simple_property_write;
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Implement a simple integer property
@@ -46,7 +47,7 @@ macro_rules! impl_int_property {
 }
 
 /// Int8 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int8Property {
     /// Name
     pub name: FName,
@@ -62,7 +63,7 @@ pub struct Int8Property {
 impl_property_data_trait!(Int8Property);
 
 /// Byte property value
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub enum BytePropertyValue {
     /// Byte variant
     Byte(u8),
@@ -71,7 +72,7 @@ pub enum BytePropertyValue {
 }
 
 /// Byte property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ByteProperty {
     /// Name
     pub name: FName,
@@ -89,7 +90,7 @@ pub struct ByteProperty {
 impl_property_data_trait!(ByteProperty);
 
 /// Bool property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct BoolProperty {
     /// Name
     pub name: FName,
@@ -105,7 +106,7 @@ pub struct BoolProperty {
 impl_property_data_trait!(BoolProperty);
 
 /// Int32 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct IntProperty {
     /// Name
     pub name: FName,
@@ -121,7 +122,7 @@ pub struct IntProperty {
 impl_property_data_trait!(IntProperty);
 
 /// Int16 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int16Property {
     /// Name
     pub name: FName,
@@ -137,7 +138,7 @@ pub struct Int16Property {
 impl_property_data_trait!(Int16Property);
 
 /// Int64 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int64Property {
     /// Name
     pub name: FName,
@@ -153,7 +154,7 @@ pub struct Int64Property {
 impl_property_data_trait!(Int64Property);
 
 /// UInt16 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt16Property {
     /// Name
     pub name: FName,
@@ -169,7 +170,7 @@ pub struct UInt16Property {
 impl_property_data_trait!(UInt16Property);
 
 /// UInt32 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt32Property {
     /// Name
     pub name: FName,
@@ -185,7 +186,7 @@ pub struct UInt32Property {
 impl_property_data_trait!(UInt32Property);
 
 /// UInt64 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt64Property {
     /// Name
     pub name: FName,
@@ -201,7 +202,7 @@ pub struct UInt64Property {
 impl_property_data_trait!(UInt64Property);
 
 /// Float property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FloatProperty {
     /// Name
     pub name: FName,
@@ -217,7 +218,7 @@ pub struct FloatProperty {
 impl_property_data_trait!(FloatProperty);
 
 /// Double property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DoubleProperty {
     /// Name
     pub name: FName,

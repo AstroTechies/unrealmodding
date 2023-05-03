@@ -4,18 +4,19 @@ use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use std::fmt::Debug;
 use std::hash::Hash;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::flags::EPropertyFlags;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, PackageIndex};
+use crate::types::{fname::FName, PackageIndex};
 use crate::Error;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: UGenericProperty
@@ -47,12 +48,13 @@ macro_rules! parse_simple_property {
         ),*
     ) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: UGenericProperty,
             $(
                 $(#[$inner $($args)*])*
+                #[container_ignore]
                 pub $field_name: PackageIndex,
             )*
         }
@@ -90,7 +92,8 @@ pub trait UPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
 
 /// UProperty
 #[enum_dispatch(UPropertyTrait)]
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Hash)]
+#[container_nobounds]
 pub enum UProperty {
     /// Generic UProperty
     UGenericProperty,
@@ -202,22 +205,26 @@ pub struct UField {
 }
 
 /// Generic UProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UGenericProperty {
     /// UField
+    #[container_ignore]
     pub u_field: UField,
     /// Array dimension
+    #[container_ignore]
     pub array_dim: EArrayDim,
     /// Property flags
+    #[container_ignore]
     pub property_flags: EPropertyFlags,
     /// Replication notify function
     pub rep_notify_func: FName,
     /// Replication condition
+    #[container_ignore]
     pub blueprint_replication_condition: Option<ELifetimeCondition>,
 }
 
 /// Boolean UProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UBoolProperty {
     /// Generic property
     pub generic_property: UGenericProperty,

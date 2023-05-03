@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -11,11 +12,11 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Weighted random sampler property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
     /// Name
     pub name: FName,
@@ -35,7 +36,7 @@ pub struct WeightedRandomSamplerProperty {
 impl_property_data_trait!(WeightedRandomSamplerProperty);
 
 /// Skeletal mesh area weighted triangle sampler
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshAreaWeightedTriangleSampler {
     /// Name
     pub name: FName,
@@ -55,7 +56,7 @@ pub struct SkeletalMeshAreaWeightedTriangleSampler {
 impl_property_data_trait!(SkeletalMeshAreaWeightedTriangleSampler);
 
 /// Skeleetal mesh sampling lod built data property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     /// Name
     pub name: FName,

@@ -1,139 +1,52 @@
 //! Unreal types
 
+pub mod fname;
 pub mod movie;
 pub mod package_object_index;
 pub mod vector;
 
-use crate::{asset::name_map::NameMap, containers::shared_resource::SharedResource, error::Error};
+use crate::{
+    error::Error,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+};
 use std::hash::Hash;
 
-/// FName is used to store most of the Strings in UE4.
-///
-/// They are represented by an index+instance number inside a string table inside the asset file.
-///
-/// Here we are representing them by a string and an instance number.
-#[derive(Debug, Clone)]
-pub enum FName {
-    /// Backed FName that is part of a namemap
-    Backed {
-        /// FName name map index
-        index: i32,
-        /// FName instance number
-        number: i32,
-        /// Namemap which this FName belongs to
-        name_map: SharedResource<NameMap>,
-    },
-    /// Dummy FName that is not backed by any namemap, trying to serialize this will result in an `FNameError`
-    Dummy {
-        /// FName value
-        value: String,
-        /// FName instance number
-        number: i32,
-    },
+/// Serialized name header
+/// Used when reading name batches in >=UE5
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct SerializedNameHeader {
+    /// Is wide
+    pub is_wide: bool,
+    /// Name header length
+    pub len: i32,
 }
 
-/// Get implementer serialized name
-pub trait ToSerializedName {
-    /// Convert to serialized name
-    ///
-    /// # Warning
-    ///
-    /// This function is dangerous to call when a mutable reference to a name map exists
-    /// Doing so may result in a panic
-    fn to_serialized_name(&self) -> String;
-}
+impl SerializedNameHeader {
+    /// Read a `SerializedNameHeader` from an archive
+    pub fn read<Reader: ArchiveReader + ?Sized>(
+        reader: &mut Reader,
+    ) -> Result<SerializedNameHeader, Error> {
+        let (first_byte, second_byte) = (reader.read_u8()?, reader.read_u8()?);
 
-impl FName {
-    /// Create a new `FName` instance with an index
-    pub fn new(index: i32, number: i32, name_map: SharedResource<NameMap>) -> Self {
-        FName::Backed {
-            index,
-            number,
-            name_map,
-        }
+        Ok(SerializedNameHeader {
+            is_wide: (first_byte & 0x80) > 0,
+            len: (((first_byte & 0x7f) as i32) << 8) + second_byte as i32,
+        })
     }
 
-    /// Create a new "dummy" `FName` instance from a slice and an index
-    pub fn new_dummy(value: String, number: i32) -> Self {
-        FName::Dummy { value, number }
-    }
+    /// Write a `SerializedNameHeader` to an archive
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+        let is_wide = match self.is_wide {
+            true => 1u8,
+            false => 0u8,
+        };
+        let first_byte = is_wide << 7 | (self.len >> 8) as u8;
+        let second_byte = self.len as u8;
 
-    /// Create a new "dummy" `FName` instance from a slice with an index of 0
-    pub fn from_slice(value: &str) -> Self {
-        FName::new_dummy(value.to_string(), 0)
-    }
+        writer.write_u8(first_byte)?;
+        writer.write_u8(second_byte)?;
 
-    /// Get this FName content
-    pub fn get_content(&self) -> String {
-        // todo: return string ref
-        match self {
-            FName::Backed {
-                index,
-                number: _,
-                name_map,
-            } => name_map.get_ref().get_name_reference(*index),
-            FName::Dummy { value, number: _ } => value.clone(),
-        }
-    }
-}
-
-impl PartialEq for FName {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (
-                FName::Backed {
-                    index: a_index,
-                    number: a_number,
-                    name_map: _,
-                },
-                FName::Backed {
-                    index: b_index,
-                    number: b_number,
-                    name_map: _,
-                },
-            ) => a_index == b_index && a_number == b_number,
-            (
-                FName::Dummy {
-                    value: a_value,
-                    number: a_number,
-                },
-                FName::Dummy {
-                    value: b_value,
-                    number: b_number,
-                },
-            ) => a_value == b_value && a_number == b_number,
-            _ => false,
-        }
-    }
-}
-
-impl Eq for FName {}
-
-impl Hash for FName {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            FName::Backed {
-                index,
-                number,
-                name_map: _,
-            } => {
-                index.hash(state);
-                number.hash(state);
-            }
-            FName::Dummy { value, number } => {
-                value.hash(state);
-                number.hash(state);
-            }
-        }
-    }
-}
-
-impl Default for FName {
-    fn default() -> Self {
-        FName::Dummy {
-            value: String::default(),
-            number: i32::default(),
-        }
+        Ok(())
     }
 }
 

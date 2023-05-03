@@ -1,6 +1,7 @@
 //! Property export
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::exports::{
     base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
@@ -14,7 +15,7 @@ use crate::Error;
 /// Property export
 ///
 /// This is a `UProperty` export
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PropertyExport {
     /// Base normal export
     pub normal_export: NormalExport,

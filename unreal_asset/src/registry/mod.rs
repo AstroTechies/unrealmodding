@@ -91,7 +91,7 @@ impl AssetRegistryState {
                 }
             }
 
-            asset.set_position(dependency_section_end);
+            asset.set_position(dependency_section_end)?;
         }
 
         *package_data =
@@ -123,9 +123,9 @@ impl AssetRegistryState {
             }
 
             let end_pos = writer.position();
-            writer.set_position(pos);
+            writer.set_position(pos)?;
             writer.write_i64::<LittleEndian>(end_pos as i64 - pos as i64)?;
-            writer.set_position(end_pos);
+            writer.set_position(end_pos)?;
         }
 
         writer.write_i32::<LittleEndian>(self.package_data.len() as i32)?;
@@ -160,6 +160,8 @@ impl AssetRegistryState {
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
     ///     reader::raw_reader::RawReader,
+    ///     asset::name_map::NameMap,
+    ///     containers::chain::Chain
     /// };
     ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();
@@ -168,7 +170,7 @@ impl AssetRegistryState {
     ///
     /// let cursor = Cursor::new(data);
     /// let (object_version, object_version_ue5) = engine_version::get_object_versions(EngineVersion::VER_UE4_25);
-    /// let mut raw_reader = RawReader::new(cursor, object_version, object_version_ue5);
+    /// let mut raw_reader = RawReader::new(Chain::new(cursor, None), object_version, object_version_ue5, false, NameMap::new());
     /// let asset_registry = AssetRegistryState::new(&mut raw_reader).unwrap();
     ///
     /// println!("{:#?}", asset_registry);
@@ -244,6 +246,8 @@ impl AssetRegistryState {
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
     ///     reader::raw_reader::RawReader,
+    ///     asset::name_map::NameMap,
+    ///     containers::chain::Chain
     /// };
     ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();
@@ -252,7 +256,7 @@ impl AssetRegistryState {
     ///
     /// let cursor = Cursor::new(data);
     /// let (object_version, object_version_ue5) = engine_version::get_object_versions(EngineVersion::VER_UE4_25);
-    /// let mut raw_reader = RawReader::new(cursor, object_version, object_version_ue5);
+    /// let mut raw_reader = RawReader::new(Chain::new(cursor, None), object_version, object_version_ue5, false, NameMap::new());
     /// let asset_registry = AssetRegistryState::new(&mut raw_reader).unwrap();
     ///
     /// let mut cursor = Cursor::new(Vec::new());
@@ -261,7 +265,13 @@ impl AssetRegistryState {
     /// println!("{:#?}", cursor.get_ref());
     /// ```
     pub fn write(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-        let mut writer = RawWriter::new(cursor, self.object_version, self.object_version_ue5);
+        let mut writer = RawWriter::new(
+            cursor,
+            self.object_version,
+            self.object_version_ue5,
+            false,
+            NameMap::new(),
+        );
         self.version.write(&mut writer)?;
 
         if self.version < FAssetRegistryVersionType::RemovedMD5Hash {

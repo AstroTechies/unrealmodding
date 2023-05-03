@@ -1,13 +1,14 @@
 //! Movie scene sequence identifier property
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
@@ -34,7 +35,7 @@ impl MovieSceneSequenceId {
 }
 
 /// Movie scene sequence identifier property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSequenceIdProperty {
     /// Name
     pub name: FName,
@@ -45,6 +46,7 @@ pub struct MovieSceneSequenceIdProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneSequenceId,
 }
 impl_property_data_trait!(MovieSceneSequenceIdProperty);

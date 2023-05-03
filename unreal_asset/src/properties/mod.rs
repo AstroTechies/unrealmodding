@@ -6,10 +6,14 @@ use std::io::SeekFrom;
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid, ToSerializedName};
+use crate::types::{
+    fname::{FName, ToSerializedName},
+    Guid,
+};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 use crate::unversioned::properties::UsmapPropertyDataTrait;
@@ -163,7 +167,7 @@ macro_rules! simple_property_write {
 macro_rules! impl_property_data_trait {
     ($property_name:ident) => {
         impl $crate::properties::PropertyDataTrait for $property_name {
-            fn get_name(&self) -> $crate::types::FName {
+            fn get_name(&self) -> $crate::types::fname::FName {
                 self.name.clone()
             }
 
@@ -283,7 +287,8 @@ pub trait PropertyTrait: PropertyDataTrait + Debug + Hash + Clone + PartialEq + 
 /// Property
 #[allow(clippy::large_enum_variant)]
 #[enum_dispatch(PropertyTrait, PropertyDataTrait)]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[container_nobounds]
 pub enum Property {
     /// Bool property
     BoolProperty,

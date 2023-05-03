@@ -1,6 +1,7 @@
 //! Movie scene segment property
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
@@ -8,7 +9,7 @@ use crate::{
     properties::{Property, PropertyTrait},
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::movie::FFrameNumberRange,
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
 
@@ -35,13 +36,15 @@ impl MovieSceneSegmentIdentifier {
 }
 
 /// Movie scene segment
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegment {
     /// Name
     pub name: FName,
     /// range
+    #[container_ignore]
     pub range: FFrameNumberRange,
     /// Identifier
+    #[container_ignore]
     pub id: MovieSceneSegmentIdentifier,
     /// Allow empty
     pub allow_empty: bool,
@@ -122,7 +125,7 @@ impl MovieSceneSegment {
 }
 
 /// Movie scene segment property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentProperty {
     /// Name
     pub name: FName,
@@ -178,7 +181,7 @@ impl PropertyTrait for MovieSceneSegmentProperty {
 }
 
 /// Movie scene segment identifier property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentIdentifierProperty {
     /// Name
     pub name: FName,
@@ -189,6 +192,7 @@ pub struct MovieSceneSegmentIdentifierProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneSegmentIdentifier,
 }
 impl_property_data_trait!(MovieSceneSegmentIdentifierProperty);

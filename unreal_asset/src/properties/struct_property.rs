@@ -4,6 +4,7 @@ use std::io::SeekFrom;
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::{
     FEditorObjectVersion, FFortniteMainBranchObjectVersion, FSequencerObjectVersion,
@@ -12,14 +13,14 @@ use crate::error::{Error, PropertyError};
 use crate::object_version::ObjectVersion;
 use crate::properties::{Property, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 use crate::unversioned::properties::UsmapPropertyData;
 use crate::{cast, impl_property_data_trait};
 
 /// Struct property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct StructProperty {
     /// Name
     pub name: FName,

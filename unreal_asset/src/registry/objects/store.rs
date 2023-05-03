@@ -7,7 +7,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::error::Error;
 use crate::reader::archive_reader::ArchiveReader;
-use crate::types::FName;
+use crate::types::fname::FName;
 
 /// Value type
 #[repr(u32)]

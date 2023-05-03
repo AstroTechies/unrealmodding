@@ -1,12 +1,13 @@
 //! Font character property
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
@@ -55,7 +56,7 @@ impl FontCharacter {
 }
 
 /// Font character property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FontCharacterProperty {
     /// Name
     pub name: FName,
@@ -66,6 +67,7 @@ pub struct FontCharacterProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Font character
+    #[container_ignore]
     pub value: FontCharacter,
 }
 impl_property_data_trait!(FontCharacterProperty);

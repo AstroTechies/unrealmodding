@@ -182,11 +182,15 @@ pub fn generate_hash(string: &str) -> u32 {
 }
 
 pub fn generate_import_hash_from_object_path(string: &str) -> u64 {
+    cityhash64_to_lower(string) & PackageObjectIndex::INDEX_MASK
+}
+
+pub fn cityhash64_to_lower(string: &str) -> u64 {
     let encoded = string.encode_utf16().map(to_lower).collect::<Vec<_>>();
     // this is safe because we know that this is a u16 array, therefore it can safely be aligned to u8
     // this is also faster than alternatives without unsafe block
     let (_, aligned, _) = unsafe { encoded.align_to::<u8>() };
-    cityhash64(aligned) & PackageObjectIndex::INDEX_MASK
+    cityhash64(aligned)
 }
 
 fn to_upper(character: u16) -> u16 {

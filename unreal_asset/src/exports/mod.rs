@@ -1,5 +1,6 @@
 //! UAsset exports
 use enum_dispatch::enum_dispatch;
+use unreal_asset_proc_macro::FNameContainer;
 
 pub mod base_export;
 pub mod class_export;
@@ -80,7 +81,8 @@ pub trait ExportTrait: Debug + Clone + PartialEq + Eq {
 
 /// Export
 #[enum_dispatch(ExportTrait, ExportNormalTrait, ExportBaseTrait)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
+#[container_nobounds]
 pub enum Export {
     /// Base export
     BaseExport,

@@ -7,8 +7,9 @@ use crate::containers::indexed_map::IndexedMap;
 use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
+use crate::exports::class_export::ClassExport;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::types::{FName, PackageIndex};
+use crate::types::{fname::FName, PackageIndex};
 use crate::unversioned::Usmap;
 use crate::{Import, ParentClassInfo};
 
@@ -30,25 +31,49 @@ pub trait ArchiveTrait {
     where
         T: CustomVersionTrait + Into<i32>;
 
-    /// Check if the asset has unversioned properties
+    /// Get if the asset has unversioned properties
     fn has_unversioned_properties(&self) -> bool;
 
+    /// Get if the archive uses the event driven loader
+    fn use_event_driven_loader(&self) -> bool;
+
+    /// Archive data length
+    fn data_length(&mut self) -> io::Result<u64> {
+        let current_position = self.position();
+        self.seek(SeekFrom::End(0))?;
+        let length = self.position();
+        self.seek(SeekFrom::Start(current_position))?;
+        Ok(length)
+    }
     /// Current archive cursor position
     fn position(&mut self) -> u64;
     /// Set archive cursor position
-    fn set_position(&mut self, pos: u64);
+    fn set_position(&mut self, pos: u64) -> io::Result<()> {
+        self.seek(SeekFrom::Start(pos))?;
+        Ok(())
+    }
     /// Seek
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64>;
 
     /// Add a string slice to this archive as an `FName`, `FName` number will be 0
-    fn add_fname(&mut self, value: &str) -> FName;
+    #[inline(always)]
+    fn add_fname(&mut self, value: &str) -> FName {
+        self.get_name_map().get_mut().add_fname(value)
+    }
     /// Add a string slice to this archive as an `FName`
-    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName;
+    #[inline(always)]
+    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
+        self.get_name_map()
+            .get_mut()
+            .add_fname_with_number(value, number)
+    }
 
     /// Get FName name map
     fn get_name_map(&self) -> SharedResource<NameMap>;
     /// Get FName name reference by name map index
-    fn get_name_reference(&self, index: i32) -> String;
+    fn get_name_reference(&self, index: i32) -> String {
+        self.get_name_map().get_ref().get_name_reference(index)
+    }
 
     /// Get struct overrides for an `ArrayProperty`
     fn get_array_struct_type_override(&self) -> &IndexedMap<String, String>;
@@ -58,9 +83,17 @@ pub trait ArchiveTrait {
     fn get_map_value_override(&self) -> &IndexedMap<String, String>;
 
     /// Get archive's optional parent class
-    fn get_parent_class(&self) -> Option<ParentClassInfo>;
-    /// Get archive's optional parent class and cache it
-    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo>;
+    fn get_parent_class(&self) -> Option<ParentClassInfo> {
+        let class_export = self.get_class_export()?;
+
+        let parent_class_import = self.get_import(class_export.struct_export.super_struct)?;
+        let outer_parent_import = self.get_import(parent_class_import.outer_index)?;
+
+        Some(ParentClassInfo {
+            parent_class_path: parent_class_import.object_name.clone(),
+            parent_class_export_name: outer_parent_import.object_name.clone(),
+        })
+    }
 
     /// Get archive's engine version
     fn get_engine_version(&self) -> EngineVersion;
@@ -72,8 +105,15 @@ pub trait ArchiveTrait {
     /// Get .usmap mappings
     fn get_mappings(&self) -> Option<&Usmap>;
 
+    /// Searches for and returns this asset's CLassExport, if one exists
+    fn get_class_export(&self) -> Option<&ClassExport>;
     /// Get an import by a `PackageIndex`
     fn get_import(&self, index: PackageIndex) -> Option<&Import>;
     /// Get export class type by a `PackageIndex`
-    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName>;
+    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
+        match index.is_import() {
+            true => self.get_import(index).map(|e| e.object_name.clone()),
+            false => Some(FName::new_dummy(index.index.to_string(), 0)),
+        }
+    }
 }

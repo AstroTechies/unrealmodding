@@ -1,17 +1,18 @@
 //! Movie scene event parameters property
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{object_property::SoftObjectPath, PropertyTrait},
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
 /// Movie scene event parameters
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParameters {
     /// Struct type
     pub struct_type: SoftObjectPath,
@@ -46,7 +47,7 @@ impl MovieSceneEventParameters {
 }
 
 /// Movie scene event parameters property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParametersProperty {
     /// Name
     pub name: FName,

@@ -7,12 +7,13 @@ use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::KismetError;
 use crate::object_version::ObjectVersion;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::vector::{Transform, Vector, Vector4};
-use crate::types::{FName, PackageIndex};
+use crate::types::{fname::FName, PackageIndex};
 use crate::Error;
 
 /// Kismet expression token
@@ -280,11 +281,12 @@ pub enum EBlueprintTextLiteralType {
 }
 
 /// Kismet field path
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FieldPath {
     /// Path
     pub path: Vec<FName>,
     /// Path owner
+    #[container_ignore]
     pub resolved_owner: PackageIndex,
 }
 
@@ -363,9 +365,10 @@ macro_rules! declare_expression {
         ),*
     ) => {
         /// $name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $name {
             /// Kismet token
+            #[container_ignore]
             pub token: EExprToken,
             $(
                 $(#[$inner $($args)*])*
@@ -392,9 +395,10 @@ macro_rules! implement_expression {
     ) => {
         $(
             $(#[$inner $($args)*])*
-            #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+            #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
             pub struct $name {
                 /// Kismet token
+                #[container_ignore]
                 pub token: EExprToken
             }
 
@@ -481,9 +485,10 @@ macro_rules! implement_value_expression {
 }
 
 /// Kismet script text
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FScriptText {
     /// Literal type
+    #[container_ignore]
     text_literal_type: EBlueprintTextLiteralType,
     /// Localized source
     localized_source: Option<KismetExpression>,
@@ -496,6 +501,7 @@ pub struct FScriptText {
     /// Literal string
     literal_string: Option<KismetExpression>,
     /// String table asset this text is localized from
+    #[container_ignore]
     string_table_asset: Option<PackageIndex>,
     /// String table id in the string table asset
     string_table_id: Option<KismetExpression>,
@@ -641,10 +647,12 @@ impl FScriptText {
     }
 }
 
+// todo: replace with an enum with 2 variants
 /// Represents a Kismet bytecode pointer to an FProperty or FField.
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct KismetPropertyPointer {
     /// Pointer serialized as PackageIndex. Used in versions older than [`KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`]
+    #[container_ignore]
     pub old: Option<PackageIndex>,
     /// Pointer serialized as an FFieldPath. Used in versions newer than [`KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`]
     pub new: Option<FieldPath>,
@@ -718,7 +726,7 @@ impl KismetPropertyPointer {
 }
 
 /// Kismet switch case
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KismetSwitchCase {
     /// Case value index
     pub case_index_value_term: KismetExpression,
@@ -770,7 +778,8 @@ pub trait KismetExpressionEnumEqTrait {
     KismetExpressionEnumEqTrait,
     KismetExpressionDataTrait
 )]
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Hash)]
+#[container_nobounds]
 pub enum KismetExpression {
     /// A local variable.
     ExLocalVariable,
@@ -1145,6 +1154,7 @@ impl KismetExpressionTrait for ExNameConst {
 declare_expression!(
     ExObjectConst,
     /// Value
+    #[container_ignore]
     value: PackageIndex
 );
 impl ExObjectConst {
@@ -1184,6 +1194,7 @@ impl KismetExpressionTrait for ExSoftObjectConst {
 declare_expression!(
     ExTransformConst,
     /// Value
+    #[container_ignore]
     value: Transform<OrderedFloat<f32>>
 );
 impl ExTransformConst {
@@ -1229,6 +1240,7 @@ impl KismetExpressionTrait for ExTransformConst {
 declare_expression!(
     ExVectorConst,
     /// Value
+    #[container_ignore]
     value: Vector<OrderedFloat<f32>>
 );
 impl ExVectorConst {
@@ -1413,6 +1425,7 @@ impl KismetExpressionTrait for ExBindDelegate {
 declare_expression!(
     ExCallMath,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Parameters
     parameters: Vec<KismetExpression>
@@ -1441,6 +1454,7 @@ impl KismetExpressionTrait for ExCallMath {
 declare_expression!(
     ExCallMulticastDelegate,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Parameters
     parameters: Vec<KismetExpression>,
@@ -1632,6 +1646,7 @@ impl KismetExpressionTrait for ExContextFailSilent {
 declare_expression!(
     ExCrossInterfaceCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Cast target
     target: Box<KismetExpression>
@@ -1676,6 +1691,7 @@ impl KismetExpressionTrait for ExDefaultVariable {
 declare_expression!(
     ExDynamicCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Cast target
     target_expression: Box<KismetExpression>
@@ -1701,6 +1717,7 @@ impl KismetExpressionTrait for ExDynamicCast {
 declare_expression!(
     ExFinalFunction,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Parameters
     parameters: Vec<KismetExpression>
@@ -1787,6 +1804,7 @@ impl KismetExpressionTrait for ExInterfaceContext {
 declare_expression!(
     ExInterfaceToObjCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Cast target
     target: Box<KismetExpression>
@@ -2029,6 +2047,7 @@ impl KismetExpressionTrait for ExLetWeakObjPtr {
 declare_expression!(
     ExLocalFinalFunction,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Function parameters
     parameters: Vec<KismetExpression>
@@ -2160,6 +2179,7 @@ impl KismetExpressionTrait for ExMapConst {
 declare_expression!(
     ExMetaCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Target expression
     target_expression: Box<KismetExpression>
@@ -2185,6 +2205,7 @@ impl KismetExpressionTrait for ExMetaCast {
 declare_expression!(
     ExObjToInterfaceCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Target expression
     target: Box<KismetExpression>
@@ -2229,6 +2250,7 @@ impl KismetExpressionTrait for ExPopExecutionFlowIfNot {
 declare_expression!(
     ExPrimitiveCast,
     /// Conversion type
+    #[container_ignore]
     conversion_type: ECastToken,
     /// Cast target
     target: Box<KismetExpression>
@@ -2366,6 +2388,7 @@ declare_expression!(
     /// Assigning property
     assigning_property: Option<Box<KismetExpression>>,
     /// Array inner prop
+    #[container_ignore]
     array_inner_prop: Option<PackageIndex>,
     /// Elements
     elements: Vec<KismetExpression>
@@ -2545,6 +2568,7 @@ impl KismetExpressionTrait for ExSkip {
 declare_expression!(
     ExStructConst,
     /// Struct value
+    #[container_ignore]
     struct_value: PackageIndex,
     /// Struct size
     struct_size: i32,
@@ -2722,6 +2746,7 @@ impl KismetExpressionTrait for ExUnicodeStringConst {
 declare_expression!(
     ExInstrumentationEvent,
     /// Event type
+    #[container_ignore]
     event_type: EScriptInstrumentationType,
     /// Event name
     event_name: Option<FName>
@@ -2762,6 +2787,7 @@ impl KismetExpressionTrait for ExInstrumentationEvent {
 declare_expression!(
     ExFloatConst,
     /// Value
+    #[container_ignore]
     value: OrderedFloat<f32>
 );
 impl ExFloatConst {

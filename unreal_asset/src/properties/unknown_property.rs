@@ -1,18 +1,20 @@
 //! Unknown property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Unknown property
 ///
 /// This gets created when an unknown property was encountered while deserializing
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UnknownProperty {
     /// Name
     pub name: FName,

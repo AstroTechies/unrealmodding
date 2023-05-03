@@ -10,7 +10,7 @@ use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::flags::EDependencyProperty;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::FName;
+use crate::types::fname::FName;
 
 /// Asset identifier
 #[derive(Debug, Clone, Default)]

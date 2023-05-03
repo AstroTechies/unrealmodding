@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::FCoreObjectVersion;
 use crate::exports::{
@@ -13,7 +14,7 @@ use crate::exports::{
 use crate::implement_get;
 use crate::object_version::ObjectVersion;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::FName;
+use crate::types::fname::FName;
 use crate::Error;
 
 /// Enum cpp form
@@ -29,11 +30,12 @@ pub enum ECppForm {
 }
 
 /// Enum
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UEnum {
     /// Enum names
     pub names: Vec<(FName, i64)>,
     /// Enum cpp form
+    #[container_ignore]
     pub cpp_form: ECppForm,
 }
 
@@ -123,7 +125,7 @@ impl UEnum {
 }
 
 /// Enum export
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EnumExport {
     /// Base normal export
     pub normal_export: NormalExport,

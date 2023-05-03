@@ -35,19 +35,22 @@
 //!
 //! println!("{:#?}", asset);
 //! ```
-use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
-use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
 use asset::name_map::NameMap;
 use asset::AssetData;
-use bitvec::prelude::*;
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, LittleEndian};
 
 use containers::shared_resource::SharedResource;
-use properties::Property;
-use unreal_helpers::{UnrealReadExt, UnrealWriteExt};
+use engine_version::EngineVersion;
+use enums::ECustomVersionSerializationFormat;
+use reader::asset_archive_reader::AssetArchiveReader;
+use reader::asset_archive_writer::AssetArchiveWriter;
+use reader::raw_reader::RawReader;
+use reader::raw_writer::RawWriter;
+use unreal_asset_proc_macro::FNameContainer;
 
 pub mod ac7;
 pub mod asset;
@@ -71,9 +74,7 @@ pub mod uproperty;
 
 use containers::chain::Chain;
 use containers::indexed_map::IndexedMap;
-use custom_version::{CustomVersion, CustomVersionTrait};
-use engine_version::{guess_engine_version, EngineVersion};
-use error::{Error, FNameError, PropertyError};
+use error::Error;
 use exports::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
     enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
@@ -83,14 +84,12 @@ use exports::{
 };
 use flags::EPackageFlags;
 use fproperty::FProperty;
-use object_version::{ObjectVersion, ObjectVersionUE5};
-use properties::{world_tile_property::FWorldTileInfo, PropertyDataTrait};
+use object_version::ObjectVersion;
+use properties::world_tile_property::FWorldTileInfo;
 use reader::{
     archive_reader::ArchiveReader, archive_trait::ArchiveTrait, archive_writer::ArchiveWriter,
 };
-use types::{FName, GenerationInfo, Guid, PackageIndex};
-use unversioned::header::UnversionedHeaderFragment;
-use unversioned::{header::UnversionedHeader, Usmap};
+use types::{fname::FName, GenerationInfo, Guid, PackageIndex};
 
 /// Cast a Property/Export to a more specific type
 ///
@@ -120,13 +119,14 @@ macro_rules! cast {
 /// Import struct for an Asset
 ///
 /// This is used for referencing other assets
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(FNameContainer, Debug, Clone, Eq, PartialEq)]
 pub struct Import {
     /// Class package
     pub class_package: FName,
     /// Class name
     pub class_name: FName,
     /// Outer index
+    #[container_ignore]
     pub outer_index: PackageIndex,
     /// Object name
     pub object_name: FName,
@@ -150,7 +150,7 @@ impl Import {
 }
 
 /// Parent Class Info
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(FNameContainer, Debug, Clone, Eq, PartialEq)]
 pub struct ParentClassInfo {
     /// Parent classpath
     pub parent_class_path: FName,
@@ -188,10 +188,8 @@ struct AssetHeader {
 
 //#[derive(Debug)]
 /// Unreal Engine uasset
-pub struct Asset<C: Read + Seek> {
-    // raw data
-    cursor: Chain<C>,
-
+#[derive(FNameContainer)]
+pub struct Asset {
     // parsed data
     /// Asset info
     pub info: String,
@@ -208,16 +206,20 @@ pub struct Asset<C: Read + Seek> {
     // world tile info
     // preload dependencies
     /// Generations
+    #[container_ignore]
     pub generations: Vec<GenerationInfo>,
     /// Asset guid
     pub package_guid: Guid,
     /// Recorded engine version
+    #[container_ignore]
     pub engine_version_recorded: FEngineVersion,
     /// Compatible engine version
+    #[container_ignore]
     pub engine_version_compatible: FEngineVersion,
     /// Chunk ids
     chunk_ids: Vec<i32>,
     /// Asset flags
+    #[container_ignore]
     pub package_flags: EPackageFlags,
     /// Asset source
     pub package_source: u32,
@@ -269,693 +271,61 @@ pub struct Asset<C: Read + Seek> {
     preload_dependency_offset: i32,
 
     /// Overriden name map hashes
+    #[container_ignore]
     pub override_name_map_hashes: IndexedMap<String, u32>,
     /// Name map
+    #[container_ignore]
     name_map: SharedResource<NameMap>,
     /// Imports
     pub imports: Vec<Import>,
     /// Depends map
+    #[container_ignore]
     depends_map: Option<Vec<Vec<i32>>>,
     /// Soft package reference list
+    #[container_ignore]
     soft_package_reference_list: Option<Vec<String>>,
 
     /// Parent class
     parent_class: Option<ParentClassInfo>,
 }
 
-struct AssetSerializer<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek> {
-    asset: &'asset Asset<C>,
-    cursor: &'cursor mut W,
-    cached_parent_info: Option<ParentClassInfo>,
+/// Struct that stores new map/array key/value overrides
+///
+/// Returned from `read_export`
+#[derive(Default)]
+struct NewOverrides {
+    /// New array overrides
+    array_overrides: IndexedMap<String, String>,
+    /// New map key overrides
+    map_key_overrides: IndexedMap<String, String>,
+    /// New map value overrides
+    map_value_overrides: IndexedMap<String, String>,
 }
 
-impl<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek>
-    AssetSerializer<'asset, 'cursor, W, C>
-{
-    pub fn new(asset: &'asset Asset<C>, cursor: &'cursor mut W) -> Self {
-        AssetSerializer {
-            asset,
-            cursor,
-            cached_parent_info: None,
-        }
-    }
-}
-
-impl<'asset, 'cursor, W: Read + Seek + Write, C: Read + Seek> ArchiveTrait
-    for AssetSerializer<'asset, 'cursor, W, C>
-{
-    fn get_custom_version<T>(&self) -> CustomVersion
-    where
-        T: CustomVersionTrait + Into<i32>,
-    {
-        self.asset.get_custom_version::<T>()
-    }
-
-    fn position(&mut self) -> u64 {
-        self.cursor.stream_position().unwrap_or_default()
-    }
-
-    fn set_position(&mut self, pos: u64) {
-        self.cursor.seek(SeekFrom::Start(pos)).unwrap_or_default();
-    }
-
-    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
-        self.cursor.seek(style)
-    }
-
-    fn get_name_map(&self) -> SharedResource<NameMap> {
-        self.asset.name_map.clone()
-    }
-
-    fn get_name_reference(&self, index: i32) -> String {
-        self.asset.get_name_reference(index)
-    }
-
-    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
-        self.asset.get_array_struct_type_override()
-    }
-
-    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
-        self.asset.get_map_key_override()
-    }
-
-    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
-        self.asset.get_map_value_override()
-    }
-
-    fn get_parent_class(&self) -> Option<ParentClassInfo> {
-        self.asset.get_parent_class()
-    }
-
-    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
-        if let Some(ref cached_info) = self.cached_parent_info {
-            return Some(cached_info);
-        }
-
-        self.cached_parent_info = self.get_parent_class();
-        self.cached_parent_info.as_ref()
-    }
-
-    #[inline(always)]
-    fn get_engine_version(&self) -> EngineVersion {
-        self.asset.get_engine_version()
-    }
-
-    #[inline(always)]
-    fn get_object_version(&self) -> ObjectVersion {
-        self.asset.get_object_version()
-    }
-
-    #[inline(always)]
-    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
-        self.asset.get_object_version_ue5()
-    }
-
-    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
-        self.asset.get_import(index)
-    }
-
-    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
-        self.asset.get_export_class_type(index)
-    }
-
-    fn add_fname(&mut self, _value: &str) -> FName {
-        // todo: assetserializer should never add fname?
-        panic!("AssetSerializer added fname");
-    }
-
-    fn add_fname_with_number(&mut self, _value: &str, _number: i32) -> FName {
-        // todo: assetserializer should never add fname?
-        panic!("AssetSerializer added fname");
-    }
-
-    fn get_mappings(&self) -> Option<&Usmap> {
-        self.asset.get_mappings()
-    }
-
-    fn has_unversioned_properties(&self) -> bool {
-        self.asset.has_unversioned_properties()
+impl NewOverrides {
+    /// Apply overrides to asset data
+    fn apply(self, asset_data: &mut AssetData) {
+        asset_data
+            .array_struct_type_override
+            .extend(self.array_overrides.into_iter().map(|(_, k, v)| (k, v)));
+        asset_data
+            .map_key_override
+            .extend(self.map_key_overrides.into_iter().map(|(_, k, v)| (k, v)));
+        asset_data
+            .map_value_override
+            .extend(self.map_value_overrides.into_iter().map(|(_, k, v)| (k, v)));
     }
 }
 
-impl<'asset, 'cursor, W: Seek + Read + Write, C: Read + Seek> ArchiveWriter
-    for AssetSerializer<'asset, 'cursor, W, C>
-{
-    fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
-        if self.asset.asset_data.object_version
-            >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG
-        {
-            self.cursor.write_bool(guid.is_some())?;
-            if let Some(ref data) = guid {
-                self.cursor.write_all(data)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn write_fname(&mut self, fname: &FName) -> Result<(), Error> {
-        match fname {
-            FName::Backed {
-                index,
-                number,
-                name_map: _,
-            } => {
-                self.cursor.write_i32::<LittleEndian>(*index)?;
-                self.cursor.write_i32::<LittleEndian>(*number)?;
-                Ok(())
-            }
-            FName::Dummy { value, number } => {
-                Err(FNameError::dummy_serialize(value, *number).into())
-            }
-        }
-    }
-
-    fn write_u8(&mut self, value: u8) -> io::Result<()> {
-        self.cursor.write_u8(value)
-    }
-
-    fn write_i8(&mut self, value: i8) -> io::Result<()> {
-        self.cursor.write_i8(value)
-    }
-
-    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> io::Result<()> {
-        self.cursor.write_u16::<T>(value)
-    }
-
-    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> io::Result<()> {
-        self.cursor.write_i16::<T>(value)
-    }
-
-    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> io::Result<()> {
-        self.cursor.write_u32::<T>(value)
-    }
-
-    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> io::Result<()> {
-        self.cursor.write_i32::<T>(value)
-    }
-
-    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> io::Result<()> {
-        self.cursor.write_u64::<T>(value)
-    }
-
-    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> io::Result<()> {
-        self.cursor.write_i64::<T>(value)
-    }
-
-    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> io::Result<()> {
-        self.cursor.write_f32::<T>(value)
-    }
-
-    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> io::Result<()> {
-        self.cursor.write_f64::<T>(value)
-    }
-
-    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
-        Ok(self.cursor.write_fstring(value)?)
-    }
-
-    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.cursor.write_all(buf)
-    }
-
-    fn write_bool(&mut self, value: bool) -> io::Result<()> {
-        self.cursor.write_bool(value)
-    }
-
-    fn generate_unversioned_header(
-        &mut self,
-        properties: &[properties::Property],
-        parent_name: &FName,
-    ) -> Result<Option<(UnversionedHeader, Vec<properties::Property>)>, Error> {
-        self.asset
-            .generate_unversioned_header(properties, parent_name)
-    }
-}
-
-/// FName collector is used for rebuilding the name map
-/// This is useful when it's hard to keep track of asset changes
-/// And you want to ensure the name map contains all the new FNames
-struct FNameCollector<'asset, C: Read + Seek> {
-    /// Asset
-    asset: &'asset Asset<C>,
-    /// Position
-    position: u64,
-    /// Name map
-    name_map: SharedResource<NameMap>,
-    /// Cached parent info
-    cached_parent_info: Option<ParentClassInfo>,
-}
-
-impl<'asset, C: Read + Seek> FNameCollector<'asset, C> {
-    /// Create a new `FNameCollector` instance
-    pub fn new(asset: &'asset Asset<C>) -> Self {
-        FNameCollector {
-            asset,
-            position: 0,
-            name_map: asset.name_map.clone_resource(),
-            cached_parent_info: None,
-        }
-    }
-
-    /// Search an FName reference
-    pub fn search_name_reference(&self, name: &String) -> Option<i32> {
-        self.name_map.get_ref().search_name_reference(name)
-    }
-
-    /// Add an FName reference
-    pub fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32 {
-        self.name_map
-            .get_mut()
-            .add_name_reference(name, force_add_duplicates)
-    }
-}
-
-impl<'asset, C: Read + Seek> ArchiveTrait for FNameCollector<'asset, C> {
-    fn get_custom_version<T>(&self) -> CustomVersion
-    where
-        T: CustomVersionTrait + Into<i32>,
-    {
-        self.asset.get_custom_version::<T>()
-    }
-
-    fn position(&mut self) -> u64 {
-        self.position
-    }
-
-    fn set_position(&mut self, position: u64) {
-        self.position = position;
-    }
-
-    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
-        match style {
-            SeekFrom::Start(e) => self.position = e,
-            SeekFrom::Current(e) => self.position += e as u64,
-            SeekFrom::End(_) => {}
-        };
-
-        Ok(self.position)
-    }
-
-    fn get_name_map(&self) -> SharedResource<NameMap> {
-        self.name_map.clone()
-    }
-
-    fn add_fname(&mut self, value: &str) -> FName {
-        self.name_map.get_mut().add_fname(value)
-    }
-
-    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
-        self.name_map.get_mut().add_fname_with_number(value, number)
-    }
-
-    fn get_name_reference(&self, index: i32) -> String {
-        self.asset.get_name_reference(index)
-    }
-
-    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
-        self.asset.get_array_struct_type_override()
-    }
-
-    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
-        self.asset.get_map_key_override()
-    }
-
-    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
-        self.asset.get_map_value_override()
-    }
-
-    fn get_parent_class(&self) -> Option<ParentClassInfo> {
-        self.asset.get_parent_class()
-    }
-
-    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
-        if let Some(ref cached_info) = self.cached_parent_info {
-            return Some(cached_info);
-        }
-
-        self.cached_parent_info = self.get_parent_class();
-        self.cached_parent_info.as_ref()
-    }
-
-    #[inline(always)]
-    fn get_engine_version(&self) -> EngineVersion {
-        self.asset.get_engine_version()
-    }
-
-    #[inline(always)]
-    fn get_object_version(&self) -> ObjectVersion {
-        self.asset.get_object_version()
-    }
-
-    #[inline(always)]
-    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
-        self.asset.get_object_version_ue5()
-    }
-
-    fn get_mappings(&self) -> Option<&Usmap> {
-        self.asset.get_mappings()
-    }
-
-    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
-        self.asset.get_import(index)
-    }
-
-    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
-        self.asset.get_export_class_type(index)
-    }
-
-    fn has_unversioned_properties(&self) -> bool {
-        self.asset.has_unversioned_properties()
-    }
-}
-
-impl<'asset, C: Read + Seek> ArchiveWriter for FNameCollector<'asset, C> {
-    fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
-        if self.asset.asset_data.object_version
-            >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG
-        {
-            self.position += size_of::<bool>() as u64;
-            if let Some(ref data) = guid {
-                self.position += data.len() as u64;
-            }
-        }
-        Ok(())
-    }
-
-    fn write_fname(&mut self, fname: &FName) -> Result<(), Error> {
-        self.position += size_of::<u32>() as u64 * 2;
-        if self.search_name_reference(&fname.get_content()).is_none() {
-            self.add_name_reference(fname.get_content(), false);
-        }
-        Ok(())
-    }
-
-    fn write_u8(&mut self, _: u8) -> io::Result<()> {
-        self.position += size_of::<u8>() as u64;
-        Ok(())
-    }
-
-    fn write_i8(&mut self, _: i8) -> io::Result<()> {
-        self.position += size_of::<i8>() as u64;
-        Ok(())
-    }
-
-    fn write_u16<T: byteorder::ByteOrder>(&mut self, _: u16) -> io::Result<()> {
-        self.position += size_of::<u16>() as u64;
-        Ok(())
-    }
-
-    fn write_i16<T: byteorder::ByteOrder>(&mut self, _: i16) -> io::Result<()> {
-        self.position += size_of::<i16>() as u64;
-        Ok(())
-    }
-
-    fn write_u32<T: byteorder::ByteOrder>(&mut self, _: u32) -> io::Result<()> {
-        self.position += size_of::<u32>() as u64;
-        Ok(())
-    }
-
-    fn write_i32<T: byteorder::ByteOrder>(&mut self, _: i32) -> io::Result<()> {
-        self.position += size_of::<i32>() as u64;
-        Ok(())
-    }
-
-    fn write_u64<T: byteorder::ByteOrder>(&mut self, _: u64) -> io::Result<()> {
-        self.position += size_of::<u64>() as u64;
-        Ok(())
-    }
-
-    fn write_i64<T: byteorder::ByteOrder>(&mut self, _: i64) -> io::Result<()> {
-        self.position += size_of::<i64>() as u64;
-        Ok(())
-    }
-
-    fn write_f32<T: byteorder::ByteOrder>(&mut self, _: f32) -> io::Result<()> {
-        self.position += size_of::<f32>() as u64;
-        Ok(())
-    }
-
-    fn write_f64<T: byteorder::ByteOrder>(&mut self, _: f64) -> io::Result<()> {
-        self.position += size_of::<f64>() as u64;
-        Ok(())
-    }
-
-    fn write_fstring(&mut self, string: Option<&str>) -> Result<usize, Error> {
-        let length = if let Some(string) = string {
-            let is_unicode = string.len() != string.chars().count();
-
-            if is_unicode {
-                let utf16 = string.encode_utf16().collect::<Vec<_>>();
-                size_of::<i32>() + utf16.len() * 2 /* multiplying by 2 to get size in bytes */
-            } else {
-                let bytes = string.as_bytes();
-                size_of::<i32>() + bytes.len() + 1
-            }
-        } else {
-            size_of::<i32>()
-        };
-
-        self.position += length as u64;
-        Ok(length)
-    }
-
-    fn write_all(&mut self, data: &[u8]) -> io::Result<()> {
-        self.position += data.len() as u64;
-        Ok(())
-    }
-
-    fn write_bool(&mut self, _: bool) -> io::Result<()> {
-        self.position += size_of::<u8>() as u64;
-        Ok(())
-    }
-
-    fn generate_unversioned_header(
-        &mut self,
-        properties: &[properties::Property],
-        parent_name: &FName,
-    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
-        self.asset
-            .generate_unversioned_header(properties, parent_name)
-    }
-}
-
-impl<C: Read + Seek> ArchiveTrait for Asset<C> {
-    fn get_custom_version<T>(&self) -> CustomVersion
-    where
-        T: CustomVersionTrait + Into<i32>,
-    {
-        self.asset_data
-            .custom_versions
-            .iter()
-            .find(|e| {
-                e.friendly_name
-                    .as_ref()
-                    .map(|name| name == T::FRIENDLY_NAME)
-                    .unwrap_or(false)
-            })
-            .cloned()
-            .unwrap_or_else(|| CustomVersion::new(T::GUID, 0))
-    }
-
-    fn position(&mut self) -> u64 {
-        self.cursor.stream_position().unwrap_or_default()
-    }
-
-    fn set_position(&mut self, pos: u64) {
-        self.cursor.seek(SeekFrom::Start(pos)).unwrap_or_default();
-    }
-
-    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
-        self.cursor.seek(style)
-    }
-
-    fn add_fname(&mut self, value: &str) -> FName {
-        self.name_map.get_mut().add_fname(value)
-    }
-
-    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
-        self.name_map.get_mut().add_fname_with_number(value, number)
-    }
-
-    fn get_name_map(&self) -> SharedResource<NameMap> {
-        self.name_map.clone()
-    }
-
-    fn get_name_reference(&self, index: i32) -> String {
-        self.get_name_reference(index)
-    }
-
-    fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
-        &self.asset_data.array_struct_type_override
-    }
-
-    fn get_map_key_override(&self) -> &IndexedMap<String, String> {
-        &self.asset_data.map_key_override
-    }
-
-    fn get_map_value_override(&self) -> &IndexedMap<String, String> {
-        &self.asset_data.map_value_override
-    }
-
-    fn get_parent_class(&self) -> Option<ParentClassInfo> {
-        self.get_parent_class()
-    }
-
-    fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
-        self.get_parent_class_cached()
-    }
-
-    #[inline(always)]
-    fn get_engine_version(&self) -> EngineVersion {
-        guess_engine_version(
-            self.asset_data.object_version,
-            self.asset_data.object_version_ue5,
-            &self.asset_data.custom_versions,
-        )
-    }
-
-    #[inline(always)]
-    fn get_object_version(&self) -> ObjectVersion {
-        self.asset_data.object_version
-    }
-
-    #[inline(always)]
-    fn get_object_version_ue5(&self) -> ObjectVersionUE5 {
-        self.asset_data.object_version_ue5
-    }
-
-    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
-        if !index.is_import() {
-            return None;
-        }
-
-        let index = -index.index - 1;
-        if index < 0 || index > self.imports.len() as i32 {
-            return None;
-        }
-
-        Some(&self.imports[index as usize])
-    }
-
-    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
-        match index.is_import() {
-            true => self.get_import(index).map(|e| e.object_name.clone()),
-            false => Some(FName::new_dummy(index.index.to_string(), 0)),
-        }
-    }
-
-    fn get_mappings(&self) -> Option<&Usmap> {
-        self.asset_data.mappings.as_ref()
-    }
-
-    fn has_unversioned_properties(&self) -> bool {
-        self.package_flags
-            .contains(EPackageFlags::PKG_UNVERSIONED_PROPERTIES)
-    }
-}
-
-impl<C: Read + Seek> ArchiveReader for Asset<C> {
-    fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
-        if self.asset_data.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
-            let has_property_guid = self.cursor.read_bool()?;
-            if has_property_guid {
-                let mut guid = [0u8; 16];
-                self.cursor.read_exact(&mut guid)?;
-                return Ok(Some(guid));
-            }
-        }
-        Ok(None)
-    }
-
-    fn read_fname(&mut self) -> Result<FName, Error> {
-        let index = self.cursor.read_i32::<LittleEndian>()?;
-        let number = self.cursor.read_i32::<LittleEndian>()?;
-        Ok(self.name_map.get_ref().create_fname(index, number))
-    }
-
-    fn read_array_with_length<T>(
-        &mut self,
-        length: i32,
-        getter: impl Fn(&mut Self) -> Result<T, Error>,
-    ) -> Result<Vec<T>, Error> {
-        let mut array = Vec::with_capacity(length as usize);
-        for _ in 0..length {
-            array.push(getter(self)?);
-        }
-        Ok(array)
-    }
-
-    fn read_array<T>(
-        &mut self,
-        getter: impl Fn(&mut Self) -> Result<T, Error>,
-    ) -> Result<Vec<T>, Error> {
-        let length = self.cursor.read_i32::<LittleEndian>()?;
-        self.read_array_with_length(length, getter)
-    }
-
-    fn read_u8(&mut self) -> io::Result<u8> {
-        self.cursor.read_u8()
-    }
-
-    fn read_i8(&mut self) -> io::Result<i8> {
-        self.cursor.read_i8()
-    }
-
-    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> io::Result<u16> {
-        self.cursor.read_u16::<T>()
-    }
-
-    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> io::Result<i16> {
-        self.cursor.read_i16::<T>()
-    }
-
-    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> io::Result<u32> {
-        self.cursor.read_u32::<T>()
-    }
-
-    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> io::Result<i32> {
-        self.cursor.read_i32::<T>()
-    }
-
-    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> io::Result<u64> {
-        self.cursor.read_u64::<T>()
-    }
-
-    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> io::Result<i64> {
-        self.cursor.read_i64::<T>()
-    }
-
-    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> io::Result<f32> {
-        self.cursor.read_f32::<T>()
-    }
-
-    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> io::Result<f64> {
-        self.cursor.read_f64::<T>()
-    }
-
-    fn read_fstring(&mut self) -> Result<Option<String>, Error> {
-        Ok(self.cursor.read_fstring()?)
-    }
-
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
-        self.cursor.read_exact(buf)
-    }
-
-    fn read_bool(&mut self) -> io::Result<bool> {
-        self.cursor.read_bool()
-    }
-}
-
-impl<'a, C: Read + Seek> Asset<C> {
+impl<'a> Asset {
     /// Create an asset from a binary file
-    pub fn new(
+    pub fn new<C: Read + Seek>(
         asset_data: C,
         bulk_data: Option<C>,
         engine_version: EngineVersion,
     ) -> Result<Self, Error> {
         let use_event_driven_loader = bulk_data.is_some();
         let mut asset = Asset {
-            cursor: Chain::new(asset_data, bulk_data),
             info: String::from("Serialized with unrealmodding/uasset"),
             asset_data: AssetData {
                 use_event_driven_loader,
@@ -999,7 +369,23 @@ impl<'a, C: Read + Seek> Asset<C> {
             parent_class: None,
         };
         asset.set_engine_version(engine_version);
-        asset.parse_data()?;
+
+        let chain = Chain::new(asset_data, bulk_data);
+
+        let mut reader = RawReader::new(
+            chain,
+            asset.asset_data.object_version,
+            asset.asset_data.object_version_ue5,
+            asset.asset_data.use_event_driven_loader,
+            asset.name_map.clone(),
+        );
+        asset.parse_header(&mut reader)?;
+
+        // updating reader objectversions because they might've been updated when reading the header
+        reader.object_version = asset.asset_data.object_version;
+        reader.object_version_ue5 = asset.asset_data.object_version_ue5;
+
+        asset.parse_data(&mut reader)?;
         Ok(asset)
     }
 
@@ -1009,28 +395,28 @@ impl<'a, C: Read + Seek> Asset<C> {
     }
 
     /// Parse asset header
-    fn parse_header(&mut self) -> Result<(), Error> {
+    fn parse_header<R: ArchiveReader>(&mut self, reader: &mut R) -> Result<(), Error> {
         // reuseable buffers for reading
 
         // seek to start
-        self.cursor.rewind()?;
+        reader.seek(SeekFrom::Start(0))?;
 
         // read and check magic
-        if self.cursor.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {
+        if reader.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {
             return Err(Error::invalid_file(
                 "File is not a valid uasset file".to_string(),
             ));
         }
 
         // read legacy version
-        self.legacy_file_version = self.cursor.read_i32::<LittleEndian>()?;
+        self.legacy_file_version = reader.read_i32::<LittleEndian>()?;
         if self.legacy_file_version != -4 {
             // LegacyUE3Version for backwards-compatibility with UE3 games: always 864 in versioned assets, always 0 in unversioned assets
-            self.cursor.read_exact(&mut [0u8; 4])?;
+            reader.read_exact(&mut [0u8; 4])?;
         }
 
         // read unreal version
-        let file_version = self.cursor.read_i32::<LittleEndian>()?.try_into()?;
+        let file_version = reader.read_i32::<LittleEndian>()?.try_into()?;
 
         self.asset_data.unversioned = file_version == ObjectVersion::UNKNOWN;
 
@@ -1043,74 +429,63 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         // read file license version
-        self.asset_data.file_license_version = self.cursor.read_i32::<LittleEndian>()?;
+        self.asset_data.file_license_version = reader.read_i32::<LittleEndian>()?;
 
         // read custom versions container
         if self.legacy_file_version <= -2 {
             // TODO: support for enum-based custom versions
-
-            // read custom version count
-            let custom_versions_count = self.cursor.read_i32::<LittleEndian>()?;
-
-            for _ in 0..custom_versions_count {
-                // read guid
-                let mut guid = [0u8; 16];
-                self.cursor.read_exact(&mut guid)?;
-                // read version
-                let version = self.cursor.read_i32::<LittleEndian>()?;
-
-                self.asset_data
-                    .custom_versions
-                    .push(CustomVersion::new(guid, version));
-            }
+            let old_container = self.asset_data.custom_versions.clone();
+            self.asset_data.custom_versions = reader.read_custom_version_container(
+                self.get_custom_version_serialization_format(),
+                Some(&old_container),
+            )?;
         }
 
         // read header offset
-        self.header_offset = self.cursor.read_i32::<LittleEndian>()?;
+        self.header_offset = reader.read_i32::<LittleEndian>()?;
 
         // read folder name
-        self.folder_name = self
-            .cursor
+        self.folder_name = reader
             .read_fstring()?
             .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
-        self.package_flags = EPackageFlags::from_bits(self.cursor.read_u32::<LittleEndian>()?)
+        self.package_flags = EPackageFlags::from_bits(reader.read_u32::<LittleEndian>()?)
             .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
         // read name count and offset
-        self.name_count = self.cursor.read_i32::<LittleEndian>()?;
-        self.name_offset = self.cursor.read_i32::<LittleEndian>()?;
+        self.name_count = reader.read_i32::<LittleEndian>()?;
+        self.name_offset = reader.read_i32::<LittleEndian>()?;
         // read text gatherable data
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
-            self.gatherable_text_data_count = self.cursor.read_i32::<LittleEndian>()?;
-            self.gatherable_text_data_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.gatherable_text_data_count = reader.read_i32::<LittleEndian>()?;
+            self.gatherable_text_data_offset = reader.read_i32::<LittleEndian>()?;
         }
 
         // read count and offset for exports, imports, depends, soft package references, searchable names, thumbnail table
-        self.export_count = self.cursor.read_i32::<LittleEndian>()?;
-        self.export_offset = self.cursor.read_i32::<LittleEndian>()?;
-        self.import_count = self.cursor.read_i32::<LittleEndian>()?;
-        self.import_offset = self.cursor.read_i32::<LittleEndian>()?;
-        self.depends_offset = self.cursor.read_i32::<LittleEndian>()?;
+        self.export_count = reader.read_i32::<LittleEndian>()?;
+        self.export_offset = reader.read_i32::<LittleEndian>()?;
+        self.import_count = reader.read_i32::<LittleEndian>()?;
+        self.import_offset = reader.read_i32::<LittleEndian>()?;
+        self.depends_offset = reader.read_i32::<LittleEndian>()?;
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP
         {
-            self.soft_package_reference_count = self.cursor.read_i32::<LittleEndian>()?;
-            self.soft_package_reference_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.soft_package_reference_count = reader.read_i32::<LittleEndian>()?;
+            self.soft_package_reference_offset = reader.read_i32::<LittleEndian>()?;
         }
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ADDED_SEARCHABLE_NAMES {
-            self.searchable_names_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.searchable_names_offset = reader.read_i32::<LittleEndian>()?;
         }
-        self.thumbnail_table_offset = self.cursor.read_i32::<LittleEndian>()?;
+        self.thumbnail_table_offset = reader.read_i32::<LittleEndian>()?;
 
         // read guid
-        self.cursor.read_exact(&mut self.package_guid)?;
+        reader.read_exact(&mut self.package_guid)?;
 
         // raed generations
-        let generations_count = self.cursor.read_i32::<LittleEndian>()?;
+        let generations_count = reader.read_i32::<LittleEndian>()?;
         for _ in 0..generations_count {
-            let export_count = self.cursor.read_i32::<LittleEndian>()?;
-            let name_count = self.cursor.read_i32::<LittleEndian>()?;
+            let export_count = reader.read_i32::<LittleEndian>()?;
+            let name_count = reader.read_i32::<LittleEndian>()?;
             self.generations.push(GenerationInfo {
                 export_count,
                 name_count,
@@ -1119,39 +494,39 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         // read advanced engine version
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ENGINE_VERSION_OBJECT {
-            self.engine_version_recorded = FEngineVersion::read(&mut self.cursor)?;
+            self.engine_version_recorded = FEngineVersion::read(reader)?;
         } else {
             self.engine_version_recorded =
-                FEngineVersion::new(4, 0, 0, self.cursor.read_u32::<LittleEndian>()?, None);
+                FEngineVersion::new(4, 0, 0, reader.read_u32::<LittleEndian>()?, None);
         }
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
         {
-            self.engine_version_compatible = FEngineVersion::read(&mut self.cursor)?;
+            self.engine_version_compatible = FEngineVersion::read(reader)?;
         } else {
             self.engine_version_compatible = self.engine_version_recorded.clone();
         }
 
         // read compression data
-        self.compression_flags = self.cursor.read_u32::<LittleEndian>()?;
-        let compression_block_count = self.cursor.read_u32::<LittleEndian>()?;
+        self.compression_flags = reader.read_u32::<LittleEndian>()?;
+        let compression_block_count = reader.read_u32::<LittleEndian>()?;
         if compression_block_count > 0 {
             return Err(Error::invalid_file(
                 "Compression block count is not zero".to_string(),
             ));
         }
 
-        self.package_source = self.cursor.read_u32::<LittleEndian>()?;
+        self.package_source = reader.read_u32::<LittleEndian>()?;
 
         // some other old unsupported stuff
-        let additional_to_cook = self.cursor.read_i32::<LittleEndian>()?;
+        let additional_to_cook = reader.read_i32::<LittleEndian>()?;
         if additional_to_cook != 0 {
             return Err(Error::invalid_file(
                 "Additional to cook is not zero".to_string(),
             ));
         }
         if self.legacy_file_version > -7 {
-            let texture_allocations_count = self.cursor.read_i32::<LittleEndian>()?;
+            let texture_allocations_count = reader.read_i32::<LittleEndian>()?;
             if texture_allocations_count != 0 {
                 return Err(Error::invalid_file(
                     "Texture allocations count is not zero".to_string(),
@@ -1159,59 +534,36 @@ impl<'a, C: Read + Seek> Asset<C> {
             }
         }
 
-        self.asset_registry_data_offset = self.cursor.read_i32::<LittleEndian>()?;
-        self.bulk_data_start_offset = self.cursor.read_i64::<LittleEndian>()?;
+        self.asset_registry_data_offset = reader.read_i32::<LittleEndian>()?;
+        self.bulk_data_start_offset = reader.read_i64::<LittleEndian>()?;
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO {
-            self.world_tile_info_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.world_tile_info_offset = reader.read_i32::<LittleEndian>()?;
         }
 
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS
         {
-            let chunk_id_count = self.cursor.read_i32::<LittleEndian>()?;
+            let chunk_id_count = reader.read_i32::<LittleEndian>()?;
 
             for _ in 0..chunk_id_count {
-                let chunk_id = self.cursor.read_i32::<LittleEndian>()?;
+                let chunk_id = reader.read_i32::<LittleEndian>()?;
                 self.chunk_ids.push(chunk_id);
             }
         } else if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE
         {
             self.chunk_ids = vec![];
-            self.chunk_ids[0] = self.cursor.read_i32::<LittleEndian>()?;
+            self.chunk_ids[0] = reader.read_i32::<LittleEndian>()?;
         }
 
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
         {
-            self.preload_dependency_count = self.cursor.read_i32::<LittleEndian>()?;
-            self.preload_dependency_offset = self.cursor.read_i32::<LittleEndian>()?;
+            self.preload_dependency_count = reader.read_i32::<LittleEndian>()?;
+            self.preload_dependency_offset = reader.read_i32::<LittleEndian>()?;
         }
         Ok(())
-    }
-
-    /// Asset data length
-    pub fn data_length(&mut self) -> u64 {
-        let pos = self.cursor.stream_position().unwrap_or_default();
-        let len = self.cursor.seek(SeekFrom::End(0)).unwrap_or_default();
-        self.cursor.seek(SeekFrom::Start(pos)).unwrap_or_default();
-        len
-    }
-
-    /// Read a name map string
-    fn read_name_map_string(&mut self) -> Result<(u32, String), Error> {
-        let s = self
-            .cursor
-            .read_fstring()?
-            .ok_or_else(|| Error::no_data("name_map_string is None".to_string()))?;
-        let mut hashes = 0;
-        if self.asset_data.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED
-            && !s.is_empty()
-        {
-            hashes = self.cursor.read_u32::<LittleEndian>()?;
-        }
-        Ok((hashes, s))
     }
 
     /// Get name map
@@ -1225,7 +577,7 @@ impl<'a, C: Read + Seek> Asset<C> {
     }
 
     /// Search an FName reference
-    pub fn search_name_reference(&self, name: &String) -> Option<i32> {
+    pub fn search_name_reference(&self, name: &str) -> Option<i32> {
         self.name_map.get_ref().search_name_reference(name)
     }
 
@@ -1252,38 +604,6 @@ impl<'a, C: Read + Seek> Asset<C> {
         let import = import;
         self.imports.push(import);
         PackageIndex::new(index)
-    }
-
-    /// Searches for and returns this asset's CLassExport, if one exists
-    pub fn get_class_export(&self) -> Option<&ClassExport> {
-        self.asset_data
-            .exports
-            .iter()
-            .find_map(|e| cast!(Export, ClassExport, e))
-    }
-
-    /// Gets parent class info of this asset, if it exists
-    pub fn get_parent_class(&self) -> Option<ParentClassInfo> {
-        let class_export = self.get_class_export()?;
-
-        let parent_class_import = self.get_import(class_export.struct_export.super_struct)?;
-        let outer_parent_import = self.get_import(parent_class_import.outer_index)?;
-
-        Some(ParentClassInfo {
-            parent_class_path: parent_class_import.object_name.clone(),
-            parent_class_export_name: outer_parent_import.object_name.clone(),
-        })
-    }
-
-    /// Gets parent class info of this asset from cache if it exists,
-    /// if it doesn't exist in cache, tries to compute it.
-    pub fn get_parent_class_cached(&mut self) -> Option<&ParentClassInfo> {
-        if let Some(ref parent_class) = self.parent_class {
-            return Some(parent_class);
-        }
-
-        self.parent_class = self.get_parent_class();
-        self.parent_class.as_ref()
     }
 
     /// Find an import
@@ -1336,94 +656,101 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.asset_data.get_export_mut(index)
     }
 
-    /// Parse asset data
-    fn parse_data(&mut self) -> Result<(), Error> {
-        self.parse_header()?;
-        self.cursor.seek(SeekFrom::Start(self.name_offset as u64))?;
+    /// Get custom version serialization format
+    pub fn get_custom_version_serialization_format(&self) -> ECustomVersionSerializationFormat {
+        if self.legacy_file_version > 3 {
+            return ECustomVersionSerializationFormat::Enums;
+        }
+        if self.legacy_file_version > -6 {
+            return ECustomVersionSerializationFormat::Guids;
+        }
+        ECustomVersionSerializationFormat::Optimized
+    }
 
-        for _ in 0..self.name_count {
-            let name_map = self.read_name_map_string()?;
-            if name_map.0 == 0 {
-                self.override_name_map_hashes.insert(name_map.1.clone(), 0);
+    /// Parse asset data
+    fn parse_data<R: ArchiveReader>(&mut self, reader: &mut R) -> Result<(), Error> {
+        reader.seek(SeekFrom::Start(self.name_offset as u64))?;
+
+        for i in 0..self.name_count {
+            println!("processing {}", i);
+            let (name, hash) = reader.read_name_map_string(None)?;
+            if hash == 0 {
+                // todo: good FString type
+                self.override_name_map_hashes.insert(name.clone(), 0);
             }
-            self.add_name_reference(name_map.1, true);
+            self.add_name_reference(name, true);
         }
 
         if self.import_offset > 0 {
-            self.cursor
-                .seek(SeekFrom::Start(self.import_offset as u64))?;
+            reader.seek(SeekFrom::Start(self.import_offset as u64))?;
             for _i in 0..self.import_count {
                 let import = Import::new(
-                    self.read_fname()?,
-                    self.read_fname()?,
-                    PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?),
-                    self.read_fname()?,
+                    reader.read_fname()?,
+                    reader.read_fname()?,
+                    PackageIndex::new(reader.read_i32::<LittleEndian>()?),
+                    reader.read_fname()?,
                 );
                 self.imports.push(import);
             }
         }
 
         if self.export_offset > 0 {
-            self.cursor
-                .seek(SeekFrom::Start(self.export_offset as u64))?;
+            reader.seek(SeekFrom::Start(self.export_offset as u64))?;
             for _i in 0..self.export_count {
                 let mut export = BaseExport {
-                    class_index: PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?),
-                    super_index: PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?),
+                    class_index: PackageIndex::new(reader.read_i32::<LittleEndian>()?),
+                    super_index: PackageIndex::new(reader.read_i32::<LittleEndian>()?),
                     ..Default::default()
                 };
 
-                if self.asset_data.object_version
+                if reader.get_object_version()
                     >= ObjectVersion::VER_UE4_TemplateIndex_IN_COOKED_EXPORTS
                 {
-                    export.template_index =
-                        PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
+                    export.template_index = PackageIndex::new(reader.read_i32::<LittleEndian>()?);
                 }
 
-                export.outer_index = PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?);
-                export.object_name = self.read_fname()?;
-                export.object_flags = self.cursor.read_u32::<LittleEndian>()?;
+                export.outer_index = PackageIndex::new(reader.read_i32::<LittleEndian>()?);
+                export.object_name = reader.read_fname()?;
+                export.object_flags = reader.read_u32::<LittleEndian>()?;
 
-                if self.asset_data.object_version
-                    < ObjectVersion::VER_UE4_64BIT_EXPORTMAP_SERIALSIZES
+                if reader.get_object_version() < ObjectVersion::VER_UE4_64BIT_EXPORTMAP_SERIALSIZES
                 {
-                    export.serial_size = self.cursor.read_i32::<LittleEndian>()? as i64;
-                    export.serial_offset = self.cursor.read_i32::<LittleEndian>()? as i64;
+                    export.serial_size = reader.read_i32::<LittleEndian>()? as i64;
+                    export.serial_offset = reader.read_i32::<LittleEndian>()? as i64;
                 } else {
-                    export.serial_size = self.cursor.read_i64::<LittleEndian>()?;
-                    export.serial_offset = self.cursor.read_i64::<LittleEndian>()?;
+                    export.serial_size = reader.read_i64::<LittleEndian>()?;
+                    export.serial_offset = reader.read_i64::<LittleEndian>()?;
                 }
 
-                export.forced_export = self.cursor.read_i32::<LittleEndian>()? == 1;
-                export.not_for_client = self.cursor.read_i32::<LittleEndian>()? == 1;
-                export.not_for_server = self.cursor.read_i32::<LittleEndian>()? == 1;
-                self.cursor.read_exact(&mut export.package_guid)?;
-                export.package_flags = self.cursor.read_u32::<LittleEndian>()?;
+                export.forced_export = reader.read_i32::<LittleEndian>()? == 1;
+                export.not_for_client = reader.read_i32::<LittleEndian>()? == 1;
+                export.not_for_server = reader.read_i32::<LittleEndian>()? == 1;
+                reader.read_exact(&mut export.package_guid)?;
+                export.package_flags = reader.read_u32::<LittleEndian>()?;
 
-                if self.asset_data.object_version >= ObjectVersion::VER_UE4_LOAD_FOR_EDITOR_GAME {
+                if reader.get_object_version() >= ObjectVersion::VER_UE4_LOAD_FOR_EDITOR_GAME {
                     export.not_always_loaded_for_editor_game =
-                        self.cursor.read_i32::<LittleEndian>()? == 1;
+                        reader.read_i32::<LittleEndian>()? == 1;
                 }
 
-                if self.asset_data.object_version
+                if reader.get_object_version()
                     >= ObjectVersion::VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT
                 {
-                    export.is_asset = self.cursor.read_i32::<LittleEndian>()? == 1;
+                    export.is_asset = reader.read_i32::<LittleEndian>()? == 1;
                 }
 
-                if self.asset_data.object_version
+                if reader.get_object_version()
                     >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
                 {
-                    export.first_export_dependency_offset =
-                        self.cursor.read_i32::<LittleEndian>()?;
+                    export.first_export_dependency_offset = reader.read_i32::<LittleEndian>()?;
                     export.serialization_before_serialization_dependencies_size =
-                        self.cursor.read_i32::<LittleEndian>()?;
+                        reader.read_i32::<LittleEndian>()?;
                     export.create_before_serialization_dependencies_size =
-                        self.cursor.read_i32::<LittleEndian>()?;
+                        reader.read_i32::<LittleEndian>()?;
                     export.serialization_before_create_dependencies_size =
-                        self.cursor.read_i32::<LittleEndian>()?;
+                        reader.read_i32::<LittleEndian>()?;
                     export.create_before_create_dependencies_size =
-                        self.cursor.read_i32::<LittleEndian>()?;
+                        reader.read_i32::<LittleEndian>()?;
                 }
 
                 self.asset_data.exports.push(export.into());
@@ -1433,14 +760,13 @@ impl<'a, C: Read + Seek> Asset<C> {
         if self.depends_offset > 0 {
             let mut depends_map = Vec::with_capacity(self.export_count as usize);
 
-            self.cursor
-                .seek(SeekFrom::Start(self.depends_offset as u64))?;
+            reader.seek(SeekFrom::Start(self.depends_offset as u64))?;
 
             for _i in 0..self.export_count as usize {
-                let size = self.cursor.read_i32::<LittleEndian>()?;
+                let size = reader.read_i32::<LittleEndian>()?;
                 let mut data: Vec<i32> = Vec::new();
                 for _j in 0..size {
-                    data.push(self.cursor.read_i32::<LittleEndian>()?);
+                    data.push(reader.read_i32::<LittleEndian>()?);
                 }
                 depends_map.push(data);
             }
@@ -1451,11 +777,10 @@ impl<'a, C: Read + Seek> Asset<C> {
             let mut soft_package_reference_list =
                 Vec::with_capacity(self.soft_package_reference_count as usize);
 
-            self.cursor
-                .seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
+            reader.seek(SeekFrom::Start(self.soft_package_reference_offset as u64))?;
 
             for _i in 0..self.soft_package_reference_count as usize {
-                if let Some(reference) = self.cursor.read_fstring()? {
+                if let Some(reference) = reader.read_fstring()? {
                     soft_package_reference_list.push(reference);
                 }
             }
@@ -1465,18 +790,16 @@ impl<'a, C: Read + Seek> Asset<C> {
         // TODO: Asset registry data parsing should be here
 
         if self.world_tile_info_offset > 0 {
-            self.cursor
-                .seek(SeekFrom::Start(self.world_tile_info_offset as u64))?;
-            self.asset_data.world_tile_info = Some(FWorldTileInfo::new(self)?);
+            reader.seek(SeekFrom::Start(self.world_tile_info_offset as u64))?;
+            self.asset_data.world_tile_info = Some(FWorldTileInfo::new(reader)?);
         }
 
         if self.asset_data.use_event_driven_loader {
             for export in &mut self.asset_data.exports {
                 let unk_export = export.get_base_export_mut();
 
-                self.cursor
-                    .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
-                self.cursor.seek(SeekFrom::Current(
+                reader.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
+                reader.seek(SeekFrom::Current(
                     unk_export.first_export_dependency_offset as i64 * size_of::<i32>() as i64,
                 ))?;
 
@@ -1485,7 +808,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                 );
                 for _ in 0..unk_export.serialization_before_serialization_dependencies_size {
                     serialization_before_serialization_dependencies
-                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                        .push(PackageIndex::new(reader.read_i32::<LittleEndian>()?));
                 }
                 unk_export.serialization_before_serialization_dependencies =
                     serialization_before_serialization_dependencies;
@@ -1495,7 +818,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                 );
                 for _ in 0..unk_export.create_before_serialization_dependencies_size {
                     create_before_serialization_dependencies
-                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                        .push(PackageIndex::new(reader.read_i32::<LittleEndian>()?));
                 }
                 unk_export.create_before_serialization_dependencies =
                     create_before_serialization_dependencies;
@@ -1505,7 +828,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                 );
                 for _ in 0..unk_export.serialization_before_create_dependencies_size {
                     serialization_before_create_dependencies
-                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                        .push(PackageIndex::new(reader.read_i32::<LittleEndian>()?));
                 }
                 unk_export.serialization_before_create_dependencies =
                     serialization_before_create_dependencies;
@@ -1514,78 +837,104 @@ impl<'a, C: Read + Seek> Asset<C> {
                     Vec::with_capacity(unk_export.create_before_create_dependencies_size as usize);
                 for _ in 0..unk_export.create_before_create_dependencies_size {
                     create_before_create_dependencies
-                        .push(PackageIndex::new(self.cursor.read_i32::<LittleEndian>()?));
+                        .push(PackageIndex::new(reader.read_i32::<LittleEndian>()?));
                 }
                 unk_export.create_before_create_dependencies = create_before_create_dependencies;
             }
-            self.cursor
-                .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
+            reader.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
         }
 
         if self.header_offset > 0 && !self.asset_data.exports.is_empty() {
+            let mut new_exports = Vec::with_capacity(self.asset_data.exports.len());
             for i in 0..self.asset_data.exports.len() {
+                let mut asset_reader = AssetArchiveReader::new(
+                    reader,
+                    &self.asset_data,
+                    &self.imports,
+                    self.name_map.clone(),
+                );
+
                 let base_export = match &self.asset_data.exports[i] {
                     Export::BaseExport(export) => Some(export.clone()),
                     _ => None,
                 };
 
                 if let Some(base_export) = base_export {
-                    let export: Result<Export, Error> = match self.read_export(&base_export, i) {
+                    let result = self.read_export(&mut asset_reader, &base_export, i);
+                    let export: Result<(Export, NewOverrides), Error> = match result {
                         Ok(e) => Ok(e),
                         Err(_e) => {
                             // todo: warning?
-                            self.cursor
-                                .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
-                            Ok(RawExport::from_base(base_export, self)?.into())
+                            asset_reader.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+                            Ok((
+                                RawExport::from_base(base_export, &mut asset_reader)?.into(),
+                                NewOverrides::default(),
+                            ))
                         }
                     };
-                    self.asset_data.exports[i] = export?;
+                    let (export, new_overrides) = export?;
+
+                    drop(asset_reader);
+                    new_overrides.apply(&mut self.asset_data);
+
+                    new_exports.push(export);
                 }
             }
+
+            self.asset_data.exports = new_exports;
         }
 
         Ok(())
     }
 
     /// Read an `Export`
-    fn read_export(&mut self, base_export: &BaseExport, i: usize) -> Result<Export, Error> {
+    fn read_export<R: ArchiveReader>(
+        &self,
+        reader: &mut R,
+        base_export: &BaseExport,
+        i: usize,
+    ) -> Result<(Export, NewOverrides), Error> {
         let next_starting = match i < (self.asset_data.exports.len() - 1) {
             true => match &self.asset_data.exports[i + 1] {
                 Export::BaseExport(next_export) => next_export.serial_offset as u64,
-                _ => self.data_length() - 4,
+                _ => reader.data_length()? - 4,
             },
-            false => self.data_length() - 4,
+            false => reader.data_length()? - 4,
         };
 
-        self.cursor
-            .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+
+        let mut new_overrides = NewOverrides::default();
 
         //todo: manual skips
-        let export_class_type = self
+        let export_class_type = reader
             .get_export_class_type(base_export.class_index)
             .ok_or_else(|| Error::invalid_package_index("Unknown class type".to_string()))?;
+
+        let content = export_class_type.get_content();
+        println!("Export class type: {}", content);
         let mut export: Export = match export_class_type.get_content().as_str() {
-            "Level" => LevelExport::from_base(base_export, self, next_starting)?.into(),
-            "StringTable" => StringTableExport::from_base(base_export, self)?.into(),
-            "Enum" | "UserDefinedEnum" => EnumExport::from_base(base_export, self)?.into(),
-            "Function" => FunctionExport::from_base(base_export, self)?.into(),
+            "Level" => LevelExport::from_base(base_export, reader, next_starting)?.into(),
+            "StringTable" => StringTableExport::from_base(base_export, reader)?.into(),
+            "Enum" | "UserDefinedEnum" => EnumExport::from_base(base_export, reader)?.into(),
+            "Function" => FunctionExport::from_base(base_export, reader)?.into(),
             _ => {
                 if export_class_type.get_content().ends_with("DataTable") {
-                    DataTableExport::from_base(base_export, self)?.into()
+                    DataTableExport::from_base(base_export, reader)?.into()
                 } else if export_class_type.get_content().ends_with("StringTable") {
-                    StringTableExport::from_base(base_export, self)?.into()
+                    StringTableExport::from_base(base_export, reader)?.into()
                 } else if export_class_type
                     .get_content()
                     .ends_with("BlueprintGeneratedClass")
                 {
-                    let class_export = ClassExport::from_base(base_export, self)?;
+                    let class_export = ClassExport::from_base(base_export, reader)?;
 
                     for entry in &class_export.struct_export.loaded_properties {
                         if let FProperty::FMapProperty(map) = entry {
                             let key_override = match &*map.key_prop {
                                 FProperty::FStructProperty(struct_property) => {
                                     match struct_property.struct_value.is_import() {
-                                        true => self
+                                        true => reader
                                             .get_import(struct_property.struct_value)
                                             .map(|e| e.object_name.get_content()),
                                         false => None,
@@ -1594,15 +943,15 @@ impl<'a, C: Read + Seek> Asset<C> {
                                 _ => None,
                             };
                             if let Some(key) = key_override {
-                                self.asset_data
-                                    .map_key_override
+                                new_overrides
+                                    .map_key_overrides
                                     .insert(map.generic_property.name.get_content(), key);
                             }
 
                             let value_override = match &*map.value_prop {
                                 FProperty::FStructProperty(struct_property) => {
                                     match struct_property.struct_value.is_import() {
-                                        true => self
+                                        true => reader
                                             .get_import(struct_property.struct_value)
                                             .map(|e| e.object_name.get_content()),
                                         false => None,
@@ -1612,36 +961,37 @@ impl<'a, C: Read + Seek> Asset<C> {
                             };
 
                             if let Some(value) = value_override {
-                                self.asset_data
-                                    .map_value_override
+                                new_overrides
+                                    .map_value_overrides
                                     .insert(map.generic_property.name.get_content(), value);
                             }
                         }
                     }
                     class_export.into()
                 } else if export_class_type.get_content().ends_with("Property") {
-                    PropertyExport::from_base(base_export, self)?.into()
+                    PropertyExport::from_base(base_export, reader)?.into()
                 } else {
-                    NormalExport::from_base(base_export, self)?.into()
+                    NormalExport::from_base(base_export, reader)?.into()
                 }
             }
         };
 
-        let extras_len =
-            next_starting as i64 - self.cursor.stream_position().unwrap_or_default() as i64;
+        let extras_len = next_starting as i64 - reader.position() as i64;
         if extras_len < 0 {
             // todo: warning?
 
-            self.cursor
-                .seek(SeekFrom::Start(base_export.serial_offset as u64))?;
-            return Ok(RawExport::from_base(base_export.clone(), self)?.into());
+            reader.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+            return Ok((
+                RawExport::from_base(base_export.clone(), reader)?.into(),
+                new_overrides,
+            ));
         } else if let Some(normal_export) = export.get_normal_export_mut() {
             let mut extras = vec![0u8; extras_len as usize];
-            self.cursor.read_exact(&mut extras)?;
+            reader.read_exact(&mut extras)?;
             normal_export.extras = extras;
         }
 
-        Ok(export)
+        Ok((export, new_overrides))
     }
 
     /// Write asset header
@@ -1853,20 +1203,20 @@ impl<'a, C: Read + Seek> Asset<C> {
     /// This is useful when copying export from one asset into another
     /// This will automatically figure out every new FName and add them to the name map
     pub fn rebuild_name_map(&mut self) -> Result<(), Error> {
-        let mut collector = FNameCollector::new(self);
+        // let mut collector = FNameCollector::new(self);
 
-        for import in &self.imports {
-            collector.write_fname(&import.class_package)?;
-            collector.write_fname(&import.class_name)?;
-            collector.write_fname(&import.object_name)?;
-        }
+        // for import in &self.imports {
+        //     collector.write_fname(&import.class_package)?;
+        //     collector.write_fname(&import.class_name)?;
+        //     collector.write_fname(&import.object_name)?;
+        // }
 
-        for export in &self.asset_data.exports {
-            self.write_export_header(export.get_base_export(), &mut collector, 0, 0, 0)?;
-            export.write(&mut collector)?;
-        }
+        // for export in &self.asset_data.exports {
+        //     self.write_export_header(export.get_base_export(), &mut collector, 0, 0, 0)?;
+        //     export.write(&mut collector)?;
+        // }
 
-        self.name_map = collector.name_map;
+        // self.name_map = collector.name_map;
 
         Ok(())
     }
@@ -1902,7 +1252,19 @@ impl<'a, C: Read + Seek> Asset<C> {
             bulk_data_start_offset: self.bulk_data_start_offset,
         };
 
-        let mut serializer = AssetSerializer::new(self, cursor);
+        let mut raw_serializer = RawWriter::new(
+            cursor,
+            self.asset_data.object_version,
+            self.asset_data.object_version_ue5,
+            self.asset_data.use_event_driven_loader,
+            self.name_map.clone(),
+        );
+        let mut serializer = AssetArchiveWriter::new(
+            &mut raw_serializer,
+            &self.asset_data,
+            &self.imports,
+            self.name_map.clone(),
+        );
 
         self.write_header(&mut serializer, &header)?;
 
@@ -2042,8 +1404,24 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         let final_cursor_pos = serializer.position();
 
+        let mut raw_bulk_serializer = match self.asset_data.use_event_driven_loader {
+            true => Some(RawWriter::new(
+                uexp_cursor.unwrap(),
+                self.asset_data.object_version,
+                self.asset_data.object_version_ue5,
+                self.asset_data.use_event_driven_loader,
+                self.name_map.clone(),
+            )),
+            false => None,
+        };
+
         let mut bulk_serializer = match self.asset_data.use_event_driven_loader {
-            true => Some(AssetSerializer::new(self, uexp_cursor.unwrap())),
+            true => Some(AssetArchiveWriter::new(
+                raw_bulk_serializer.as_mut().unwrap(),
+                &self.asset_data,
+                &self.imports,
+                self.name_map.clone(),
+            )),
             false => None,
         };
 
@@ -2116,166 +1494,10 @@ impl<'a, C: Read + Seek> Asset<C> {
         serializer.seek(SeekFrom::Start(0))?;
         Ok(())
     }
-
-    /// Generate `UnversionedHeader` for properties and sort the properties into a new array
-    fn generate_unversioned_header(
-        &self,
-        properties: &[Property],
-        parent_name: &FName,
-    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
-        if !self.has_unversioned_properties() {
-            return Ok(None);
-        }
-
-        let Some(mappings) = self.get_mappings() else {
-            return Ok(None);
-        };
-
-        let mut first_global_index = u32::MAX;
-        let mut last_global_index = u32::MIN;
-
-        let mut properties_to_process = HashSet::new();
-        let mut zero_properties: HashSet<u32> = HashSet::new();
-
-        for property in properties {
-            let Some((_, global_index)) = mappings.get_property_with_duplication_index(
-                &property.get_name(),
-                property.get_ancestry(),
-                property.get_duplication_index() as u32,
-            ) else {
-                return Err(PropertyError::no_mapping(&property.get_name().get_content(), property.get_ancestry()).into());
-            };
-
-            if matches!(property, Property::EmptyProperty(_)) {
-                zero_properties.insert(global_index);
-            }
-
-            first_global_index = first_global_index.min(global_index);
-            last_global_index = last_global_index.max(global_index);
-            properties_to_process.insert(global_index);
-        }
-
-        // Sort properties and generate header fragments
-        let mut sorted_properties = Vec::new();
-
-        let mut fragments: Vec<UnversionedHeaderFragment> = Vec::new();
-        let mut last_num_before_fragment = 0;
-
-        if !properties_to_process.is_empty() {
-            loop {
-                let mut has_zeros = false;
-
-                // Find next contiguous properties chunk
-                let mut start_index = last_num_before_fragment;
-                while !properties_to_process.contains(&start_index)
-                    && start_index <= last_global_index
-                {
-                    start_index += 1;
-                }
-
-                if start_index > last_global_index {
-                    break;
-                }
-
-                // Process contiguous properties chunk
-                let mut end_index = start_index;
-                while properties_to_process.contains(&end_index) {
-                    if zero_properties.contains(&end_index) {
-                        has_zeros = true;
-                    }
-
-                    // todo: clone might not be needed
-                    sorted_properties.push(properties[end_index as usize].clone());
-                    end_index += 1;
-                }
-
-                // Create extra fragments for this chunk
-                let mut skip_num = start_index - last_num_before_fragment - 1;
-                let mut value_num = (end_index - 1) - start_index + 1;
-
-                while skip_num > i8::MAX as u32 {
-                    fragments.push(UnversionedHeaderFragment {
-                        skip_num: i8::MAX as u8,
-                        value_num: 0,
-                        first_num: 0,
-                        is_last: false,
-                        has_zeros: false,
-                    });
-                    skip_num -= i8::MAX as u32;
-                }
-                while value_num > i8::MAX as u32 {
-                    fragments.push(UnversionedHeaderFragment {
-                        skip_num: 0,
-                        value_num: i8::MAX as u8,
-                        first_num: 0,
-                        is_last: false,
-                        has_zeros: false,
-                    });
-                    value_num -= i8::MAX as u32;
-                }
-
-                // Create the main fragment for this chunk
-                let fragment = UnversionedHeaderFragment {
-                    skip_num: skip_num as u8,
-                    value_num: value_num as u8,
-                    first_num: start_index as u8,
-                    is_last: false,
-                    has_zeros,
-                };
-
-                fragments.push(fragment);
-                last_num_before_fragment = end_index - 1;
-            }
-        } else {
-            fragments.push(UnversionedHeaderFragment {
-                skip_num: usize::min(
-                    mappings
-                        .get_all_properties(&parent_name.get_content())
-                        .len(),
-                    i8::MAX as usize,
-                ) as u8,
-                value_num: 0,
-                first_num: 0,
-                is_last: true,
-                has_zeros: false,
-            });
-        }
-
-        if let Some(fragment) = fragments.last_mut() {
-            fragment.is_last = true;
-        }
-
-        let mut has_non_zero_values = false;
-        let mut zero_mask = BitVec::<u8, Lsb0>::new();
-
-        for fragment in fragments.iter().filter(|e| e.has_zeros) {
-            for i in 0..fragment.value_num {
-                let is_zero = zero_properties.contains(&((fragment.first_num + i) as u32));
-                if !is_zero {
-                    has_non_zero_values = true;
-                }
-                zero_mask.push(is_zero);
-            }
-        }
-
-        let unversioned_property_index =
-            fragments.first().map(|e| e.first_num).unwrap_or_default() as usize;
-
-        let header = UnversionedHeader {
-            fragments,
-            zero_mask,
-            has_non_zero_values,
-            unversioned_property_index,
-            current_fragment_index: 0,
-            zero_mask_index: 0,
-        };
-
-        Ok(Some((header, sorted_properties)))
-    }
 }
 
 // custom debug implementation to not print the whole data buffer
-impl<C: Read + Seek> Debug for Asset<C> {
+impl Debug for Asset {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.debug_struct("Asset")
             .field("info", &self.info)
@@ -2290,7 +1512,7 @@ impl<C: Read + Seek> Debug for Asset<C> {
             // preload dependencies
             .field("generations", &self.generations)
             .field("package_guid", &self.package_guid)
-            .field("engine_version", &self.get_engine_version())
+            .field("engine_version", &self.asset_data.get_engine_version())
             .field("engine_version_recorded", &self.engine_version_recorded)
             .field("engine_version_compatible", &self.engine_version_compatible)
             .field("chunk_ids", &self.chunk_ids)
@@ -2358,7 +1580,7 @@ impl FEngineVersion {
         }
     }
 
-    fn read<C: Read + Seek>(cursor: &mut C) -> Result<Self, Error> {
+    fn read<Reader: ArchiveReader>(cursor: &mut Reader) -> Result<Self, Error> {
         let major = cursor.read_u16::<LittleEndian>()?;
         let minor = cursor.read_u16::<LittleEndian>()?;
         let patch = cursor.read_u16::<LittleEndian>()?;

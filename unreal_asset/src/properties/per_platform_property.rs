@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -11,11 +12,11 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Per platform bool property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
     /// Name
     pub name: FName,
@@ -31,7 +32,7 @@ pub struct PerPlatformBoolProperty {
 impl_property_data_trait!(PerPlatformBoolProperty);
 
 /// Per platform int property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
     /// Name
     pub name: FName,
@@ -47,7 +48,7 @@ pub struct PerPlatformIntProperty {
 impl_property_data_trait!(PerPlatformIntProperty);
 
 /// Per platform float property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
     /// Name
     pub name: FName,

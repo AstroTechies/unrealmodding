@@ -6,7 +6,7 @@ use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
 use crate::error::{Error, RegistryError};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::registry::objects::md5_hash::FMD5Hash;
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 
 /// Asset package data
 #[derive(Debug)]

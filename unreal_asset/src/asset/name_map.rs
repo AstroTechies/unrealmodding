@@ -10,7 +10,7 @@ use crate::{
         indexed_map::IndexedMap,
         shared_resource::{CyclicSharedResource, SharedResource, SharedResourceWeakRef},
     },
-    types::FName,
+    types::fname::FName,
 };
 
 /// Asset name map
@@ -34,8 +34,20 @@ impl NameMap {
         })
     }
 
+    /// Creates a new `NameMap` instance from a name batch
+    pub fn from_name_batch(name_batch: &[String]) -> SharedResource<Self> {
+        let mut name_map = NameMap::new();
+        name_map.get_mut().name_map_index_list = Vec::with_capacity(name_batch.len());
+
+        for name in name_batch {
+            name_map.get_mut().add_name_reference(name.clone(), false);
+        }
+
+        name_map
+    }
+
     /// Search an FName reference
-    pub fn search_name_reference(&self, name: &String) -> Option<i32> {
+    pub fn search_name_reference(&self, name: &str) -> Option<i32> {
         let mut s = DefaultHasher::new();
         name.hash(&mut s);
 

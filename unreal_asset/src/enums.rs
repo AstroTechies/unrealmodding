@@ -51,3 +51,16 @@ pub enum ELifetimeCondition {
     /// Max
     CondMax = 16,
 }
+
+/// Custom version serialization format
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum ECustomVersionSerializationFormat {
+    /// Unknown
+    Unknown,
+    /// Guids
+    Guids,
+    /// Enums
+    Enums,
+    /// Optimized
+    Optimized,
+}

@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -12,11 +13,11 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::vector::Color;
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Color property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ColorProperty {
     /// Name
     pub name: FName,
@@ -27,12 +28,13 @@ pub struct ColorProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Color
+    #[container_ignore]
     pub color: Color<u8>,
 }
 impl_property_data_trait!(ColorProperty);
 
 /// Linear color property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct LinearColorProperty {
     /// Name
     pub name: FName,
@@ -43,6 +45,7 @@ pub struct LinearColorProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Color
+    #[container_ignore]
     pub color: Color<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(LinearColorProperty);

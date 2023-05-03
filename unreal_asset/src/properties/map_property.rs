@@ -3,18 +3,22 @@
 use std::hash::Hash;
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid, ToSerializedName};
+use crate::types::{
+    fname::{FName, ToSerializedName},
+    Guid,
+};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::properties::UsmapPropertyData;
 use crate::{cast, impl_property_data_trait};
 
 /// Map property
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
 pub struct MapProperty {
     /// Name
     pub name: FName,

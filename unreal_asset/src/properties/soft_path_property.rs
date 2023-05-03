@@ -1,5 +1,7 @@
 //! Soft path properties
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
@@ -7,11 +9,11 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Soft asset path property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
     /// Name
     pub name: FName,
@@ -31,7 +33,7 @@ pub struct SoftAssetPathProperty {
 impl_property_data_trait!(SoftAssetPathProperty);
 
 /// Soft object path property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftObjectPathProperty {
     /// Name
     pub name: FName,
@@ -51,7 +53,7 @@ pub struct SoftObjectPathProperty {
 impl_property_data_trait!(SoftObjectPathProperty);
 
 /// Soft class path property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SoftClassPathProperty {
     /// Name
     pub name: FName,
@@ -71,7 +73,7 @@ pub struct SoftClassPathProperty {
 impl_property_data_trait!(SoftClassPathProperty);
 
 /// String asset reference property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct StringAssetReferenceProperty {
     /// Name
     pub name: FName,

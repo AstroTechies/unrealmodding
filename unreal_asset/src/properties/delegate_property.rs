@@ -3,22 +3,24 @@
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     reader::archive_reader::ArchiveReader,
     reader::archive_writer::ArchiveWriter,
-    types::{FName, Guid, PackageIndex},
+    types::{fname::FName, Guid, PackageIndex},
     unversioned::ancestry::Ancestry,
 };
 
 use super::PropertyTrait;
 
 /// Delegate
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Delegate {
     /// Delegate object
+    #[container_ignore]
     pub object: PackageIndex,
     /// Delegate name
     pub delegate: FName,
@@ -32,7 +34,7 @@ impl Delegate {
 }
 
 /// Delegate property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DelegateProperty {
     /// Name
     pub name: FName,
@@ -91,7 +93,7 @@ impl PropertyTrait for DelegateProperty {
 macro_rules! impl_multicast {
     ($property_name:ident) => {
         /// $property_name
-        #[derive(Debug, Hash, Clone, PartialEq, Eq)]
+        #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
         pub struct $property_name {
             /// Name
             pub name: FName,

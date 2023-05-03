@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::{CustomVersion, FEditorObjectVersion};
 use crate::error::{Error, PropertyError};
@@ -13,11 +14,13 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Text history type
-#[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(
+    FNameContainer, Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive,
+)]
 #[repr(i8)]
 pub enum TextHistoryType {
     /// None
@@ -59,7 +62,7 @@ impl Default for TextHistoryType {
 }
 
 /// String property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct StrProperty {
     /// Name
     pub name: FName,
@@ -75,7 +78,7 @@ pub struct StrProperty {
 impl_property_data_trait!(StrProperty);
 
 /// Text property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TextProperty {
     /// Name
     pub name: FName,
@@ -101,7 +104,7 @@ pub struct TextProperty {
 impl_property_data_trait!(TextProperty);
 
 /// Name property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct NameProperty {
     /// Name
     pub name: FName,

@@ -1,14 +1,19 @@
 //! Set property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::properties::{array_property::ArrayProperty, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid, ToSerializedName};
+use crate::types::{
+    fname::{FName, ToSerializedName},
+    Guid,
+};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Set property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SetProperty {
     /// Name
     pub name: FName,

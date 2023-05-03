@@ -8,7 +8,7 @@ use crate::error::Error;
 use crate::flags::EPackageFlags;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::registry::objects::asset_bundle_data::AssetBundleData;
-use crate::types::FName;
+use crate::types::fname::FName;
 
 /// Top level asset path
 #[derive(Clone, Debug)]

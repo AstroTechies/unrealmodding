@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -12,11 +13,11 @@ use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::vector::{Vector, Vector4};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Vector property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct VectorProperty {
     /// Name
     pub name: FName,
@@ -27,12 +28,13 @@ pub struct VectorProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Vector value
+    #[container_ignore]
     pub value: Vector<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(VectorProperty);
 
 /// Int point property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct IntPointProperty {
     /// Name
     pub name: FName,
@@ -50,7 +52,7 @@ pub struct IntPointProperty {
 impl_property_data_trait!(IntPointProperty);
 
 /// Vector4 property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector4Property {
     /// Name
     pub name: FName,
@@ -61,12 +63,13 @@ pub struct Vector4Property {
     /// Property duplication index
     pub duplication_index: i32,
     /// Vector4 value
+    #[container_ignore]
     pub value: Vector4<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(Vector4Property);
 
 /// Vector2D property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector2DProperty {
     /// Name
     pub name: FName,
@@ -84,7 +87,7 @@ pub struct Vector2DProperty {
 impl_property_data_trait!(Vector2DProperty);
 
 /// Quaternion property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct QuatProperty {
     /// Name
     pub name: FName,
@@ -95,12 +98,13 @@ pub struct QuatProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Quaternion value
+    #[container_ignore]
     pub value: Vector4<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(QuatProperty);
 
 /// Rotator property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct RotatorProperty {
     /// Name
     pub name: FName,
@@ -111,12 +115,13 @@ pub struct RotatorProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Rotator value
+    #[container_ignore]
     pub value: Vector<OrderedFloat<f32>>,
 }
 impl_property_data_trait!(RotatorProperty);
 
 /// Box property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct BoxProperty {
     /// Name
     pub name: FName,
@@ -136,7 +141,7 @@ pub struct BoxProperty {
 impl_property_data_trait!(BoxProperty);
 
 /// Box2D property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Box2DProperty {
     /// Name
     pub name: FName,

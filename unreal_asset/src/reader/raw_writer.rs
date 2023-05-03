@@ -1,6 +1,6 @@
 //! Binary archive writer
 
-use std::io::{self, Cursor, Seek, Write};
+use std::io::{self, Seek, Write};
 
 use byteorder::WriteBytesExt;
 
@@ -12,46 +12,50 @@ use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
+use crate::exports::class_export::ClassExport;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::properties::Property;
 use crate::reader::{archive_trait::ArchiveTrait, archive_writer::ArchiveWriter};
-use crate::types::{FName, PackageIndex};
-use crate::unversioned::header::UnversionedHeader;
+use crate::types::PackageIndex;
+use crate::unversioned::Usmap;
 use crate::Import;
 
 /// A binary writer
-pub struct RawWriter<'cursor> {
+pub struct RawWriter<'cursor, W: Write + Seek> {
     /// Writer cursor
-    cursor: &'cursor mut Cursor<Vec<u8>>,
+    cursor: &'cursor mut W,
     /// Object version
     object_version: ObjectVersion,
     /// UE5 object version
     object_version_ue5: ObjectVersionUE5,
-
-    /// Dummy name map
-    dummy_name_map: SharedResource<NameMap>,
+    /// Does the reader use the event driven loader
+    use_event_driven_loader: bool,
+    /// Name map
+    name_map: SharedResource<NameMap>,
     /// Empty map
     empty_map: IndexedMap<String, String>,
 }
 
-impl<'cursor> RawWriter<'cursor> {
+impl<'cursor, W: Write + Seek> RawWriter<'cursor, W> {
     /// Create a new instance of `RawWriter` with the specified object versions
     pub fn new(
-        cursor: &'cursor mut Cursor<Vec<u8>>,
+        cursor: &'cursor mut W,
         object_version: ObjectVersion,
         object_version_ue5: ObjectVersionUE5,
+        use_event_driven_loader: bool,
+        name_map: SharedResource<NameMap>,
     ) -> Self {
         RawWriter {
             cursor,
             object_version,
             object_version_ue5,
-            dummy_name_map: NameMap::new(),
+            use_event_driven_loader,
+            name_map,
             empty_map: IndexedMap::new(),
         }
     }
 }
 
-impl<'cursor> ArchiveTrait for RawWriter<'cursor> {
+impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -59,12 +63,16 @@ impl<'cursor> ArchiveTrait for RawWriter<'cursor> {
         CustomVersion::new([0u8; 16], 0)
     }
 
-    fn position(&mut self) -> u64 {
-        self.cursor.position()
+    fn has_unversioned_properties(&self) -> bool {
+        false
     }
 
-    fn set_position(&mut self, pos: u64) {
-        self.cursor.set_position(pos)
+    fn use_event_driven_loader(&self) -> bool {
+        self.use_event_driven_loader
+    }
+
+    fn position(&mut self) -> u64 {
+        self.cursor.stream_position().unwrap_or_default()
     }
 
     fn seek(&mut self, style: io::SeekFrom) -> io::Result<u64> {
@@ -72,11 +80,7 @@ impl<'cursor> ArchiveTrait for RawWriter<'cursor> {
     }
 
     fn get_name_map(&self) -> SharedResource<NameMap> {
-        self.dummy_name_map.clone()
-    }
-
-    fn get_name_reference(&self, _: i32) -> String {
-        "".to_string()
+        self.name_map.clone()
     }
 
     fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
@@ -91,14 +95,6 @@ impl<'cursor> ArchiveTrait for RawWriter<'cursor> {
         &self.empty_map
     }
 
-    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
-        None
-    }
-
-    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
-        None
-    }
-
     fn get_engine_version(&self) -> EngineVersion {
         guess_engine_version(self.object_version, self.object_version_ue5, &[])
     }
@@ -111,50 +107,20 @@ impl<'cursor> ArchiveTrait for RawWriter<'cursor> {
         self.object_version_ue5
     }
 
-    fn get_import(&self, _index: PackageIndex) -> Option<&Import> {
+    fn get_mappings(&self) -> Option<&Usmap> {
         None
     }
 
-    fn get_export_class_type(&self, _index: PackageIndex) -> Option<FName> {
+    fn get_class_export(&self) -> Option<&ClassExport> {
         None
     }
 
-    fn add_fname(&mut self, value: &str) -> FName {
-        FName::new_dummy(value.to_string(), 0)
-    }
-
-    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
-        FName::new_dummy(value.to_string(), number)
-    }
-
-    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
+    fn get_import(&self, _: PackageIndex) -> Option<&Import> {
         None
-    }
-
-    fn has_unversioned_properties(&self) -> bool {
-        false
     }
 }
 
-impl<'cursor> ArchiveWriter for RawWriter<'cursor> {
-    fn write_property_guid(
-        &mut self,
-        guid: &Option<crate::types::Guid>,
-    ) -> Result<(), crate::error::Error> {
-        if self.object_version >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
-            self.cursor.write_bool(guid.is_some())?;
-            if let Some(ref data) = guid {
-                self.cursor.write_all(data)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn write_fname(&mut self, fname: &FName) -> Result<(), crate::error::Error> {
-        self.cursor.write_fstring(Some(&fname.get_content()))?;
-        Ok(())
-    }
-
+impl<'cursor, W: Write + Seek> ArchiveWriter for RawWriter<'cursor, W> {
     fn write_u8(&mut self, value: u8) -> io::Result<()> {
         self.cursor.write_u8(value)
     }
@@ -205,13 +171,5 @@ impl<'cursor> ArchiveWriter for RawWriter<'cursor> {
 
     fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.cursor.write_bool(value)
-    }
-
-    fn generate_unversioned_header(
-        &mut self,
-        _properties: &[Property],
-        _parent_name: &FName,
-    ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
-        Ok(None)
     }
 }

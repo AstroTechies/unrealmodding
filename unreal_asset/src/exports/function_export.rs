@@ -1,6 +1,7 @@
 //! Function export
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::exports::{
@@ -11,11 +12,12 @@ use crate::flags::EFunctionFlags;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 
 /// Function export
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionExport {
     /// Base struct export
     pub struct_export: StructExport,
     /// Function flags
+    #[container_ignore]
     pub function_flags: EFunctionFlags,
 }
 

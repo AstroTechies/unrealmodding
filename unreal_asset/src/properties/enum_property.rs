@@ -2,15 +2,17 @@
 
 use std::mem::size_of;
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Enum property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct EnumProperty {
     /// Name
     pub name: FName,

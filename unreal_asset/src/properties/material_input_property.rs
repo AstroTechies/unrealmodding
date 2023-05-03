@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -15,11 +16,11 @@ use crate::properties::{
     PropertyTrait,
 };
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Material expression
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MaterialExpression {
     /// Name
     pub name: FName,
@@ -34,7 +35,7 @@ pub struct MaterialExpression {
 }
 
 /// Color material input property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ColorMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -52,7 +53,7 @@ pub struct ColorMaterialInputProperty {
 impl_property_data_trait!(ColorMaterialInputProperty);
 
 /// Scalar material input property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ScalarMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -70,7 +71,7 @@ pub struct ScalarMaterialInputProperty {
 impl_property_data_trait!(ScalarMaterialInputProperty);
 
 /// Shading model material input property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ShadingModelMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -88,7 +89,7 @@ pub struct ShadingModelMaterialInputProperty {
 impl_property_data_trait!(ShadingModelMaterialInputProperty);
 
 /// Vector material input property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct VectorMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -106,7 +107,7 @@ pub struct VectorMaterialInputProperty {
 impl_property_data_trait!(VectorMaterialInputProperty);
 
 /// Vector2 material input property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Vector2MaterialInputProperty {
     /// Name
     pub name: FName,
@@ -124,7 +125,7 @@ pub struct Vector2MaterialInputProperty {
 impl_property_data_trait!(Vector2MaterialInputProperty);
 
 /// Expression input property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ExpressionInputProperty {
     /// Name
     pub name: FName,
@@ -140,7 +141,7 @@ pub struct ExpressionInputProperty {
 impl_property_data_trait!(ExpressionInputProperty);
 
 /// Material attributes input property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MaterialAttributesInputProperty {
     /// Name
     pub name: FName,

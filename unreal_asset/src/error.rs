@@ -45,9 +45,6 @@ pub enum UsmapError {
     /// Name is None
     #[error("read_name returned None, expected Some(...)")]
     NameNone,
-    /// Cityhash64 hash collision
-    #[error("Cityhash64 name collision for hash {0}, string {1}")]
-    Cityhash64Collision(u64, Box<str>),
 }
 
 impl UsmapError {
@@ -64,11 +61,6 @@ impl UsmapError {
     /// Create an `UsmapError` for a case where a Some(...) name was expected, but None was returned
     pub fn name_none() -> Self {
         UsmapError::NameNone
-    }
-
-    /// Create an `UsmapError` for a Cityhash64 hash collision
-    pub fn cityhash64_collision(hash: u64, value: String) -> Self {
-        UsmapError::Cityhash64Collision(hash, value.into_boxed_str())
     }
 }
 
@@ -274,6 +266,12 @@ pub enum Error {
     /// An `FNameError` occured
     #[error(transparent)]
     FName(#[from] FNameError),
+    /// Cityhash64 hash collision
+    #[error("Cityhash64 name collision for hash {0}, string {1}")]
+    Cityhash64Collision(u64, Box<str>),
+    /// Hash mismatch when reading a name batch
+    #[error("Hash mismatch when reading a name batch, expected hash {0}, got {1}, string {2}")]
+    NameBatchHashMismatch(u64, u64, Box<str>),
     /// The file is invalid
     #[error("{0}")]
     InvalidFile(Box<str>),
@@ -322,6 +320,16 @@ impl Error {
     /// Create an `Error` when a part of the library is not implemented
     pub fn unimplemented(msg: String) -> Self {
         Error::Unimplemented(msg.into_boxed_str())
+    }
+
+    /// Create an `Error` for a Cityhash64 hash collision
+    pub fn cityhash64_collision(hash: u64, value: String) -> Self {
+        Error::Cityhash64Collision(hash, value.into_boxed_str())
+    }
+
+    /// Create an `Error` for a hash mismatch when reading a name batch
+    pub fn name_batch_hash_mismatch(expected: u64, got: u64, value: String) -> Self {
+        Error::NameBatchHashMismatch(expected, got, value.into_boxed_str())
     }
 }
 

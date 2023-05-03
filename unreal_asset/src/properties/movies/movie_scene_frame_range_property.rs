@@ -1,6 +1,7 @@
 //! Movie scene frame range property
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
@@ -8,7 +9,7 @@ use crate::{
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::movie::ERangeBoundTypes,
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
@@ -40,7 +41,7 @@ impl Int32RangeBound {
 }
 
 /// Movie scene frame range property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFrameRangeProperty {
     /// Name
     pub name: FName,
@@ -51,8 +52,10 @@ pub struct MovieSceneFrameRangeProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Lower bound
+    #[container_ignore]
     pub lower_bound: Int32RangeBound,
     /// Upper bound
+    #[container_ignore]
     pub upper_bound: Int32RangeBound,
 }
 impl_property_data_trait!(MovieSceneFrameRangeProperty);

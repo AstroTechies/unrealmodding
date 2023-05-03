@@ -2,6 +2,7 @@
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
@@ -9,8 +10,9 @@ use crate::{
     properties::{rich_curve_key_property::RichCurveExtrapolation, PropertyTrait},
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{
+        fname::FName,
         movie::{FrameNumber, FrameRate},
-        FName, Guid,
+        Guid,
     },
     unversioned::ancestry::Ancestry,
 };
@@ -122,7 +124,7 @@ impl MovieSceneFloatChannel {
 }
 
 /// Movie scene float channel property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatChannelProperty {
     /// Name
     pub name: FName,
@@ -133,6 +135,7 @@ pub struct MovieSceneFloatChannelProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneFloatChannel,
 }
 impl_property_data_trait!(MovieSceneFloatChannelProperty);

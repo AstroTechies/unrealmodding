@@ -2,6 +2,7 @@
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
@@ -11,7 +12,7 @@ use crate::{
         PropertyTrait,
     },
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
@@ -60,7 +61,7 @@ impl MovieSceneFloatValue {
 }
 
 /// Movie scene float value property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatValueProperty {
     /// Name
     pub name: FName,
@@ -71,6 +72,7 @@ pub struct MovieSceneFloatValueProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneFloatValue,
 }
 impl_property_data_trait!(MovieSceneFloatValueProperty);

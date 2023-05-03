@@ -5,6 +5,7 @@ use std::mem::size_of;
 use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -12,7 +13,7 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// View target blend function
@@ -34,7 +35,7 @@ pub enum ViewTargetBlendFunction {
 }
 
 /// View target blend params property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ViewTargetBlendParamsProperty {
     /// Name
     pub name: FName,
@@ -47,6 +48,7 @@ pub struct ViewTargetBlendParamsProperty {
     /// Blend time
     pub blend_time: OrderedFloat<f32>,
     /// Blend function
+    #[container_ignore]
     pub blend_function: ViewTargetBlendFunction,
     /// Blend exponent
     pub blend_exp: OrderedFloat<f32>,

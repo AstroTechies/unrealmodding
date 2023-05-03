@@ -5,17 +5,21 @@ use std::hash::Hash;
 
 use byteorder::LittleEndian;
 use enum_dispatch::enum_dispatch;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, PackageIndex, ToSerializedName};
+use crate::types::{
+    fname::{FName, ToSerializedName},
+    PackageIndex,
+};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
@@ -48,12 +52,13 @@ macro_rules! parse_simple_property_index {
         ),*
     ) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
             $(
                 $(#[$inner $($args)*])*
+                #[container_ignore]
                 pub $index_name: PackageIndex,
             )*
         }
@@ -91,7 +96,7 @@ macro_rules! parse_simple_property_prop {
         ),*
     ) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
@@ -134,7 +139,8 @@ pub trait FPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
 
 /// FProperty
 #[enum_dispatch(FPropertyTrait)]
-#[derive(Hash, PartialEq, Clone, Debug)]
+#[derive(FNameContainer, Hash, PartialEq, Clone, Debug)]
+#[container_nobounds]
 pub enum FProperty {
     /// Generic FProperty
     FGenericProperty,
@@ -250,41 +256,46 @@ impl ToSerializedName for FProperty {
 }
 
 /// Generic FProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FGenericProperty {
     /// Property name
     pub name: FName,
     /// Object flags
+    #[container_ignore]
     pub flags: EObjectFlags,
     /// Array dimension
+    #[container_ignore]
     pub array_dim: EArrayDim,
     /// Array element size
     pub element_size: i32,
     /// Property flags
+    #[container_ignore]
     pub property_flags: EPropertyFlags,
     /// Replication index
     pub rep_index: u16,
     /// Replication notify function
     pub rep_notify_func: FName,
     /// Replication condition
+    #[container_ignore]
     pub blueprint_replication_condition: ELifetimeCondition,
     /// Serialized type
     pub serialized_type: Option<FName>,
 }
 
 /// Enum FProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FEnumProperty {
     /// Generic property
     generic_property: FGenericProperty,
     /// Enum value
+    #[container_ignore]
     enum_value: PackageIndex,
     /// Underlying property
     underlying_prop: Box<FProperty>,
 }
 
 /// Boolean FProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FBoolProperty {
     /// Generic property
     generic_property: FGenericProperty,

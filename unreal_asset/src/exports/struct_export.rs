@@ -3,6 +3,7 @@
 use std::io::SeekFrom;
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::FCoreObjectVersion;
 use crate::engine_version::EngineVersion;
@@ -19,15 +20,18 @@ use crate::types::PackageIndex;
 use crate::uproperty::UField;
 
 /// Struct export
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct StructExport {
     /// Base normal export
     pub normal_export: NormalExport,
     /// Field
+    #[container_ignore]
     pub field: UField,
     /// Super struct
+    #[container_ignore]
     pub super_struct: PackageIndex,
     /// Children
+    #[container_ignore]
     pub children: Vec<PackageIndex>,
     /// Loaded properties
     pub loaded_properties: Vec<FProperty>,

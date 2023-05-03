@@ -2,6 +2,7 @@
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::FFortniteMainBranchObjectVersion;
 use crate::error::Error;
@@ -11,13 +12,13 @@ use crate::properties::{
     PropertyTrait,
 };
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::fname::FName;
 use crate::types::vector::Vector;
-use crate::types::FName;
 use crate::unversioned::ancestry::Ancestry;
 
 //todo: what is this file even doing in properties?
 /// World tile layer
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FWorldTileLayer {
     /// Name
     pub name: Option<String>,
@@ -101,7 +102,7 @@ impl FWorldTileLayer {
 }
 
 /// World tile lod info
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FWorldTileLODInfo {
     /// Relative streaming distance
     pub relative_streaming_distance: i32,
@@ -139,9 +140,10 @@ impl FWorldTileLODInfo {
 }
 
 /// World tile ifno
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FWorldTileInfo {
     /// Position
+    #[container_ignore]
     pub position: Vector<i32>,
     /// Bounds
     pub bounds: BoxProperty,

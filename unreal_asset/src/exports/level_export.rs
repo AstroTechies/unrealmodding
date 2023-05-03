@@ -1,6 +1,7 @@
 //! Level export
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::exports::{
@@ -12,12 +13,13 @@ use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter
 use crate::types::PackageIndex;
 
 /// Level export
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
     /// Base normal export
     pub normal_export: NormalExport,
 
     /// Level actors
+    #[container_ignore]
     pub actors: Vec<PackageIndex>,
     /// Level namespace
     pub namespace: Option<String>,
@@ -26,6 +28,7 @@ pub struct LevelExport {
     /// Flags?
     pub flags_probably: u64,
     /// Misc category data
+    #[container_ignore]
     pub misc_category_data: Vec<PackageIndex>,
 }
 

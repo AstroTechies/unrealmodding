@@ -1,17 +1,19 @@
 //! Movie scene track implementation pointer property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::error::Error;
 use crate::properties::str_property::StrProperty;
 use crate::properties::{Property, PropertyDataTrait, PropertyTrait};
 use crate::reader::archive_reader::ArchiveReader;
 use crate::reader::archive_writer::ArchiveWriter;
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 use crate::{cast, impl_property_data_trait, optional_guid, optional_guid_write};
 
 /// Movie scene track implementation pointer property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackImplementationPtrProperty {
     /// Name
     pub name: FName,

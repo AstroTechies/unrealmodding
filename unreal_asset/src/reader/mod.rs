@@ -4,3 +4,5 @@ pub mod archive_trait;
 pub mod archive_writer;
 pub mod raw_reader;
 pub mod raw_writer;
+pub mod asset_archive_reader;
+pub mod asset_archive_writer;

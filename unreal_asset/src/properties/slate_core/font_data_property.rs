@@ -2,6 +2,7 @@
 
 use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     custom_version::FEditorObjectVersion,
@@ -9,7 +10,7 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid, PackageIndex},
+    types::{fname::FName, Guid, PackageIndex},
     unversioned::ancestry::Ancestry,
 };
 
@@ -42,15 +43,18 @@ pub enum EFontLoadingPolicy {
 }
 
 /// Font data
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FontData {
     /// UObject
+    #[container_ignore]
     local_font_face_asset: PackageIndex,
     /// Font filename
     font_filename: Option<String>,
     /// Hinting
+    #[container_ignore]
     hinting: Option<EFontHinting>,
     /// Loading policy
+    #[container_ignore]
     loading_policy: Option<EFontLoadingPolicy>,
     /// Sub face index
     sub_face_index: Option<i32>,
@@ -128,7 +132,7 @@ impl FontData {
 }
 
 /// Font data property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FontDataProperty {
     /// Name
     pub name: FName,

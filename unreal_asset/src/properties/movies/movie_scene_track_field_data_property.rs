@@ -1,11 +1,13 @@
 //! Movie scene track field data property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
@@ -43,7 +45,7 @@ impl MovieSceneTrackFieldData {
 }
 
 /// Movie scene track field data property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackFieldDataProperty {
     /// Name
     pub name: FName,
@@ -54,6 +56,7 @@ pub struct MovieSceneTrackFieldDataProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneTrackFieldData,
 }
 impl_property_data_trait!(MovieSceneTrackFieldDataProperty);

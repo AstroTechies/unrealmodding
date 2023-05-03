@@ -1,18 +1,19 @@
 //! Movie scene sequence instance data pointer property
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid, PackageIndex},
+    types::{fname::FName, Guid, PackageIndex},
     unversioned::ancestry::Ancestry,
 };
 
 /// Movie scene sequence instance data pointer property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSequenceInstanceDataPtrProperty {
     /// Name
     pub name: FName,
@@ -23,6 +24,7 @@ pub struct MovieSceneSequenceInstanceDataPtrProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: PackageIndex,
 }
 impl_property_data_trait!(MovieSceneSequenceInstanceDataPtrProperty);

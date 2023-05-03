@@ -1,7 +1,7 @@
 //! Allows reading unversioned assets using mappings
 
 use std::hash::Hash;
-use std::io::{self, Cursor, Seek, SeekFrom};
+use std::io::{self, Cursor, Read, Seek, SeekFrom};
 
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -9,10 +9,12 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use unreal_helpers::UnrealReadExt;
 
+use crate::asset::cityhash64_string_map::Cityhash64StringMap;
 use crate::containers::indexed_map::IndexedMap;
-use crate::crc;
+use crate::custom_version::CustomVersion;
 use crate::error::{Error, UsmapError};
-use crate::types::FName;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
+use crate::types::fname::FName;
 
 use self::ancestry::Ancestry;
 use self::usmap_trait::UsmapTrait;
@@ -29,11 +31,17 @@ pub mod usmap_writer;
 pub(crate) mod oodle;
 
 /// Usmap file version
-#[derive(Debug, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(
+    Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
+)]
 #[repr(u8)]
 pub enum UsmapVersion {
     /// Initial
     Initial,
+
+    /// Adds package versioning to aid with compatibililty
+    PackageVersioning,
+
     /// Latest
     Latest,
     /// Latest plus one
@@ -105,7 +113,13 @@ pub struct Usmap {
     /// Extension version
     pub extension_version: UsmapExtensionVersion,
     /// Pre-computed cityhash64 map for relevant strings
-    pub cityhash64_map: IndexedMap<u64, String>,
+    pub cityhash64_map: Cityhash64StringMap,
+    /// UE4 object version
+    pub object_version: ObjectVersion,
+    /// UE5 object version
+    pub object_version_ue5: ObjectVersionUE5,
+    /// Custom version container
+    pub custom_versions: Vec<CustomVersion>,
 
     /// Binary cursor
     cursor: Cursor<Vec<u8>>,
@@ -125,6 +139,26 @@ impl Usmap {
 
         let version: UsmapVersion = UsmapVersion::try_from(self.cursor.read_u8()?)?;
         self.version = version;
+
+        if version >= UsmapVersion::PackageVersioning {
+            let has_versioning = self.cursor.read_i32::<LE>()? > 0;
+            if has_versioning {
+                self.object_version = ObjectVersion::try_from(self.cursor.read_i32::<LE>()?)?;
+                self.object_version_ue5 =
+                    ObjectVersionUE5::try_from(self.cursor.read_i32::<LE>()?)?;
+
+                // todo: replace with generic custom version reading
+                let num_custom_versions = self.cursor.read_i32::<LE>()?;
+                for _ in 0..num_custom_versions {
+                    let mut custom_version_id = [0u8; 16];
+                    self.cursor.read_exact(&mut custom_version_id)?;
+                    let version_number = self.cursor.read_i32::<LE>()?;
+
+                    self.custom_versions
+                        .push(CustomVersion::new(custom_version_id, version_number));
+                }
+            }
+        }
 
         let compression = self.cursor.read_u8()?;
         let compression_method: ECompressionMethod = ECompressionMethod::try_from(compression)?;
@@ -161,19 +195,6 @@ impl Usmap {
             _ => return Err(UsmapError::unsupported_compression(compression).into()),
         }
 
-        Ok(())
-    }
-
-    /// Add a cityhash64 map entry to the precomputed map
-    fn add_cityhash64_map_entry(&mut self, entry: &str) -> Result<(), Error> {
-        let hash = crc::generate_import_hash_from_object_path(entry);
-        if let Some(existing_entry) = self.cityhash64_map.get_by_key(&hash) {
-            if crc::to_lower_string(existing_entry) == crc::to_lower_string(entry) {
-                return Ok(());
-            }
-            return Err(UsmapError::cityhash64_collision(hash, entry.to_string()).into());
-        }
-        self.cityhash64_map.insert(hash, entry.to_string());
         Ok(())
     }
 
@@ -340,7 +361,7 @@ impl Usmap {
                     schema.module_path = module_paths[index].clone();
                     let entry_name =
                         module_paths[index].clone().unwrap_or_default() + "." + &schema.name;
-                    self.add_cityhash64_map_entry(&entry_name)?;
+                    self.cityhash64_map.add_entry(&entry_name)?;
                 }
             }
         }
@@ -356,7 +377,10 @@ impl Usmap {
             enum_map: IndexedMap::new(),
             schemas: IndexedMap::new(),
             extension_version: UsmapExtensionVersion::NONE,
-            cityhash64_map: IndexedMap::new(),
+            cityhash64_map: Cityhash64StringMap::new(),
+            object_version: ObjectVersion::UNKNOWN,
+            object_version_ue5: ObjectVersionUE5::UNKNOWN,
+            custom_versions: Vec::new(),
             cursor,
         })
     }

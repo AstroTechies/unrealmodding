@@ -1,6 +1,7 @@
 //! Data table export
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::exports::{
@@ -10,11 +11,11 @@ use crate::exports::{
 use crate::implement_get;
 use crate::properties::{struct_property::StructProperty, Property, PropertyDataTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::FName;
+use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
 
 /// Data table
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTable {
     /// Data
     pub data: Vec<StructProperty>,
@@ -28,7 +29,7 @@ impl DataTable {
 }
 
 /// Data table export
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTableExport {
     /// Base normal export
     pub normal_export: NormalExport,

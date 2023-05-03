@@ -1,9 +1,11 @@
 //! Unversioned properties ancestry
 
-use crate::types::FName;
+use unreal_asset_proc_macro::FNameContainer;
+
+use crate::types::fname::FName;
 
 /// Unversioned properties ancestry
-#[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Ancestry {
     /// Ancestry array, last element is immediate parent
     pub ancestry: Vec<FName>,

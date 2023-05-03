@@ -1,18 +1,20 @@
 //! Movie scene evaluation field entity tree property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
 use super::movie_scene_evaluation::MovieSceneEvaluationFieldEntityTree;
 
 /// Movie scene evaluation field entity tree property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationFieldEntityTreeProperty {
     /// Name
     pub name: FName,
@@ -23,6 +25,7 @@ pub struct MovieSceneEvaluationFieldEntityTreeProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneEvaluationFieldEntityTree,
 }
 impl_property_data_trait!(MovieSceneEvaluationFieldEntityTreeProperty);

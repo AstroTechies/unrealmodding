@@ -1,17 +1,19 @@
 //! Section evaluation data tree property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use super::movie_scene_evaluation::TMovieSceneEvaluationTree;
 use crate::error::Error;
 use crate::properties::{Property, PropertyTrait};
 use crate::reader::archive_reader::ArchiveReader;
 use crate::reader::archive_writer::ArchiveWriter;
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 use crate::{impl_property_data_trait, optional_guid, optional_guid_write};
 
 /// Section evaluation tree
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SectionEvaluationTree {
     /// Evaluation tree
     pub tree: TMovieSceneEvaluationTree<Vec<Property>>,
@@ -71,7 +73,7 @@ impl SectionEvaluationTree {
 }
 
 /// Section evaluation data tree property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SectionEvaluationDataTreeProperty {
     /// Name
     pub name: FName,

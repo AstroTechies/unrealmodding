@@ -246,6 +246,60 @@ where
 
 impl<K, V> FusedIterator for IndexedMapIndexIteratorMut<'_, K, V> where K: Eq + Hash {}
 
+pub struct IndexedMapIndexIteratorOwned<K, V>
+where
+    K: Eq + Hash,
+{
+    store: slab::Slab<IndexedValue<K, V>>,
+    index_iter: std::vec::IntoIter<usize>,
+}
+
+impl<K, V> Iterator for IndexedMapIndexIteratorOwned<K, V>
+where
+    K: Eq + Hash,
+{
+    type Item = (usize, K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index = self.index_iter.next()?;
+        let value = self.store.remove(index);
+
+        Some((
+            index,
+            Rc::try_unwrap(value.key_map_index.0).ok().unwrap(),
+            value.value,
+        ))
+    }
+}
+
+impl<K, V> DoubleEndedIterator for IndexedMapIndexIteratorOwned<K, V>
+where
+    K: Eq + Hash,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let index = self.index_iter.next_back()?;
+        let value = self.store.remove(index);
+
+        Some((
+            index,
+            Rc::try_unwrap(value.key_map_index.0).ok().unwrap(),
+            value.value,
+        ))
+    }
+}
+
+impl<K, V> ExactSizeIterator for IndexedMapIndexIteratorOwned<K, V>
+where
+    K: Eq + Hash,
+{
+    #[inline]
+    fn len(&self) -> usize {
+        self.index_iter.len()
+    }
+}
+
+impl<K, V> FusedIterator for IndexedMapIndexIteratorOwned<K, V> where K: Eq + Hash {}
+
 pub struct IndexedMapKeyIterator<'map, K, V>
 where
     K: Eq + Hash,
@@ -754,6 +808,21 @@ where
         IndexedMapIndexIterator {
             store: &self.store,
             index_iter: self.index_iter_map.iter(),
+        }
+    }
+}
+
+impl<K, V> IntoIterator for IndexedMap<K, V>
+where
+    K: Eq + Hash,
+{
+    type Item = (usize, K, V);
+    type IntoIter = IndexedMapIndexIteratorOwned<K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IndexedMapIndexIteratorOwned {
+            store: self.store,
+            index_iter: self.index_iter_map.into_iter(),
         }
     }
 }

@@ -5,7 +5,7 @@ use byteorder::LittleEndian;
 use crate::error::Error;
 use crate::properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::FName;
+use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
 
 /// Bundle entry

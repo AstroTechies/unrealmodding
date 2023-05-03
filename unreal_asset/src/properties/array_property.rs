@@ -3,18 +3,23 @@
 use std::io::SeekFrom;
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
 use crate::object_version::ObjectVersion;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{default_guid, FName, Guid, ToSerializedName};
+use crate::types::{
+    default_guid,
+    fname::{FName, ToSerializedName},
+    Guid,
+};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::properties::{UsmapPropertyData, UsmapPropertyDataTrait};
 use crate::{cast, impl_property_data_trait};
 
 /// Array property
-#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
     /// Name
     pub name: FName,

@@ -3,6 +3,7 @@
 use std::mem::size_of;
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -10,11 +11,11 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid, PackageIndex};
+use crate::types::{fname::FName, Guid, PackageIndex};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Object property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
     /// Name
     pub name: FName,
@@ -25,12 +26,13 @@ pub struct ObjectProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: PackageIndex,
 }
 impl_property_data_trait!(ObjectProperty);
 
 /// Asset object property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
     /// Name
     pub name: FName,
@@ -46,7 +48,7 @@ pub struct AssetObjectProperty {
 impl_property_data_trait!(AssetObjectProperty);
 
 /// Soft object path
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectPath {
     /// Asset path name
     pub asset_path_name: FName,
@@ -76,7 +78,7 @@ impl SoftObjectPath {
 }
 
 /// Soft object property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
     /// Name
     pub name: FName,

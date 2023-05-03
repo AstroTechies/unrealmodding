@@ -3,6 +3,7 @@
 use std::{fmt::Debug, hash::Hash};
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
@@ -97,12 +98,13 @@ impl MovieSceneEvaluationTreeNodeHandle {
 }
 
 /// Generic evaluation tree entry container
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TEvaluationTreeEntryContainer<T>
 where
     T: Debug + Clone + PartialEq + Eq + Hash,
 {
     /// Entries
+    #[container_ignore]
     pub entries: Vec<FEntry>,
     /// Items
     pub items: Vec<T>,
@@ -160,14 +162,16 @@ where
 }
 
 /// Generic movie scene evaluation tree
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TMovieSceneEvaluationTree<T>
 where
     T: Debug + Clone + PartialEq + Eq + Hash,
 {
     /// Root node
+    #[container_ignore]
     pub root_node: MovieSceneEvaluationTreeNode,
     /// Child nodes
+    #[container_ignore]
     pub child_nodes: TEvaluationTreeEntryContainer<MovieSceneEvaluationTreeNode>,
     /// Data
     pub data: TEvaluationTreeEntryContainer<T>,

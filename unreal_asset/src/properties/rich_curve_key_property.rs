@@ -5,6 +5,7 @@ use std::mem::size_of;
 use byteorder::LittleEndian;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -12,7 +13,7 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
 
 /// Rich curve extrapolation
@@ -78,7 +79,7 @@ pub enum RichCurveTangentWeightMode {
 }
 
 /// Rich curve key property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct RichCurveKeyProperty {
     /// Name
     pub name: FName,
@@ -89,10 +90,13 @@ pub struct RichCurveKeyProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Interpolation mode
+    #[container_ignore]
     pub interp_mode: RichCurveInterpMode,
     /// Tangent mode
+    #[container_ignore]
     pub tangent_mode: RichCurveTangentMode,
     /// Tangent weight mode
+    #[container_ignore]
     pub tangent_weight_mode: RichCurveTangentWeightMode,
     /// Time
     pub time: OrderedFloat<f32>,

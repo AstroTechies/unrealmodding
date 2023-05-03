@@ -4,11 +4,12 @@ use std::mem::size_of;
 
 use byteorder::LittleEndian;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::FName,
+    types::fname::FName,
     unversioned::ancestry::Ancestry,
 };
 
@@ -18,7 +19,7 @@ use super::{
 };
 
 /// Mesh to mesh vertex data
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MeshToMeshVertData {
     /// Position barycentric coords and distance
     pub position_bary_coords_and_dist: Vector4Property,
@@ -113,7 +114,7 @@ impl MeshToMeshVertData {
 }
 
 /// Cloth lod data property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ClothLodDataProperty {
     /// Base struct property
     pub struct_property: StructProperty,

@@ -1,13 +1,14 @@
 //! Movie scene evaluation key property
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
@@ -52,7 +53,7 @@ impl MovieSceneEvaluationKey {
 }
 
 /// Movie scene evaluation key property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationKeyProperty {
     /// Name
     pub name: FName,
@@ -63,6 +64,7 @@ pub struct MovieSceneEvaluationKeyProperty {
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneEvaluationKey,
 }
 impl_property_data_trait!(MovieSceneEvaluationKeyProperty);

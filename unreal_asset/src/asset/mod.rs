@@ -1,44 +1,51 @@
 //! Generic unreal asset traits
 //! Must be implemented for all unreal assets
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::{
-    containers::indexed_map::IndexedMap,
-    custom_version::CustomVersion,
-    engine_version::{get_object_versions, EngineVersion},
+    containers::{indexed_map::IndexedMap, shared_resource::SharedResource},
+    custom_version::{CustomVersion, CustomVersionTrait},
+    engine_version::{get_object_versions, guess_engine_version, EngineVersion},
     exports::Export,
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
     properties::world_tile_property::FWorldTileInfo,
-    types::{FName, PackageIndex},
+    types::{fname::FName, PackageIndex},
     unversioned::Usmap,
 };
 
 use self::name_map::NameMap;
 
+pub mod cityhash64_string_map;
 pub mod name_map;
-
 /// Unreal asset data, this is relevant for all assets
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
 pub struct AssetData {
     /// Does asset use the event driven loader
     pub use_event_driven_loader: bool,
     /// Is asset unversioned
     pub unversioned: bool,
     /// Asset flags
+    #[container_ignore]
     pub package_flags: EPackageFlags,
 
     /// File licensee version, used by some games for their own engine versioning.
     pub file_license_version: i32,
 
     /// Object version
+    #[container_ignore]
     pub object_version: ObjectVersion,
     /// UE5 object version
+    #[container_ignore]
     pub object_version_ue5: ObjectVersionUE5,
 
     /// Custom versions
+    #[container_ignore]
     pub custom_versions: Vec<CustomVersion>,
 
     /// .usmap mappings
+    #[container_ignore]
     pub mappings: Option<Usmap>,
 
     /// Object exports
@@ -50,13 +57,16 @@ pub struct AssetData {
 
     /// Map properties with StructProperties inside, have no way of determining the underlying type of the struct
     /// This is used for specifying those types for keys
+    #[container_ignore]
     pub map_key_override: IndexedMap<String, String>,
     /// Map properties with StructProperties inside, have no way of determining the underlying type of the struct
     /// This is used for specifying those types for values
+    #[container_ignore]
     pub map_value_override: IndexedMap<String, String>,
 
     /// Array properties with StructProperties inside, have no way of determining the underlying type of the struct
     /// This is used for specifying those types
+    #[container_ignore]
     pub array_struct_type_override: IndexedMap<String, String>,
 }
 
@@ -77,6 +87,43 @@ impl AssetData {
         self.object_version = object_version;
         self.object_version_ue5 = object_version_ue5;
         self.custom_versions = CustomVersion::get_default_custom_version_container(engine_version);
+    }
+
+    /// Get a custom version from this AssetData
+    ///
+    /// # Example
+    ///
+    /// ```no_run,ignore
+    /// use unreal_asset::{
+    ///     asset::AssetData,
+    ///     custom_version::FFrameworkObjectVersion,
+    /// };
+    /// let data: AssetData = ...;
+    /// println!("{:?}", data.get_custom_version::<FFrameworkObjectVersion>());
+    /// ```
+    pub fn get_custom_version<T>(&self) -> CustomVersion
+    where
+        T: CustomVersionTrait + Into<i32>,
+    {
+        self.custom_versions
+            .iter()
+            .find(|e| {
+                e.friendly_name
+                    .as_ref()
+                    .map(|name| name == T::FRIENDLY_NAME)
+                    .unwrap_or(false)
+            })
+            .cloned()
+            .unwrap_or_else(|| CustomVersion::new(T::GUID, 0))
+    }
+
+    /// Get engine version
+    pub fn get_engine_version(&self) -> EngineVersion {
+        guess_engine_version(
+            self.object_version,
+            self.object_version_ue5,
+            &self.custom_versions,
+        )
     }
 
     /// Get an export
@@ -180,10 +227,8 @@ pub trait AssetTrait {
     /// Gets a mutable reference to the asset data
     fn get_asset_data_mut(&mut self) -> &mut AssetData;
 
-    /// Gets a reference to the name map
-    fn get_name_map(&self) -> &NameMap;
-    /// Get a mutable reference to the name map
-    fn get_name_map_mut(&mut self) -> &mut NameMap;
+    /// Gets the name map
+    fn get_name_map(&self) -> SharedResource<NameMap>;
 
     // todo: hese methods probably should be replaced with getters to name map
     /// Search an FName reference
@@ -192,14 +237,8 @@ pub trait AssetTrait {
     /// Add an FName reference
     fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32;
 
-    /// Get all FNames
-    fn get_name_map_index_list(&self) -> &[String];
-
     /// Get a name reference by an FName map index
     fn get_name_reference(&self, index: i32) -> String;
-
-    /// Get a mutable name reference by an FName map index
-    fn get_name_reference_mut(&mut self, index: i32) -> &mut String;
 
     /// Add an `FName`
     fn add_fname(&mut self, slice: &str) -> FName;

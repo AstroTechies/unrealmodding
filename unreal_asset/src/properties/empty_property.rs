@@ -1,14 +1,16 @@
 //! Empty unversioned property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::{
-    error::Error, reader::archive_writer::ArchiveWriter, types::FName,
+    error::Error, reader::archive_writer::ArchiveWriter, types::fname::FName,
     unversioned::ancestry::Ancestry,
 };
 
 use super::{PropertyDataTrait, PropertyTrait};
 
 /// Empty unversioned property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EmptyProperty {
     /// Property type name
     pub type_name: FName,

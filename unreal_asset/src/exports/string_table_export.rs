@@ -1,6 +1,7 @@
 //! String table export
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
@@ -12,7 +13,7 @@ use crate::implement_get;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 
 /// String table export
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
 pub struct StringTableExport {
     /// Base normal export
     pub normal_export: NormalExport,

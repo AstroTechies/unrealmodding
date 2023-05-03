@@ -1,5 +1,7 @@
 //! Normal export
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::error::Error;
 use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::properties::Property;
@@ -10,7 +12,7 @@ use crate::unversioned::header::UnversionedHeader;
 /// Normal export
 ///
 /// This export is usually the base export for all other exports
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NormalExport {
     /// Base export
     pub base_export: BaseExport,

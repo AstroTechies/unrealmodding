@@ -3,18 +3,19 @@
 use std::{io::SeekFrom, mem::size_of};
 
 use byteorder::LittleEndian;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::archive_reader::ArchiveReader,
-    types::{FName, Guid},
+    types::{fname::FName, Guid},
     unversioned::ancestry::Ancestry,
 };
 
 /// Unique network id
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UniqueNetId {
     /// Type
     pub ty: FName,
@@ -23,7 +24,7 @@ pub struct UniqueNetId {
 }
 
 /// Unique network id property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UniqueNetIdProperty {
     /// Name
     pub name: FName,
