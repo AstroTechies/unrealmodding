@@ -89,7 +89,10 @@ use properties::world_tile_property::FWorldTileInfo;
 use reader::{
     archive_reader::ArchiveReader, archive_trait::ArchiveTrait, archive_writer::ArchiveWriter,
 };
-use types::{fname::FName, GenerationInfo, Guid, PackageIndex};
+use types::{
+    fname::{FName, FNameContainer},
+    GenerationInfo, Guid, PackageIndex,
+};
 
 /// Cast a Property/Export to a more specific type
 ///
@@ -1202,23 +1205,23 @@ impl<'a> Asset {
     /// This can be used if it's too complicated to keep track of all FNames that were added into the asset
     /// This is useful when copying export from one asset into another
     /// This will automatically figure out every new FName and add them to the name map
-    pub fn rebuild_name_map(&mut self) -> Result<(), Error> {
-        // let mut collector = FNameCollector::new(self);
+    pub fn rebuild_name_map(&mut self) {
+        let mut current_name_map = self.name_map.clone();
+        self.traverse_fnames(&mut |mut name| {
+            let content = name.get_content();
+            let FName::Backed { index, number: _, name_map } = &mut name else {
+                return;
+            };
 
-        // for import in &self.imports {
-        //     collector.write_fname(&import.class_package)?;
-        //     collector.write_fname(&import.class_name)?;
-        //     collector.write_fname(&import.object_name)?;
-        // }
+            if *name_map != current_name_map {
+                let new_index = current_name_map
+                    .get_mut()
+                    .add_name_reference(content, false);
 
-        // for export in &self.asset_data.exports {
-        //     self.write_export_header(export.get_base_export(), &mut collector, 0, 0, 0)?;
-        //     export.write(&mut collector)?;
-        // }
-
-        // self.name_map = collector.name_map;
-
-        Ok(())
+                *index = new_index;
+                *name_map = current_name_map.clone();
+            }
+        });
     }
 
     /// Write asset data
