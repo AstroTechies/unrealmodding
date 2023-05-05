@@ -1,7 +1,10 @@
 //! Set property
 
+use std::mem::size_of;
+
 use crate::{
     error::Error,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter},
 };
 
@@ -16,7 +19,9 @@ pub struct UsmapSetPropertyData {
 
 impl UsmapSetPropertyData {
     /// Read a `UsmapSetPropertyData` from an asset
-    pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
+        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
+    ) -> Result<Self, Error> {
         let inner_type = UsmapPropertyData::new(asset)?;
 
         Ok(UsmapSetPropertyData {
@@ -26,9 +31,13 @@ impl UsmapSetPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapSetPropertyData {
-    fn write<Writer: UsmapWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<'parent_writer, 'asset, W: ArchiveWriter>(
+        &self,
+        asset: &mut UsmapWriter<'parent_writer, 'asset, W>,
+    ) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::SetProperty as u8)?;
-        todo!()
+        let size = self.inner_type.write(asset)?;
+        Ok(size + size_of::<u8>())
     }
 
     fn get_property_type(&self) -> EPropertyType {

@@ -1,10 +1,14 @@
 //! Usmap properties
 
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::{fmt::Debug, hash::Hash};
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+};
 
 use self::{
     array_property::UsmapArrayPropertyData, enum_property::UsmapEnumPropertyData,
@@ -128,7 +132,10 @@ pub trait UsmapPropertyDataTrait: Debug + Hash + Clone + PartialEq + Eq {
     /// Get `UsmapPropertyData` property type
     fn get_property_type(&self) -> EPropertyType;
     /// Write `UsmapPropertyData` to an asset
-    fn write<Writer: UsmapWriter>(&self, writer: &mut Writer) -> Result<usize, Error>;
+    fn write<'parent_writer, 'asset, W: ArchiveWriter>(
+        &self,
+        writer: &mut UsmapWriter<'parent_writer, 'asset, W>,
+    ) -> Result<usize, Error>;
 }
 
 /// UsmapPropertyData
@@ -152,7 +159,9 @@ pub enum UsmapPropertyData {
 
 impl UsmapPropertyData {
     /// Read an `UsmapPropertyData` from an asset
-    pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
+        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
+    ) -> Result<Self, Error> {
         let prop_type: EPropertyType = EPropertyType::try_from(asset.read_u8()?)?;
 
         let res: UsmapPropertyData = match prop_type {
@@ -175,7 +184,7 @@ impl UsmapPropertyData {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapProperty {
     /// Name
-    pub name: Option<String>,
+    pub name: String,
     /// Schema index
     pub schema_index: u16,
     /// Array size
@@ -188,8 +197,10 @@ pub struct UsmapProperty {
 
 impl UsmapProperty {
     /// Read an `UsmapProperty` from an asset
-    pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let schema_index = asset.read_u16()?;
+    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
+        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
+    ) -> Result<Self, Error> {
+        let schema_index = asset.read_u16::<LE>()?;
         let array_size = asset.read_u8()?;
         let name = asset.read_name()?;
 

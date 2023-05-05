@@ -4,6 +4,7 @@ use std::mem::size_of;
 
 use crate::{
     error::Error,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter},
 };
 
@@ -15,12 +16,14 @@ pub struct UsmapEnumPropertyData {
     /// Inner property
     pub inner_property: Box<UsmapPropertyData>,
     /// Name
-    pub name: Option<String>,
+    pub name: String,
 }
 
 impl UsmapEnumPropertyData {
     /// Read a `UsmapEnumPropertyData` from an asset
-    pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
+        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
+    ) -> Result<Self, Error> {
         let inner_property = UsmapPropertyData::new(asset)?;
         let name = asset.read_name()?;
 
@@ -32,10 +35,13 @@ impl UsmapEnumPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapEnumPropertyData {
-    fn write<Writer: UsmapWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<'parent_writer, 'asset, W: ArchiveWriter>(
+        &self,
+        asset: &mut UsmapWriter<'parent_writer, 'asset, W>,
+    ) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::EnumProperty as u8)?;
         let size = self.inner_property.write(asset)?;
-        asset.write_name(self.name.as_deref())?;
+        asset.write_name(&self.name)?;
 
         Ok(size + size_of::<u8>() + size_of::<u32>() * 2)
     }
