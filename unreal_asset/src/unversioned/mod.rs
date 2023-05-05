@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::io::{Cursor, Read, Seek};
 
 use bitflags::bitflags;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::asset::name_map::NameMap;
@@ -94,8 +94,8 @@ pub struct UsmapSchema {
 
 impl UsmapSchema {
     /// Read a `UsmapSchema` from an archive
-    pub fn read<'parent_reader, 'asset, R: ArchiveReader>(
-        reader: &mut UsmapReader<'parent_reader, 'asset, R>,
+    pub fn read<R: ArchiveReader>(
+        reader: &mut UsmapReader<'_, '_, R>,
     ) -> Result<UsmapSchema, Error> {
         let name = reader.read_name()?;
         let super_type = reader.read_name()?;
@@ -274,7 +274,7 @@ impl Usmap {
         let decompressed_size = reader.read_u32::<LE>()?;
 
         let mut compressed_data = vec![0u8; compressed_size as usize];
-        reader.read_exact(&mut compressed_data);
+        reader.read_exact(&mut compressed_data)?;
 
         let data = match self.compression_method {
             EUsmapCompressionMethod::None => {
@@ -288,7 +288,10 @@ impl Usmap {
             }
             EUsmapCompressionMethod::Brotli => {
                 let mut decompressed_data = Cursor::new(vec![0u8; decompressed_size as usize]);
-                brotli::BrotliDecompress(&mut Cursor::new(compressed_data), &mut decompressed_data);
+                brotli::BrotliDecompress(
+                    &mut Cursor::new(compressed_data),
+                    &mut decompressed_data,
+                )?;
                 decompressed_data.into_inner()
             }
             EUsmapCompressionMethod::ZStandard => {

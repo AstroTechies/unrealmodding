@@ -132,10 +132,7 @@ pub trait UsmapPropertyDataTrait: Debug + Hash + Clone + PartialEq + Eq {
     /// Get `UsmapPropertyData` property type
     fn get_property_type(&self) -> EPropertyType;
     /// Write `UsmapPropertyData` to an asset
-    fn write<'parent_writer, 'asset, W: ArchiveWriter>(
-        &self,
-        writer: &mut UsmapWriter<'parent_writer, 'asset, W>,
-    ) -> Result<usize, Error>;
+    fn write<W: ArchiveWriter>(&self, writer: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error>;
 }
 
 /// UsmapPropertyData
@@ -159,9 +156,7 @@ pub enum UsmapPropertyData {
 
 impl UsmapPropertyData {
     /// Read an `UsmapPropertyData` from an asset
-    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
-        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
-    ) -> Result<Self, Error> {
+    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
         let prop_type: EPropertyType = EPropertyType::try_from(asset.read_u8()?)?;
 
         let res: UsmapPropertyData = match prop_type {
@@ -197,9 +192,7 @@ pub struct UsmapProperty {
 
 impl UsmapProperty {
     /// Read an `UsmapProperty` from an asset
-    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
-        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
-    ) -> Result<Self, Error> {
+    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
         let schema_index = asset.read_u16::<LE>()?;
         let array_size = asset.read_u8()?;
         let name = asset.read_name()?;

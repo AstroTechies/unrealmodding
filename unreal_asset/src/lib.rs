@@ -40,7 +40,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
 use asset::name_map::NameMap;
-use asset::{AssetData, AssetTrait, ExportReaderTrait, ReadExport};
+use asset::{AssetData, AssetTrait, ExportReaderTrait};
 use byteorder::{BigEndian, LittleEndian, LE};
 
 use containers::shared_resource::SharedResource;
@@ -78,14 +78,10 @@ use containers::chain::Chain;
 use containers::indexed_map::IndexedMap;
 use error::Error;
 use exports::{
-    base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
-    enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
-    normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
-    string_table_export::StringTableExport, Export, ExportBaseTrait, ExportNormalTrait,
+    base_export::BaseExport, class_export::ClassExport, Export, ExportBaseTrait, ExportNormalTrait,
     ExportTrait,
 };
 use flags::EPackageFlags;
-use fproperty::FProperty;
 use object_version::{ObjectVersion, ObjectVersionUE5};
 use properties::world_tile_property::FWorldTileInfo;
 use reader::{
@@ -296,34 +292,6 @@ pub struct Asset<C: Read + Seek> {
 
     /// Parent class
     parent_class: Option<ParentClassInfo>,
-}
-
-/// Struct that stores new map/array key/value overrides
-///
-/// Returned from `read_export`
-#[derive(Default)]
-struct NewOverrides {
-    /// New array overrides
-    array_overrides: IndexedMap<String, String>,
-    /// New map key overrides
-    map_key_overrides: IndexedMap<String, String>,
-    /// New map value overrides
-    map_value_overrides: IndexedMap<String, String>,
-}
-
-impl NewOverrides {
-    /// Apply overrides to asset data
-    fn apply(self, asset_data: &mut AssetData) {
-        asset_data
-            .array_struct_type_override
-            .extend(self.array_overrides.into_iter().map(|(_, k, v)| (k, v)));
-        asset_data
-            .map_key_override
-            .extend(self.map_key_overrides.into_iter().map(|(_, k, v)| (k, v)));
-        asset_data
-            .map_value_override
-            .extend(self.map_value_overrides.into_iter().map(|(_, k, v)| (k, v)));
-    }
 }
 
 impl<'a, C: Read + Seek> Asset<C> {

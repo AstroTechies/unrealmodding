@@ -118,8 +118,8 @@ pub trait ArchiveTrait {
         let outer_parent_import = self.get_import(parent_class_import.outer_index)?;
 
         Some(ParentClassInfo {
-            parent_class_path: parent_class_import.object_name.clone(),
-            parent_class_export_name: outer_parent_import.object_name.clone(),
+            parent_class_path: parent_class_import.object_name,
+            parent_class_export_name: outer_parent_import.object_name,
         })
     }
 
@@ -140,7 +140,7 @@ pub trait ArchiveTrait {
     /// Get export class type by a `PackageIndex`
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         match index.is_import() {
-            true => self.get_import(index).map(|e| e.object_name.clone()),
+            true => self.get_import(index).map(|e| e.object_name),
             false => Some(FName::new_dummy(index.index.to_string(), 0)),
         }
     }

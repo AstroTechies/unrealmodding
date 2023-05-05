@@ -19,9 +19,7 @@ pub struct UsmapArrayPropertyData {
 
 impl UsmapArrayPropertyData {
     /// Read a `UsmapArrayPropertyData` from an asset
-    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
-        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
-    ) -> Result<Self, Error> {
+    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
         let inner_type = UsmapPropertyData::new(asset)?;
 
         Ok(UsmapArrayPropertyData {
@@ -31,10 +29,7 @@ impl UsmapArrayPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapArrayPropertyData {
-    fn write<'parent_writer, 'asset, W: ArchiveWriter>(
-        &self,
-        asset: &mut UsmapWriter<'parent_writer, 'asset, W>,
-    ) -> Result<usize, Error> {
+    fn write<W: ArchiveWriter>(&self, asset: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::ArrayProperty as u8)?;
         let size = self.inner_type.write(asset)?;
         Ok(size + size_of::<u8>())

@@ -8,11 +8,10 @@ use byteorder::{ByteOrder, LE};
 use crate::custom_version::CustomVersion;
 use crate::enums::ECustomVersionSerializationFormat;
 use crate::error::Error;
-use crate::exports::Export;
 use crate::object_version::ObjectVersion;
 use crate::reader::archive_trait::ArchiveTrait;
 use crate::types::{fname::FName, Guid, SerializedNameHeader};
-use crate::{cast, crc, enums};
+use crate::{crc, enums};
 
 /// A trait that allows reading from an archive in an asset-specific way
 pub trait ArchiveReader: ArchiveTrait {
@@ -122,7 +121,7 @@ pub trait ArchiveReader: ArchiveTrait {
         let hash_version = self.read_u64::<LE>()?;
 
         let hashes = match hash_version {
-            enums::HASH_VERSION_CITYHASH64 => {
+            hash if hash == enums::HASH_VERSION_CITYHASH64 => {
                 let mut hashes = Vec::with_capacity(num_strings as usize);
                 for _ in 0..num_strings {
                     hashes.push(self.read_u64::<LE>()?); // cityhash64 of crc::to_lower_string
@@ -149,7 +148,9 @@ pub trait ArchiveReader: ArchiveTrait {
         if verify_hashes {
             for (i, entry) in name_batch.iter().enumerate() {
                 let hash = match hash_version {
-                    HASH_VERSION_CITYHASH64 => Ok(crc::cityhash64_to_lower(entry)),
+                    hash if hash == enums::HASH_VERSION_CITYHASH64 => {
+                        Ok(crc::cityhash64_to_lower(entry))
+                    }
                     _ => Err(Error::unimplemented(format!(
                         "Unimplemented name batch algorithm: {}",
                         hash_version

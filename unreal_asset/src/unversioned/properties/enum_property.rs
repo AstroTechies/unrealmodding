@@ -21,9 +21,7 @@ pub struct UsmapEnumPropertyData {
 
 impl UsmapEnumPropertyData {
     /// Read a `UsmapEnumPropertyData` from an asset
-    pub fn new<'parent_reader, 'asset, R: ArchiveReader>(
-        asset: &mut UsmapReader<'parent_reader, 'asset, R>,
-    ) -> Result<Self, Error> {
+    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
         let inner_property = UsmapPropertyData::new(asset)?;
         let name = asset.read_name()?;
 
@@ -35,9 +33,9 @@ impl UsmapEnumPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapEnumPropertyData {
-    fn write<'parent_writer, 'asset, W: ArchiveWriter>(
+    fn write<W: ArchiveWriter>(
         &self,
-        asset: &mut UsmapWriter<'parent_writer, 'asset, W>,
+        asset: &mut UsmapWriter<'_, '_, W>,
     ) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::EnumProperty as u8)?;
         let size = self.inner_property.write(asset)?;

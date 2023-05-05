@@ -339,7 +339,7 @@ impl Error {
     /// Create an `Error` for an archive type mismatch
     pub fn archive_type_mismatch(expected: &[ArchiveType], got: ArchiveType) -> Self {
         let expected = expected
-            .into_iter()
+            .iter()
             .map(|e| e.to_string())
             .collect::<Vec<_>>()
             .join("/");

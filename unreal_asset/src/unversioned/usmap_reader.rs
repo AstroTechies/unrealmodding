@@ -137,6 +137,6 @@ impl<'parent_reader, 'asset, R: ArchiveReader> PassthroughArchiveReader
     type Passthrough = R;
 
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        &mut self.parent_reader
+        self.parent_reader
     }
 }

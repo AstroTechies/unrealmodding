@@ -203,10 +203,6 @@ fn to_lower(character: u16) -> u16 {
     }
 }
 
-pub fn to_lower_string(string: &str) -> String {
-    String::from_utf16(&string.encode_utf16().map(to_lower).collect::<Vec<_>>()).unwrap()
-}
-
 fn generate_hash_deprecated(string: &str) -> u32 {
     let mut hash = 0u32;
 

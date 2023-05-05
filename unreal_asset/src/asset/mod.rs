@@ -352,7 +352,7 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
 
         let mut new_map_key_overrides = IndexedMap::new();
         let mut new_map_value_overrides = IndexedMap::new();
-        let mut new_array_overrides = IndexedMap::new();
+        let new_array_overrides = IndexedMap::new();
 
         println!("Export class type: {}", content);
         let mut export: Export = match export_class_type.get_content().as_str() {

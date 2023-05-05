@@ -100,7 +100,7 @@ impl ExportTrait for DataTableExport {
             if data.get_name().get_content().as_str() == "RowStruct" {
                 if let Property::ObjectProperty(prop) = data {
                     if let Some(import) = asset.get_import(prop.value) {
-                        decided_struct_type = import.object_name.clone();
+                        decided_struct_type = import.object_name;
                         break;
                     }
                 }

@@ -23,14 +23,14 @@ pub struct UsmapWriter<'parent_writer, 'asset, W: ArchiveWriter> {
     /// Parent writer
     parent_writer: &'parent_writer mut W,
     /// Name map
-    name_map: &'asset [String],
+    _name_map: &'asset [String],
     /// Custom versions
     custom_versions: &'asset [CustomVersion],
 }
 
 impl<'parent_writer, 'asset, W: ArchiveWriter> UsmapWriter<'parent_writer, 'asset, W> {
     /// Write a name to this archive
-    pub fn write_name(&mut self, name: &str) -> Result<usize, Error> {
+    pub fn write_name(&mut self, _: &str) -> Result<usize, Error> {
         todo!()
     }
 }
@@ -116,6 +116,6 @@ impl<'parent_writer, 'asset, W: ArchiveWriter> PassthroughArchiveWriter
     type Passthrough = W;
 
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        &mut self.parent_writer
+        self.parent_writer
     }
 }

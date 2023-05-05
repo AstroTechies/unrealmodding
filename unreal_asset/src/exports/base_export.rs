@@ -111,9 +111,7 @@ impl BaseExport {
     /// Gets class type for first ancestry parent
     pub fn get_class_type_for_ancestry<Asset: ArchiveTrait>(&self, asset: &Asset) -> FName {
         match self.class_index.is_import() {
-            true => asset
-                .get_import(self.class_index)
-                .map(|e| e.object_name.clone()),
+            true => asset.get_import(self.class_index).map(|e| e.object_name),
             false => asset.get_parent_class().map(|e| e.parent_class_export_name),
         }
         .unwrap_or_default()
@@ -316,8 +314,10 @@ impl BaseExport {
             archive.get_name_map(),
         );
 
-        let mut default_export = BaseExport::default();
-        default_export.object_name = FName::new(0, 0, archive.get_name_map());
+        let default_export = BaseExport {
+            object_name: FName::new(0, 0, archive.get_name_map()),
+            ..Default::default()
+        };
 
         match archive.get_archive_type() {
             ArchiveType::UAsset => {
