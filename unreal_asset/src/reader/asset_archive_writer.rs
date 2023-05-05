@@ -15,7 +15,7 @@ use crate::{
 };
 
 use super::{
-    archive_trait::ArchiveTrait,
+    archive_trait::{ArchiveTrait, ArchiveType},
     archive_writer::{ArchiveWriter, PassthroughArchiveWriter},
 };
 
@@ -53,6 +53,11 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter>
 impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
     for AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
 {
+    #[inline(always)]
+    fn get_archive_type(&self) -> ArchiveType {
+        ArchiveType::UAsset
+    }
+
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -121,7 +126,7 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
             .find_map(|e| cast!(Export, ClassExport, e))
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
+    fn get_import(&self, index: PackageIndex) -> Option<Import> {
         if !index.is_import() {
             return None;
         }
@@ -131,7 +136,7 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
             return None;
         }
 
-        Some(&self.imports[index as usize])
+        Some(self.imports[index as usize].clone())
     }
 }
 

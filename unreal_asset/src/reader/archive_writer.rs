@@ -32,6 +32,7 @@ pub trait ArchiveWriter: ArchiveTrait {
             FName::Backed {
                 index,
                 number,
+                ty: _,
                 name_map: _,
             } => {
                 self.write_i32::<LE>(*index)?;

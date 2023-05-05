@@ -8,6 +8,7 @@ use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::exports::class_export::ClassExport;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
+use crate::reader::archive_trait::ArchiveType;
 use crate::reader::archive_writer::PassthroughArchiveWriter;
 use crate::reader::{archive_trait::ArchiveTrait, archive_writer::ArchiveWriter};
 use crate::types::PackageIndex;
@@ -31,6 +32,11 @@ impl<'writer, Writer: ArchiveWriter> NameTableWriter<'writer, Writer> {
 }
 
 impl<'writer, Writer: ArchiveWriter> ArchiveTrait for NameTableWriter<'writer, Writer> {
+    #[inline(always)]
+    fn get_archive_type(&self) -> ArchiveType {
+        self.writer.get_archive_type()
+    }
+
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -94,7 +100,7 @@ impl<'writer, Writer: ArchiveWriter> ArchiveTrait for NameTableWriter<'writer, W
         self.writer.get_class_export()
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
+    fn get_import(&self, index: PackageIndex) -> Option<Import> {
         self.writer.get_import(index)
     }
 }

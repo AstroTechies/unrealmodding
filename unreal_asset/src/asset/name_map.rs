@@ -10,7 +10,7 @@ use crate::{
         indexed_map::IndexedMap,
         shared_resource::{CyclicSharedResource, SharedResource, SharedResourceWeakRef},
     },
-    types::fname::FName,
+    types::fname::{FName, EMappedNameType},
 };
 
 /// Asset name map
@@ -99,6 +99,7 @@ impl NameMap {
         FName::Backed {
             index,
             number,
+            ty: EMappedNameType::Package,
             name_map: self.self_ref.upgrade().unwrap(),
         }
     }

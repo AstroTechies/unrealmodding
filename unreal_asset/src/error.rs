@@ -8,6 +8,7 @@ use thiserror::Error;
 use unreal_helpers::error::FStringError;
 
 use crate::custom_version::FAssetRegistryVersionType;
+use crate::reader::archive_trait::ArchiveType;
 use crate::unversioned::ancestry::Ancestry;
 
 /// Thrown when kismet bytecode failed to deserialize
@@ -42,9 +43,9 @@ pub enum UsmapError {
     /// Invalid compressiondata
     #[error("Invalid compression data")]
     InvalidCompressionData,
-    /// Name is None
-    #[error("read_name returned None, expected Some(...)")]
-    NameNone,
+    /// Name map index out of range
+    #[error("Name map index out of range, name map size: {0}, got: {1}")]
+    NameMapIndexOutOfRange(usize, i32),
 }
 
 impl UsmapError {
@@ -58,9 +59,9 @@ impl UsmapError {
         UsmapError::InvalidCompressionData
     }
 
-    /// Create an `UsmapError` for a case where a Some(...) name was expected, but None was returned
-    pub fn name_none() -> Self {
-        UsmapError::NameNone
+    /// Create an `UsmapError` for a case where the name map index was out of range
+    pub fn name_map_index_out_of_range(name_map_size: usize, index: i32) -> Self {
+        UsmapError::NameMapIndexOutOfRange(name_map_size, index)
     }
 }
 
@@ -266,6 +267,9 @@ pub enum Error {
     /// An `FNameError` occured
     #[error(transparent)]
     FName(#[from] FNameError),
+    /// Archive type didn't match the expected type
+    #[error("Archive type mismatch, expected {0}, got {1}")]
+    ArchiveTypeMismatch(Box<str>, ArchiveType),
     /// Cityhash64 hash collision
     #[error("Cityhash64 name collision for hash {0}, string {1}")]
     Cityhash64Collision(u64, Box<str>),
@@ -330,6 +334,16 @@ impl Error {
     /// Create an `Error` for a hash mismatch when reading a name batch
     pub fn name_batch_hash_mismatch(expected: u64, got: u64, value: String) -> Self {
         Error::NameBatchHashMismatch(expected, got, value.into_boxed_str())
+    }
+
+    /// Create an `Error` for an archive type mismatch
+    pub fn archive_type_mismatch(expected: &[ArchiveType], got: ArchiveType) -> Self {
+        let expected = expected
+            .into_iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("/");
+        Error::ArchiveTypeMismatch(expected.into_boxed_str(), got)
     }
 }
 

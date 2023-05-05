@@ -12,6 +12,7 @@ use crate::error::Error;
 use crate::exports::class_export::ClassExport;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::archive_reader::PassthroughArchiveReader;
+use crate::reader::archive_trait::ArchiveType;
 use crate::reader::{archive_reader::ArchiveReader, archive_trait::ArchiveTrait};
 use crate::types::PackageIndex;
 use crate::unversioned::Usmap;
@@ -61,6 +62,11 @@ impl<'reader, Reader: ArchiveReader> NameTableReader<'reader, Reader> {
 }
 
 impl<'reader, Reader: ArchiveReader> ArchiveTrait for NameTableReader<'reader, Reader> {
+    #[inline(always)]
+    fn get_archive_type(&self) -> ArchiveType {
+        self.reader.get_archive_type()
+    }
+
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -124,7 +130,7 @@ impl<'reader, Reader: ArchiveReader> ArchiveTrait for NameTableReader<'reader, R
         self.reader.get_class_export()
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<&Import> {
+    fn get_import(&self, index: PackageIndex) -> Option<Import> {
         self.reader.get_import(index)
     }
 }

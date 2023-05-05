@@ -1,23 +1,33 @@
 //! Generic unreal asset traits
 //! Must be implemented for all unreal assets
 
+use std::io::SeekFrom;
+
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
+    cast,
     containers::{indexed_map::IndexedMap, shared_resource::SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::{get_object_versions, guess_engine_version, EngineVersion},
-    exports::Export,
+    error::Error,
+    exports::{
+        base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
+        enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
+        normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
+        string_table_export::StringTableExport, Export, ExportNormalTrait,
+    },
     flags::EPackageFlags,
+    fproperty::FProperty,
     object_version::{ObjectVersion, ObjectVersionUE5},
     properties::world_tile_property::FWorldTileInfo,
+    reader::archive_reader::ArchiveReader,
     types::{fname::FName, PackageIndex},
     unversioned::Usmap,
 };
 
 use self::name_map::NameMap;
 
-pub mod cityhash64_string_map;
 pub mod name_map;
 /// Unreal asset data, this is relevant for all assets
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
@@ -68,6 +78,54 @@ pub struct AssetData {
     /// This is used for specifying those types
     #[container_ignore]
     pub array_struct_type_override: IndexedMap<String, String>,
+}
+
+/// Export read from [`AssetData`]
+///
+/// To get the actual export, call `.reduce()`
+///
+/// This is needed because export reading may want to modify [`AssetData`] which upsets the borrow checker
+#[derive(Debug, Clone)]
+pub struct ReadExport {
+    export: Export,
+    new_map_key_overrides: IndexedMap<String, String>,
+    new_map_value_overrides: IndexedMap<String, String>,
+    new_array_overrides: IndexedMap<String, String>,
+}
+
+impl ReadExport {
+    /// Create a new `ReadExport` instance
+    pub fn new(
+        export: Export,
+        new_map_key_overrides: IndexedMap<String, String>,
+        new_map_value_overrides: IndexedMap<String, String>,
+        new_array_overrides: IndexedMap<String, String>,
+    ) -> Self {
+        ReadExport {
+            export,
+            new_map_key_overrides,
+            new_map_value_overrides,
+            new_array_overrides,
+        }
+    }
+
+    /// Reduce `ReadExport` to an [`Export`]
+    pub fn reduce(self, asset_data: &mut AssetData) -> Export {
+        asset_data.map_key_override.extend(
+            self.new_map_key_overrides
+                .into_iter()
+                .map(|(_, k, v)| (k, v)),
+        );
+        asset_data.map_value_override.extend(
+            self.new_map_value_overrides
+                .into_iter()
+                .map(|(_, k, v)| (k, v)),
+        );
+        asset_data
+            .array_struct_type_override
+            .extend(self.new_array_overrides.into_iter().map(|(_, k, v)| (k, v)));
+        self.export
+    }
 }
 
 impl AssetData {
@@ -154,6 +212,19 @@ impl AssetData {
         }
 
         Some(&mut self.exports[index as usize])
+    }
+
+    /// Searches for an returns this asset's ClassExport, if one exists
+    pub fn get_class_export(&self) -> Option<&ClassExport> {
+        self.exports
+            .iter()
+            .find_map(|e| cast!(Export, ClassExport, e))
+    }
+
+    /// Get if the asset has unversioned properties
+    pub fn has_unversioned_properties(&self) -> bool {
+        self.package_flags
+            .contains(EPackageFlags::PKG_UNVERSIONED_PROPERTIES)
     }
 }
 
@@ -243,3 +314,166 @@ pub trait AssetTrait {
     /// Add an `FName`
     fn add_fname(&mut self, slice: &str) -> FName;
 }
+
+/// Export reader trait, used to read exports from an asset, implemented for all assets that implemented [`ArchiveReader`]+[`AssetTrait`]
+pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
+    /// Read an export from this asset
+    ///
+    /// This function doesn't automatically create a raw export if an error occurs
+    ///
+    /// This function also doens't automatically reduce the export
+    ///
+    /// # Arguments
+    ///
+    /// * `base_export` - base export used for reading this export
+    /// * `i` - export index
+    fn read_export_no_raw(
+        &mut self,
+        base_export: BaseExport,
+        i: usize,
+    ) -> Result<ReadExport, Error> {
+        let asset_data = self.get_asset_data();
+        let next_starting = match i < (asset_data.exports.len() - 1) {
+            true => match &asset_data.exports[i + 1] {
+                Export::BaseExport(next_export) => next_export.serial_offset as u64,
+                _ => self.data_length()? - 4,
+            },
+            false => self.data_length()? - 4,
+        };
+
+        self.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+
+        //todo: manual skips
+        let export_class_type = self
+            .get_export_class_type(base_export.class_index)
+            .ok_or_else(|| Error::invalid_package_index("Unknown class type".to_string()))?;
+
+        let content = export_class_type.get_content();
+
+        let mut new_map_key_overrides = IndexedMap::new();
+        let mut new_map_value_overrides = IndexedMap::new();
+        let mut new_array_overrides = IndexedMap::new();
+
+        println!("Export class type: {}", content);
+        let mut export: Export = match export_class_type.get_content().as_str() {
+            "Level" => LevelExport::from_base(&base_export, self, next_starting)?.into(),
+            "StringTable" => StringTableExport::from_base(&base_export, self)?.into(),
+            "Enum" | "UserDefinedEnum" => EnumExport::from_base(&base_export, self)?.into(),
+            "Function" => FunctionExport::from_base(&base_export, self)?.into(),
+            _ => {
+                if export_class_type.get_content().ends_with("DataTable") {
+                    DataTableExport::from_base(&base_export, self)?.into()
+                } else if export_class_type.get_content().ends_with("StringTable") {
+                    StringTableExport::from_base(&base_export, self)?.into()
+                } else if export_class_type
+                    .get_content()
+                    .ends_with("BlueprintGeneratedClass")
+                {
+                    let class_export = ClassExport::from_base(&base_export, self)?;
+
+                    for entry in &class_export.struct_export.loaded_properties {
+                        if let FProperty::FMapProperty(map) = entry {
+                            let key_override = match &*map.key_prop {
+                                FProperty::FStructProperty(struct_property) => {
+                                    match struct_property.struct_value.is_import() {
+                                        true => self
+                                            .get_import(struct_property.struct_value)
+                                            .map(|e| e.object_name.get_content()),
+                                        false => None,
+                                    }
+                                }
+                                _ => None,
+                            };
+                            if let Some(key) = key_override {
+                                new_map_key_overrides
+                                    .insert(map.generic_property.name.get_content(), key);
+                            }
+
+                            let value_override = match &*map.value_prop {
+                                FProperty::FStructProperty(struct_property) => {
+                                    match struct_property.struct_value.is_import() {
+                                        true => self
+                                            .get_import(struct_property.struct_value)
+                                            .map(|e| e.object_name.get_content()),
+                                        false => None,
+                                    }
+                                }
+                                _ => None,
+                            };
+
+                            if let Some(value) = value_override {
+                                new_map_value_overrides
+                                    .insert(map.generic_property.name.get_content(), value);
+                            }
+                        }
+                    }
+                    class_export.into()
+                } else if export_class_type.get_content().ends_with("Property") {
+                    PropertyExport::from_base(&base_export, self)?.into()
+                } else {
+                    NormalExport::from_base(&base_export, self)?.into()
+                }
+            }
+        };
+
+        let extras_len = next_starting as i64 - self.position() as i64;
+        if extras_len < 0 {
+            // todo: warning?
+
+            self.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
+            let export: Export = RawExport::from_base(base_export, self)?.into();
+            return Ok(ReadExport::new(
+                export,
+                new_map_key_overrides,
+                new_map_value_overrides,
+                new_array_overrides,
+            ));
+        } else if let Some(normal_export) = export.get_normal_export_mut() {
+            let mut extras = vec![0u8; extras_len as usize];
+            self.read_exact(&mut extras)?;
+            normal_export.extras = extras;
+        }
+
+        Ok(ReadExport::new(
+            export,
+            new_map_key_overrides,
+            new_map_value_overrides,
+            new_array_overrides,
+        ))
+    }
+
+    /// Read an export from this asset
+    ///
+    /// If an error occurs during export reading, it reads a RawExport and returns that
+    ///
+    /// This function also automatically reduces the [`ReadExport`] to an [`Export`]
+    ///
+    /// # Arguments
+    ///
+    /// * `i` - export index
+    fn read_export(&mut self, i: usize) -> Result<Export, Error> {
+        let asset_data = self.get_asset_data();
+        let base_export =
+            cast!(Export, BaseExport, asset_data.exports[i].clone()).ok_or_else(|| {
+                Error::invalid_file("Couldn't cast to BaseExport when reading exports".to_string())
+            })?;
+
+        let serial_offset = base_export.serial_offset as u64;
+
+        match self.read_export_no_raw(base_export.clone(), i) {
+            Ok(e) => {
+                let asset_data_mut = self.get_asset_data_mut();
+                let reduced = e.reduce(asset_data_mut);
+
+                Ok(reduced)
+            }
+            Err(_e) => {
+                // todo: warning?
+                self.seek(SeekFrom::Start(serial_offset))?;
+                Ok(RawExport::from_base(base_export, self)?.into())
+            }
+        }
+    }
+}
+
+impl<R: ArchiveReader + AssetTrait + Sized> ExportReaderTrait for R {}

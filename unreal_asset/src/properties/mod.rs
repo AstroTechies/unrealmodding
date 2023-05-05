@@ -511,16 +511,16 @@ impl Property {
             while practicing_unversioned_property_index >= schema.prop_count as usize {
                 practicing_unversioned_property_index -= schema.prop_count as usize;
 
-                let new_schema = match schema.super_type {
-                    Some(ref e) => mappings.schemas.get_by_key(e),
-                    None => None,
-                }
-                .ok_or_else(|| {
-                    PropertyError::no_schema(
-                        parent_name.get_content(),
-                        practicing_unversioned_property_index,
-                    )
-                })?;
+                let new_schema =
+                    mappings
+                        .schemas
+                        .get_by_key(&schema.super_type)
+                        .ok_or_else(|| {
+                            PropertyError::no_schema(
+                                parent_name.get_content(),
+                                practicing_unversioned_property_index,
+                            )
+                        })?;
 
                 schema = new_schema;
             }
@@ -531,7 +531,7 @@ impl Property {
                 .unwrap();
             header.unversioned_property_index += 1;
 
-            name = FName::new_dummy(property.name.clone().unwrap_or_default(), 0);
+            name = FName::new_dummy(property.name.clone(), 0);
             property_type =
                 FName::new_dummy(property.property_data.get_property_type().to_string(), 0);
             length = 1;

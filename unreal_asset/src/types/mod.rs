@@ -2,7 +2,6 @@
 
 pub mod fname;
 pub mod movie;
-pub mod package_object_index;
 pub mod vector;
 
 use crate::{

@@ -118,10 +118,7 @@ impl StructProperty {
                 .map(|e| e.get_content() == "Generic")
                 .unwrap_or(true)
             {
-                struct_type = Some(FName::new_dummy(
-                    struct_mapping.struct_type.clone().unwrap_or_default(),
-                    0,
-                ));
+                struct_type = Some(FName::new_dummy(struct_mapping.struct_type.clone(), 0));
             }
         }
 

@@ -2,6 +2,9 @@
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+/// Cityhash64 hash version
+pub const HASH_VERSION_CITYHASH64: u64 = 0x00000000C1640000;
+
 /// Array dimension
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]

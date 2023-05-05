@@ -20,6 +20,8 @@ use crate::types::{PackageIndex, SerializedNameHeader};
 use crate::unversioned::Usmap;
 use crate::Import;
 
+use super::archive_trait::ArchiveType;
+
 /// A binary reader
 pub struct RawReader<C: Read + Seek> {
     /// Reader cursor
@@ -29,9 +31,9 @@ pub struct RawReader<C: Read + Seek> {
     /// UE5 object version
     pub(crate) object_version_ue5: ObjectVersionUE5,
     /// Does the reader use the event driven loader
-    use_event_driven_loader: bool,
+    pub(crate) use_event_driven_loader: bool,
     /// Name map
-    name_map: SharedResource<NameMap>,
+    pub(crate) name_map: SharedResource<NameMap>,
     /// Empty map
     empty_map: IndexedMap<String, String>,
 }
@@ -57,6 +59,11 @@ impl<C: Read + Seek> RawReader<C> {
 }
 
 impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
+    #[inline(always)]
+    fn get_archive_type(&self) -> ArchiveType {
+        ArchiveType::Raw
+    }
+
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -116,7 +123,7 @@ impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
         None
     }
 
-    fn get_import(&self, _: PackageIndex) -> Option<&Import> {
+    fn get_import(&self, _: PackageIndex) -> Option<Import> {
         None
     }
 }

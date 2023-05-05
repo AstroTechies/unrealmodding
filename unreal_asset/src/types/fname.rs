@@ -2,12 +2,26 @@
 //!
 //! They are represented by an index+instance number inside a string table inside the asset file.
 
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 use crate::{
     asset::name_map::NameMap,
     containers::{indexed_map::IndexedMap, shared_resource::SharedResource},
 };
 
 use std::hash::Hash;
+
+/// FName name type
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[repr(u16)]
+pub enum EMappedNameType {
+    /// Package-level name table
+    Package,
+    /// Container-level name table
+    Container,
+    /// Global name table
+    Global,
+}
 
 /// FName is used to store most of the Strings in UE4.
 ///
@@ -20,6 +34,10 @@ pub enum FName {
         index: i32,
         /// FName instance number
         number: i32,
+        /// FName type
+        ///
+        /// Always [`EMappedNameType::Package`] for non-Zen assets
+        ty: EMappedNameType,
         /// Namemap which this FName belongs to
         name_map: SharedResource<NameMap>,
     },
@@ -44,11 +62,36 @@ pub trait ToSerializedName {
 }
 
 impl FName {
+    /// FName index bits
+    pub const INDEX_BITS: u32 = 30;
+    /// FName index mask
+    pub const INDEX_MASK: u32 = (1u32 << Self::INDEX_BITS).overflowing_sub(1).0;
+    /// FName type mask
+    pub const TYPE_MASK: u32 = !Self::INDEX_MASK;
+    /// FName type shift
+    pub const TYPE_SHIFT: u32 = Self::INDEX_BITS;
+
     /// Create a new `FName` instance with an index
     pub fn new(index: i32, number: i32, name_map: SharedResource<NameMap>) -> Self {
         FName::Backed {
             index,
             number,
+            ty: EMappedNameType::Package,
+            name_map,
+        }
+    }
+
+    /// Create a new `FName` instance with an index and type
+    pub fn new_with_type(
+        index: i32,
+        number: i32,
+        ty: EMappedNameType,
+        name_map: SharedResource<NameMap>,
+    ) -> Self {
+        FName::Backed {
+            index,
+            number,
+            ty,
             name_map,
         }
     }
@@ -70,6 +113,7 @@ impl FName {
             FName::Backed {
                 index,
                 number: _,
+                ty: _,
                 name_map,
             } => name_map.get_ref().get_name_reference(*index),
             FName::Dummy { value, number: _ } => value.clone(),
@@ -84,11 +128,13 @@ impl PartialEq for FName {
                 FName::Backed {
                     index: a_index,
                     number: a_number,
+                    ty: _,
                     name_map: _,
                 },
                 FName::Backed {
                     index: b_index,
                     number: b_number,
+                    ty: _,
                     name_map: _,
                 },
             ) => a_index == b_index && a_number == b_number,
@@ -115,6 +161,7 @@ impl Hash for FName {
             FName::Backed {
                 index,
                 number,
+                ty: _,
                 name_map: _,
             } => {
                 index.hash(state);

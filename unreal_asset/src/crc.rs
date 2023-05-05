@@ -3,8 +3,6 @@
 use lazy_static::lazy_static;
 use naive_cityhash::cityhash64;
 
-use crate::types::package_object_index::PackageObjectIndex;
-
 #[rustfmt::skip]
 lazy_static! {
     static ref CRCTABLE_DEPRECATED: [u32; 256] = [
@@ -179,10 +177,6 @@ pub fn generate_hash(string: &str) -> u32 {
     let algo1 = generate_hash_deprecated(string);
     let algo2 = generate_crc32(string, 0);
     (algo1 & 0xffff) | ((algo2 & 0xffff) << 16)
-}
-
-pub fn generate_import_hash_from_object_path(string: &str) -> u64 {
-    cityhash64_to_lower(string) & PackageObjectIndex::INDEX_MASK
 }
 
 pub fn cityhash64_to_lower(string: &str) -> u64 {

@@ -5,13 +5,14 @@ use std::io;
 
 use byteorder::{ByteOrder, LE};
 
-use crate::crc;
 use crate::custom_version::CustomVersion;
 use crate::enums::ECustomVersionSerializationFormat;
 use crate::error::Error;
+use crate::exports::Export;
 use crate::object_version::ObjectVersion;
 use crate::reader::archive_trait::ArchiveTrait;
 use crate::types::{fname::FName, Guid, SerializedNameHeader};
+use crate::{cast, crc, enums};
 
 /// A trait that allows reading from an archive in an asset-specific way
 pub trait ArchiveReader: ArchiveTrait {
@@ -112,8 +113,6 @@ pub trait ArchiveReader: ArchiveTrait {
 
     /// Read `FName` name batch
     fn read_name_batch(&mut self, verify_hashes: bool) -> Result<(Vec<String>, u64), Error> {
-        const HASH_VERSION_CITYHASH64: u64 = 0x00000000C1640000;
-
         let num_strings = self.read_i32::<LE>()?;
         if num_strings == 0 {
             return Ok((Vec::new(), 0));
@@ -123,7 +122,7 @@ pub trait ArchiveReader: ArchiveTrait {
         let hash_version = self.read_u64::<LE>()?;
 
         let hashes = match hash_version {
-            HASH_VERSION_CITYHASH64 => {
+            enums::HASH_VERSION_CITYHASH64 => {
                 let mut hashes = Vec::with_capacity(num_strings as usize);
                 for _ in 0..num_strings {
                     hashes.push(self.read_u64::<LE>()?); // cityhash64 of crc::to_lower_string

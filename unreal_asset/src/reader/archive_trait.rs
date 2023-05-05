@@ -1,5 +1,6 @@
 //! Archive property trait
 
+use std::fmt::Display;
 use std::io::{self, SeekFrom};
 
 use crate::asset::name_map::NameMap;
@@ -13,8 +14,35 @@ use crate::types::{fname::FName, PackageIndex};
 use crate::unversioned::Usmap;
 use crate::{Import, ParentClassInfo};
 
+/// An enum to help identify current archive type
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum ArchiveType {
+    /// Raw archive
+    Raw,
+    /// Archive used to read .uasset/.uexp files
+    UAsset,
+    /// Archive used to read .usmap files
+    Usmap,
+    /// Archive used to read zen files
+    Zen,
+}
+
+impl Display for ArchiveType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArchiveType::Raw => write!(f, "Raw"),
+            ArchiveType::UAsset => write!(f, "UAsset"),
+            ArchiveType::Usmap => write!(f, "Usmap"),
+            ArchiveType::Zen => write!(f, "Zen"),
+        }
+    }
+}
+
 /// A trait that allows accessing data about the archive that is currently being read
 pub trait ArchiveTrait {
+    /// Get archive type
+    fn get_archive_type(&self) -> ArchiveType;
+
     /// Get a custom version from this archive
     ///
     /// # Example
@@ -108,7 +136,7 @@ pub trait ArchiveTrait {
     /// Searches for and returns this asset's CLassExport, if one exists
     fn get_class_export(&self) -> Option<&ClassExport>;
     /// Get an import by a `PackageIndex`
-    fn get_import(&self, index: PackageIndex) -> Option<&Import>;
+    fn get_import(&self, index: PackageIndex) -> Option<Import>;
     /// Get export class type by a `PackageIndex`
     fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
         match index.is_import() {

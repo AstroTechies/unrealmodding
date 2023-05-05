@@ -19,6 +19,8 @@ use crate::types::PackageIndex;
 use crate::unversioned::Usmap;
 use crate::Import;
 
+use super::archive_trait::ArchiveType;
+
 /// A binary writer
 pub struct RawWriter<'cursor, W: Write + Seek> {
     /// Writer cursor
@@ -56,6 +58,11 @@ impl<'cursor, W: Write + Seek> RawWriter<'cursor, W> {
 }
 
 impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
+    #[inline(always)]
+    fn get_archive_type(&self) -> ArchiveType {
+        ArchiveType::Raw
+    }
+
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -115,7 +122,7 @@ impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
         None
     }
 
-    fn get_import(&self, _: PackageIndex) -> Option<&Import> {
+    fn get_import(&self, _: PackageIndex) -> Option<Import> {
         None
     }
 }

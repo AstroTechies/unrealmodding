@@ -38,8 +38,8 @@ fn cdo_modification() -> Result<(), Error> {
         .exports
         .iter_mut()
         .find(|e| {
-            e.get_base_export().object_flags & EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits()
-                == EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits()
+            e.get_base_export().object_flags & EObjectFlags::RF_CLASS_DEFAULT_OBJECT
+                == EObjectFlags::RF_CLASS_DEFAULT_OBJECT
         })
         .and_then(|e| cast!(Export, NormalExport, e))
         .expect("Failed to find cdo export");
