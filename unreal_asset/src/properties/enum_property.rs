@@ -5,11 +5,12 @@ use std::mem::size_of;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
-use crate::impl_property_data_trait;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
+use crate::unversioned::properties::{UsmapPropertyData, UsmapPropertyDataTrait};
+use crate::{cast, impl_property_data_trait};
 
 /// Enum property
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
@@ -24,6 +25,8 @@ pub struct EnumProperty {
     pub duplication_index: i32,
     /// Enum type
     pub enum_type: Option<FName>,
+    /// Inner type, used only with unversioned properties
+    pub inner_type: Option<FName>,
     /// Enum value
     pub value: FName,
 }
@@ -39,9 +42,55 @@ impl EnumProperty {
         _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
-        let (enum_type, property_guid) = match include_header {
-            true => (Some(asset.read_fname()?), asset.read_property_guid()?),
-            false => (None, None),
+        let mut enum_type: Option<FName> = None;
+        let mut inner_type: Option<FName> = None;
+        if asset.has_unversioned_properties() {
+            if let Some(enum_data) = asset
+                .get_mappings()
+                .and_then(|e| e.get_property(&name, &ancestry))
+                .and_then(|e| cast!(UsmapPropertyData, UsmapEnumPropertyData, &e.property_data))
+            {
+                let enum_ty = FName::new_dummy(enum_data.name.clone(), 0);
+                let inner_ty =
+                    FName::new_dummy(enum_data.inner_property.get_property_type().to_string(), 0);
+
+                if inner_ty.get_content() == "ByteProperty" {
+                    let enum_index = asset.read_u8()?;
+                    let info = asset
+                        .get_mappings()
+                        .unwrap()
+                        .enum_map
+                        .get_by_key(&enum_ty.get_content())
+                        .ok_or_else(|| {
+                            Error::invalid_file(
+                                "Missing unversioned info for: ".to_string()
+                                    + &enum_ty.get_content(),
+                            )
+                        })?;
+                    let value = FName::new_dummy(info[enum_index as usize].clone(), 0);
+
+                    return Ok(EnumProperty {
+                        name,
+                        ancestry,
+                        property_guid: None,
+                        duplication_index,
+                        enum_type: Some(enum_ty),
+                        inner_type: Some(inner_ty),
+                        value,
+                    });
+                }
+
+                enum_type = Some(enum_ty);
+                inner_type = Some(inner_ty);
+            }
+        }
+
+        let property_guid = match include_header {
+            true => {
+                enum_type = Some(asset.read_fname()?);
+                asset.read_property_guid()?
+            }
+            false => None,
         };
         let value = asset.read_fname()?;
 
@@ -51,6 +100,7 @@ impl EnumProperty {
             property_guid,
             duplication_index,
             enum_type,
+            inner_type,
             value,
         })
     }
@@ -62,6 +112,43 @@ impl PropertyTrait for EnumProperty {
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
+        if asset.has_unversioned_properties()
+            && self
+                .inner_type
+                .as_ref()
+                .map(|e| e.get_content() == "ByteProperty")
+                .unwrap_or(false)
+        {
+            let enum_type = self
+                .enum_type
+                .as_ref()
+                .ok_or_else(|| {
+                    Error::no_data("enum_type is None on an unversioned property".to_string())
+                })?
+                .get_content();
+
+            let info = asset
+                .get_mappings()
+                .ok_or_else(PropertyError::no_mappings)?
+                .enum_map
+                .get_by_key(&enum_type)
+                .ok_or_else(|| {
+                    Error::invalid_file("Missing unversioned info for: ".to_string() + &enum_type)
+                })?;
+
+            let enum_index = info
+                .iter()
+                .enumerate()
+                .find(|(_, e)| **e == self.value.get_content())
+                .map(|(index, _)| index)
+                .ok_or_else(|| {
+                    Error::invalid_file("Missing unversioned info for: ".to_string() + &enum_type)
+                })?;
+
+            asset.write_u8(enum_index as u8)?;
+            return Ok(size_of::<u8>());
+        }
+
         if include_header {
             asset.write_fname(
                 self.enum_type

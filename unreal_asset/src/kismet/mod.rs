@@ -3,14 +3,14 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::{LittleEndian, LE};
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::KismetError;
-use crate::object_version::ObjectVersion;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::vector::{Transform, Vector, Vector4};
 use crate::types::{fname::FName, PackageIndex};
@@ -1195,73 +1195,141 @@ declare_expression!(
     ExTransformConst,
     /// Value
     #[container_ignore]
-    value: Transform<OrderedFloat<f32>>
+    value: Transform<OrderedFloat<f64>>
 );
 impl ExTransformConst {
     /// Read a `ExTransformConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let rotation = Vector4::new(
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-        );
-        let translation = Vector::new(
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-        );
-        let scale = Vector::new(
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-        );
+        let transform = match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                let rotation = Vector4::new(
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                );
+                let translation = Vector::new(
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                );
+                let scale = Vector::new(
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                );
+                Transform::new(rotation, translation, scale)
+            },
+            false => {
+                let rotation = Vector4::new(
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                );
+                let translation = Vector::new(
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                );
+                let scale = Vector::new(
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                );
+                Transform::new(rotation, translation, scale)
+            }
+        };
+
         Ok(ExTransformConst {
             token: EExprToken::ExTransformConst,
-            value: Transform::new(rotation, translation, scale),
+            value: transform,
         })
     }
 }
 impl KismetExpressionTrait for ExTransformConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.rotation.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.z.0)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.w.0)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.z.0)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.z.0)?;
-        Ok(size_of::<f32>() * 10)
+        match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                asset.write_f64::<LittleEndian>(self.value.rotation.x.0)?;
+                asset.write_f64::<LittleEndian>(self.value.rotation.y.0)?;
+                asset.write_f64::<LittleEndian>(self.value.rotation.z.0)?;
+                asset.write_f64::<LittleEndian>(self.value.rotation.w.0)?;
+                asset.write_f64::<LittleEndian>(self.value.translation.x.0)?;
+                asset.write_f64::<LittleEndian>(self.value.translation.y.0)?;
+                asset.write_f64::<LittleEndian>(self.value.translation.z.0)?;
+                asset.write_f64::<LittleEndian>(self.value.scale.x.0)?;
+                asset.write_f64::<LittleEndian>(self.value.scale.y.0)?;
+                asset.write_f64::<LittleEndian>(self.value.scale.z.0)?;
+
+                Ok(size_of::<f64>() * 10)
+            }
+            false => {
+                asset.write_f32::<LittleEndian>(self.value.rotation.x.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.rotation.y.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.rotation.z.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.rotation.w.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.translation.x.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.translation.y.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.translation.z.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.scale.x.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.scale.y.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.scale.z.0 as f32)?;
+
+                Ok(size_of::<f32>() * 10)
+            }
+        }
     }
 }
 declare_expression!(
     ExVectorConst,
     /// Value
     #[container_ignore]
-    value: Vector<OrderedFloat<f32>>
+    value: Vector<OrderedFloat<f64>>
 );
 impl ExVectorConst {
     /// Read a `ExVectorConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let value = match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                Vector::new(
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
+                )
+            }
+            false => {
+                Vector::new(
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
+                )
+            }
+        };
         Ok(ExVectorConst {
             token: EExprToken::ExVectorConst,
-            value: Vector::new(
-                OrderedFloat(asset.read_f32::<LittleEndian>()?),
-                OrderedFloat(asset.read_f32::<LittleEndian>()?),
-                OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            ),
+            value,
         })
     }
 }
 impl KismetExpressionTrait for ExVectorConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.z.0)?;
-        Ok(size_of::<f32>() * 3)
+        match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                asset.write_f64::<LittleEndian>(self.value.x.0)?;
+                asset.write_f64::<LittleEndian>(self.value.y.0)?;
+                asset.write_f64::<LittleEndian>(self.value.z.0)?;
+
+                Ok(size_of::<f64>() * 3)
+            },
+            false => {
+                asset.write_f32::<LittleEndian>(self.value.x.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.y.0 as f32)?;
+                asset.write_f32::<LittleEndian>(self.value.z.0 as f32)?;
+
+                Ok(size_of::<f32>() * 3)
+            }
+        }
     }
 }
 declare_expression!(
@@ -2357,30 +2425,49 @@ impl KismetExpressionTrait for ExReturn {
 }
 declare_expression!(
     ExRotationConst,
-    /// Pitch
-    pitch: i32,
-    /// Yaw
-    yaw: i32,
-    /// Roll
-    roll: i32
+    /// Rotator
+    #[container_ignore]
+    rotator: Vector<OrderedFloat<f64>>
 );
 impl ExRotationConst {
     /// Read a `ExRotationConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let rotator = match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                let pitch = asset.read_f64::<LE>()?;
+                let yaw = asset.read_f64::<LE>()?;
+                let roll = asset.read_f64::<LE>()?;
+                Vector::new(OrderedFloat(pitch), OrderedFloat(yaw), OrderedFloat(roll))
+            },
+            false => {
+                let pitch = asset.read_f32::<LE>()?;
+                let yaw = asset.read_f32::<LE>()?;
+                let roll = asset.read_f32::<LE>()?;
+                Vector::new(OrderedFloat(pitch as f64), OrderedFloat(yaw as f64), OrderedFloat(roll as f64))
+            }
+        };
         Ok(ExRotationConst {
             token: EExprToken::ExRotationConst,
-            pitch: asset.read_i32::<LittleEndian>()?,
-            yaw: asset.read_i32::<LittleEndian>()?,
-            roll: asset.read_i32::<LittleEndian>()?,
+            rotator
         })
     }
 }
 impl KismetExpressionTrait for ExRotationConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_i32::<LittleEndian>(self.pitch)?;
-        asset.write_i32::<LittleEndian>(self.yaw)?;
-        asset.write_i32::<LittleEndian>(self.roll)?;
-        Ok(size_of::<i32>() * 3)
+        match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                asset.write_f64::<LE>(self.rotator.x.0)?;
+                asset.write_f64::<LE>(self.rotator.y.0)?;
+                asset.write_f64::<LE>(self.rotator.z.0)?;
+                Ok(size_of::<f64>() * 3)
+            },
+            false => {
+                asset.write_f32::<LE>(self.rotator.x.0 as f32)?;
+                asset.write_f32::<LE>(self.rotator.y.0 as f32)?;
+                asset.write_f32::<LE>(self.rotator.z.0 as f32)?;
+                Ok(size_of::<f32>() * 3)
+            }
+        }
     }
 }
 declare_expression!(

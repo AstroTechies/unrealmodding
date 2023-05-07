@@ -19,6 +19,22 @@ impl<T> Vector<T> {
     }
 }
 
+/// Vector2
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct Vector2<T> {
+    /// X component
+    pub x: T,
+    /// Y component
+    pub y: T,
+}
+
+impl<T> Vector2<T> {
+    /// Create a new `Vector2` instance
+    pub fn new(x: T, y: T) -> Self {
+        Vector2 { x, y }
+    }
+}
+
 /// Vector4
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Vector4<T> {
