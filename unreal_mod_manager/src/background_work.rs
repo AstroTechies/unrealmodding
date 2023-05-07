@@ -590,6 +590,14 @@ where
 
                     // run integrator
                     debug!("Integrating mods");
+
+                    // do not inline this, otherwise the lock will be held for the whole integration time
+                    // which will cause the gui to hang
+                    let refuse_mismatched_connections = background_thread_data
+                        .data
+                        .lock()
+                        .refuse_mismatched_connections;
+
                     match integrate_mods(
                         config.get_integrator_config(),
                         &mods_to_integrate,
@@ -598,10 +606,7 @@ where
                             .join(IC::GAME_NAME)
                             .join("Content")
                             .join("Paks"),
-                        background_thread_data
-                            .data
-                            .lock()
-                            .refuse_mismatched_connections,
+                        refuse_mismatched_connections,
                     ) {
                         Ok(_) => debug!("Integration successful"),
                         Err(err) => {
