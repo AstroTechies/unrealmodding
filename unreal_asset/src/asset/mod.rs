@@ -348,13 +348,10 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
             .get_export_class_type(base_export.class_index)
             .ok_or_else(|| Error::invalid_package_index("Unknown class type".to_string()))?;
 
-        let content = export_class_type.get_content();
-
         let mut new_map_key_overrides = IndexedMap::new();
         let mut new_map_value_overrides = IndexedMap::new();
         let new_array_overrides = IndexedMap::new();
 
-        println!("Export class type: {}", content);
         let mut export: Export = match export_class_type.get_content().as_str() {
             "Level" => LevelExport::from_base(&base_export, self, next_starting)?.into(),
             "StringTable" => StringTableExport::from_base(&base_export, self)?.into(),

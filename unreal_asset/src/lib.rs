@@ -648,8 +648,7 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         self.seek(SeekFrom::Start(self.name_offset as u64))?;
 
-        for i in 0..self.name_count {
-            println!("processing {}", i);
+        for _ in 0..self.name_count {
             let (name, hash) = self.read_name_map_string(None)?;
             if hash == 0 {
                 // todo: good FString type

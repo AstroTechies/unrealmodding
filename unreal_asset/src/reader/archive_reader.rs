@@ -7,7 +7,7 @@ use byteorder::{ByteOrder, LE};
 
 use crate::custom_version::CustomVersion;
 use crate::enums::ECustomVersionSerializationFormat;
-use crate::error::Error;
+use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
 use crate::reader::archive_trait::ArchiveTrait;
 use crate::types::{fname::FName, Guid, SerializedNameHeader};
@@ -31,6 +31,16 @@ pub trait ArchiveReader: ArchiveTrait {
     fn read_fname(&mut self) -> Result<FName, Error> {
         let index = self.read_i32::<LE>()?;
         let number = self.read_i32::<LE>()?;
+
+        let name_map_size = self
+            .get_name_map()
+            .get_ref()
+            .get_name_map_index_list()
+            .len();
+        if index < 0 || index >= name_map_size as i32 {
+            return Err(FNameError::out_of_range(index, name_map_size).into());
+        }
+
         Ok(self.get_name_map().get_ref().create_fname(index, number))
     }
 
