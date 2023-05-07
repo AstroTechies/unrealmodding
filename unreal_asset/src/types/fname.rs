@@ -119,6 +119,19 @@ impl FName {
             FName::Dummy { value, number: _ } => value.clone(),
         }
     }
+
+    /// Get this FName instance number
+    pub fn get_number(&self) -> i32 {
+        match self {
+            FName::Backed {
+                index: _,
+                number,
+                ty: _,
+                name_map: _,
+            } => *number,
+            FName::Dummy { value: _, number } => *number,
+        }
+    }
 }
 
 impl PartialEq for FName {
