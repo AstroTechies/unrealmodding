@@ -9,6 +9,9 @@ use crate::error::FStringError;
 
 /// Extension for anything that implements Read to more easily read Unreal data formats.
 pub trait UnrealReadExt {
+    /// Read string of format \<string\>\<null\>
+    fn read_fstring_len(&mut self, len: i32, is_wide: bool)
+        -> Result<Option<String>, FStringError>;
     /// Read string of format \<length i32\>\<string\>\<null\>
     fn read_fstring(&mut self) -> Result<Option<String>, FStringError>;
     /// Read u8 as bool
@@ -16,9 +19,11 @@ pub trait UnrealReadExt {
 }
 
 impl<R: Read + Seek> UnrealReadExt for R {
-    fn read_fstring(&mut self) -> Result<Option<String>, FStringError> {
-        let len = self.read_i32::<LittleEndian>()?;
-
+    fn read_fstring_len(
+        &mut self,
+        len: i32,
+        is_wide: bool,
+    ) -> Result<Option<String>, FStringError> {
         if !(-131072..=131072).contains(&len) {
             return Err(FStringError::InvalidStringSize(
                 len,
@@ -30,9 +35,7 @@ impl<R: Read + Seek> UnrealReadExt for R {
             return Ok(None);
         }
 
-        if len < 0 {
-            let len = -len;
-
+        if is_wide {
             let len = len * size_of::<u16>() as i32 - 2;
             let mut buf = vec![0u8; len as usize];
             self.read_exact(&mut buf)?;
@@ -66,6 +69,27 @@ impl<R: Read + Seek> UnrealReadExt for R {
 
             String::from_utf8(buf).map(Some).map_err(|e| e.into())
         }
+    }
+
+    fn read_fstring(&mut self) -> Result<Option<String>, FStringError> {
+        let len = self.read_i32::<LittleEndian>()?;
+
+        if !(-131072..=131072).contains(&len) {
+            return Err(FStringError::InvalidStringSize(
+                len,
+                self.stream_position()?,
+            ));
+        }
+
+        if len == 0 {
+            return Ok(None);
+        }
+
+        let (len, is_wide) = match len < 0 {
+            true => (-len, true),
+            false => (len, false),
+        };
+        self.read_fstring_len(len, is_wide)
     }
 
     fn read_bool(&mut self) -> io::Result<bool> {

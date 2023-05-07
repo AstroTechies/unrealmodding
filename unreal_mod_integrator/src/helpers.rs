@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
 
-use unreal_asset::{engine_version::EngineVersion, Asset};
+use unreal_asset::{engine_version::EngineVersion, reader::archive_trait::ArchiveTrait, Asset};
 use unreal_pak::{PakMemory, PakReader};
 
 use crate::{error::IntegrationError, Error};
@@ -101,7 +101,7 @@ pub fn write_asset<C: std::io::Read + std::io::Seek>(
     name: &String,
 ) -> Result<(), Error> {
     let mut uasset_cursor = Cursor::new(Vec::new());
-    let mut uexp_cursor = match asset.use_separate_bulk_data_files {
+    let mut uexp_cursor = match asset.use_event_driven_loader() {
         true => Some(Cursor::new(Vec::new())),
         false => None,
     };

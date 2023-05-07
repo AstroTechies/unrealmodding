@@ -9,6 +9,8 @@ use serde_json::Value;
 
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::properties::int_property::BytePropertyValue;
+use unreal_asset::types::fname::FName;
+use unreal_asset::unversioned::ancestry::Ancestry;
 use unreal_asset::{
     exports::{data_table_export::DataTable, Export, ExportBaseTrait},
     properties::{
@@ -17,7 +19,6 @@ use unreal_asset::{
         struct_property::StructProperty,
         Property, PropertyDataTrait,
     },
-    types::FName,
     Asset,
 };
 use unreal_mod_metadata::{Metadata, SyncMode};
@@ -174,6 +175,7 @@ pub trait IntegratorConfig<'data, D, E: std::error::Error + 'static> {
 
 fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Result<(), Error> {
     let data_table_export = asset
+        .asset_data
         .exports
         .iter()
         .filter_map(|e| match e {
@@ -205,11 +207,12 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
             SyncMode::ClientOnly => "SyncMode::NewEnumerator1",
             SyncMode::None => "SyncMode::NewEnumerator0",
         };
-        asset.add_fname(coded_sync_mode);
+        let coded_sync_mode = asset.add_fname(coded_sync_mode);
 
         let rows: Vec<Property> = vec![
             StrProperty {
                 name: columns[0].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 0,
                 value: Some(mod_data.name.clone()),
@@ -217,6 +220,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
             .into(),
             StrProperty {
                 name: columns[1].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 0,
                 value: Some(mod_data.author.clone().unwrap_or_default()),
@@ -224,6 +228,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
             .into(),
             StrProperty {
                 name: columns[2].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 9,
                 value: Some(mod_data.description.clone().unwrap_or_default()),
@@ -231,6 +236,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
             .into(),
             StrProperty {
                 name: columns[3].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 0,
                 value: Some(mod_data.mod_version.clone()),
@@ -238,6 +244,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
             .into(),
             StrProperty {
                 name: columns[4].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 0,
                 value: Some(mod_data.game_build.clone().unwrap_or_default()),
@@ -245,14 +252,16 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
             .into(),
             ByteProperty {
                 name: columns[5].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 0,
-                enum_type: Some(FName::from_slice("SyncMode")),
-                value: BytePropertyValue::FName(FName::from_slice(coded_sync_mode)),
+                enum_type: Some(asset.add_fname("SyncMode")),
+                value: BytePropertyValue::FName(coded_sync_mode.clone()),
             }
             .into(),
             StrProperty {
                 name: columns[6].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 0,
                 value: Some(mod_data.homepage.clone().unwrap_or_default()),
@@ -260,6 +269,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
             .into(),
             BoolProperty {
                 name: columns[7].clone(),
+                ancestry: Ancestry::default(),
                 property_guid: None,
                 duplication_index: 0,
                 value: true, // optional modids?
@@ -270,8 +280,10 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
         let duplication_index = duplication_indices
             .entry(mod_data.mod_id.clone())
             .or_insert_with(|| 0);
+        let name = asset.add_fname(&mod_data.mod_id);
         new_table.push(StructProperty {
-            name: FName::new(mod_data.mod_id.clone(), 0),
+            name,
+            ancestry: Ancestry::default(),
             struct_type: struct_type.clone(),
             struct_guid: None,
             property_guid: None,
@@ -283,6 +295,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
     }
 
     let data_table_export = asset
+        .asset_data
         .exports
         .iter_mut()
         .filter_map(|e| match e {
@@ -305,20 +318,22 @@ fn bake_integrator_data(
     integrator_version: String,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
-    if asset.exports.len() != 4 {
+    if asset.asset_data.exports.len() != 4 {
         return Err(IntegrationError::corrupted_starter_pak().into());
     }
 
     let properties: Vec<Property> = Vec::from([
         StrProperty {
-            name: FName::from_slice("IntegratorVersion"),
+            name: asset.add_fname("IntegratorVersion"),
+            ancestry: Ancestry::default(),
             property_guid: None,
             duplication_index: 0,
             value: Some(integrator_version),
         }
         .into(),
         BoolProperty {
-            name: FName::from_slice("RefuseMismatchedConnections"),
+            name: asset.add_fname("RefuseMismatchedConnections"),
+            ancestry: Ancestry::default(),
             property_guid: None,
             duplication_index: 0,
             value: refuse_mismatched_connections,
@@ -326,10 +341,9 @@ fn bake_integrator_data(
         .into(),
     ]);
 
-    let export = asset
-        .exports
-        .iter_mut()
-        .find(|e| e.get_base_export().object_name.content == "Default__IntegratorStatics_BP_C");
+    let export = asset.asset_data.exports.iter_mut().find(|e| {
+        e.get_base_export().object_name.get_content() == "Default__IntegratorStatics_BP_C"
+    });
     if export.is_none() {
         return Err(IntegrationError::corrupted_starter_pak().into());
     }

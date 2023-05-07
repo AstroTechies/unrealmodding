@@ -4,6 +4,8 @@ use std::io::{self, Cursor, ErrorKind};
 use std::path::Path;
 
 use unreal_asset::engine_version::EngineVersion;
+use unreal_asset::reader::archive_trait::ArchiveTrait;
+use unreal_asset::unversioned::ancestry::Ancestry;
 use unreal_asset::{
     cast,
     exports::{normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},
@@ -11,8 +13,7 @@ use unreal_asset::{
         array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
         object_property::ObjectProperty, Property, PropertyDataTrait,
     },
-    reader::asset_trait::AssetTrait,
-    types::{FName, PackageIndex},
+    types::PackageIndex,
     Asset, Import,
 };
 use unreal_pak::{PakMemory, PakReader};
@@ -46,11 +47,19 @@ pub fn handle_persistent_actors(
     )
     .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
 
-    let actor_template = cast!(Export, NormalExport, level_asset.exports[2].clone())
-        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted actor_template"))?;
+    let actor_template = cast!(
+        Export,
+        NormalExport,
+        level_asset.asset_data.exports[2].clone()
+    )
+    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted actor_template"))?;
 
-    let scene_export = cast!(Export, NormalExport, level_asset.exports[11].clone())
-        .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted scene_component"))?;
+    let scene_export = cast!(
+        Export,
+        NormalExport,
+        level_asset.asset_data.exports[11].clone()
+    )
+    .ok_or_else(|| io::Error::new(ErrorKind::Other, "Corrupted scene_component"))?;
 
     let mut persistent_actors = Vec::new();
     for persistent_actors_array in persistent_actor_arrays {
@@ -77,23 +86,14 @@ pub fn handle_persistent_actors(
         )?;
 
         let mut level_export_index = None;
-        for i in 0..asset.exports.len() {
-            if cast!(Export, LevelExport, &asset.exports[i]).is_some() {
+        for i in 0..asset.asset_data.exports.len() {
+            if cast!(Export, LevelExport, &asset.asset_data.exports[i]).is_some() {
                 level_export_index = Some(i);
                 break;
             }
         }
         let level_export_index = level_export_index
             .ok_or_else(|| io::Error::new(ErrorKind::Other, "No level export"))?;
-
-        asset.add_fname("bHidden");
-        asset.add_fname("bNetAddressable");
-        asset.add_fname("CreationMethod");
-        asset.add_fname("EComponentCreationMethod");
-        asset.add_fname("EComponentCreationMethod::SimpleConstructionScript");
-        asset.add_fname("BlueprintCreatedComponents");
-        asset.add_fname("AttachParent");
-        asset.add_fname("RootComponent");
 
         for component_path_raw in &persistent_actors {
             let component = Path::new(component_path_raw)
@@ -108,11 +108,6 @@ pub fn handle_persistent_actors(
                 false => (component_path_raw.to_string(), component),
             };
             let mut actor_template = actor_template.clone();
-
-            asset.add_name_reference(component_path_raw.clone(), false);
-            asset.add_name_reference(String::from(component) + "_C", false);
-            asset.add_name_reference(String::from("Default__") + component + "_C", false);
-            asset.add_fname(component);
 
             let package_import = Import {
                 class_package: asset.add_fname("/Script/CoreUObject"),
@@ -140,7 +135,7 @@ pub fn handle_persistent_actors(
             let default_import = asset.add_import(default_import);
 
             actor_template.base_export.class_index = blueprint_generated_class_import;
-            actor_template.base_export.object_name = FName::from_slice(component);
+            actor_template.base_export.object_name = asset.add_fname(component);
             actor_template.base_export.template_index = default_import;
             actor_template.base_export.outer_index =
                 PackageIndex::new(level_export_index as i32 + 1); // package index starts from 1
@@ -157,14 +152,14 @@ pub fn handle_persistent_actors(
             )?;
 
             let mut scs_location = None;
-            for i in 0..actor_asset.exports.len() {
-                let export = &actor_asset.exports[i];
+            for i in 0..actor_asset.asset_data.exports.len() {
+                let export = &actor_asset.asset_data.exports[i];
                 if let Some(normal_export) = export.get_normal_export() {
                     if normal_export.base_export.class_index.is_import() {
                         let import = asset
                             .get_import(normal_export.base_export.class_index)
                             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Import not found"))?;
-                        if import.object_name.content == "SimpleConstructionScript" {
+                        if import.object_name.get_content() == "SimpleConstructionScript" {
                             scs_location = Some(i);
                             break;
                         }
@@ -175,7 +170,7 @@ pub fn handle_persistent_actors(
             let mut created_components = Vec::new();
             if let Some(scs_location) = scs_location {
                 let mut known_node_categories = Vec::new();
-                let scs_export: &NormalExport = actor_asset.exports[scs_location]
+                let scs_export: &NormalExport = actor_asset.asset_data.exports[scs_location]
                     .get_normal_export()
                     .expect("Corrupted memory");
                 for i in 0..scs_export.properties.len() {
@@ -184,9 +179,9 @@ pub fn handle_persistent_actors(
                         if array_property
                             .array_type
                             .as_ref()
-                            .map(|e| e.content == "ObjectProperty")
+                            .map(|e| e.get_content() == "ObjectProperty")
                             .unwrap_or(false)
-                            && array_property.name.content == "AllNodes"
+                            && array_property.name.get_content() == "AllNodes"
                         {
                             for value in &array_property.value {
                                 if let Some(object_property) =
@@ -203,7 +198,7 @@ pub fn handle_persistent_actors(
 
                 let mut known_parents = HashMap::new();
                 for known_node_category in known_node_categories {
-                    let known_category: &NormalExport = actor_asset.exports
+                    let known_category: &NormalExport = actor_asset.asset_data.exports
                         [known_node_category as usize - 1]
                         .get_normal_export()
                         .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid export"))?;
@@ -214,7 +209,7 @@ pub fn handle_persistent_actors(
                                 .ok_or_else(|| {
                                 io::Error::new(ErrorKind::Other, "Import not found")
                             })?;
-                            import.object_name.content == "SCS_Node"
+                            import.object_name.get_content() == "SCS_Node"
                         }
                         false => false,
                     };
@@ -233,12 +228,12 @@ pub fn handle_persistent_actors(
                     let mut second_import = None;
 
                     for property in &known_category.properties {
-                        match property.get_name().content.as_str() {
+                        match property.get_name().get_content().as_str() {
                             "InternalVariableName" => {
                                 if let Some(name_property) = cast!(Property, NameProperty, property)
                                 {
                                     new_scs.internal_variable_name =
-                                        name_property.value.content.clone();
+                                        name_property.value.get_content();
                                 }
                             }
                             "ComponentClass" => {
@@ -270,7 +265,7 @@ pub fn handle_persistent_actors(
                                     if array_property
                                         .array_type
                                         .as_ref()
-                                        .map(|e| e.content == "ObjectProperty")
+                                        .map(|e| e.get_content() == "ObjectProperty")
                                         .unwrap_or(false)
                                     {
                                         for value_property in &array_property.value {
@@ -329,7 +324,7 @@ pub fn handle_persistent_actors(
             }
 
             let template_category_pointer =
-                asset.exports.len() as i32 + created_components.len() as i32 + 1;
+                asset.asset_data.exports.len() as i32 + created_components.len() as i32 + 1;
 
             let mut created_component_serialized_list: Vec<Property> = Vec::new();
             let mut attach_parent_correcting = HashMap::new();
@@ -339,27 +334,28 @@ pub fn handle_persistent_actors(
             for created_component in &created_components {
                 let mut scene_export = scene_export.clone();
                 scene_export.base_export.class_index = created_component.type_link;
-                asset.add_name_reference(created_component.internal_variable_name.clone(), false);
                 scene_export.base_export.object_name =
-                    FName::new(created_component.internal_variable_name.clone(), 0);
+                    asset.add_fname(&created_component.internal_variable_name);
                 scene_export.base_export.outer_index = PackageIndex::new(template_category_pointer);
 
                 let mut prop_data: Vec<Property> = Vec::from([
                     BoolProperty {
-                        name: FName::from_slice("bNetAddressable"),
+                        name: asset.add_fname("bNetAddressable"),
+                        ancestry: Ancestry::default(),
                         property_guid: Some([0u8; 16]),
                         duplication_index: 0,
                         value: true,
                     }
                     .into(),
                     EnumProperty {
-                        name: FName::from_slice("CreationMethod"),
+                        name: asset.add_fname("CreationMethod"),
+                        ancestry: Ancestry::default(),
+                        inner_type: None,
                         property_guid: Some([0u8; 16]),
                         duplication_index: 0,
-                        enum_type: Some(FName::from_slice("EComponentCreationMethod")),
-                        value: FName::from_slice(
-                            "EComponentCreationMethod::SimpleConstructionScript",
-                        ),
+                        enum_type: Some(asset.add_fname("EComponentCreationMethod")),
+                        value: asset
+                            .add_fname("EComponentCreationMethod::SimpleConstructionScript"),
                     }
                     .into(),
                 ]);
@@ -367,7 +363,8 @@ pub fn handle_persistent_actors(
                 let mut correction_queue = Vec::new();
                 if let Some(attach_parent) = created_component.attach_parent {
                     let next_property = ObjectProperty {
-                        name: FName::from_slice("AttachParent"),
+                        name: asset.add_fname("AttachParent"),
+                        ancestry: Ancestry::default(),
                         property_guid: Some([0u8; 16]),
                         duplication_index: 0,
                         value: attach_parent,
@@ -380,26 +377,27 @@ pub fn handle_persistent_actors(
                 scene_export.extras = vec![0u8; 4];
                 scene_export.properties = prop_data;
 
-                attach_parent_correcting.insert(asset.exports.len(), correction_queue);
-                asset.exports.push(scene_export.into());
+                attach_parent_correcting.insert(asset.asset_data.exports.len(), correction_queue);
+                asset.asset_data.exports.push(scene_export.into());
 
                 created_component_serialized_list.push(
                     ObjectProperty {
-                        name: FName::from_slice("BlueprintCreatedComponents"),
+                        name: asset.add_fname("BlueprintCreatedComponents"),
+                        ancestry: Ancestry::default(),
                         property_guid: Some([0u8; 16]),
                         duplication_index: 0,
-                        value: PackageIndex::new(asset.exports.len() as i32),
+                        value: PackageIndex::new(asset.asset_data.exports.len() as i32),
                     }
                     .into(),
                 );
 
                 node_name_to_export_index.insert(
                     created_component.internal_variable_name.clone(),
-                    asset.exports.len() as i32,
+                    asset.asset_data.exports.len() as i32,
                 );
                 old_export_to_new_export.insert(
                     created_component.original_category.index,
-                    asset.exports.len() as i32,
+                    asset.asset_data.exports.len() as i32,
                 );
 
                 let type_link = asset
@@ -407,19 +405,18 @@ pub fn handle_persistent_actors(
                     .ok_or_else(|| io::Error::new(ErrorKind::Other, "No type link"))?;
 
                 let import = Import {
-                    class_package: FName::from_slice("/Script/Engine"),
+                    class_package: asset.add_fname("/Script/Engine"),
                     class_name: type_link.object_name.clone(),
                     outer_index: actor_template.base_export.class_index,
-                    object_name: FName::new(
-                        created_component.internal_variable_name.clone() + "_GEN_VARIABLE",
-                        0,
+                    object_name: asset.add_fname(
+                        &(created_component.internal_variable_name.clone() + "_GEN_VARIABLE"),
                     ),
                 };
                 asset.add_import(import);
             }
 
             for (export_index, correction_queue) in attach_parent_correcting {
-                let export: &mut NormalExport = asset.exports[export_index]
+                let export: &mut NormalExport = asset.asset_data.exports[export_index]
                     .get_normal_export_mut()
                     .expect("Corrupted memory");
                 for correction in correction_queue {
@@ -438,15 +435,17 @@ pub fn handle_persistent_actors(
 
             let mut determined_prop_data: Vec<Property> = Vec::from([
                 BoolProperty {
-                    name: FName::from_slice("bHidden"),
+                    name: asset.add_fname("bHidden"),
+                    ancestry: Ancestry::default(),
                     property_guid: Some([0u8; 16]),
                     duplication_index: 0,
                     value: true,
                 }
                 .into(),
                 ArrayProperty::from_arr(
-                    FName::from_slice("BlueprintCreatedComponents"),
-                    Some(FName::from_slice("ObjectProperty")),
+                    asset.add_fname("BlueprintCreatedComponents"),
+                    Ancestry::default(),
+                    Some(asset.add_fname("ObjectProperty")),
                     created_component_serialized_list,
                 )
                 .into(),
@@ -456,7 +455,8 @@ pub fn handle_persistent_actors(
                 if node_name == "DefaultSceneRoot" {
                     determined_prop_data.push(
                         ObjectProperty {
-                            name: FName::from_slice("RootComponent"),
+                            name: asset.add_fname("RootComponent"),
+                            ancestry: Ancestry::default(),
                             property_guid: Some([0u8; 16]),
                             duplication_index: 0,
                             value: PackageIndex::new(export_index),
@@ -466,7 +466,8 @@ pub fn handle_persistent_actors(
                 }
                 determined_prop_data.push(
                     ObjectProperty {
-                        name: FName::new(node_name, 0),
+                        name: asset.add_fname(&node_name),
+                        ancestry: Ancestry::default(),
                         property_guid: Some([0u8; 16]),
                         duplication_index: 0,
                         value: PackageIndex::new(export_index),
@@ -489,11 +490,15 @@ pub fn handle_persistent_actors(
                 .push(PackageIndex::new(level_export_index as i32 + 1));
             actor_template.extras = vec![0u8; 4];
             actor_template.properties = determined_prop_data;
-            asset.exports.push(actor_template.into());
+            asset.asset_data.exports.push(actor_template.into());
 
-            let exports_len = PackageIndex::new(asset.exports.len() as i32);
-            let level_export = cast!(Export, LevelExport, &mut asset.exports[level_export_index])
-                .expect("Corrupted memory");
+            let exports_len = PackageIndex::new(asset.asset_data.exports.len() as i32);
+            let level_export = cast!(
+                Export,
+                LevelExport,
+                &mut asset.asset_data.exports[level_export_index]
+            )
+            .expect("Corrupted memory");
             level_export.actors.push(exports_len);
             level_export
                 .get_base_export_mut()
