@@ -112,7 +112,7 @@ impl AssetData {
         let package_name = asset.read_fname()?;
         let asset_name = asset.read_fname()?;
         let tags = Self::read_tags(asset)?;
-        let chunk_ids = asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LE>()?))?; // if we don't explicitly specify the type inside lambda the compiler will crashd
+        let chunk_ids = asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LE>()?))?; // if we don't explicitly specify the type inside the lambda the compiler will crash
         let package_flags = EPackageFlags::from_bits(asset.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
