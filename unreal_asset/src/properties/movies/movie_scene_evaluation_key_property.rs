@@ -1,6 +1,6 @@
 //! Movie scene evaluation key property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -33,7 +33,7 @@ impl MovieSceneEvaluationKey {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let sequence_id = MovieSceneSequenceId::new(asset)?;
         let track_identifier = MovieSceneTrackIdentifier::new(asset)?;
-        let section_index = asset.read_u32::<LittleEndian>()?;
+        let section_index = asset.read_u32::<LE>()?;
 
         Ok(MovieSceneEvaluationKey {
             sequence_id,
@@ -46,7 +46,7 @@ impl MovieSceneEvaluationKey {
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.sequence_id.write(asset)?;
         self.track_identifier.write(asset)?;
-        asset.write_u32::<LittleEndian>(self.section_index)?;
+        asset.write_u32::<LE>(self.section_index)?;
 
         Ok(())
     }

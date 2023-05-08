@@ -1,6 +1,6 @@
 //! Structs related to movies
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
@@ -76,7 +76,7 @@ impl FFrameNumberRangeBound {
     /// Read a `FFrameNumberRangeBound` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let ty: ERangeBoundTypes = ERangeBoundTypes::try_from(asset.read_i8()?)?;
-        let value = FrameNumber::new(asset.read_i32::<LittleEndian>()?);
+        let value = FrameNumber::new(asset.read_i32::<LE>()?);
 
         Ok(FFrameNumberRangeBound { ty, value })
     }
@@ -84,7 +84,7 @@ impl FFrameNumberRangeBound {
     /// Write a `FFrameNumberRangeBound` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i8(self.ty as i8)?;
-        asset.write_i32::<LittleEndian>(self.value.value)?;
+        asset.write_i32::<LE>(self.value.value)?;
         Ok(())
     }
 }

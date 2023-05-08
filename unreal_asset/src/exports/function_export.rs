@@ -1,6 +1,6 @@
 //! Function export
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
@@ -28,7 +28,7 @@ impl FunctionExport {
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let struct_export = StructExport::from_base(base, asset)?;
-        let function_flags = EFunctionFlags::from_bits(asset.read_u32::<LittleEndian>()?)
+        let function_flags = EFunctionFlags::from_bits(asset.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid function flags".to_string()))?;
         Ok(FunctionExport {
             struct_export,
@@ -40,7 +40,7 @@ impl FunctionExport {
 impl ExportTrait for FunctionExport {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_export.write(asset)?;
-        asset.write_u32::<LittleEndian>(self.function_flags.bits())?;
+        asset.write_u32::<LE>(self.function_flags.bits())?;
         Ok(())
     }
 }

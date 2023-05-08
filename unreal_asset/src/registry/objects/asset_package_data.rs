@@ -1,6 +1,6 @@
 //! Asset bundle asset package data
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 
 use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
 use crate::error::{Error, RegistryError};
@@ -43,7 +43,7 @@ impl AssetPackageData {
         version: FAssetRegistryVersionType,
     ) -> Result<Self, Error> {
         let package_name = asset.read_fname()?;
-        let disk_size = asset.read_i64::<LittleEndian>()?;
+        let disk_size = asset.read_i64::<LE>()?;
         let mut package_guid = [0u8; 16];
         asset.read_exact(&mut package_guid)?;
 
@@ -59,14 +59,14 @@ impl AssetPackageData {
         let mut custom_versions = None;
         if version >= FAssetRegistryVersionType::WorkspaceDomain {
             if version >= FAssetRegistryVersionType::PackageFileSummaryVersionChange {
-                file_version = asset.read_i32::<LittleEndian>()?;
-                ue5_version = Some(asset.read_i32::<LittleEndian>()?);
+                file_version = asset.read_i32::<LE>()?;
+                ue5_version = Some(asset.read_i32::<LE>()?);
             } else {
-                file_version = asset.read_i32::<LittleEndian>()?;
+                file_version = asset.read_i32::<LE>()?;
             }
 
-            file_version_licensee_ue = asset.read_i32::<LittleEndian>()?;
-            flags = asset.read_u32::<LittleEndian>()?;
+            file_version_licensee_ue = asset.read_i32::<LE>()?;
+            flags = asset.read_u32::<LE>()?;
             custom_versions =
                 Some(asset.read_array(|asset: &mut Reader| CustomVersion::read(asset))?);
         }
@@ -95,7 +95,7 @@ impl AssetPackageData {
     /// Write `AssetPackageData` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.package_name)?;
-        asset.write_i64::<LittleEndian>(self.disk_size)?;
+        asset.write_i64::<LE>(self.disk_size)?;
         asset.write_all(&self.package_guid)?;
 
         if self.version >= FAssetRegistryVersionType::AddedCookedMD5Hash {
@@ -109,22 +109,22 @@ impl AssetPackageData {
 
         if self.version >= FAssetRegistryVersionType::WorkspaceDomain {
             if self.version >= FAssetRegistryVersionType::PackageFileSummaryVersionChange {
-                asset.write_i32::<LittleEndian>(self.file_version)?;
-                asset.write_i32::<LittleEndian>(self.ue5_version.ok_or_else(|| {
+                asset.write_i32::<LE>(self.file_version)?;
+                asset.write_i32::<LE>(self.ue5_version.ok_or_else(|| {
                     RegistryError::version("UE5 Version".to_string(), self.version)
                 })?)?;
             } else {
-                asset.write_i32::<LittleEndian>(self.file_version)?;
+                asset.write_i32::<LE>(self.file_version)?;
             }
 
-            asset.write_i32::<LittleEndian>(self.file_version_licensee_ue)?;
-            asset.write_u32::<LittleEndian>(self.flags)?;
+            asset.write_i32::<LE>(self.file_version_licensee_ue)?;
+            asset.write_u32::<LE>(self.flags)?;
 
             let custom_versions = self.custom_versions.as_ref().ok_or_else(|| {
                 RegistryError::version("Custom versions".to_string(), self.version)
             })?;
 
-            asset.write_i32::<LittleEndian>(custom_versions.len() as i32)?;
+            asset.write_i32::<LE>(custom_versions.len() as i32)?;
             for custom_version in custom_versions {
                 custom_version.write(asset)?;
             }

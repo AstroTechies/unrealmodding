@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -73,11 +73,11 @@ impl MeshToMeshVertData {
 
         let mut source_mesh_vert_indices = Vec::with_capacity(4);
         for _ in 0..4 {
-            source_mesh_vert_indices.push(asset.read_u16::<LittleEndian>()?);
+            source_mesh_vert_indices.push(asset.read_u16::<LE>()?);
         }
 
-        let weight = asset.read_f32::<LittleEndian>()?;
-        let padding = asset.read_u32::<LittleEndian>()?;
+        let weight = asset.read_f32::<LE>()?;
+        let padding = asset.read_u32::<LE>()?;
 
         Ok(MeshToMeshVertData {
             position_bary_coords_and_dist,
@@ -98,14 +98,14 @@ impl MeshToMeshVertData {
 
         for i in 0..4 {
             match i < self.source_mesh_vert_indices.len() {
-                true => asset.write_u16::<LittleEndian>(self.source_mesh_vert_indices[i]),
-                false => asset.write_u16::<LittleEndian>(0),
+                true => asset.write_u16::<LE>(self.source_mesh_vert_indices[i]),
+                false => asset.write_u16::<LE>(0),
             }?;
             size += size_of::<u16>();
 
-            asset.write_f32::<LittleEndian>(self.weight.0)?;
+            asset.write_f32::<LE>(self.weight.0)?;
             size += size_of::<f32>();
-            asset.write_u32::<LittleEndian>(self.padding)?;
+            asset.write_u32::<LE>(self.padding)?;
             size += size_of::<u32>();
         }
 
@@ -145,13 +145,13 @@ impl ClothLodDataProperty {
             None,
         )?;
 
-        let transition_up_skin_data_len = asset.read_i32::<LittleEndian>()?;
+        let transition_up_skin_data_len = asset.read_i32::<LE>()?;
         let mut transition_up_skin_data = Vec::with_capacity(transition_up_skin_data_len as usize);
         for _ in 0..transition_up_skin_data_len {
             transition_up_skin_data.push(MeshToMeshVertData::new(asset)?);
         }
 
-        let transition_down_skin_data_len = asset.read_i32::<LittleEndian>()?;
+        let transition_down_skin_data_len = asset.read_i32::<LE>()?;
         let mut transition_down_skin_data =
             Vec::with_capacity(transition_down_skin_data_len as usize);
         for _ in 0..transition_down_skin_data_len {
@@ -204,13 +204,13 @@ impl PropertyTrait for ClothLodDataProperty {
             Some(FName::from_slice("Generic")),
         )?;
 
-        asset.write_i32::<LittleEndian>(self.transition_up_skin_data.len() as i32)?;
+        asset.write_i32::<LE>(self.transition_up_skin_data.len() as i32)?;
         size += size_of::<i32>();
         for transition_up_skin_data in &self.transition_up_skin_data {
             size += transition_up_skin_data.write(asset)?;
         }
 
-        asset.write_i32::<LittleEndian>(self.transition_down_skin_data.len() as i32)?;
+        asset.write_i32::<LE>(self.transition_down_skin_data.len() as i32)?;
         size += size_of::<i32>();
         for transition_down_skin_data in &self.transition_down_skin_data {
             size += transition_down_skin_data.write(asset)?;

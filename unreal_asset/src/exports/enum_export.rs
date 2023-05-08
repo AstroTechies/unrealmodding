@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -45,7 +45,7 @@ impl UEnum {
         let mut names = Vec::new();
 
         if asset.get_object_version() < ObjectVersion::VER_UE4_TIGHTLY_PACKED_ENUMS {
-            let num_entries = asset.read_i32::<LittleEndian>()?;
+            let num_entries = asset.read_i32::<LE>()?;
             for i in 0..num_entries {
                 let name = asset.read_fname()?;
                 names.push((name, i as i64));
@@ -53,17 +53,17 @@ impl UEnum {
         } else {
             let custom_version = asset.get_custom_version::<FCoreObjectVersion>();
             if custom_version.version < FCoreObjectVersion::EnumProperties as i32 {
-                let num_entries = asset.read_i32::<LittleEndian>()?;
+                let num_entries = asset.read_i32::<LE>()?;
                 for _i in 0..num_entries {
                     let name = asset.read_fname()?;
                     let index = asset.read_u8()?;
                     names.push((name, index as i64));
                 }
             } else {
-                let num_entries = asset.read_i32::<LittleEndian>()?;
+                let num_entries = asset.read_i32::<LE>()?;
                 for _i in 0..num_entries {
                     let name = asset.read_fname()?;
-                    let index = asset.read_i64::<LittleEndian>()?;
+                    let index = asset.read_i64::<LE>()?;
                     names.push((name, index));
                 }
             }
@@ -72,7 +72,7 @@ impl UEnum {
         let cpp_form = match asset.get_object_version() < ObjectVersion::VER_UE4_ENUM_CLASS_SUPPORT
         {
             true => {
-                let is_namespace = asset.read_i32::<LittleEndian>()? == 1;
+                let is_namespace = asset.read_i32::<LE>()? == 1;
                 match is_namespace {
                     true => ECppForm::Namespaced,
                     false => ECppForm::Regular,
@@ -86,7 +86,7 @@ impl UEnum {
 
     /// Write a `UEnum` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.names.len() as i32)?;
+        asset.write_i32::<LE>(self.names.len() as i32)?;
         if asset.get_object_version() < ObjectVersion::VER_UE4_TIGHTLY_PACKED_ENUMS {
             // todo: a better algorithm?
             let mut names_map = HashMap::with_capacity(self.names.len());
@@ -108,12 +108,12 @@ impl UEnum {
         } else {
             for (name, index) in &self.names {
                 asset.write_fname(name)?;
-                asset.write_i64::<LittleEndian>(*index)?;
+                asset.write_i64::<LE>(*index)?;
             }
         }
 
         if asset.get_object_version() < ObjectVersion::VER_UE4_ENUM_CLASS_SUPPORT {
-            asset.write_i32::<LittleEndian>(match self.cpp_form == ECppForm::Namespaced {
+            asset.write_i32::<LE>(match self.cpp_form == ECppForm::Namespaced {
                 true => 1,
                 false => 0,
             })?;
@@ -142,7 +142,7 @@ impl EnumExport {
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
 
         let value = UEnum::new(asset)?;
         Ok(EnumExport {
@@ -155,7 +155,7 @@ impl EnumExport {
 impl ExportTrait for EnumExport {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
         self.value.write(asset)?;
         Ok(())
     }

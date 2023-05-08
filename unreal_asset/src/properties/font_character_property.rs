@@ -1,6 +1,6 @@
 //! Font character property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -34,23 +34,23 @@ impl FontCharacter {
     /// Read a `FontCharacter` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(FontCharacter {
-            start_u: asset.read_i32::<LittleEndian>()?,
-            start_v: asset.read_i32::<LittleEndian>()?,
-            size_u: asset.read_i32::<LittleEndian>()?,
-            size_v: asset.read_i32::<LittleEndian>()?,
+            start_u: asset.read_i32::<LE>()?,
+            start_v: asset.read_i32::<LE>()?,
+            size_u: asset.read_i32::<LE>()?,
+            size_v: asset.read_i32::<LE>()?,
             texture_index: asset.read_u8()?,
-            vertical_offset: asset.read_i32::<LittleEndian>()?,
+            vertical_offset: asset.read_i32::<LE>()?,
         })
     }
 
     /// Write a `FontCharacter` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.start_u)?;
-        asset.write_i32::<LittleEndian>(self.start_v)?;
-        asset.write_i32::<LittleEndian>(self.size_u)?;
-        asset.write_i32::<LittleEndian>(self.size_v)?;
+        asset.write_i32::<LE>(self.start_u)?;
+        asset.write_i32::<LE>(self.start_v)?;
+        asset.write_i32::<LE>(self.size_u)?;
+        asset.write_i32::<LE>(self.size_v)?;
         asset.write_u8(self.texture_index)?;
-        asset.write_i32::<LittleEndian>(self.vertical_offset)?;
+        asset.write_i32::<LE>(self.vertical_offset)?;
         Ok(())
     }
 }

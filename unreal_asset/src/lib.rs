@@ -41,7 +41,7 @@ use std::mem::size_of;
 
 use asset::name_map::NameMap;
 use asset::{AssetData, AssetTrait, ExportReaderTrait};
-use byteorder::{BigEndian, LittleEndian, LE};
+use byteorder::{BigEndian, LE};
 
 use containers::shared_resource::SharedResource;
 use custom_version::{CustomVersion, CustomVersionTrait};
@@ -384,14 +384,14 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         // read legacy version
-        self.legacy_file_version = self.read_i32::<LittleEndian>()?;
+        self.legacy_file_version = self.read_i32::<LE>()?;
         if self.legacy_file_version != -4 {
             // LegacyUE3Version for backwards-compatibility with UE3 games: always 864 in versioned assets, always 0 in unversioned assets
             self.read_exact(&mut [0u8; 4])?;
         }
 
         // read unreal version
-        let file_version = self.read_i32::<LittleEndian>()?.try_into()?;
+        let file_version = self.read_i32::<LE>()?.try_into()?;
 
         self.asset_data.unversioned = file_version == ObjectVersion::UNKNOWN;
 
@@ -404,7 +404,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         // read file license version
-        self.asset_data.file_license_version = self.read_i32::<LittleEndian>()?;
+        self.asset_data.file_license_version = self.read_i32::<LE>()?;
 
         // read custom versions container
         if self.legacy_file_version <= -2 {
@@ -417,7 +417,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         // read header offset
-        self.header_offset = self.read_i32::<LittleEndian>()?;
+        self.header_offset = self.read_i32::<LE>()?;
 
         // read folder name
         self.folder_name = self
@@ -425,42 +425,42 @@ impl<'a, C: Read + Seek> Asset<C> {
             .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
-        self.package_flags = EPackageFlags::from_bits(self.read_u32::<LittleEndian>()?)
+        self.package_flags = EPackageFlags::from_bits(self.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
         // read name count and offset
-        self.name_count = self.read_i32::<LittleEndian>()?;
-        self.name_offset = self.read_i32::<LittleEndian>()?;
+        self.name_count = self.read_i32::<LE>()?;
+        self.name_offset = self.read_i32::<LE>()?;
         // read text gatherable data
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
-            self.gatherable_text_data_count = self.read_i32::<LittleEndian>()?;
-            self.gatherable_text_data_offset = self.read_i32::<LittleEndian>()?;
+            self.gatherable_text_data_count = self.read_i32::<LE>()?;
+            self.gatherable_text_data_offset = self.read_i32::<LE>()?;
         }
 
         // read count and offset for exports, imports, depends, soft package references, searchable names, thumbnail table
-        self.export_count = self.read_i32::<LittleEndian>()?;
-        self.export_offset = self.read_i32::<LittleEndian>()?;
-        self.import_count = self.read_i32::<LittleEndian>()?;
-        self.import_offset = self.read_i32::<LittleEndian>()?;
-        self.depends_offset = self.read_i32::<LittleEndian>()?;
+        self.export_count = self.read_i32::<LE>()?;
+        self.export_offset = self.read_i32::<LE>()?;
+        self.import_count = self.read_i32::<LE>()?;
+        self.import_offset = self.read_i32::<LE>()?;
+        self.depends_offset = self.read_i32::<LE>()?;
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP
         {
-            self.soft_package_reference_count = self.read_i32::<LittleEndian>()?;
-            self.soft_package_reference_offset = self.read_i32::<LittleEndian>()?;
+            self.soft_package_reference_count = self.read_i32::<LE>()?;
+            self.soft_package_reference_offset = self.read_i32::<LE>()?;
         }
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ADDED_SEARCHABLE_NAMES {
-            self.searchable_names_offset = self.read_i32::<LittleEndian>()?;
+            self.searchable_names_offset = self.read_i32::<LE>()?;
         }
-        self.thumbnail_table_offset = self.read_i32::<LittleEndian>()?;
+        self.thumbnail_table_offset = self.read_i32::<LE>()?;
 
         // read guid
         self.raw_reader.read_exact(&mut self.package_guid)?;
 
         // raed generations
-        let generations_count = self.read_i32::<LittleEndian>()?;
+        let generations_count = self.read_i32::<LE>()?;
         for _ in 0..generations_count {
-            let export_count = self.read_i32::<LittleEndian>()?;
-            let name_count = self.read_i32::<LittleEndian>()?;
+            let export_count = self.read_i32::<LE>()?;
+            let name_count = self.read_i32::<LE>()?;
             self.generations.push(GenerationInfo {
                 export_count,
                 name_count,
@@ -472,7 +472,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             self.engine_version_recorded = FEngineVersion::read(self)?;
         } else {
             self.engine_version_recorded =
-                FEngineVersion::new(4, 0, 0, self.read_u32::<LittleEndian>()?, None);
+                FEngineVersion::new(4, 0, 0, self.read_u32::<LE>()?, None);
         }
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION
@@ -483,25 +483,25 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         // read compression data
-        self.compression_flags = self.read_u32::<LittleEndian>()?;
-        let compression_block_count = self.read_u32::<LittleEndian>()?;
+        self.compression_flags = self.read_u32::<LE>()?;
+        let compression_block_count = self.read_u32::<LE>()?;
         if compression_block_count > 0 {
             return Err(Error::invalid_file(
                 "Compression block count is not zero".to_string(),
             ));
         }
 
-        self.package_source = self.read_u32::<LittleEndian>()?;
+        self.package_source = self.read_u32::<LE>()?;
 
         // some other old unsupported stuff
-        let additional_to_cook = self.read_i32::<LittleEndian>()?;
+        let additional_to_cook = self.read_i32::<LE>()?;
         if additional_to_cook != 0 {
             return Err(Error::invalid_file(
                 "Additional to cook is not zero".to_string(),
             ));
         }
         if self.legacy_file_version > -7 {
-            let texture_allocations_count = self.read_i32::<LittleEndian>()?;
+            let texture_allocations_count = self.read_i32::<LE>()?;
             if texture_allocations_count != 0 {
                 return Err(Error::invalid_file(
                     "Texture allocations count is not zero".to_string(),
@@ -509,34 +509,34 @@ impl<'a, C: Read + Seek> Asset<C> {
             }
         }
 
-        self.asset_registry_data_offset = self.read_i32::<LittleEndian>()?;
-        self.bulk_data_start_offset = self.read_i64::<LittleEndian>()?;
+        self.asset_registry_data_offset = self.read_i32::<LE>()?;
+        self.bulk_data_start_offset = self.read_i64::<LE>()?;
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO {
-            self.world_tile_info_offset = self.read_i32::<LittleEndian>()?;
+            self.world_tile_info_offset = self.read_i32::<LE>()?;
         }
 
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS
         {
-            let chunk_id_count = self.read_i32::<LittleEndian>()?;
+            let chunk_id_count = self.read_i32::<LE>()?;
 
             for _ in 0..chunk_id_count {
-                let chunk_id = self.read_i32::<LittleEndian>()?;
+                let chunk_id = self.read_i32::<LE>()?;
                 self.chunk_ids.push(chunk_id);
             }
         } else if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE
         {
             self.chunk_ids = vec![];
-            self.chunk_ids[0] = self.read_i32::<LittleEndian>()?;
+            self.chunk_ids[0] = self.read_i32::<LE>()?;
         }
 
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
         {
-            self.preload_dependency_count = self.read_i32::<LittleEndian>()?;
-            self.preload_dependency_offset = self.read_i32::<LittleEndian>()?;
+            self.preload_dependency_count = self.read_i32::<LE>()?;
+            self.preload_dependency_offset = self.read_i32::<LE>()?;
         }
         Ok(())
     }
@@ -663,7 +663,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                 let import = Import::new(
                     self.read_fname()?,
                     self.read_fname()?,
-                    PackageIndex::new(self.read_i32::<LittleEndian>()?),
+                    PackageIndex::new(self.read_i32::<LE>()?),
                     self.read_fname()?,
                 );
                 self.imports.push(import);
@@ -684,10 +684,10 @@ impl<'a, C: Read + Seek> Asset<C> {
             self.seek(SeekFrom::Start(self.depends_offset as u64))?;
 
             for _i in 0..self.export_count as usize {
-                let size = self.read_i32::<LittleEndian>()?;
+                let size = self.read_i32::<LE>()?;
                 let mut data: Vec<i32> = Vec::new();
                 for _j in 0..size {
-                    data.push(self.read_i32::<LittleEndian>()?);
+                    data.push(self.read_i32::<LE>()?);
                 }
                 depends_map.push(data);
             }
@@ -772,79 +772,75 @@ impl<'a, C: Read + Seek> Asset<C> {
         asset_header: &AssetHeader,
     ) -> Result<(), Error> {
         cursor.write_u32::<BigEndian>(UE4_ASSET_MAGIC)?;
-        cursor.write_i32::<LittleEndian>(self.legacy_file_version)?;
+        cursor.write_i32::<LE>(self.legacy_file_version)?;
 
         if self.legacy_file_version != 4 {
             match self.asset_data.unversioned {
-                true => cursor.write_i32::<LittleEndian>(0)?,
-                false => cursor.write_i32::<LittleEndian>(864)?,
+                true => cursor.write_i32::<LE>(0)?,
+                false => cursor.write_i32::<LE>(864)?,
             };
         }
 
         match self.asset_data.unversioned {
-            true => cursor.write_i32::<LittleEndian>(0)?,
-            false => cursor.write_i32::<LittleEndian>(self.asset_data.object_version as i32)?,
+            true => cursor.write_i32::<LE>(0)?,
+            false => cursor.write_i32::<LE>(self.asset_data.object_version as i32)?,
         };
 
-        cursor.write_i32::<LittleEndian>(self.asset_data.file_license_version)?;
+        cursor.write_i32::<LE>(self.asset_data.file_license_version)?;
         if self.legacy_file_version <= -2 {
             match self.asset_data.unversioned {
-                true => cursor.write_i32::<LittleEndian>(0)?,
+                true => cursor.write_i32::<LE>(0)?,
                 false => {
-                    cursor
-                        .write_i32::<LittleEndian>(self.asset_data.custom_versions.len() as i32)?;
+                    cursor.write_i32::<LE>(self.asset_data.custom_versions.len() as i32)?;
                     for custom_version in &self.asset_data.custom_versions {
                         cursor.write_all(&custom_version.guid)?;
-                        cursor.write_i32::<LittleEndian>(custom_version.version)?;
+                        cursor.write_i32::<LE>(custom_version.version)?;
                     }
                 }
             };
         }
 
-        cursor.write_i32::<LittleEndian>(asset_header.header_offset)?;
+        cursor.write_i32::<LE>(asset_header.header_offset)?;
         cursor.write_fstring(Some(&self.folder_name))?;
-        cursor.write_u32::<LittleEndian>(self.package_flags.bits())?;
-        cursor.write_i32::<LittleEndian>(
-            self.name_map.get_ref().get_name_map_index_list().len() as i32,
-        )?;
-        cursor.write_i32::<LittleEndian>(asset_header.name_offset)?;
+        cursor.write_u32::<LE>(self.package_flags.bits())?;
+        cursor.write_i32::<LE>(self.name_map.get_ref().get_name_map_index_list().len() as i32)?;
+        cursor.write_i32::<LE>(asset_header.name_offset)?;
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
-            cursor.write_i32::<LittleEndian>(self.gatherable_text_data_count)?;
-            cursor.write_i32::<LittleEndian>(self.gatherable_text_data_offset)?;
+            cursor.write_i32::<LE>(self.gatherable_text_data_count)?;
+            cursor.write_i32::<LE>(self.gatherable_text_data_offset)?;
         }
 
-        cursor.write_i32::<LittleEndian>(self.asset_data.exports.len() as i32)?;
-        cursor.write_i32::<LittleEndian>(asset_header.export_offset)?;
-        cursor.write_i32::<LittleEndian>(self.imports.len() as i32)?;
-        cursor.write_i32::<LittleEndian>(asset_header.import_offset)?;
-        cursor.write_i32::<LittleEndian>(asset_header.depends_offset)?;
+        cursor.write_i32::<LE>(self.asset_data.exports.len() as i32)?;
+        cursor.write_i32::<LE>(asset_header.export_offset)?;
+        cursor.write_i32::<LE>(self.imports.len() as i32)?;
+        cursor.write_i32::<LE>(asset_header.import_offset)?;
+        cursor.write_i32::<LE>(asset_header.depends_offset)?;
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP
         {
-            cursor.write_i32::<LittleEndian>(self.soft_package_reference_count)?;
-            cursor.write_i32::<LittleEndian>(asset_header.soft_package_reference_offset)?;
+            cursor.write_i32::<LE>(self.soft_package_reference_count)?;
+            cursor.write_i32::<LE>(asset_header.soft_package_reference_offset)?;
         }
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ADDED_SEARCHABLE_NAMES {
-            cursor.write_i32::<LittleEndian>(self.searchable_names_offset)?;
+            cursor.write_i32::<LE>(self.searchable_names_offset)?;
         }
 
-        cursor.write_i32::<LittleEndian>(self.thumbnail_table_offset)?;
+        cursor.write_i32::<LE>(self.thumbnail_table_offset)?;
         cursor.write_all(&self.package_guid)?;
-        cursor.write_i32::<LittleEndian>(self.generations.len() as i32)?;
+        cursor.write_i32::<LE>(self.generations.len() as i32)?;
 
         for _ in 0..self.generations.len() {
-            cursor.write_i32::<LittleEndian>(self.asset_data.exports.len() as i32)?;
-            cursor.write_i32::<LittleEndian>(
-                self.name_map.get_ref().get_name_map_index_list().len() as i32,
-            )?;
+            cursor.write_i32::<LE>(self.asset_data.exports.len() as i32)?;
+            cursor
+                .write_i32::<LE>(self.name_map.get_ref().get_name_map_index_list().len() as i32)?;
         }
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ENGINE_VERSION_OBJECT {
             self.engine_version_recorded.write(cursor)?;
         } else {
-            cursor.write_u32::<LittleEndian>(self.engine_version_recorded.build)?;
+            cursor.write_u32::<LE>(self.engine_version_recorded.build)?;
         }
 
         if self.asset_data.object_version
@@ -853,40 +849,40 @@ impl<'a, C: Read + Seek> Asset<C> {
             self.engine_version_recorded.write(cursor)?;
         }
 
-        cursor.write_u32::<LittleEndian>(self.compression_flags)?;
-        cursor.write_i32::<LittleEndian>(0)?; // numCompressedChunks
-        cursor.write_u32::<LittleEndian>(self.package_source)?;
-        cursor.write_i32::<LittleEndian>(0)?; // numAdditionalPackagesToCook
+        cursor.write_u32::<LE>(self.compression_flags)?;
+        cursor.write_i32::<LE>(0)?; // numCompressedChunks
+        cursor.write_u32::<LE>(self.package_source)?;
+        cursor.write_i32::<LE>(0)?; // numAdditionalPackagesToCook
 
         if self.legacy_file_version > -7 {
-            cursor.write_i32::<LittleEndian>(0)?; // numTextureallocations
+            cursor.write_i32::<LE>(0)?; // numTextureallocations
         }
 
-        cursor.write_i32::<LittleEndian>(asset_header.asset_registry_data_offset)?;
-        cursor.write_i64::<LittleEndian>(asset_header.bulk_data_start_offset)?;
+        cursor.write_i32::<LE>(asset_header.asset_registry_data_offset)?;
+        cursor.write_i64::<LE>(asset_header.bulk_data_start_offset)?;
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_WORLD_LEVEL_INFO {
-            cursor.write_i32::<LittleEndian>(asset_header.world_tile_info_offset)?;
+            cursor.write_i32::<LE>(asset_header.world_tile_info_offset)?;
         }
 
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_CHANGED_CHUNKID_TO_BE_AN_ARRAY_OF_CHUNKIDS
         {
-            cursor.write_i32::<LittleEndian>(self.chunk_ids.len() as i32)?;
+            cursor.write_i32::<LE>(self.chunk_ids.len() as i32)?;
             for chunk_id in &self.chunk_ids {
-                cursor.write_i32::<LittleEndian>(*chunk_id)?;
+                cursor.write_i32::<LE>(*chunk_id)?;
             }
         } else if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_ADDED_CHUNKID_TO_ASSETDATA_AND_UPACKAGE
         {
-            cursor.write_i32::<LittleEndian>(self.chunk_ids[0])?;
+            cursor.write_i32::<LE>(self.chunk_ids[0])?;
         }
 
         if self.asset_data.object_version
             >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
         {
-            cursor.write_i32::<LittleEndian>(asset_header.preload_dependency_count)?;
-            cursor.write_i32::<LittleEndian>(asset_header.preload_dependency_offset)?;
+            cursor.write_i32::<LE>(asset_header.preload_dependency_count)?;
+            cursor.write_i32::<LE>(asset_header.preload_dependency_offset)?;
         }
 
         Ok(())
@@ -972,8 +968,8 @@ impl<'a, C: Read + Seek> Asset<C> {
 
             if self.asset_data.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                 match self.override_name_map_hashes.get_by_key(name) {
-                    Some(e) => serializer.write_u32::<LittleEndian>(*e)?,
-                    None => serializer.write_u32::<LittleEndian>(crc::generate_hash(name))?,
+                    Some(e) => serializer.write_u32::<LE>(*e)?,
+                    None => serializer.write_u32::<LE>(crc::generate_hash(name))?,
                 };
             }
         }
@@ -986,7 +982,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         for import in &self.imports {
             serializer.write_fname(&import.class_package)?;
             serializer.write_fname(&import.class_name)?;
-            serializer.write_i32::<LittleEndian>(import.outer_index.index)?;
+            serializer.write_i32::<LE>(import.outer_index.index)?;
             serializer.write_fname(&import.object_name)?;
         }
 
@@ -1017,9 +1013,9 @@ impl<'a, C: Read + Seek> Asset<C> {
                     Some(e) => e,
                     None => &dummy,
                 };
-                serializer.write_i32::<LittleEndian>(current_data.len() as i32)?;
+                serializer.write_i32::<LE>(current_data.len() as i32)?;
                 for i in current_data {
-                    serializer.write_i32::<LittleEndian>(*i)?;
+                    serializer.write_i32::<LE>(*i)?;
                 }
             }
         }
@@ -1042,7 +1038,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             false => 0,
         };
         if self.asset_registry_data_offset != 0 {
-            serializer.write_i32::<LittleEndian>(0)?; // asset registry data length
+            serializer.write_i32::<LE>(0)?; // asset registry data length
         }
 
         let world_tile_info_offset = match self.asset_data.world_tile_info {
@@ -1062,19 +1058,19 @@ impl<'a, C: Read + Seek> Asset<C> {
                 let unk_export = export.get_base_export();
 
                 for element in &unk_export.serialization_before_serialization_dependencies {
-                    serializer.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LE>(element.index)?;
                 }
 
                 for element in &unk_export.create_before_serialization_dependencies {
-                    serializer.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LE>(element.index)?;
                 }
 
                 for element in &unk_export.serialization_before_create_dependencies {
-                    serializer.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LE>(element.index)?;
                 }
 
                 for element in &unk_export.create_before_create_dependencies {
-                    serializer.write_i32::<LittleEndian>(element.index)?;
+                    serializer.write_i32::<LE>(element.index)?;
                 }
 
                 preload_dependency_count += unk_export
@@ -1391,20 +1387,20 @@ impl FEngineVersion {
     }
 
     fn read<Reader: ArchiveReader>(cursor: &mut Reader) -> Result<Self, Error> {
-        let major = cursor.read_u16::<LittleEndian>()?;
-        let minor = cursor.read_u16::<LittleEndian>()?;
-        let patch = cursor.read_u16::<LittleEndian>()?;
-        let build = cursor.read_u32::<LittleEndian>()?;
+        let major = cursor.read_u16::<LE>()?;
+        let minor = cursor.read_u16::<LE>()?;
+        let patch = cursor.read_u16::<LE>()?;
+        let build = cursor.read_u32::<LE>()?;
         let branch = cursor.read_fstring()?;
 
         Ok(Self::new(major, minor, patch, build, branch))
     }
 
     fn write<Writer: ArchiveWriter>(&self, cursor: &mut Writer) -> Result<(), Error> {
-        cursor.write_u16::<LittleEndian>(self.major)?;
-        cursor.write_u16::<LittleEndian>(self.minor)?;
-        cursor.write_u16::<LittleEndian>(self.patch)?;
-        cursor.write_u32::<LittleEndian>(self.build)?;
+        cursor.write_u16::<LE>(self.major)?;
+        cursor.write_u16::<LE>(self.minor)?;
+        cursor.write_u16::<LE>(self.patch)?;
+        cursor.write_u32::<LE>(self.build)?;
         cursor.write_fstring(self.branch.as_deref())?;
         Ok(())
     }

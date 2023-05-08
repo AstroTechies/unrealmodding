@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -83,19 +83,19 @@ impl WeightedRandomSamplerProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let size = asset.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LE>()?;
         let mut prob = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            prob.push(OrderedFloat(asset.read_f32::<LittleEndian>()?));
+            prob.push(OrderedFloat(asset.read_f32::<LE>()?));
         }
 
-        let size = asset.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LE>()?;
         let mut alias = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            alias.push(asset.read_i32::<LittleEndian>()?);
+            alias.push(asset.read_i32::<LE>()?);
         }
 
-        let total_weight = OrderedFloat(asset.read_f32::<LittleEndian>()?);
+        let total_weight = OrderedFloat(asset.read_f32::<LE>()?);
 
         Ok(WeightedRandomSamplerProperty {
             name,
@@ -116,17 +116,17 @@ impl PropertyTrait for WeightedRandomSamplerProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.prob.len() as i32)?;
+        asset.write_i32::<LE>(self.prob.len() as i32)?;
         for entry in &self.prob {
-            asset.write_f32::<LittleEndian>(entry.0)?;
+            asset.write_f32::<LE>(entry.0)?;
         }
 
-        asset.write_i32::<LittleEndian>(self.alias.len() as i32)?;
+        asset.write_i32::<LE>(self.alias.len() as i32)?;
         for entry in &self.alias {
-            asset.write_i32::<LittleEndian>(*entry)?;
+            asset.write_i32::<LE>(*entry)?;
         }
 
-        asset.write_f32::<LittleEndian>(self.total_weight.0)?;
+        asset.write_f32::<LE>(self.total_weight.0)?;
         Ok(size_of::<i32>()
             + size_of::<f32>() * self.prob.len()
             + size_of::<i32>()
@@ -147,19 +147,19 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let size = asset.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LE>()?;
         let mut prob = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            prob.push(OrderedFloat(asset.read_f32::<LittleEndian>()?));
+            prob.push(OrderedFloat(asset.read_f32::<LE>()?));
         }
 
-        let size = asset.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LE>()?;
         let mut alias = Vec::with_capacity(size as usize);
         for _i in 0..size as usize {
-            alias.push(asset.read_i32::<LittleEndian>()?);
+            alias.push(asset.read_i32::<LE>()?);
         }
 
-        let total_weight = OrderedFloat(asset.read_f32::<LittleEndian>()?);
+        let total_weight = OrderedFloat(asset.read_f32::<LE>()?);
 
         Ok(SkeletalMeshAreaWeightedTriangleSampler {
             name,
@@ -180,17 +180,17 @@ impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.prob.len() as i32)?;
+        asset.write_i32::<LE>(self.prob.len() as i32)?;
         for entry in &self.prob {
-            asset.write_f32::<LittleEndian>(entry.0)?;
+            asset.write_f32::<LE>(entry.0)?;
         }
 
-        asset.write_i32::<LittleEndian>(self.alias.len() as i32)?;
+        asset.write_i32::<LE>(self.alias.len() as i32)?;
         for entry in &self.alias {
-            asset.write_i32::<LittleEndian>(*entry)?;
+            asset.write_i32::<LE>(*entry)?;
         }
 
-        asset.write_f32::<LittleEndian>(self.total_weight.0)?;
+        asset.write_f32::<LE>(self.total_weight.0)?;
         Ok(size_of::<i32>()
             + size_of::<f32>() * self.prob.len()
             + size_of::<i32>()

@@ -1,6 +1,6 @@
 //! Smart name property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::FAnimPhysObjectVersion;
@@ -54,7 +54,7 @@ impl SmartNameProperty {
         let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
 
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
-            smart_name_id = Some(asset.read_u16::<LittleEndian>()?);
+            smart_name_id = Some(asset.read_u16::<LE>()?);
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
@@ -88,7 +88,7 @@ impl PropertyTrait for SmartNameProperty {
 
         let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
-            asset.write_u16::<LittleEndian>(
+            asset.write_u16::<LE>(
                 self.smart_name_id
                     .ok_or_else(|| PropertyError::property_field_none("smart_name_id", "u16"))?,
             )?;

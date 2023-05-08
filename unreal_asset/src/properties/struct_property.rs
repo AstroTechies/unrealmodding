@@ -3,7 +3,7 @@
 use std::io::SeekFrom;
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::{
@@ -141,7 +141,7 @@ impl StructProperty {
                 // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
                 // The best solution is to just check and see if the next bit is an FName or not
 
-                let name_map_index = asset.read_i32::<LittleEndian>()?;
+                let name_map_index = asset.read_i32::<LE>()?;
                 asset.seek(SeekFrom::Current(-(size_of::<u32>() as i64)))?;
 
                 if name_map_index >= 0

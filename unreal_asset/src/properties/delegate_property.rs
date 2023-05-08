@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -67,7 +67,7 @@ impl DelegateProperty {
             property_guid,
             duplication_index,
             value: Delegate::new(
-                PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                PackageIndex::new(asset.read_i32::<LE>()?),
                 asset.read_fname()?,
             ),
         })
@@ -82,7 +82,7 @@ impl PropertyTrait for DelegateProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
 
-        asset.write_i32::<LittleEndian>(self.value.object.index)?;
+        asset.write_i32::<LE>(self.value.object.index)?;
         asset.write_fname(&self.value.delegate)?;
 
         Ok(size_of::<i32>() * 3)
@@ -119,11 +119,11 @@ macro_rules! impl_multicast {
             ) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
 
-                let length = asset.read_i32::<LittleEndian>()?;
+                let length = asset.read_i32::<LE>()?;
                 let mut value = Vec::with_capacity(length as usize);
                 for _ in 0..length {
                     value.push(Delegate::new(
-                        PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                        PackageIndex::new(asset.read_i32::<LE>()?),
                         asset.read_fname()?,
                     ));
                 }
@@ -146,9 +146,9 @@ macro_rules! impl_multicast {
             ) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, include_header);
 
-                asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+                asset.write_i32::<LE>(self.value.len() as i32)?;
                 for entry in &self.value {
-                    asset.write_i32::<LittleEndian>(entry.object.index)?;
+                    asset.write_i32::<LE>(entry.object.index)?;
                     asset.write_fname(&entry.delegate)?;
                 }
                 Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())

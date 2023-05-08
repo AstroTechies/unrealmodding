@@ -1,6 +1,6 @@
 //! Niagara variable property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -46,7 +46,7 @@ impl NiagaraVariableProperty {
             properties.push(property);
         }
 
-        let variable_offset = asset.read_i32::<LittleEndian>()?;
+        let variable_offset = asset.read_i32::<LE>()?;
 
         Ok(NiagaraVariableProperty {
             struct_property: StructProperty {
@@ -122,7 +122,7 @@ impl PropertyTrait for NiagaraVariableProperty {
         if !asset.has_unversioned_properties() {
             asset.write_fname(&asset.get_name_map().get_mut().add_fname("None"))?;
         }
-        asset.write_i32::<LittleEndian>(self.variable_offset)?;
+        asset.write_i32::<LE>(self.variable_offset)?;
 
         Ok((asset.position() - begin) as usize)
     }

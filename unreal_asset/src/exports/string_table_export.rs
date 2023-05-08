@@ -1,6 +1,6 @@
 //! String table export
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
@@ -32,12 +32,12 @@ impl StringTableExport {
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
 
         let namespace = asset.read_fstring()?;
 
         let mut table = IndexedMap::new();
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         for _ in 0..num_entries {
             table.insert(
                 asset
@@ -60,10 +60,10 @@ impl StringTableExport {
 impl ExportTrait for StringTableExport {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
 
         asset.write_fstring(self.namespace.as_deref())?;
-        asset.write_i32::<LittleEndian>(self.table.len() as i32)?;
+        asset.write_i32::<LE>(self.table.len() as i32)?;
         for (_, key, value) in &self.table {
             asset.write_fstring(Some(key))?;
             asset.write_fstring(Some(value))?;

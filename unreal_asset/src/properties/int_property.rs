@@ -3,7 +3,7 @@
 use std::io::SeekFrom;
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -37,7 +37,7 @@ macro_rules! impl_int_property {
                     ancestry,
                     property_guid,
                     duplication_index,
-                    value: asset.$read_func::<LittleEndian>()?,
+                    value: asset.$read_func::<LE>()?,
                 })
             }
         }
@@ -311,8 +311,8 @@ impl ByteProperty {
             1 => Some(BytePropertyValue::Byte(asset.read_u8()?)),
             8 => Some(BytePropertyValue::FName(asset.read_fname()?)),
             0 => {
-                let name_map_pointer = asset.read_i32::<LittleEndian>()?;
-                let name_map_index = asset.read_i32::<LittleEndian>()?;
+                let name_map_pointer = asset.read_i32::<LE>()?;
+                let name_map_index = asset.read_i32::<LE>()?;
 
                 asset.seek(SeekFrom::Current(-(size_of::<i32>() as i64 * 2)))?;
 
@@ -415,7 +415,7 @@ impl FloatProperty {
             ancestry,
             property_guid,
             duplication_index,
-            value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f32::<LE>()?),
         })
     }
 }
@@ -427,7 +427,7 @@ impl PropertyTrait for FloatProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_f32::<LittleEndian>(self.value.0)?;
+        asset.write_f32::<LE>(self.value.0)?;
         Ok(size_of::<f32>())
     }
 }
@@ -449,7 +449,7 @@ impl DoubleProperty {
             ancestry,
             property_guid,
             duplication_index,
-            value: OrderedFloat(asset.read_f64::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f64::<LE>()?),
         })
     }
 }
@@ -461,7 +461,7 @@ impl PropertyTrait for DoubleProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_f64::<LittleEndian>(self.value.0)?;
+        asset.write_f64::<LE>(self.value.0)?;
         Ok(size_of::<f64>())
     }
 }

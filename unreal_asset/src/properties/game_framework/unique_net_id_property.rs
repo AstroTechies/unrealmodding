@@ -2,7 +2,7 @@
 
 use std::{io::SeekFrom, mem::size_of};
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -51,7 +51,7 @@ impl UniqueNetIdProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let size = asset.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LE>()?;
         let value = match size > 0 {
             true => Some(UniqueNetId {
                 ty: asset.read_fname()?,
@@ -88,11 +88,11 @@ impl PropertyTrait for UniqueNetIdProperty {
 
                 let end = asset.position();
                 asset.seek(SeekFrom::Start(begin))?;
-                asset.write_i32::<LittleEndian>(length as i32)?;
+                asset.write_i32::<LE>(length as i32)?;
                 asset.seek(SeekFrom::Start(end))?;
             }
             None => {
-                asset.write_i32::<LittleEndian>(0)?;
+                asset.write_i32::<LE>(0)?;
             }
         }
 

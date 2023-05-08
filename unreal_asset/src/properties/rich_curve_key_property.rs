@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
@@ -129,12 +129,12 @@ impl RichCurveKeyProperty {
         let tangent_mode = RichCurveTangentMode::try_from(asset.read_i8()?)?;
         let tangent_weight_mode = RichCurveTangentWeightMode::try_from(asset.read_i8()?)?;
 
-        let time = OrderedFloat(asset.read_f32::<LittleEndian>()?);
-        let value = OrderedFloat(asset.read_f32::<LittleEndian>()?);
-        let arrive_tangent = OrderedFloat(asset.read_f32::<LittleEndian>()?);
-        let arrive_tangent_weight = OrderedFloat(asset.read_f32::<LittleEndian>()?);
-        let leave_tangent = OrderedFloat(asset.read_f32::<LittleEndian>()?);
-        let leave_tangent_weight = OrderedFloat(asset.read_f32::<LittleEndian>()?);
+        let time = OrderedFloat(asset.read_f32::<LE>()?);
+        let value = OrderedFloat(asset.read_f32::<LE>()?);
+        let arrive_tangent = OrderedFloat(asset.read_f32::<LE>()?);
+        let arrive_tangent_weight = OrderedFloat(asset.read_f32::<LE>()?);
+        let leave_tangent = OrderedFloat(asset.read_f32::<LE>()?);
+        let leave_tangent_weight = OrderedFloat(asset.read_f32::<LE>()?);
 
         Ok(RichCurveKeyProperty {
             name,
@@ -164,12 +164,12 @@ impl PropertyTrait for RichCurveKeyProperty {
         asset.write_i8(self.interp_mode.into())?;
         asset.write_i8(self.tangent_mode.into())?;
         asset.write_i8(self.tangent_weight_mode.into())?;
-        asset.write_f32::<LittleEndian>(self.time.0)?;
-        asset.write_f32::<LittleEndian>(self.value.0)?;
-        asset.write_f32::<LittleEndian>(self.arrive_tangent.0)?;
-        asset.write_f32::<LittleEndian>(self.arrive_tangent_weight.0)?;
-        asset.write_f32::<LittleEndian>(self.leave_tangent.0)?;
-        asset.write_f32::<LittleEndian>(self.leave_tangent_weight.0)?;
+        asset.write_f32::<LE>(self.time.0)?;
+        asset.write_f32::<LE>(self.value.0)?;
+        asset.write_f32::<LE>(self.arrive_tangent.0)?;
+        asset.write_f32::<LE>(self.arrive_tangent_weight.0)?;
+        asset.write_f32::<LE>(self.leave_tangent.0)?;
+        asset.write_f32::<LE>(self.leave_tangent_weight.0)?;
         Ok(size_of::<f32>() * 6 + size_of::<i8>() * 3)
     }
 }

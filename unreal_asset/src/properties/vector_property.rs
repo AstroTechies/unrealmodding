@@ -2,7 +2,6 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
 use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
@@ -210,9 +209,9 @@ impl PropertyTrait for VectorProperty {
                 Ok(size_of::<f64>() * 3)
             }
             false => {
-                asset.write_f32::<LittleEndian>(self.value.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.y.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.z.0 as f32)?;
                 Ok(size_of::<f32>() * 3)
             }
         }
@@ -229,8 +228,8 @@ impl IntPointProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let x = asset.read_i32::<LittleEndian>()?;
-        let y = asset.read_i32::<LittleEndian>()?;
+        let x = asset.read_i32::<LE>()?;
+        let y = asset.read_i32::<LE>()?;
 
         Ok(IntPointProperty {
             name,
@@ -249,8 +248,8 @@ impl PropertyTrait for IntPointProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.x)?;
-        asset.write_i32::<LittleEndian>(self.value.y)?;
+        asset.write_i32::<LE>(self.value.x)?;
+        asset.write_i32::<LE>(self.value.y)?;
         Ok(size_of::<i32>() * 2)
     }
 }
@@ -365,13 +364,13 @@ impl PropertyTrait for Vector2DProperty {
 
         match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
             true => {
-                asset.write_f64::<LittleEndian>(self.value.x.0)?;
-                asset.write_f64::<LittleEndian>(self.value.y.0)?;
+                asset.write_f64::<LE>(self.value.x.0)?;
+                asset.write_f64::<LE>(self.value.y.0)?;
                 Ok(size_of::<f64>() * 2)
             }
             false => {
-                asset.write_f32::<LittleEndian>(self.value.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.y.0 as f32)?;
                 Ok(size_of::<f32>() * 2)
             }
         }
@@ -392,17 +391,17 @@ impl QuatProperty {
         let value =
             match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
                 true => {
-                    let x = OrderedFloat(asset.read_f64::<LittleEndian>()?);
-                    let y = OrderedFloat(asset.read_f64::<LittleEndian>()?);
-                    let z = OrderedFloat(asset.read_f64::<LittleEndian>()?);
-                    let w = OrderedFloat(asset.read_f64::<LittleEndian>()?);
+                    let x = OrderedFloat(asset.read_f64::<LE>()?);
+                    let y = OrderedFloat(asset.read_f64::<LE>()?);
+                    let z = OrderedFloat(asset.read_f64::<LE>()?);
+                    let w = OrderedFloat(asset.read_f64::<LE>()?);
                     Vector4::new(x, y, z, w)
                 }
                 false => {
-                    let x = OrderedFloat(asset.read_f32::<LittleEndian>()? as f64);
-                    let y = OrderedFloat(asset.read_f32::<LittleEndian>()? as f64);
-                    let z = OrderedFloat(asset.read_f32::<LittleEndian>()? as f64);
-                    let w = OrderedFloat(asset.read_f32::<LittleEndian>()? as f64);
+                    let x = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let y = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let z = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let w = OrderedFloat(asset.read_f32::<LE>()? as f64);
                     Vector4::new(x, y, z, w)
                 }
             };
@@ -427,17 +426,17 @@ impl PropertyTrait for QuatProperty {
 
         match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
             true => {
-                asset.write_f64::<LittleEndian>(self.value.x.0)?;
-                asset.write_f64::<LittleEndian>(self.value.y.0)?;
-                asset.write_f64::<LittleEndian>(self.value.z.0)?;
-                asset.write_f64::<LittleEndian>(self.value.w.0)?;
+                asset.write_f64::<LE>(self.value.x.0)?;
+                asset.write_f64::<LE>(self.value.y.0)?;
+                asset.write_f64::<LE>(self.value.z.0)?;
+                asset.write_f64::<LE>(self.value.w.0)?;
                 Ok(size_of::<f64>() * 4)
             }
             false => {
-                asset.write_f32::<LittleEndian>(self.value.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.y.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.z.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.w.0 as f32)?;
+                asset.write_f32::<LE>(self.value.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.w.0 as f32)?;
                 Ok(size_of::<f32>() * 4)
             }
         }
@@ -458,15 +457,15 @@ impl RotatorProperty {
         let value =
             match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
                 true => {
-                    let x = OrderedFloat(asset.read_f64::<LittleEndian>()?);
-                    let y = OrderedFloat(asset.read_f64::<LittleEndian>()?);
-                    let z = OrderedFloat(asset.read_f64::<LittleEndian>()?);
+                    let x = OrderedFloat(asset.read_f64::<LE>()?);
+                    let y = OrderedFloat(asset.read_f64::<LE>()?);
+                    let z = OrderedFloat(asset.read_f64::<LE>()?);
                     Vector::new(x, y, z)
                 }
                 false => {
-                    let x = OrderedFloat(asset.read_f32::<LittleEndian>()? as f64);
-                    let y = OrderedFloat(asset.read_f32::<LittleEndian>()? as f64);
-                    let z = OrderedFloat(asset.read_f32::<LittleEndian>()? as f64);
+                    let x = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let y = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let z = OrderedFloat(asset.read_f32::<LE>()? as f64);
                     Vector::new(x, y, z)
                 }
             };
@@ -491,16 +490,16 @@ impl PropertyTrait for RotatorProperty {
 
         match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
             true => {
-                asset.write_f64::<LittleEndian>(self.value.x.0)?;
-                asset.write_f64::<LittleEndian>(self.value.y.0)?;
-                asset.write_f64::<LittleEndian>(self.value.z.0)?;
+                asset.write_f64::<LE>(self.value.x.0)?;
+                asset.write_f64::<LE>(self.value.y.0)?;
+                asset.write_f64::<LE>(self.value.z.0)?;
 
                 Ok(size_of::<f64>() * 3)
             }
             false => {
-                asset.write_f32::<LittleEndian>(self.value.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.y.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.z.0 as f32)?;
 
                 Ok(size_of::<f32>() * 3)
             }

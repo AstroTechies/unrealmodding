@@ -1,7 +1,7 @@
 //! Asset registry NameTableReader
 use std::io::{self, SeekFrom};
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 
 use crate::asset::name_map::NameMap;
 use crate::containers::indexed_map::IndexedMap;
@@ -30,7 +30,7 @@ pub struct NameTableReader<'reader, Reader: ArchiveReader> {
 impl<'reader, Reader: ArchiveReader> NameTableReader<'reader, Reader> {
     /// Create a new `NameTableReader` from another `Reader`
     pub(crate) fn new(reader: &'reader mut Reader) -> Result<Self, Error> {
-        let name_offset = reader.read_i64::<LittleEndian>()?;
+        let name_offset = reader.read_i64::<LE>()?;
         // todo: length checking
 
         let mut name_map = NameMap::new();
@@ -38,7 +38,7 @@ impl<'reader, Reader: ArchiveReader> NameTableReader<'reader, Reader> {
             let original_offset = reader.position();
             reader.seek(SeekFrom::Start(name_offset as u64))?;
 
-            let name_count = reader.read_i32::<LittleEndian>()?;
+            let name_count = reader.read_i32::<LE>()?;
             if name_count < 0 {
                 return Err(Error::invalid_file("Corrupted file".to_string()));
             }
@@ -50,8 +50,8 @@ impl<'reader, Reader: ArchiveReader> NameTableReader<'reader, Reader> {
                 name_map.get_mut().add_name_reference(name, false);
 
                 if reader.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
-                    let _non_case_preserving_hash = reader.read_u16::<LittleEndian>()?;
-                    let _case_preserving_hash = reader.read_u16::<LittleEndian>()?;
+                    let _non_case_preserving_hash = reader.read_u16::<LE>()?;
+                    let _case_preserving_hash = reader.read_u16::<LE>()?;
                 }
             }
 

@@ -1,6 +1,6 @@
 //! Level export
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
@@ -43,23 +43,23 @@ impl LevelExport {
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(unk, asset)?;
 
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
 
-        let num_actors = asset.read_i32::<LittleEndian>()?;
+        let num_actors = asset.read_i32::<LE>()?;
         let mut actors = Vec::with_capacity(num_actors as usize);
         for _i in 0..num_actors as usize {
-            actors.push(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
+            actors.push(PackageIndex::new(asset.read_i32::<LE>()?));
         }
 
         let namespace = asset.read_fstring()?;
-        asset.read_i32::<LittleEndian>()?; // null
+        asset.read_i32::<LE>()?; // null
         let value = asset.read_fstring()?;
 
-        asset.read_i64::<LittleEndian>()?; // null
-        let flags_probably = asset.read_u64::<LittleEndian>()?;
+        asset.read_i64::<LE>()?; // null
+        let flags_probably = asset.read_u64::<LE>()?;
         let mut misc_category_data = Vec::new();
         while asset.position() < next_starting - 1 {
-            misc_category_data.push(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
+            misc_category_data.push(PackageIndex::new(asset.read_i32::<LE>()?));
         }
         asset.read_exact(&mut [0u8; 1])?;
 
@@ -78,21 +78,21 @@ impl ExportTrait for LevelExport {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
 
-        asset.write_i32::<LittleEndian>(0)?;
-        asset.write_i32::<LittleEndian>(self.actors.len() as i32)?;
+        asset.write_i32::<LE>(0)?;
+        asset.write_i32::<LE>(self.actors.len() as i32)?;
         for actor in &self.actors {
-            asset.write_i32::<LittleEndian>(actor.index)?;
+            asset.write_i32::<LE>(actor.index)?;
         }
 
         asset.write_fstring(self.namespace.as_deref())?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
         asset.write_fstring(self.value.as_deref())?;
 
-        asset.write_u64::<LittleEndian>(0)?;
-        asset.write_u64::<LittleEndian>(self.flags_probably)?;
+        asset.write_u64::<LE>(0)?;
+        asset.write_u64::<LE>(self.flags_probably)?;
 
         for data in &self.misc_category_data {
-            asset.write_i32::<LittleEndian>(data.index)?;
+            asset.write_i32::<LE>(data.index)?;
         }
         asset.write_u8(0)?;
         Ok(())

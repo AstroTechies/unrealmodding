@@ -1,6 +1,6 @@
 //! Movie scene sequence instance data pointer property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -40,7 +40,7 @@ impl MovieSceneSequenceInstanceDataPtrProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let value = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let value = PackageIndex::new(asset.read_i32::<LE>()?);
 
         Ok(MovieSceneSequenceInstanceDataPtrProperty {
             name,
@@ -61,7 +61,7 @@ impl PropertyTrait for MovieSceneSequenceInstanceDataPtrProperty {
         optional_guid_write!(self, asset, include_header);
 
         let begin = asset.position();
-        asset.write_i32::<LittleEndian>(self.value.index)?;
+        asset.write_i32::<LE>(self.value.index)?;
 
         Ok((asset.position() - begin) as usize)
     }

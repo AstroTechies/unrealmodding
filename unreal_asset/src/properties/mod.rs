@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::io::SeekFrom;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use lazy_static::lazy_static;
 use unreal_asset_proc_macro::FNameContainer;
@@ -155,7 +155,7 @@ macro_rules! simple_property_write {
                 include_header: bool,
             ) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, include_header);
-                asset.$write_func::<LittleEndian>(self.$value_name)?;
+                asset.$write_func::<LE>(self.$value_name)?;
                 Ok(size_of::<$value_type>())
             }
         }
@@ -553,8 +553,8 @@ impl Property {
             }
 
             property_type = asset.read_fname()?;
-            length = asset.read_i32::<LittleEndian>()?;
-            duplication_index = asset.read_i32::<LittleEndian>()?;
+            length = asset.read_i32::<LE>()?;
+            duplication_index = asset.read_i32::<LE>()?;
         }
 
         Property::from_type(
@@ -1258,13 +1258,13 @@ impl Property {
         )?;
 
         let begin = asset.position();
-        asset.write_i32::<LittleEndian>(0)?; // initial length
-        asset.write_i32::<LittleEndian>(property.get_duplication_index())?;
+        asset.write_i32::<LE>(0)?; // initial length
+        asset.write_i32::<LE>(property.get_duplication_index())?;
         let len = property.write(asset, include_header)?;
         let end = asset.position();
 
         asset.seek(SeekFrom::Start(begin))?;
-        asset.write_i32::<LittleEndian>(len as i32)?;
+        asset.write_i32::<LE>(len as i32)?;
         asset.seek(SeekFrom::Start(end))?;
         Ok(begin as usize)
     }

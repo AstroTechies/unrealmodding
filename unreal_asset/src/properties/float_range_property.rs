@@ -1,6 +1,6 @@
 //! Float range property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -43,8 +43,8 @@ impl FloatRangeProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let lower_bound = asset.read_f32::<LittleEndian>()?;
-        let upper_bound = asset.read_f32::<LittleEndian>()?;
+        let lower_bound = asset.read_f32::<LE>()?;
+        let upper_bound = asset.read_f32::<LE>()?;
 
         Ok(FloatRangeProperty {
             name,
@@ -67,8 +67,8 @@ impl PropertyTrait for FloatRangeProperty {
 
         let begin = asset.position();
 
-        asset.write_f32::<LittleEndian>(self.lower_bound.0)?;
-        asset.write_f32::<LittleEndian>(self.upper_bound.0)?;
+        asset.write_f32::<LE>(self.lower_bound.0)?;
+        asset.write_f32::<LE>(self.upper_bound.0)?;
 
         Ok((asset.position() - begin) as usize)
     }

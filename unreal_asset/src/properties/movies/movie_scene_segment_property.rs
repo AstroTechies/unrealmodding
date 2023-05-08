@@ -1,6 +1,6 @@
 //! Movie scene segment property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -23,14 +23,14 @@ pub struct MovieSceneSegmentIdentifier {
 impl MovieSceneSegmentIdentifier {
     /// Read a `MovieSceneSegmentIdentifier` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let identifier_index = asset.read_i32::<LittleEndian>()?;
+        let identifier_index = asset.read_i32::<LE>()?;
 
         Ok(MovieSceneSegmentIdentifier { identifier_index })
     }
 
     /// Write a `MovieSceneSegmentIdentifier` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.identifier_index)?;
+        asset.write_i32::<LE>(self.identifier_index)?;
         Ok(())
     }
 }
@@ -61,9 +61,9 @@ impl MovieSceneSegment {
     ) -> Result<Self, Error> {
         let range = FFrameNumberRange::new(asset)?;
         let id = MovieSceneSegmentIdentifier::new(asset)?;
-        let allow_empty = asset.read_i32::<LittleEndian>()? != 0;
+        let allow_empty = asset.read_i32::<LE>()? != 0;
 
-        let impls_length = asset.read_i32::<LittleEndian>()?;
+        let impls_length = asset.read_i32::<LE>()?;
         let mut impls = Vec::with_capacity(impls_length as usize);
 
         for _ in 0..impls_length {
@@ -92,12 +92,12 @@ impl MovieSceneSegment {
         self.range.write(asset)?;
         self.id.write(asset)?;
 
-        asset.write_i32::<LittleEndian>(match self.allow_empty {
+        asset.write_i32::<LE>(match self.allow_empty {
             true => 1,
             false => 0,
         })?;
 
-        asset.write_i32::<LittleEndian>(self.impls.len() as i32)?;
+        asset.write_i32::<LE>(self.impls.len() as i32)?;
 
         let none_fname = asset.add_fname("None");
 

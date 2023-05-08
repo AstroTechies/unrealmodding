@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, LE};
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
@@ -537,7 +537,7 @@ impl FScriptText {
                 literal_string = Some(KismetExpression::new(asset)?);
             }
             EBlueprintTextLiteralType::StringTableEntry => {
-                string_table_asset = Some(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
+                string_table_asset = Some(PackageIndex::new(asset.read_i32::<LE>()?));
                 string_table_id = Some(KismetExpression::new(asset)?);
                 string_table_key = Some(KismetExpression::new(asset)?);
             }
@@ -614,14 +614,14 @@ impl FScriptText {
                 )?;
             }
             EBlueprintTextLiteralType::StringTableEntry => {
-                asset.write_i32::<LittleEndian>(
-                    self.string_table_asset.map(|e| e.index).ok_or_else(|| {
+                asset.write_i32::<LE>(self.string_table_asset.map(|e| e.index).ok_or_else(
+                    || {
                         Error::no_data(
                             "text_literal_type is StringTableEntry but string_table_asset is None"
                                 .to_string(),
                         )
-                    })?,
-                )?;
+                    },
+                )?)?;
                 offset += size_of::<u64>();
                 offset += KismetExpression::write(
                     self.string_table_id.as_ref().ok_or_else(|| {
@@ -683,18 +683,18 @@ impl KismetPropertyPointer {
         if asset.get_object_version()
             >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
         {
-            let num_entries = asset.read_i32::<LittleEndian>()?;
+            let num_entries = asset.read_i32::<LE>()?;
             let mut names = Vec::with_capacity(num_entries as usize);
             for _i in 0..num_entries as usize {
                 names.push(asset.read_fname()?);
             }
-            let owner = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+            let owner = PackageIndex::new(asset.read_i32::<LE>()?);
             Ok(KismetPropertyPointer::from_new(FieldPath::new(
                 names, owner,
             )))
         } else {
             Ok(KismetPropertyPointer::from_old(PackageIndex::new(
-                asset.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LE>()?,
             )))
         }
     }
@@ -709,13 +709,13 @@ impl KismetPropertyPointer {
                     "engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string(),
                 )
             })?;
-            asset.write_i32::<LittleEndian>(new.path.len() as i32)?;
+            asset.write_i32::<LE>(new.path.len() as i32)?;
             for entry in &new.path {
                 asset.write_fname(entry)?;
             }
-            asset.write_i32::<LittleEndian>(new.resolved_owner.index)?;
+            asset.write_i32::<LE>(new.resolved_owner.index)?;
         } else {
-            asset.write_i32::<LittleEndian>(self.old.map(|e| e.index).ok_or_else(|| {
+            asset.write_i32::<LE>(self.old.map(|e| e.index).ok_or_else(|| {
                 Error::no_data(
                     "engine_version < UE4_ADDED_PAFCKAGE_OWNER but old is None".to_string(),
                 )
@@ -1162,13 +1162,13 @@ impl ExObjectConst {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExObjectConst {
             token: EExprToken::ExObjectConst,
-            value: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            value: PackageIndex::new(asset.read_i32::<LE>()?),
         })
     }
 }
 impl KismetExpressionTrait for ExObjectConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_i32::<LittleEndian>(self.value.index)?;
+        asset.write_i32::<LE>(self.value.index)?;
         Ok(size_of::<u64>())
     }
 }
@@ -1200,46 +1200,47 @@ declare_expression!(
 impl ExTransformConst {
     /// Read a `ExTransformConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let transform = match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
-            true => {
-                let rotation = Vector4::new(
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                );
-                let translation = Vector::new(
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                );
-                let scale = Vector::new(
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                );
-                Transform::new(rotation, translation, scale)
-            },
-            false => {
-                let rotation = Vector4::new(
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                );
-                let translation = Vector::new(
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                );
-                let scale = Vector::new(
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                );
-                Transform::new(rotation, translation, scale)
-            }
-        };
+        let transform =
+            match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+                true => {
+                    let rotation = Vector4::new(
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                    );
+                    let translation = Vector::new(
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                    );
+                    let scale = Vector::new(
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                    );
+                    Transform::new(rotation, translation, scale)
+                }
+                false => {
+                    let rotation = Vector4::new(
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    );
+                    let translation = Vector::new(
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    );
+                    let scale = Vector::new(
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    );
+                    Transform::new(rotation, translation, scale)
+                }
+            };
 
         Ok(ExTransformConst {
             token: EExprToken::ExTransformConst,
@@ -1251,30 +1252,30 @@ impl KismetExpressionTrait for ExTransformConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
             true => {
-                asset.write_f64::<LittleEndian>(self.value.rotation.x.0)?;
-                asset.write_f64::<LittleEndian>(self.value.rotation.y.0)?;
-                asset.write_f64::<LittleEndian>(self.value.rotation.z.0)?;
-                asset.write_f64::<LittleEndian>(self.value.rotation.w.0)?;
-                asset.write_f64::<LittleEndian>(self.value.translation.x.0)?;
-                asset.write_f64::<LittleEndian>(self.value.translation.y.0)?;
-                asset.write_f64::<LittleEndian>(self.value.translation.z.0)?;
-                asset.write_f64::<LittleEndian>(self.value.scale.x.0)?;
-                asset.write_f64::<LittleEndian>(self.value.scale.y.0)?;
-                asset.write_f64::<LittleEndian>(self.value.scale.z.0)?;
+                asset.write_f64::<LE>(self.value.rotation.x.0)?;
+                asset.write_f64::<LE>(self.value.rotation.y.0)?;
+                asset.write_f64::<LE>(self.value.rotation.z.0)?;
+                asset.write_f64::<LE>(self.value.rotation.w.0)?;
+                asset.write_f64::<LE>(self.value.translation.x.0)?;
+                asset.write_f64::<LE>(self.value.translation.y.0)?;
+                asset.write_f64::<LE>(self.value.translation.z.0)?;
+                asset.write_f64::<LE>(self.value.scale.x.0)?;
+                asset.write_f64::<LE>(self.value.scale.y.0)?;
+                asset.write_f64::<LE>(self.value.scale.z.0)?;
 
                 Ok(size_of::<f64>() * 10)
             }
             false => {
-                asset.write_f32::<LittleEndian>(self.value.rotation.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.rotation.y.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.rotation.z.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.rotation.w.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.translation.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.translation.y.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.translation.z.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.scale.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.scale.y.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.scale.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.rotation.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.rotation.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.rotation.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.rotation.w.0 as f32)?;
+                asset.write_f32::<LE>(self.value.translation.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.translation.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.translation.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.scale.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.scale.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.scale.z.0 as f32)?;
 
                 Ok(size_of::<f32>() * 10)
             }
@@ -1290,22 +1291,19 @@ declare_expression!(
 impl ExVectorConst {
     /// Read a `ExVectorConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let value = match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
-            true => {
-                Vector::new(
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                    OrderedFloat(asset.read_f64::<LittleEndian>()?),
-                )
-            }
-            false => {
-                Vector::new(
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                    OrderedFloat(asset.read_f32::<LittleEndian>()? as f64),
-                )
-            }
-        };
+        let value =
+            match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+                true => Vector::new(
+                    OrderedFloat(asset.read_f64::<LE>()?),
+                    OrderedFloat(asset.read_f64::<LE>()?),
+                    OrderedFloat(asset.read_f64::<LE>()?),
+                ),
+                false => Vector::new(
+                    OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    OrderedFloat(asset.read_f32::<LE>()? as f64),
+                ),
+            };
         Ok(ExVectorConst {
             token: EExprToken::ExVectorConst,
             value,
@@ -1316,16 +1314,16 @@ impl KismetExpressionTrait for ExVectorConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
             true => {
-                asset.write_f64::<LittleEndian>(self.value.x.0)?;
-                asset.write_f64::<LittleEndian>(self.value.y.0)?;
-                asset.write_f64::<LittleEndian>(self.value.z.0)?;
+                asset.write_f64::<LE>(self.value.x.0)?;
+                asset.write_f64::<LE>(self.value.y.0)?;
+                asset.write_f64::<LE>(self.value.z.0)?;
 
                 Ok(size_of::<f64>() * 3)
-            },
+            }
             false => {
-                asset.write_f32::<LittleEndian>(self.value.x.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.y.0 as f32)?;
-                asset.write_f32::<LittleEndian>(self.value.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.z.0 as f32)?;
 
                 Ok(size_of::<f32>() * 3)
             }
@@ -1386,7 +1384,7 @@ impl ExArrayConst {
     /// Read a `ExArrayConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_property = KismetPropertyPointer::new(asset)?;
-        asset.read_i32::<LittleEndian>()?; // num_entries
+        asset.read_i32::<LE>()?; // num_entries
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndArrayConst)?;
         Ok(ExArrayConst {
             token: EExprToken::ExArrayConst,
@@ -1399,7 +1397,7 @@ impl KismetExpressionTrait for ExArrayConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += self.inner_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -1445,7 +1443,7 @@ impl ExAssert {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExAssert {
             token: EExprToken::ExAssert,
-            line_number: asset.read_u16::<LittleEndian>()?,
+            line_number: asset.read_u16::<LE>()?,
             debug_mode: asset.read_bool()?,
             assert_expression: Box::new(KismetExpression::new(asset)?),
         })
@@ -1453,7 +1451,7 @@ impl ExAssert {
 }
 impl KismetExpressionTrait for ExAssert {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_u16::<LittleEndian>(self.line_number)?;
+        asset.write_u16::<LE>(self.line_number)?;
         asset.write_bool(self.debug_mode)?;
         let offset = size_of::<u32>()
             + size_of::<bool>()
@@ -1503,7 +1501,7 @@ impl ExCallMath {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExCallMath {
             token: EExprToken::ExCallMath,
-            stack_node: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            stack_node: PackageIndex::new(asset.read_i32::<LE>()?),
             parameters: KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?,
         })
     }
@@ -1511,7 +1509,7 @@ impl ExCallMath {
 impl KismetExpressionTrait for ExCallMath {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }
@@ -1532,7 +1530,7 @@ declare_expression!(
 impl ExCallMulticastDelegate {
     /// Read a `ExCallMulticastDelegate` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let stack_node = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let stack_node = PackageIndex::new(asset.read_i32::<LE>()?);
         let delegate = KismetExpression::new(asset)?;
         let parameters = KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?;
         Ok(ExCallMulticastDelegate {
@@ -1546,7 +1544,7 @@ impl ExCallMulticastDelegate {
 impl KismetExpressionTrait for ExCallMulticastDelegate {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         offset += KismetExpression::write(&self.delegate, asset)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
@@ -1572,7 +1570,7 @@ impl ExClassContext {
         Ok(ExClassContext {
             token: EExprToken::ExClassContext,
             object_expression: Box::new(KismetExpression::new(asset)?),
-            offset: asset.read_u32::<LittleEndian>()?,
+            offset: asset.read_u32::<LE>()?,
             r_value_pointer: KismetPropertyPointer::new(asset)?,
             context_expression: Box::new(KismetExpression::new(asset)?),
         })
@@ -1582,7 +1580,7 @@ impl KismetExpressionTrait for ExClassContext {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         offset += KismetExpression::write(self.object_expression.as_ref(), asset)?;
-        asset.write_u32::<LittleEndian>(self.offset)?;
+        asset.write_u32::<LE>(self.offset)?;
         offset += self.r_value_pointer.write(asset)?;
         offset += KismetExpression::write(self.context_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1662,7 +1660,7 @@ impl ExContext {
         Ok(ExContext {
             token: EExprToken::ExContext,
             object_expression: Box::new(KismetExpression::new(asset)?),
-            offset: asset.read_u32::<LittleEndian>()?,
+            offset: asset.read_u32::<LE>()?,
             r_value_pointer: KismetPropertyPointer::new(asset)?,
             context_expression: Box::new(KismetExpression::new(asset)?),
         })
@@ -1672,7 +1670,7 @@ impl KismetExpressionTrait for ExContext {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         offset += KismetExpression::write(self.object_expression.as_ref(), asset)?;
-        asset.write_u32::<LittleEndian>(self.offset)?;
+        asset.write_u32::<LE>(self.offset)?;
         offset += self.r_value_pointer.write(asset)?;
         offset += KismetExpression::write(self.context_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1695,7 +1693,7 @@ impl ExContextFailSilent {
         Ok(ExContextFailSilent {
             token: EExprToken::ExContextFailSilent,
             object_expression: Box::new(KismetExpression::new(asset)?),
-            offset: asset.read_u32::<LittleEndian>()?,
+            offset: asset.read_u32::<LE>()?,
             r_value_pointer: KismetPropertyPointer::new(asset)?,
             context_expression: Box::new(KismetExpression::new(asset)?),
         })
@@ -1705,7 +1703,7 @@ impl KismetExpressionTrait for ExContextFailSilent {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         offset += KismetExpression::write(self.object_expression.as_ref(), asset)?;
-        asset.write_u32::<LittleEndian>(self.offset)?;
+        asset.write_u32::<LE>(self.offset)?;
         offset += self.r_value_pointer.write(asset)?;
         offset += KismetExpression::write(self.context_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1724,7 +1722,7 @@ impl ExCrossInterfaceCast {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExCrossInterfaceCast {
             token: EExprToken::ExCrossInterfaceCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -1732,7 +1730,7 @@ impl ExCrossInterfaceCast {
 impl KismetExpressionTrait for ExCrossInterfaceCast {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
         Ok(offset)
     }
@@ -1769,7 +1767,7 @@ impl ExDynamicCast {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExDynamicCast {
             token: EExprToken::ExDynamicCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -1777,7 +1775,7 @@ impl ExDynamicCast {
 impl KismetExpressionTrait for ExDynamicCast {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -1795,7 +1793,7 @@ impl ExFinalFunction {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFinalFunction {
             token: EExprToken::ExFinalFunction,
-            stack_node: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            stack_node: PackageIndex::new(asset.read_i32::<LE>()?),
             parameters: KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?,
         })
     }
@@ -1803,7 +1801,7 @@ impl ExFinalFunction {
 impl KismetExpressionTrait for ExFinalFunction {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }
@@ -1882,7 +1880,7 @@ impl ExInterfaceToObjCast {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInterfaceToObjCast {
             token: EExprToken::ExInterfaceToObjCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -1890,7 +1888,7 @@ impl ExInterfaceToObjCast {
 impl KismetExpressionTrait for ExInterfaceToObjCast {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
         Ok(offset)
     }
@@ -1905,13 +1903,13 @@ impl ExJump {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExJump {
             token: EExprToken::ExJump,
-            code_offset: asset.read_u32::<LittleEndian>()?,
+            code_offset: asset.read_u32::<LE>()?,
         })
     }
 }
 impl KismetExpressionTrait for ExJump {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_u32::<LittleEndian>(self.code_offset)?;
+        asset.write_u32::<LE>(self.code_offset)?;
         Ok(size_of::<u32>())
     }
 }
@@ -1927,7 +1925,7 @@ impl ExJumpIfNot {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExJumpIfNot {
             token: EExprToken::ExJumpIfNot,
-            code_offset: asset.read_u32::<LittleEndian>()?,
+            code_offset: asset.read_u32::<LE>()?,
             boolean_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -1935,7 +1933,7 @@ impl ExJumpIfNot {
 impl KismetExpressionTrait for ExJumpIfNot {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
-        asset.write_u32::<LittleEndian>(self.code_offset)?;
+        asset.write_u32::<LE>(self.code_offset)?;
         offset += KismetExpression::write(self.boolean_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2125,7 +2123,7 @@ impl ExLocalFinalFunction {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalFinalFunction {
             token: EExprToken::ExLocalFinalFunction,
-            stack_node: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            stack_node: PackageIndex::new(asset.read_i32::<LE>()?),
             parameters: KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?,
         })
     }
@@ -2133,7 +2131,7 @@ impl ExLocalFinalFunction {
 impl KismetExpressionTrait for ExLocalFinalFunction {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }
@@ -2221,7 +2219,7 @@ impl ExMapConst {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key_property = KismetPropertyPointer::new(asset)?;
         let value_property = KismetPropertyPointer::new(asset)?;
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndMapConst)?;
         Ok(ExMapConst {
             token: EExprToken::ExMapConst,
@@ -2236,7 +2234,7 @@ impl KismetExpressionTrait for ExMapConst {
         let mut offset = size_of::<i32>();
         offset += self.key_property.write(asset)?;
         offset += self.value_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2257,7 +2255,7 @@ impl ExMetaCast {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExMetaCast {
             token: EExprToken::ExMetaCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -2265,7 +2263,7 @@ impl ExMetaCast {
 impl KismetExpressionTrait for ExMetaCast {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2283,7 +2281,7 @@ impl ExObjToInterfaceCast {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExObjToInterfaceCast {
             token: EExprToken::ExObjToInterfaceCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -2291,7 +2289,7 @@ impl ExObjToInterfaceCast {
 impl KismetExpressionTrait for ExObjToInterfaceCast {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2370,13 +2368,13 @@ impl ExPushExecutionFlow {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPushExecutionFlow {
             token: EExprToken::ExPushExecutionFlow,
-            pushing_address: asset.read_u32::<LittleEndian>()?,
+            pushing_address: asset.read_u32::<LE>()?,
         })
     }
 }
 impl KismetExpressionTrait for ExPushExecutionFlow {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_u32::<LittleEndian>(self.pushing_address)?;
+        asset.write_u32::<LE>(self.pushing_address)?;
         Ok(size_of::<u32>())
     }
 }
@@ -2432,23 +2430,28 @@ declare_expression!(
 impl ExRotationConst {
     /// Read a `ExRotationConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let rotator = match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
-            true => {
-                let pitch = asset.read_f64::<LE>()?;
-                let yaw = asset.read_f64::<LE>()?;
-                let roll = asset.read_f64::<LE>()?;
-                Vector::new(OrderedFloat(pitch), OrderedFloat(yaw), OrderedFloat(roll))
-            },
-            false => {
-                let pitch = asset.read_f32::<LE>()?;
-                let yaw = asset.read_f32::<LE>()?;
-                let roll = asset.read_f32::<LE>()?;
-                Vector::new(OrderedFloat(pitch as f64), OrderedFloat(yaw as f64), OrderedFloat(roll as f64))
-            }
-        };
+        let rotator =
+            match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+                true => {
+                    let pitch = asset.read_f64::<LE>()?;
+                    let yaw = asset.read_f64::<LE>()?;
+                    let roll = asset.read_f64::<LE>()?;
+                    Vector::new(OrderedFloat(pitch), OrderedFloat(yaw), OrderedFloat(roll))
+                }
+                false => {
+                    let pitch = asset.read_f32::<LE>()?;
+                    let yaw = asset.read_f32::<LE>()?;
+                    let roll = asset.read_f32::<LE>()?;
+                    Vector::new(
+                        OrderedFloat(pitch as f64),
+                        OrderedFloat(yaw as f64),
+                        OrderedFloat(roll as f64),
+                    )
+                }
+            };
         Ok(ExRotationConst {
             token: EExprToken::ExRotationConst,
-            rotator
+            rotator,
         })
     }
 }
@@ -2460,7 +2463,7 @@ impl KismetExpressionTrait for ExRotationConst {
                 asset.write_f64::<LE>(self.rotator.y.0)?;
                 asset.write_f64::<LE>(self.rotator.z.0)?;
                 Ok(size_of::<f64>() * 3)
-            },
+            }
             false => {
                 asset.write_f32::<LE>(self.rotator.x.0 as f32)?;
                 asset.write_f32::<LE>(self.rotator.y.0 as f32)?;
@@ -2486,10 +2489,7 @@ impl ExSetArray {
         let (assigning_property, array_inner_prop) =
             match asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
                 true => (Some(Box::new(KismetExpression::new(asset)?)), None),
-                false => (
-                    None,
-                    Some(PackageIndex::new(asset.read_i32::<LittleEndian>()?)),
-                ),
+                false => (None, Some(PackageIndex::new(asset.read_i32::<LE>()?))),
             };
         Ok(ExSetArray {
             token: EExprToken::ExSetArray,
@@ -2513,14 +2513,12 @@ impl KismetExpressionTrait for ExSetArray {
                 asset,
             )?;
         } else {
-            asset.write_i32::<LittleEndian>(self.array_inner_prop.map(|e| e.index).ok_or_else(
-                || {
-                    Error::no_data(
+            asset.write_i32::<LE>(self.array_inner_prop.map(|e| e.index).ok_or_else(|| {
+                Error::no_data(
                     "engine_version < UE4_CHANGE_SETARRAY_BYTECODE but array_inner_prop is None"
                         .to_string(),
                 )
-                },
-            )?)?;
+            })?)?;
             offset += size_of::<u64>();
         }
 
@@ -2542,7 +2540,7 @@ impl ExSetConst {
     /// Read a `ExSetConst` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_property = KismetPropertyPointer::new(asset)?;
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndSetConst)?;
         Ok(ExSetConst {
             token: EExprToken::ExSetConst,
@@ -2555,7 +2553,7 @@ impl KismetExpressionTrait for ExSetConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += self.inner_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2574,7 +2572,7 @@ impl ExSetMap {
     /// Read a `ExSetMap` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let map_property = Box::new(KismetExpression::new(asset)?);
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndMap)?;
         Ok(ExSetMap {
             token: EExprToken::ExSetMap,
@@ -2587,7 +2585,7 @@ impl KismetExpressionTrait for ExSetMap {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += KismetExpression::write(self.map_property.as_ref(), asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2606,7 +2604,7 @@ impl ExSetSet {
     /// Read a `ExSetSet` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let set_property = Box::new(KismetExpression::new(asset)?);
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndSet)?;
         Ok(ExSetSet {
             token: EExprToken::ExSetSet,
@@ -2619,7 +2617,7 @@ impl KismetExpressionTrait for ExSetSet {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += KismetExpression::write(self.set_property.as_ref(), asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2639,7 +2637,7 @@ impl ExSkip {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExSkip {
             token: EExprToken::ExSkip,
-            code_offset: asset.read_u32::<LittleEndian>()?,
+            code_offset: asset.read_u32::<LE>()?,
             skip_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -2647,7 +2645,7 @@ impl ExSkip {
 impl KismetExpressionTrait for ExSkip {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
-        asset.write_u32::<LittleEndian>(self.code_offset)?;
+        asset.write_u32::<LE>(self.code_offset)?;
         offset += KismetExpression::write(self.skip_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2667,8 +2665,8 @@ impl ExStructConst {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExStructConst {
             token: EExprToken::ExStructConst,
-            struct_value: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
-            struct_size: asset.read_i32::<LittleEndian>()?,
+            struct_value: PackageIndex::new(asset.read_i32::<LE>()?),
+            struct_size: asset.read_i32::<LE>()?,
             value: KismetExpression::read_arr(asset, EExprToken::ExEndStructConst)?,
         })
     }
@@ -2676,8 +2674,8 @@ impl ExStructConst {
 impl KismetExpressionTrait for ExStructConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>() + size_of::<i32>();
-        asset.write_i32::<LittleEndian>(self.struct_value.index)?;
-        asset.write_i32::<LittleEndian>(self.struct_size)?;
+        asset.write_i32::<LE>(self.struct_value.index)?;
+        asset.write_i32::<LE>(self.struct_size)?;
         for entry in &self.value {
             offset += KismetExpression::write(entry, asset)?;
         }
@@ -2726,14 +2724,14 @@ declare_expression!(
 impl ExSwitchValue {
     /// Read a `ExSwitchValue` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let num_cases = asset.read_u16::<LittleEndian>()?;
-        let end_goto_offset = asset.read_u32::<LittleEndian>()?;
+        let num_cases = asset.read_u16::<LE>()?;
+        let end_goto_offset = asset.read_u32::<LE>()?;
         let index_term = Box::new(KismetExpression::new(asset)?);
 
         let mut cases = Vec::with_capacity(num_cases as usize);
         for _i in 0..num_cases as usize {
             let term_a = KismetExpression::new(asset)?;
-            let term_b = asset.read_u32::<LittleEndian>()?;
+            let term_b = asset.read_u32::<LE>()?;
             let term_c = KismetExpression::new(asset)?;
             cases.push(KismetSwitchCase::new(term_a, term_b, term_c));
         }
@@ -2750,13 +2748,13 @@ impl ExSwitchValue {
 impl KismetExpressionTrait for ExSwitchValue {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u16>() + size_of::<u32>();
-        asset.write_u16::<LittleEndian>(self.cases.len() as u16)?;
-        asset.write_u32::<LittleEndian>(self.end_goto_offset)?;
+        asset.write_u16::<LE>(self.cases.len() as u16)?;
+        asset.write_u32::<LE>(self.end_goto_offset)?;
         offset += KismetExpression::write(self.index_term.as_ref(), asset)?;
         for case in &self.cases {
             offset += KismetExpression::write(&case.case_index_value_term, asset)?;
             offset += size_of::<u32>();
-            asset.write_u32::<LittleEndian>(case.next_offset)?;
+            asset.write_u32::<LE>(case.next_offset)?;
             offset += KismetExpression::write(&case.case_term, asset)?;
         }
         offset += KismetExpression::write(self.default_term.as_ref(), asset)?;
@@ -2882,13 +2880,13 @@ impl ExFloatConst {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFloatConst {
             token: EExprToken::ExFloatConst,
-            value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f32::<LE>()?),
         })
     }
 }
 impl KismetExpressionTrait for ExFloatConst {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.0)?;
+        asset.write_f32::<LE>(self.value.0)?;
         Ok(size_of::<f32>())
     }
 }
@@ -2943,8 +2941,8 @@ implement_expression!(
 );
 
 implement_value_expression!(ExByteConst, u8, read_u8, write_u8);
-implement_value_expression!(ExInt64Const, i64, read_i64, write_i64, LittleEndian);
-implement_value_expression!(ExIntConst, i32, read_i32, write_i32, LittleEndian);
+implement_value_expression!(ExInt64Const, i64, read_i64, write_i64, LE);
+implement_value_expression!(ExIntConst, i32, read_i32, write_i32, LE);
 implement_value_expression!(ExIntConstByte, u8, read_u8, write_u8);
-implement_value_expression!(ExSkipOffsetConst, u32, read_u32, write_u32, LittleEndian);
-implement_value_expression!(ExUInt64Const, u64, read_u64, write_u64, LittleEndian);
+implement_value_expression!(ExSkipOffsetConst, u32, read_u32, write_u32, LE);
+implement_value_expression!(ExUInt64Const, u64, read_u64, write_u64, LE);

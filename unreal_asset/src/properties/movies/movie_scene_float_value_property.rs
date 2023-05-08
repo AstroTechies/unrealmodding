@@ -1,6 +1,6 @@
 //! Movie scene float value property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -37,7 +37,7 @@ impl MovieSceneFloatValue {
         asset: &mut Reader,
         clang_win64: bool,
     ) -> Result<Self, Error> {
-        let value = asset.read_f32::<LittleEndian>()?;
+        let value = asset.read_f32::<LE>()?;
         let tangent = MovieSceneTangentData::new(asset, clang_win64)?;
         let interp_mode: RichCurveInterpMode = RichCurveInterpMode::try_from(asset.read_i8()?)?;
         let tangent_mode: RichCurveTangentMode = RichCurveTangentMode::try_from(asset.read_i8()?)?;
@@ -52,7 +52,7 @@ impl MovieSceneFloatValue {
 
     /// Write a `MovieSceneFloatValue` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_f32::<LittleEndian>(self.value.0)?;
+        asset.write_f32::<LE>(self.value.0)?;
         self.tangent.write(asset)?;
         asset.write_i8(self.interp_mode as i8)?;
         asset.write_i8(self.tangent_mode as i8)?;

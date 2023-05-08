@@ -1,6 +1,6 @@
 //! Property export
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::exports::{
@@ -33,7 +33,7 @@ impl PropertyExport {
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
 
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
 
         let export_class_type = asset
             .get_export_class_type(normal_export.base_export.class_index)
@@ -50,7 +50,7 @@ impl PropertyExport {
 impl ExportTrait for PropertyExport {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
         self.property.write(asset)?;
         Ok(())
     }

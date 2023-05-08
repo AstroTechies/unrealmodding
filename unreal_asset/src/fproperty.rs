@@ -3,7 +3,7 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -69,7 +69,7 @@ macro_rules! parse_simple_property_index {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                     $(
-                        $index_name: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                        $index_name: PackageIndex::new(asset.read_i32::<LE>()?),
                     )*
                 })
             }
@@ -79,7 +79,7 @@ macro_rules! parse_simple_property_index {
             fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 $(
-                    asset.write_i32::<LittleEndian>(self.$index_name.index)?;
+                    asset.write_i32::<LE>(self.$index_name.index)?;
                 )*
                 Ok(())
             }
@@ -321,14 +321,13 @@ impl FGenericProperty {
         serialized_type: Option<FName>,
     ) -> Result<Self, Error> {
         let name = asset.read_fname()?;
-        let flags: EObjectFlags = EObjectFlags::from_bits(asset.read_u32::<LittleEndian>()?)
+        let flags: EObjectFlags = EObjectFlags::from_bits(asset.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid object flags".to_string()))?; // todo: maybe other error type than invalid_file?
-        let array_dim: EArrayDim = asset.read_i32::<LittleEndian>()?.try_into()?;
-        let element_size = asset.read_i32::<LittleEndian>()?;
-        let property_flags: EPropertyFlags =
-            EPropertyFlags::from_bits(asset.read_u64::<LittleEndian>()?)
-                .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
-        let rep_index = asset.read_u16::<LittleEndian>()?;
+        let array_dim: EArrayDim = asset.read_i32::<LE>()?.try_into()?;
+        let element_size = asset.read_i32::<LE>()?;
+        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.read_u64::<LE>()?)
+            .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
+        let rep_index = asset.read_u16::<LE>()?;
         let rep_notify_func = asset.read_fname()?;
         let blueprint_replication_condition: ELifetimeCondition = asset.read_u8()?.try_into()?;
 
@@ -354,11 +353,11 @@ impl FGenericProperty {
 impl FPropertyTrait for FGenericProperty {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.name)?;
-        asset.write_u32::<LittleEndian>(self.flags.bits())?;
-        asset.write_i32::<LittleEndian>(self.array_dim.into())?;
-        asset.write_i32::<LittleEndian>(self.element_size)?;
-        asset.write_u64::<LittleEndian>(self.property_flags.bits())?;
-        asset.write_u16::<LittleEndian>(self.rep_index)?;
+        asset.write_u32::<LE>(self.flags.bits())?;
+        asset.write_i32::<LE>(self.array_dim.into())?;
+        asset.write_i32::<LE>(self.element_size)?;
+        asset.write_u64::<LE>(self.property_flags.bits())?;
+        asset.write_u16::<LE>(self.rep_index)?;
         asset.write_fname(&self.rep_notify_func)?;
         asset.write_u8(self.blueprint_replication_condition.into())?;
         Ok(())
@@ -369,7 +368,7 @@ impl FEnumProperty {
     /// Read an `FEnumProperty` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
-        let enum_value = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let enum_value = PackageIndex::new(asset.read_i32::<LE>()?);
         let underlying_prop = FProperty::new(asset)?;
 
         Ok(FEnumProperty {
@@ -383,7 +382,7 @@ impl FEnumProperty {
 impl FPropertyTrait for FEnumProperty {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.generic_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.enum_value.index)?;
+        asset.write_i32::<LE>(self.enum_value.index)?;
         FProperty::write(self.underlying_prop.as_ref(), asset)?;
         Ok(())
     }

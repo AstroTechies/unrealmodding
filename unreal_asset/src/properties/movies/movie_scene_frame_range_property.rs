@@ -1,6 +1,6 @@
 //! Movie scene frame range property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -26,7 +26,7 @@ impl Int32RangeBound {
     /// Read an `Int32RangeBound` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let ty: ERangeBoundTypes = ERangeBoundTypes::try_from(asset.read_i8()?)?;
-        let value = asset.read_i32::<LittleEndian>()?;
+        let value = asset.read_i32::<LE>()?;
 
         Ok(Int32RangeBound { ty, value })
     }
@@ -34,7 +34,7 @@ impl Int32RangeBound {
     /// Write an `Int32RangeBound` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i8(self.ty as i8)?;
-        asset.write_i32::<LittleEndian>(self.value)?;
+        asset.write_i32::<LE>(self.value)?;
 
         Ok(())
     }

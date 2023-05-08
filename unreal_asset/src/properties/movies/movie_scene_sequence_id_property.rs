@@ -1,6 +1,6 @@
 //! Movie scene sequence identifier property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -22,14 +22,14 @@ pub struct MovieSceneSequenceId {
 impl MovieSceneSequenceId {
     /// Read a `MovieSceneSequenceId` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let value = asset.read_u32::<LittleEndian>()?;
+        let value = asset.read_u32::<LE>()?;
 
         Ok(MovieSceneSequenceId { value })
     }
 
     /// Write a `MovieSceneSequenceId` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_u32::<LittleEndian>(self.value)?;
+        asset.write_u32::<LE>(self.value)?;
         Ok(())
     }
 }

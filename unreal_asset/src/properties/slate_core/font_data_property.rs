@@ -1,6 +1,6 @@
 //! Font data property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -71,7 +71,7 @@ impl FontData {
             return Ok(None);
         }
 
-        let is_cooked = asset.read_i32::<LittleEndian>()? != 0;
+        let is_cooked = asset.read_i32::<LE>()? != 0;
 
         let mut local_font_face_asset = PackageIndex::new(0);
         let mut font_filename = None;
@@ -80,7 +80,7 @@ impl FontData {
         let mut sub_face_index = None;
 
         if is_cooked {
-            local_font_face_asset = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+            local_font_face_asset = PackageIndex::new(asset.read_i32::<LE>()?);
 
             if local_font_face_asset.index == 0 {
                 font_filename = asset.read_fstring()?;
@@ -88,7 +88,7 @@ impl FontData {
                 loading_policy = Some(EFontLoadingPolicy::try_from(asset.read_u8()?)?);
             }
 
-            sub_face_index = Some(asset.read_i32::<LittleEndian>()?);
+            sub_face_index = Some(asset.read_i32::<LE>()?);
         }
 
         Ok(Some(FontData {
@@ -109,13 +109,13 @@ impl FontData {
             return Ok(());
         }
 
-        asset.write_i32::<LittleEndian>(match self.is_cooked {
+        asset.write_i32::<LE>(match self.is_cooked {
             true => 1,
             false => 0,
         })?;
 
         if self.is_cooked {
-            asset.write_i32::<LittleEndian>(self.local_font_face_asset.index)?;
+            asset.write_i32::<LE>(self.local_font_face_asset.index)?;
 
             if self.local_font_face_asset.index == 0 {
                 asset.write_fstring(self.font_filename.as_deref())?;

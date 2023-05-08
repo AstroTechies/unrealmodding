@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -163,7 +163,7 @@ impl MaterialExpression {
         name: FName,
         _include_header: bool,
     ) -> Result<Self, Error> {
-        let output_index = asset.read_i32::<LittleEndian>()?;
+        let output_index = asset.read_i32::<LE>()?;
         let input_name = asset.read_fname()?;
         let mut extras = [0u8; 20];
         asset.read_exact(&mut extras)?;
@@ -184,7 +184,7 @@ impl MaterialExpression {
         asset: &mut Writer,
         _include_header: bool,
     ) -> Result<usize, Error> {
-        asset.write_i32::<LittleEndian>(self.output_index)?;
+        asset.write_i32::<LE>(self.output_index)?;
         asset.write_fname(&self.input_name)?;
         asset.write_all(&self.extras)?;
         asset.write_fname(&self.expression_name)?;
@@ -203,7 +203,7 @@ impl ColorMaterialInputProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
 
         let value = ColorProperty::new(
             asset,
@@ -232,7 +232,7 @@ impl PropertyTrait for ColorMaterialInputProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
         let exp_len = self.material_expression.write(asset, false)?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
         let value_len = self.value.write(asset, false)?;
         Ok(exp_len + value_len + size_of::<i32>())
     }
@@ -249,9 +249,9 @@ impl ScalarMaterialInputProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
 
-        let value = asset.read_f32::<LittleEndian>()?;
+        let value = asset.read_f32::<LE>()?;
 
         Ok(ScalarMaterialInputProperty {
             name,
@@ -272,8 +272,8 @@ impl PropertyTrait for ScalarMaterialInputProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
         let exp_len = self.material_expression.write(asset, false)?;
-        asset.write_i32::<LittleEndian>(0)?;
-        asset.write_f32::<LittleEndian>(self.value.0)?;
+        asset.write_i32::<LE>(0)?;
+        asset.write_f32::<LE>(self.value.0)?;
         Ok(exp_len + size_of::<f32>() + size_of::<i32>())
     }
 }
@@ -290,8 +290,8 @@ impl ShadingModelMaterialInputProperty {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
-        asset.read_i32::<LittleEndian>()?;
-        let value = asset.read_u32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
+        let value = asset.read_u32::<LE>()?;
         Ok(ShadingModelMaterialInputProperty {
             name,
             ancestry,
@@ -311,8 +311,8 @@ impl PropertyTrait for ShadingModelMaterialInputProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
         let exp_len = self.material_expression.write(asset, false)?;
-        asset.write_i32::<LittleEndian>(0)?;
-        asset.write_u32::<LittleEndian>(self.value)?;
+        asset.write_i32::<LE>(0)?;
+        asset.write_u32::<LE>(self.value)?;
         Ok(exp_len + size_of::<u32>() + size_of::<i32>())
     }
 }
@@ -329,7 +329,7 @@ impl VectorMaterialInputProperty {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
         let value = VectorProperty::new(
             asset,
             name.clone(),
@@ -356,7 +356,7 @@ impl PropertyTrait for VectorMaterialInputProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
         let exp_len = self.material_expression.write(asset, false)?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
         let value_len = self.value.write(asset, false)?;
         Ok(exp_len + value_len + size_of::<i32>())
     }
@@ -374,7 +374,7 @@ impl Vector2MaterialInputProperty {
         let property_guid = optional_guid!(asset, include_header);
         let material_expression = MaterialExpression::new(asset, name.clone(), false)?;
 
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
         let value = Vector2DProperty::new(
             asset,
             name.clone(),
@@ -401,7 +401,7 @@ impl PropertyTrait for Vector2MaterialInputProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
         let exp_len = self.material_expression.write(asset, false)?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
         let value_len = self.value.write(asset, false)?;
         Ok(exp_len + value_len + size_of::<i32>())
     }

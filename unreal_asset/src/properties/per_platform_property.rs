@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -75,7 +75,7 @@ impl PerPlatformBoolProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
@@ -99,7 +99,7 @@ impl PropertyTrait for PerPlatformBoolProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
         for entry in &self.value {
             asset.write_bool(*entry)?;
         }
@@ -119,11 +119,11 @@ impl PerPlatformIntProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
-            value.push(asset.read_i32::<LittleEndian>()?);
+            value.push(asset.read_i32::<LE>()?);
         }
 
         Ok(PerPlatformIntProperty {
@@ -143,9 +143,9 @@ impl PropertyTrait for PerPlatformIntProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
         for entry in &self.value {
-            asset.write_i32::<LittleEndian>(*entry)?;
+            asset.write_i32::<LE>(*entry)?;
         }
         Ok(size_of::<i32>() + size_of::<i32>() * self.value.len())
     }
@@ -163,11 +163,11 @@ impl PerPlatformFloatProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
-            value.push(OrderedFloat(asset.read_f32::<LittleEndian>()?));
+            value.push(OrderedFloat(asset.read_f32::<LE>()?));
         }
 
         Ok(PerPlatformFloatProperty {
@@ -187,9 +187,9 @@ impl PropertyTrait for PerPlatformFloatProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
         for entry in &self.value {
-            asset.write_f32::<LittleEndian>(entry.0)?;
+            asset.write_f32::<LE>(entry.0)?;
         }
         Ok(size_of::<i32>() + size_of::<f32>() * self.value.len())
     }

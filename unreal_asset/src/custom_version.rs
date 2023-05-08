@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use lazy_static::lazy_static;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -97,7 +97,7 @@ impl CustomVersion {
     pub fn read<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let mut key = [0u8; 16];
         asset.read_exact(&mut key)?;
-        let version = asset.read_i32::<LittleEndian>()?;
+        let version = asset.read_i32::<LE>()?;
 
         let version_info = GUID_TO_VERSION_INFO.get(&key).map(|e| e.to_owned());
         Ok(Self {
@@ -111,7 +111,7 @@ impl CustomVersion {
     /// Write a custom version to an asset
     pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_all(&self.guid)?;
-        writer.write_i32::<LittleEndian>(self.version)?;
+        writer.write_i32::<LE>(self.version)?;
         Ok(())
     }
 
@@ -1338,7 +1338,7 @@ impl FAssetRegistryVersionType {
         asset.read_exact(&mut guid)?;
 
         if guid == *ASSET_REGISTRY_VERSION_GUID {
-            return Ok(Self::try_from(asset.read_i32::<LittleEndian>()?)?);
+            return Ok(Self::try_from(asset.read_i32::<LE>()?)?);
         }
 
         Ok(FAssetRegistryVersionType::LatestVersion)
@@ -1347,7 +1347,7 @@ impl FAssetRegistryVersionType {
     /// Write an asset registry version to an asset
     pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_all(&*ASSET_REGISTRY_VERSION_GUID)?;
-        writer.write_i32::<LittleEndian>((*self).into())?;
+        writer.write_i32::<LE>((*self).into())?;
         Ok(())
     }
 }

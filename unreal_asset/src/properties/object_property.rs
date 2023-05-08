@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
@@ -103,7 +103,7 @@ impl ObjectProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let value = asset.read_i32::<LittleEndian>()?;
+        let value = asset.read_i32::<LE>()?;
         Ok(ObjectProperty {
             name,
             ancestry,
@@ -121,7 +121,7 @@ impl PropertyTrait for ObjectProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.index)?;
+        asset.write_i32::<LE>(self.value.index)?;
         Ok(size_of::<i32>())
     }
 }

@@ -1,6 +1,6 @@
 //! Asset registry bundle d ata
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 
 use crate::error::Error;
 use crate::properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
@@ -53,7 +53,7 @@ impl AssetBundleEntry {
     pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         writer.write_fname(&self.bundle_name)?;
 
-        writer.write_i32::<LittleEndian>(self.bundle_assets.len() as i32)?;
+        writer.write_i32::<LE>(self.bundle_assets.len() as i32)?;
 
         for bundle_asset in &self.bundle_assets {
             bundle_asset.write(writer, false)?;
@@ -80,7 +80,7 @@ impl AssetBundleData {
 
     /// Write `AssetBundleData` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.bundles.len() as i32)?;
+        asset.write_i32::<LE>(self.bundles.len() as i32)?;
 
         for bundle in &self.bundles {
             bundle.write(asset)?;

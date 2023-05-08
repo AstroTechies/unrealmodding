@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -60,7 +60,7 @@ impl ColorProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let color = Color::from_argb(asset.read_i32::<LittleEndian>()?);
+        let color = Color::from_argb(asset.read_i32::<LE>()?);
         Ok(ColorProperty {
             name,
             ancestry,
@@ -78,7 +78,7 @@ impl PropertyTrait for ColorProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.color.to_argb())?;
+        asset.write_i32::<LE>(self.color.to_argb())?;
         Ok(size_of::<i32>())
     }
 }
@@ -94,10 +94,10 @@ impl LinearColorProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
         let color = Color::new(
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            OrderedFloat(asset.read_f32::<LE>()?),
+            OrderedFloat(asset.read_f32::<LE>()?),
+            OrderedFloat(asset.read_f32::<LE>()?),
+            OrderedFloat(asset.read_f32::<LE>()?),
         );
         Ok(LinearColorProperty {
             name,
@@ -116,10 +116,10 @@ impl PropertyTrait for LinearColorProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_f32::<LittleEndian>(self.color.r.0)?;
-        asset.write_f32::<LittleEndian>(self.color.g.0)?;
-        asset.write_f32::<LittleEndian>(self.color.b.0)?;
-        asset.write_f32::<LittleEndian>(self.color.a.0)?;
+        asset.write_f32::<LE>(self.color.r.0)?;
+        asset.write_f32::<LE>(self.color.g.0)?;
+        asset.write_f32::<LE>(self.color.b.0)?;
+        asset.write_f32::<LE>(self.color.a.0)?;
         Ok(size_of::<f32>() * 4)
     }
 }

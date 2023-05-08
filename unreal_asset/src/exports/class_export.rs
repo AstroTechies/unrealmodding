@@ -3,7 +3,7 @@
 use std::io::SeekFrom;
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
@@ -78,22 +78,22 @@ impl ClassExport {
     ) -> Result<Self, Error> {
         let struct_export = StructExport::from_base(base, asset)?;
 
-        let num_func_index_entries = asset.read_i32::<LittleEndian>()? as usize;
+        let num_func_index_entries = asset.read_i32::<LE>()? as usize;
         let mut func_map = IndexedMap::with_capacity(num_func_index_entries);
         for _i in 0..num_func_index_entries {
             let name = asset.read_fname()?;
-            let function_export = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+            let function_export = PackageIndex::new(asset.read_i32::<LE>()?);
 
             func_map.insert(name, function_export);
         }
 
-        let mut class_flags = EClassFlags::from_bits(asset.read_u32::<LittleEndian>()?)
+        let mut class_flags = EClassFlags::from_bits(asset.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid class flags".to_string()))?;
         if asset.get_object_version() < ObjectVersion::VER_UE4_CLASS_NOTPLACEABLE_ADDED {
             class_flags ^= EClassFlags::CLASS_NOT_PLACEABLE
         }
 
-        let class_within = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let class_within = PackageIndex::new(asset.read_i32::<LE>()?);
         let class_config_name = asset.read_fname()?;
 
         let mut interfaces_start = None;
@@ -101,7 +101,7 @@ impl ClassExport {
             < ObjectVersion::VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING
         {
             interfaces_start = Some(asset.position());
-            let num_interfaces = asset.read_i32::<LittleEndian>()?;
+            let num_interfaces = asset.read_i32::<LE>()?;
             asset.seek(SeekFrom::Start(
                 interfaces_start.unwrap()
                     + size_of::<i32>() as u64
@@ -109,7 +109,7 @@ impl ClassExport {
             ))?;
         }
 
-        let class_generated_by = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let class_generated_by = PackageIndex::new(asset.read_i32::<LE>()?);
         let current_offset = asset.position();
 
         if asset.get_object_version()
@@ -117,13 +117,13 @@ impl ClassExport {
         {
             asset.seek(SeekFrom::Start(interfaces_start.unwrap()))?;
         }
-        let num_interfaces = asset.read_i32::<LittleEndian>()? as usize;
+        let num_interfaces = asset.read_i32::<LE>()? as usize;
         let mut interfaces = Vec::with_capacity(num_interfaces);
         for _i in 0..num_interfaces {
             interfaces.push(SerializedInterfaceReference::new(
-                asset.read_i32::<LittleEndian>()?,
-                asset.read_i32::<LittleEndian>()?,
-                asset.read_i32::<LittleEndian>()? == 1,
+                asset.read_i32::<LE>()?,
+                asset.read_i32::<LE>()?,
+                asset.read_i32::<LE>()? == 1,
             ));
         }
 
@@ -133,16 +133,16 @@ impl ClassExport {
             asset.seek(SeekFrom::Start(current_offset))?;
         }
 
-        let deprecated_force_script_order = asset.read_i32::<LittleEndian>()? == 1;
-        asset.read_i64::<LittleEndian>()?; // none
+        let deprecated_force_script_order = asset.read_i32::<LE>()? == 1;
+        asset.read_i64::<LE>()?; // none
 
         let cooked = match asset.get_object_version() >= ObjectVersion::VER_UE4_ADD_COOKED_TO_UCLASS
         {
-            true => Some(asset.read_i32::<LittleEndian>()? == 1),
+            true => Some(asset.read_i32::<LE>()? == 1),
             false => None,
         };
 
-        let class_default_object = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let class_default_object = PackageIndex::new(asset.read_i32::<LE>()?);
 
         Ok(ClassExport {
             struct_export,
@@ -161,11 +161,11 @@ impl ClassExport {
 
     /// Serialize a `ClassExport` interface
     fn serialize_interfaces<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.interfaces.len() as i32)?;
+        asset.write_i32::<LE>(self.interfaces.len() as i32)?;
         for interface in &self.interfaces {
-            asset.write_i32::<LittleEndian>(interface.class)?;
-            asset.write_i32::<LittleEndian>(interface.pointer_offset)?;
-            asset.write_i32::<LittleEndian>(match interface.implemented_by_k2 {
+            asset.write_i32::<LE>(interface.class)?;
+            asset.write_i32::<LE>(interface.pointer_offset)?;
+            asset.write_i32::<LE>(match interface.implemented_by_k2 {
                 true => 1,
                 false => 0,
             })?;
@@ -198,10 +198,10 @@ impl ExportTrait for ClassExport {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_export.write(asset)?;
 
-        asset.write_i32::<LittleEndian>(self.func_map.len() as i32)?;
+        asset.write_i32::<LE>(self.func_map.len() as i32)?;
         for (_, name, index) in &self.func_map {
             asset.write_fname(name)?;
-            asset.write_i32::<LittleEndian>(index.index)?;
+            asset.write_i32::<LE>(index.index)?;
         }
 
         let serializing_class_flags =
@@ -209,9 +209,9 @@ impl ExportTrait for ClassExport {
                 true => self.class_flags ^ EClassFlags::CLASS_NOT_PLACEABLE,
                 false => self.class_flags,
             };
-        asset.write_u32::<LittleEndian>(serializing_class_flags.bits())?;
+        asset.write_u32::<LE>(serializing_class_flags.bits())?;
 
-        asset.write_i32::<LittleEndian>(self.class_within.index)?;
+        asset.write_i32::<LE>(self.class_within.index)?;
         asset.write_fname(&self.class_config_name)?;
 
         if asset.get_object_version()
@@ -219,7 +219,7 @@ impl ExportTrait for ClassExport {
         {
             self.serialize_interfaces(asset)?;
         }
-        asset.write_i32::<LittleEndian>(self.class_generated_by.index)?;
+        asset.write_i32::<LE>(self.class_generated_by.index)?;
 
         if asset.get_object_version()
             >= ObjectVersion::VER_UE4_UCLASS_SERIALIZE_INTERFACES_AFTER_LINKING
@@ -227,14 +227,14 @@ impl ExportTrait for ClassExport {
             self.serialize_interfaces(asset)?;
         }
 
-        asset.write_i32::<LittleEndian>(match self.deprecated_force_script_order {
+        asset.write_i32::<LE>(match self.deprecated_force_script_order {
             true => 1,
             false => 0,
         })?;
         asset.write_fname(&asset.get_name_map().get_mut().add_fname("None"))?;
 
         if asset.get_object_version() >= ObjectVersion::VER_UE4_ADD_COOKED_TO_UCLASS {
-            asset.write_i32::<LittleEndian>(
+            asset.write_i32::<LE>(
                 match self.cooked.ok_or_else(|| {
                     Error::no_data(
                         "engine_version >= UE4_ADD_COOKED_TO_UCLASS but cooked is None".to_string(),
@@ -246,7 +246,7 @@ impl ExportTrait for ClassExport {
             )?;
         }
 
-        asset.write_i32::<LittleEndian>(self.class_default_object.index)?;
+        asset.write_i32::<LE>(self.class_default_object.index)?;
         Ok(())
     }
 }

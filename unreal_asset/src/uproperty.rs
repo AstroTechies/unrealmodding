@@ -1,6 +1,6 @@
 //! All of Unreal Engine UProperties
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -65,7 +65,7 @@ macro_rules! parse_simple_property {
                 Ok($prop_name {
                     generic_property: UGenericProperty::new(asset)?,
                     $(
-                        $field_name: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                        $field_name: PackageIndex::new(asset.read_i32::<LE>()?),
                     )*
                 })
             }
@@ -75,7 +75,7 @@ macro_rules! parse_simple_property {
             fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 $(
-                    asset.write_i32::<LittleEndian>(self.$field_name.index)?;
+                    asset.write_i32::<LE>(self.$field_name.index)?;
                 )*
                 Ok(())
             }
@@ -242,7 +242,7 @@ impl UField {
             .version
             < FFrameworkObjectVersion::RemoveUfieldNext as i32
         {
-            true => Some(PackageIndex::new(asset.read_i32::<LittleEndian>()?)),
+            true => Some(PackageIndex::new(asset.read_i32::<LE>()?)),
             false => None,
         };
         Ok(UField { next })
@@ -255,7 +255,7 @@ impl UField {
             .version
             < FFrameworkObjectVersion::RemoveUfieldNext as i32
         {
-            asset.write_i32::<LittleEndian>(
+            asset.write_i32::<LE>(
                 self.next
                     .ok_or_else(|| {
                         Error::no_data(
@@ -275,10 +275,9 @@ impl UGenericProperty {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let u_field = UField::new(asset)?;
 
-        let array_dim: EArrayDim = asset.read_i32::<LittleEndian>()?.try_into()?;
-        let property_flags: EPropertyFlags =
-            EPropertyFlags::from_bits(asset.read_u64::<LittleEndian>()?)
-                .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
+        let array_dim: EArrayDim = asset.read_i32::<LE>()?.try_into()?;
+        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.read_u64::<LE>()?)
+            .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
         let rep_notify_func = asset.read_fname()?;
 
         let blueprint_replication_condition: Option<ELifetimeCondition> =
@@ -302,8 +301,8 @@ impl UGenericProperty {
 impl UPropertyTrait for UGenericProperty {
     fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.u_field.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.array_dim.into())?;
-        asset.write_u64::<LittleEndian>(self.property_flags.bits())?;
+        asset.write_i32::<LE>(self.array_dim.into())?;
+        asset.write_u64::<LE>(self.property_flags.bits())?;
         asset.write_fname(&self.rep_notify_func)?;
 
         if asset.get_custom_version::<FReleaseObjectVersion>().version

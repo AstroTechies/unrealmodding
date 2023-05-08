@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
@@ -57,7 +57,7 @@ impl TimeSpanProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let ticks = asset.read_i64::<LittleEndian>()?;
+        let ticks = asset.read_i64::<LE>()?;
         Ok(TimeSpanProperty {
             name,
             ancestry,
@@ -80,7 +80,7 @@ impl DateTimeProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let ticks = asset.read_i64::<LittleEndian>()?;
+        let ticks = asset.read_i64::<LE>()?;
         Ok(DateTimeProperty {
             name,
             ancestry,

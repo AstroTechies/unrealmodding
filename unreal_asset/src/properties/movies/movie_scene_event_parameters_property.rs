@@ -1,5 +1,5 @@
 //! Movie scene event parameters property
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
@@ -25,7 +25,7 @@ impl MovieSceneEventParameters {
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let struct_type = SoftObjectPath::new(asset)?;
 
-        let struct_bytes_length = asset.read_i32::<LittleEndian>()?;
+        let struct_bytes_length = asset.read_i32::<LE>()?;
         let mut struct_bytes = vec![0u8; struct_bytes_length as usize];
         asset.read_exact(&mut struct_bytes)?;
 
@@ -39,7 +39,7 @@ impl MovieSceneEventParameters {
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_type.write(asset)?;
 
-        asset.write_i32::<LittleEndian>(self.struct_bytes.len() as i32)?;
+        asset.write_i32::<LE>(self.struct_bytes.len() as i32)?;
         asset.write_all(&self.struct_bytes)?;
 
         Ok(())

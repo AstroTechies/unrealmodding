@@ -1,6 +1,6 @@
 //! Data table export
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
@@ -59,8 +59,8 @@ impl DataTableExport {
             }
         }
 
-        asset.read_i32::<LittleEndian>()?;
-        let num_entries = asset.read_i32::<LittleEndian>()? as usize;
+        asset.read_i32::<LE>()?;
+        let num_entries = asset.read_i32::<LE>()? as usize;
         let mut data = Vec::with_capacity(num_entries);
 
         let ancestry = Ancestry::new(base.get_class_type_for_ancestry(asset));
@@ -106,8 +106,8 @@ impl ExportTrait for DataTableExport {
                 }
             }
         }
-        asset.write_i32::<LittleEndian>(0)?;
-        asset.write_i32::<LittleEndian>(self.table.data.len() as i32)?;
+        asset.write_i32::<LE>(0)?;
+        asset.write_i32::<LE>(self.table.data.len() as i32)?;
         for entry in &self.table.data {
             asset.write_fname(&entry.name)?;
             entry.write_with_type(asset, false, Some(decided_struct_type.clone()))?;

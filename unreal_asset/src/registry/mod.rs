@@ -5,7 +5,7 @@
 //! but some games might require modifying it before your assets will get loaded
 use std::io::{Cursor, SeekFrom};
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 
 use crate::asset::name_map::NameMap;
 use crate::containers::shared_resource::SharedResource;
@@ -61,7 +61,7 @@ impl AssetRegistryState {
         *assets_data = asset.read_array(|asset: &mut Reader| AssetData::new(asset, version))?;
 
         if version < FAssetRegistryVersionType::AddedDependencyFlags {
-            let local_num_depends_nodes = asset.read_i32::<LittleEndian>()?;
+            let local_num_depends_nodes = asset.read_i32::<LE>()?;
             *depends_nodes = Vec::with_capacity(local_num_depends_nodes as usize);
 
             for i in 0..local_num_depends_nodes {
@@ -75,9 +75,9 @@ impl AssetRegistryState {
                 }
             }
         } else {
-            let dependency_section_size = asset.read_i64::<LittleEndian>()?;
+            let dependency_section_size = asset.read_i64::<LE>()?;
             let dependency_section_end = asset.position() + dependency_section_size as u64;
-            let local_num_depends_nodes = asset.read_i32::<LittleEndian>()?;
+            let local_num_depends_nodes = asset.read_i32::<LE>()?;
 
             *depends_nodes = Vec::with_capacity(local_num_depends_nodes as usize);
             for i in 0..local_num_depends_nodes {
@@ -102,21 +102,21 @@ impl AssetRegistryState {
 
     /// Write an `AssetRegistryState` to an asset
     fn write_data<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
-        writer.write_i32::<LittleEndian>(self.assets_data.len() as i32)?;
+        writer.write_i32::<LE>(self.assets_data.len() as i32)?;
         for asset_data in &self.assets_data {
             asset_data.write(writer)?;
         }
 
         if self.version < FAssetRegistryVersionType::AddedDependencyFlags {
-            writer.write_i32::<LittleEndian>(self.depends_nodes.len() as i32)?;
+            writer.write_i32::<LE>(self.depends_nodes.len() as i32)?;
 
             for depends_node in &self.depends_nodes {
                 depends_node.save_dependencies_before_flags(writer)?;
             }
         } else {
             let pos = writer.position();
-            writer.write_i64::<LittleEndian>(0)?;
-            writer.write_i32::<LittleEndian>(self.depends_nodes.len() as i32)?;
+            writer.write_i64::<LE>(0)?;
+            writer.write_i32::<LE>(self.depends_nodes.len() as i32)?;
 
             for depends_node in &self.depends_nodes {
                 depends_node.save_dependencies(writer)?;
@@ -124,11 +124,11 @@ impl AssetRegistryState {
 
             let end_pos = writer.position();
             writer.set_position(pos)?;
-            writer.write_i64::<LittleEndian>(end_pos as i64 - pos as i64)?;
+            writer.write_i64::<LE>(end_pos as i64 - pos as i64)?;
             writer.set_position(end_pos)?;
         }
 
-        writer.write_i32::<LittleEndian>(self.package_data.len() as i32)?;
+        writer.write_i32::<LE>(self.package_data.len() as i32)?;
         for package_data in &self.package_data {
             package_data.write(writer)?;
         }
@@ -281,7 +281,7 @@ impl AssetRegistryState {
             )));
         } else if self.version < FAssetRegistryVersionType::FixedTags {
             let pos = writer.position();
-            writer.write_i64::<LittleEndian>(0)?;
+            writer.write_i64::<LE>(0)?;
 
             let name_map = self
                 .name_map
@@ -293,16 +293,14 @@ impl AssetRegistryState {
             self.write_data(&mut name_table_writer)?;
 
             let offset = writer.position();
-            writer.write_i32::<LittleEndian>(
-                name_map.get_ref().get_name_map_index_list().len() as i32
-            )?;
+            writer.write_i32::<LE>(name_map.get_ref().get_name_map_index_list().len() as i32)?;
             for name in name_map.get_ref().get_name_map_index_list() {
                 writer.write_fstring(Some(name))?;
 
                 match writer.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                     true => {
                         let hash = crc::generate_hash(name);
-                        writer.write_u32::<LittleEndian>(hash)?;
+                        writer.write_u32::<LE>(hash)?;
                     }
                     false => {}
                 }
@@ -311,7 +309,7 @@ impl AssetRegistryState {
             let end = writer.position();
 
             writer.seek(SeekFrom::Start(pos))?;
-            writer.write_i64::<LittleEndian>(offset as i64)?;
+            writer.write_i64::<LE>(offset as i64)?;
             writer.seek(SeekFrom::Start(end))?;
         } else {
             self.write_data(&mut writer)?;

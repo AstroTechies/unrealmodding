@@ -2,7 +2,7 @@
 
 use std::io::SeekFrom;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
@@ -97,7 +97,7 @@ impl ArrayProperty {
         mut array_type: Option<FName>,
         property_guid: Option<Guid>,
     ) -> Result<Self, Error> {
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut entries = Vec::new();
         let mut name = name;
 
@@ -159,7 +159,7 @@ impl ArrayProperty {
                     )));
                 }
 
-                struct_length = asset.read_i64::<LittleEndian>()?;
+                struct_length = asset.read_i64::<LE>()?;
                 full_type = asset.read_fname()?;
 
                 let mut guid = [0u8; 16];
@@ -268,7 +268,7 @@ impl ArrayProperty {
         }
 
         let begin = asset.position();
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
 
         if (array_type.is_some()
             && array_type.as_ref().unwrap().get_content().as_str() == "StructProperty")
@@ -295,7 +295,7 @@ impl ArrayProperty {
                 asset.write_fname(&property.name)?;
                 asset.write_fname(&asset.get_name_map().get_mut().add_fname("StructProperty"))?;
                 length_loc = Some(asset.position());
-                asset.write_i64::<LittleEndian>(0)?;
+                asset.write_i64::<LE>(0)?;
                 asset.write_fname(
                     property.struct_type.as_ref().ok_or_else(|| {
                         PropertyError::property_field_none("struct_type", "FName")
@@ -335,7 +335,7 @@ impl ArrayProperty {
                         false => 0,
                     };
 
-                asset.write_i32::<LittleEndian>(length as i32)?;
+                asset.write_i32::<LE>(length as i32)?;
                 asset.seek(SeekFrom::Start(new_loc))?;
             }
         } else {

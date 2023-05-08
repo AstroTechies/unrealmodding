@@ -187,10 +187,10 @@ pub trait ArchiveReader: ArchiveTrait {
     /// This reads an array of 12 ints
     /// ```no_run,ignore
     /// use unreal_asset::reader::asset_reader::ArchiveReader;
-    /// use byteorder::LittleEndian;
+    /// use byteorder::LE;
     ///
     /// let reader: ArchiveReader = ...;
-    /// let ints = reader.read_array_with_length(12, |e| e.read_i32::<LittleEndian>()?)?;
+    /// let ints = reader.read_array_with_length(12, |e| e.read_i32::<LE>()?)?;
     /// ```
     fn read_array_with_length<T>(
         &mut self,

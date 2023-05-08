@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use unreal_asset_proc_macro::FNameContainer;
 
@@ -181,7 +181,7 @@ impl TextProperty {
             }
         }
 
-        let flags = asset.read_u32::<LittleEndian>()?;
+        let flags = asset.read_u32::<LE>()?;
         let mut history_type = TextHistoryType::Base;
         let mut table_id = None;
         if asset.get_object_version() >= ObjectVersion::VER_UE4_FTEXT_HISTORY {
@@ -195,7 +195,7 @@ impl TextProperty {
                         >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability
                             as i32
                     {
-                        let has_culture_invariant_string = asset.read_i32::<LittleEndian>()? == 1;
+                        let has_culture_invariant_string = asset.read_i32::<LE>()? == 1;
                         if has_culture_invariant_string {
                             culture_invariant_string = asset.read_fstring()?;
                         }
@@ -253,7 +253,7 @@ impl PropertyTrait for TextProperty {
                 asset.write_fstring(self.value.as_deref())?;
             }
         }
-        asset.write_u32::<LittleEndian>(self.flags)?;
+        asset.write_u32::<LE>(self.flags)?;
 
         if asset.get_object_version() >= ObjectVersion::VER_UE4_FTEXT_HISTORY {
             let history_type = self.history_type;
@@ -269,9 +269,9 @@ impl PropertyTrait for TextProperty {
                             None => true,
                         };
                         match is_empty {
-                            true => asset.write_i32::<LittleEndian>(0)?,
+                            true => asset.write_i32::<LE>(0)?,
                             false => {
-                                asset.write_i32::<LittleEndian>(1)?;
+                                asset.write_i32::<LE>(1)?;
                                 asset.write_fstring(self.culture_invariant_string.as_deref())?;
                             }
                         }

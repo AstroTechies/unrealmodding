@@ -2,7 +2,7 @@
 
 use std::hash::Hash;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
@@ -143,7 +143,7 @@ impl MapProperty {
             property_guid = asset.read_property_guid()?;
         }
 
-        let num_keys_to_remove = asset.read_i32::<LittleEndian>()?;
+        let num_keys_to_remove = asset.read_i32::<LE>()?;
         let mut keys_to_remove = None;
 
         let type_1 = type_1.ok_or_else(|| Error::invalid_file("No type1".to_string()))?;
@@ -163,7 +163,7 @@ impl MapProperty {
             keys_to_remove = Some(vec);
         }
 
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut values: IndexedMap<Property, Property> = IndexedMap::new();
 
         for _ in 0..num_entries {
@@ -229,7 +229,7 @@ impl PropertyTrait for MapProperty {
         }
 
         let begin = asset.position();
-        asset.write_i32::<LittleEndian>(match self.keys_to_remove {
+        asset.write_i32::<LE>(match self.keys_to_remove {
             Some(ref e) => e.len(),
             None => 0,
         } as i32)?;
@@ -240,7 +240,7 @@ impl PropertyTrait for MapProperty {
             }
         }
 
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
 
         for (_, key, value) in &self.value {
             key.write(asset, false)?;

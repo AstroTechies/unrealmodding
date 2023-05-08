@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
@@ -69,10 +69,10 @@ impl ViewTargetBlendParamsProperty {
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let blend_time = OrderedFloat(asset.read_f32::<LittleEndian>()?);
+        let blend_time = OrderedFloat(asset.read_f32::<LE>()?);
         let blend_function = ViewTargetBlendFunction::try_from(asset.read_u8()?)?;
-        let blend_exp = OrderedFloat(asset.read_f32::<LittleEndian>()?);
-        let lock_outgoing = asset.read_i32::<LittleEndian>()? != 0;
+        let blend_exp = OrderedFloat(asset.read_f32::<LE>()?);
+        let lock_outgoing = asset.read_i32::<LE>()? != 0;
 
         Ok(ViewTargetBlendParamsProperty {
             name,
@@ -95,10 +95,10 @@ impl PropertyTrait for ViewTargetBlendParamsProperty {
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
 
-        asset.write_f32::<LittleEndian>(self.blend_time.0)?;
+        asset.write_f32::<LE>(self.blend_time.0)?;
         asset.write_u8(self.blend_function.into())?;
-        asset.write_f32::<LittleEndian>(self.blend_exp.0)?;
-        asset.write_i32::<LittleEndian>(match self.lock_outgoing {
+        asset.write_f32::<LE>(self.blend_exp.0)?;
+        asset.write_i32::<LE>(match self.lock_outgoing {
             true => 1,
             false => 0,
         })?;

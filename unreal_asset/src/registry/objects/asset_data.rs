@@ -1,6 +1,6 @@
 //! Asset bundle asset data
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::FAssetRegistryVersionType;
@@ -74,7 +74,7 @@ impl AssetData {
     fn read_tags<Reader: ArchiveReader>(
         asset: &mut Reader,
     ) -> Result<IndexedMap<FName, Option<String>>, Error> {
-        let size = asset.read_i32::<LittleEndian>()?;
+        let size = asset.read_i32::<LE>()?;
         let mut tags_and_values = IndexedMap::new();
 
         for _ in 0..size {
@@ -88,7 +88,7 @@ impl AssetData {
         asset: &mut Writer,
         tags_and_values: &IndexedMap<FName, Option<String>>,
     ) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(tags_and_values.len() as i32)?;
+        asset.write_i32::<LE>(tags_and_values.len() as i32)?;
         for (_, key, value) in tags_and_values {
             asset.write_fname(key)?;
             asset.write_fstring(value.as_deref())?;
@@ -112,9 +112,8 @@ impl AssetData {
         let package_name = asset.read_fname()?;
         let asset_name = asset.read_fname()?;
         let tags = Self::read_tags(asset)?;
-        let chunk_ids =
-            asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LittleEndian>()?))?; // if we don't explicitly specify the type inside lambda the compiler will crashd
-        let package_flags = EPackageFlags::from_bits(asset.read_u32::<LittleEndian>()?)
+        let chunk_ids = asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LE>()?))?; // if we don't explicitly specify the type inside lambda the compiler will crashd
+        let package_flags = EPackageFlags::from_bits(asset.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
         Ok(Self {
@@ -193,12 +192,12 @@ impl AssetData {
         writer.write_fname(&self.asset_name)?;
         Self::write_tags(writer, &self.tags_and_values)?;
 
-        writer.write_i32::<LittleEndian>(self.chunk_ids.len() as i32)?;
+        writer.write_i32::<LE>(self.chunk_ids.len() as i32)?;
         for chunk_id in &self.chunk_ids {
-            writer.write_i32::<LittleEndian>(*chunk_id)?;
+            writer.write_i32::<LE>(*chunk_id)?;
         }
 
-        writer.write_u32::<LittleEndian>(self.package_flags.bits())?;
+        writer.write_u32::<LE>(self.package_flags.bits())?;
         Ok(())
     }
 }
