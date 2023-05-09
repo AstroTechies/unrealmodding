@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# Pre-commit hook for Cargo.toml dependency version updating
+
+python scripts/dependency_version.py Cargo.toml
+git add Cargo.toml
