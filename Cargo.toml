@@ -13,7 +13,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.13"
+version = "0.1.14"
 authors = ["AstroTechies, localcc, konsti219"]
 license = "MIT"
 description = "Tools for making and loading Unreal Engine Mods."
