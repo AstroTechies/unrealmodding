@@ -1,16 +1,16 @@
-use std::io::Cursor;
+use std::io::{Cursor, Read, Seek};
 
 use unreal_asset::{cast, engine_version::EngineVersion, error::Error, exports::Export, Asset};
 
 #[allow(dead_code)]
-pub(crate) fn verify_reparse(
-    asset: &mut Asset<Cursor<Vec<u8>>>,
+pub(crate) fn verify_reparse<C: Read + Seek>(
+    asset: &mut Asset<C>,
     engine_version: EngineVersion,
 ) -> Result<(), Error> {
     let mut cursor = Cursor::new(Vec::new());
 
     let mut bulk_cursor = None;
-    if asset.use_separate_bulk_data_files {
+    if asset.asset_data.use_event_driven_loader {
         bulk_cursor = Some(Cursor::new(Vec::new()));
     }
     asset.write_data(&mut cursor, bulk_cursor.as_mut())?;
@@ -21,15 +21,15 @@ pub(crate) fn verify_reparse(
 }
 
 #[allow(dead_code)]
-pub(crate) fn verify_binary_equality(
+pub(crate) fn verify_binary_equality<C: Read + Seek>(
     data: &[u8],
     bulk: Option<&[u8]>,
-    asset: &mut Asset<Cursor<&[u8]>>,
+    asset: &mut Asset<C>,
 ) -> Result<(), Error> {
     let mut cursor = Cursor::new(Vec::new());
 
     let mut bulk_cursor = None;
-    if asset.use_separate_bulk_data_files {
+    if asset.asset_data.use_event_driven_loader {
         bulk_cursor = Some(Cursor::new(Vec::new()));
     }
     asset.write_data(&mut cursor, bulk_cursor.as_mut())?;
@@ -52,8 +52,8 @@ pub(crate) fn verify_binary_equality(
 }
 
 #[allow(dead_code)]
-pub(crate) fn verify_all_exports_parsed(asset: &Asset<Cursor<&[u8]>>) -> bool {
-    for export in &asset.exports {
+pub(crate) fn verify_all_exports_parsed<C: Read + Seek>(asset: &Asset<C>) -> bool {
+    for export in &asset.asset_data.exports {
         if cast!(Export, RawExport, export).is_some() {
             return false;
         }

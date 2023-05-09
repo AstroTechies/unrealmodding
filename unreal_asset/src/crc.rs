@@ -1,6 +1,7 @@
 //! CRC implementation
 
 use lazy_static::lazy_static;
+use naive_cityhash::cityhash64;
 
 #[rustfmt::skip]
 lazy_static! {
@@ -178,9 +179,25 @@ pub fn generate_hash(string: &str) -> u32 {
     (algo1 & 0xffff) | ((algo2 & 0xffff) << 16)
 }
 
+pub fn cityhash64_to_lower(string: &str) -> u64 {
+    let encoded = string.encode_utf16().map(to_lower).collect::<Vec<_>>();
+    // this is safe because we know that this is a u16 array, therefore it can safely be aligned to u8
+    // this is also faster than alternatives without unsafe block
+    let (_, aligned, _) = unsafe { encoded.align_to::<u8>() };
+    cityhash64(aligned)
+}
+
 fn to_upper(character: u16) -> u16 {
     if character.saturating_sub('a' as u16) < 26u16 {
         (character as u8 as char).to_uppercase().next().unwrap() as u16
+    } else {
+        character
+    }
+}
+
+fn to_lower(character: u16) -> u16 {
+    if character.saturating_sub('a' as u16) < 26u16 {
+        (character as u8 as char).to_lowercase().next().unwrap() as u16
     } else {
         character
     }

@@ -3,26 +3,29 @@
 use std::io::SeekFrom;
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::simple_property_write;
-use crate::types::{FName, Guid};
+use crate::types::{fname::FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Implement a simple integer property
 macro_rules! impl_int_property {
     ($property_type:ident, $read_func:ident, $write_func:ident, $ty:ty) => {
         impl $property_type {
             /// Read `$property_type` from an asset
-            pub fn new<Reader: AssetReader>(
+            pub fn new<Reader: ArchiveReader>(
                 asset: &mut Reader,
                 name: FName,
+                ancestry: Ancestry,
                 include_header: bool,
                 _length: i64,
                 duplication_index: i32,
@@ -31,9 +34,10 @@ macro_rules! impl_int_property {
 
                 Ok($property_type {
                     name,
+                    ancestry,
                     property_guid,
                     duplication_index,
-                    value: asset.$read_func::<LittleEndian>()?,
+                    value: asset.$read_func::<LE>()?,
                 })
             }
         }
@@ -43,10 +47,12 @@ macro_rules! impl_int_property {
 }
 
 /// Int8 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int8Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -57,7 +63,7 @@ pub struct Int8Property {
 impl_property_data_trait!(Int8Property);
 
 /// Byte property value
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub enum BytePropertyValue {
     /// Byte variant
     Byte(u8),
@@ -66,10 +72,12 @@ pub enum BytePropertyValue {
 }
 
 /// Byte property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ByteProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -82,10 +90,12 @@ pub struct ByteProperty {
 impl_property_data_trait!(ByteProperty);
 
 /// Bool property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct BoolProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -96,10 +106,12 @@ pub struct BoolProperty {
 impl_property_data_trait!(BoolProperty);
 
 /// Int32 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct IntProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -110,10 +122,12 @@ pub struct IntProperty {
 impl_property_data_trait!(IntProperty);
 
 /// Int16 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int16Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -124,10 +138,12 @@ pub struct Int16Property {
 impl_property_data_trait!(Int16Property);
 
 /// Int64 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Int64Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -138,10 +154,12 @@ pub struct Int64Property {
 impl_property_data_trait!(Int64Property);
 
 /// UInt16 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt16Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -152,10 +170,12 @@ pub struct UInt16Property {
 impl_property_data_trait!(UInt16Property);
 
 /// UInt32 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt32Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -166,10 +186,12 @@ pub struct UInt32Property {
 impl_property_data_trait!(UInt32Property);
 
 /// UInt64 property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UInt64Property {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -180,10 +202,12 @@ pub struct UInt64Property {
 impl_property_data_trait!(UInt64Property);
 
 /// Float property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct FloatProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -194,10 +218,12 @@ pub struct FloatProperty {
 impl_property_data_trait!(FloatProperty);
 
 /// Double property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DoubleProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -209,9 +235,10 @@ impl_property_data_trait!(DoubleProperty);
 
 impl BoolProperty {
     /// Read a `BoolProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -221,6 +248,7 @@ impl BoolProperty {
 
         Ok(BoolProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -229,7 +257,7 @@ impl BoolProperty {
 }
 
 impl PropertyTrait for BoolProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -242,9 +270,10 @@ impl PropertyTrait for BoolProperty {
 
 impl Int8Property {
     /// Read an `Int8Property` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -252,6 +281,7 @@ impl Int8Property {
         let property_guid = optional_guid!(asset, include_header);
         Ok(Int8Property {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: asset.read_i8()?,
@@ -260,7 +290,7 @@ impl Int8Property {
 }
 
 impl PropertyTrait for Int8Property {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -273,7 +303,7 @@ impl PropertyTrait for Int8Property {
 
 impl ByteProperty {
     /// Read byte property value
-    fn read_value<Reader: AssetReader>(
+    fn read_value<Reader: ArchiveReader>(
         asset: &mut Reader,
         length: i64,
     ) -> Result<BytePropertyValue, Error> {
@@ -281,13 +311,18 @@ impl ByteProperty {
             1 => Some(BytePropertyValue::Byte(asset.read_u8()?)),
             8 => Some(BytePropertyValue::FName(asset.read_fname()?)),
             0 => {
-                let name_map_pointer = asset.read_i32::<LittleEndian>()?;
-                let name_map_index = asset.read_i32::<LittleEndian>()?;
+                let name_map_pointer = asset.read_i32::<LE>()?;
+                let name_map_index = asset.read_i32::<LE>()?;
 
                 asset.seek(SeekFrom::Current(-(size_of::<i32>() as i64 * 2)))?;
 
                 let byte_value = if name_map_pointer >= 0
-                    && name_map_pointer < asset.get_name_map_index_list().len() as i32
+                    && name_map_pointer
+                        < asset
+                            .get_name_map()
+                            .get_ref()
+                            .get_name_map_index_list()
+                            .len() as i32
                     && name_map_index == 0
                     && !asset.get_name_reference(name_map_index).contains('/')
                 {
@@ -307,9 +342,10 @@ impl ByteProperty {
     }
 
     /// Read a `ByteProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         fallback_length: i64,
@@ -325,6 +361,7 @@ impl ByteProperty {
 
         Ok(ByteProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             enum_type,
@@ -334,7 +371,7 @@ impl ByteProperty {
 }
 
 impl PropertyTrait for ByteProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -363,9 +400,10 @@ impl PropertyTrait for ByteProperty {
 
 impl FloatProperty {
     /// Read a `FloatProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -374,30 +412,32 @@ impl FloatProperty {
 
         Ok(FloatProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
-            value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f32::<LE>()?),
         })
     }
 }
 
 impl PropertyTrait for FloatProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_f32::<LittleEndian>(self.value.0)?;
+        asset.write_f32::<LE>(self.value.0)?;
         Ok(size_of::<f32>())
     }
 }
 
 impl DoubleProperty {
     /// Read a `DoubleProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -406,21 +446,22 @@ impl DoubleProperty {
 
         Ok(DoubleProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
-            value: OrderedFloat(asset.read_f64::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f64::<LE>()?),
         })
     }
 }
 
 impl PropertyTrait for DoubleProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_f64::<LittleEndian>(self.value.0)?;
+        asset.write_f64::<LE>(self.value.0)?;
         Ok(size_of::<f64>())
     }
 }

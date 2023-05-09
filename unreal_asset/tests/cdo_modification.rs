@@ -7,7 +7,8 @@ use unreal_asset::{
     exports::{normal_export::NormalExport, Export, ExportBaseTrait},
     flags::EObjectFlags,
     properties::{object_property::ObjectProperty, PropertyDataTrait},
-    types::{FName, PackageIndex},
+    types::PackageIndex,
+    unversioned::ancestry::Ancestry,
     Asset,
 };
 
@@ -30,12 +31,15 @@ fn cdo_modification() -> Result<(), Error> {
 
     shared::verify_binary_equality(TEST_ASSET, None, &mut asset)?;
 
+    let new_name = asset.get_name_map().get_mut().add_fname("PickupActor");
+
     let cdo_export: &mut NormalExport = asset
+        .asset_data
         .exports
         .iter_mut()
         .find(|e| {
-            e.get_base_export().object_flags & EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits()
-                == EObjectFlags::RF_CLASS_DEFAULT_OBJECT.bits()
+            e.get_base_export().object_flags & EObjectFlags::RF_CLASS_DEFAULT_OBJECT
+                == EObjectFlags::RF_CLASS_DEFAULT_OBJECT
         })
         .and_then(|e| cast!(Export, NormalExport, e))
         .expect("Failed to find cdo export");
@@ -43,14 +47,15 @@ fn cdo_modification() -> Result<(), Error> {
     let pickup_actor = cdo_export
         .properties
         .iter_mut()
-        .find(|e| e.get_name().content == "PickupActor")
+        .find(|e| e.get_name().get_content() == "PickupActor")
         .expect("Failed to find PickupActor");
 
     *pickup_actor = ObjectProperty {
-        name: FName::from_slice("PickupActor"),
+        name: new_name,
         property_guid: None,
         duplication_index: 0,
         value: PackageIndex::new(0),
+        ancestry: Ancestry::default(),
     }
     .into();
 

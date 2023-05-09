@@ -1,6 +1,7 @@
 //! Data table export
 
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::exports::{
@@ -9,11 +10,12 @@ use crate::exports::{
 };
 use crate::implement_get;
 use crate::properties::{struct_property::StructProperty, Property, PropertyDataTrait};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::FName;
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::fname::FName;
+use crate::unversioned::ancestry::Ancestry;
 
 /// Data table
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTable {
     /// Data
     pub data: Vec<StructProperty>,
@@ -27,7 +29,7 @@ impl DataTable {
 }
 
 /// Data table export
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataTableExport {
     /// Base normal export
     pub normal_export: NormalExport,
@@ -39,16 +41,17 @@ implement_get!(DataTableExport);
 
 impl DataTableExport {
     /// Read a `DataTableExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
 
-        let mut decided_struct_type = FName::new(String::from("Generic"), 0);
+        let mut decided_struct_type = FName::from_slice("Generic");
         for data in &normal_export.properties {
             if let Property::ObjectProperty(property) = data {
-                if property.name.content.as_str() == "RowStruct" && property.value.is_import() {
+                if property.name.get_content().as_str() == "RowStruct" && property.value.is_import()
+                {
                     if let Some(import) = asset.get_import(property.value) {
                         decided_struct_type = import.object_name.clone();
                     }
@@ -56,13 +59,11 @@ impl DataTableExport {
             }
         }
 
-        asset.read_i32::<LittleEndian>()?;
-        let num_entries = asset.read_i32::<LittleEndian>()? as usize;
+        asset.read_i32::<LE>()?;
+        let num_entries = asset.read_i32::<LE>()? as usize;
         let mut data = Vec::with_capacity(num_entries);
 
-        let parent_name = asset
-            .get_parent_class_cached()
-            .map(|e| e.parent_class_export_name.clone());
+        let ancestry = Ancestry::new(base.get_class_type_for_ancestry(asset));
 
         for _i in 0..num_entries {
             let row_name = asset.read_fname()?;
@@ -70,7 +71,7 @@ impl DataTableExport {
             let next_struct = StructProperty::custom_header(
                 asset,
                 row_name,
-                parent_name.as_ref(),
+                ancestry.clone(),
                 1,
                 0,
                 Some(decided_struct_type.clone()),
@@ -91,22 +92,22 @@ impl DataTableExport {
 }
 
 impl ExportTrait for DataTableExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
 
         let mut decided_struct_type = FName::from_slice("Generic");
         for data in &self.normal_export.properties {
-            if data.get_name().content.as_str() == "RowStruct" {
+            if data.get_name().get_content().as_str() == "RowStruct" {
                 if let Property::ObjectProperty(prop) = data {
                     if let Some(import) = asset.get_import(prop.value) {
-                        decided_struct_type = import.object_name.clone();
+                        decided_struct_type = import.object_name;
                         break;
                     }
                 }
             }
         }
-        asset.write_i32::<LittleEndian>(0)?;
-        asset.write_i32::<LittleEndian>(self.table.data.len() as i32)?;
+        asset.write_i32::<LE>(0)?;
+        asset.write_i32::<LE>(self.table.data.len() as i32)?;
         for entry in &self.table.data {
             asset.write_fname(&entry.name)?;
             entry.write_with_type(asset, false, Some(decided_struct_type.clone()))?;

@@ -681,6 +681,21 @@ pub enum ObjectVersionUE5 {
     /// Large world coordinates converts a number of core types to double components by default.
     LARGE_WORLD_COORDINATES,
 
+    /// Remove package GUID from FObjectExport
+    REMOVE_OBJECT_EXPORT_PACKAGE_GUID,
+
+    /// Add IsInherited to the FObjectExport entry
+    TRACK_OBJECT_EXPORT_IS_INHERITED,
+
+    /// Replace FName asset path in FSoftObjectPath with (package name, asset name) pair FTopLevelAssetPath
+    FSOFTOBJECTPATH_REMOVE_ASSET_PATH_FNAMES,
+
+    /// Add a soft object path list to the package summary for fast remap
+    ADD_SOFTOBJECTPATH_LIST,
+
+    /// Added bulk/data resource table
+    DATA_RESOURCES,
+
     /// -----<new versions can be added before this line>-------------------------------------------------
     AUTOMATIC_VERSION,
     /// Automatic version plus one

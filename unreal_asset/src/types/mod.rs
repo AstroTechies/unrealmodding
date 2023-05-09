@@ -1,41 +1,51 @@
 //! Unreal types
 
+pub mod fname;
 pub mod movie;
 pub mod vector;
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+};
+use std::hash::Hash;
 
-/// FName is used to store most of the Strings in UE4.
-///
-/// They are represented by an index+instance number inside a string table inside the asset file.
-///
-/// Here we are representing them by a string and an instance number.
-#[derive(Debug, Default, Hash, PartialEq, Eq, Clone)]
-pub struct FName {
-    /// FName content
-    pub content: String,
-    /// FName index
-    pub index: i32,
+/// Serialized name header
+/// Used when reading name batches in >=UE5
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct SerializedNameHeader {
+    /// Is wide
+    pub is_wide: bool,
+    /// Name header length
+    pub len: i32,
 }
 
-/// Convert implementer to `FName`
-pub trait ToFName {
-    /// Convert to `FName`
-    fn to_fname(&self) -> FName;
-}
+impl SerializedNameHeader {
+    /// Read a `SerializedNameHeader` from an archive
+    pub fn read<Reader: ArchiveReader + ?Sized>(
+        reader: &mut Reader,
+    ) -> Result<SerializedNameHeader, Error> {
+        let (first_byte, second_byte) = (reader.read_u8()?, reader.read_u8()?);
 
-impl FName {
-    /// Create a new `FName` instance with an index
-    pub fn new(content: String, index: i32) -> Self {
-        FName { content, index }
+        Ok(SerializedNameHeader {
+            is_wide: (first_byte & 0x80) > 0,
+            len: (((first_byte & 0x7f) as i32) << 8) + second_byte as i32,
+        })
     }
 
-    /// Create a new `FName` instance from a slice with an index of 0
-    pub fn from_slice(content: &str) -> Self {
-        FName {
-            content: content.to_string(),
-            index: 0,
-        }
+    /// Write a `SerializedNameHeader` to an archive
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+        let is_wide = match self.is_wide {
+            true => 1u8,
+            false => 0u8,
+        };
+        let first_byte = is_wide << 7 | (self.len >> 8) as u8;
+        let second_byte = self.len as u8;
+
+        writer.write_u8(first_byte)?;
+        writer.write_u8(second_byte)?;
+
+        Ok(())
     }
 }
 
@@ -44,8 +54,8 @@ impl FName {
 /// It is basically a reference into an import/export table
 /// which helps "glue" together assets.
 ///
-/// If a PackageIndex is negative it's an index inside an export table
-/// if it's positive it's an index inside an import table.
+/// If a PackageIndex is negative it's an index inside an import table
+/// if it's positive it's an index inside an export table.
 ///
 /// When PackageIndex is 0 it makes for a non-existent link.
 #[derive(Debug, Hash, Copy, Clone, Default, PartialEq, Eq)]
@@ -105,7 +115,7 @@ pub const fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
     ]
 }
 
-/// Create a default Guid filled with all zeroes
+/// Create a default Guid filled with all zeros
 pub fn default_guid() -> Guid {
     new_guid(0, 0, 0, 0)
 }

@@ -30,7 +30,7 @@ fn data_tables() -> Result<(), Error> {
     assert!(shared::verify_all_exports_parsed(&asset));
 
     let data_table_export: &mut DataTableExport =
-        cast!(Export, DataTableExport, &mut asset.exports[0])
+        cast!(Export, DataTableExport, &mut asset.asset_data.exports[0])
             .expect("First export is not a DataTableExport");
 
     let first_entry = &mut data_table_export.table.data[0];
@@ -39,7 +39,7 @@ fn data_tables() -> Result<(), Error> {
     let mut found_test_name = false;
     // flip all the flags for further testing
     for property in &mut first_entry.value {
-        let property_name = property.get_name().content;
+        let property_name = property.get_name().get_content();
         if property_name == "AcceleratorANDDoubleJump" {
             found_test_name = true;
         }
@@ -63,10 +63,10 @@ fn data_tables() -> Result<(), Error> {
 
     shared::verify_binary_equality(&modified, None, &mut asset)?;
     assert!(shared::verify_all_exports_parsed(&parsed_back));
-    assert!(parsed_back.exports.len() == 1);
+    assert!(parsed_back.asset_data.exports.len() == 1);
 
     let data_table_export: &DataTableExport =
-        cast!(Export, DataTableExport, &parsed_back.exports[0])
+        cast!(Export, DataTableExport, &parsed_back.asset_data.exports[0])
             .expect("First export is not a DataTableExport after serializing and deserializing");
 
     let first_entry = &data_table_export.table.data[0];
@@ -74,7 +74,9 @@ fn data_tables() -> Result<(), Error> {
     for property in &first_entry.value {
         if let Some(bool_prop) = cast!(Property, BoolProperty, property) {
             assert_eq!(
-                *flipped_values.get(&bool_prop.get_name().content).unwrap(),
+                *flipped_values
+                    .get(&bool_prop.get_name().get_content())
+                    .unwrap(),
                 bool_prop.value
             );
         }

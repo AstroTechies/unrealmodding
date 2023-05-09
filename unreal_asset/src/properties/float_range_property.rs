@@ -1,22 +1,26 @@
 //! Float range property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::{FName, Guid},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::{fname::FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::PropertyTrait;
 
 /// Float range property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FloatRangeProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -30,19 +34,21 @@ impl_property_data_trait!(FloatRangeProperty);
 
 impl FloatRangeProperty {
     /// Read a `FloatRangeProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let lower_bound = asset.read_f32::<LittleEndian>()?;
-        let upper_bound = asset.read_f32::<LittleEndian>()?;
+        let lower_bound = asset.read_f32::<LE>()?;
+        let upper_bound = asset.read_f32::<LE>()?;
 
         Ok(FloatRangeProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             lower_bound: OrderedFloat(lower_bound),
@@ -52,7 +58,7 @@ impl FloatRangeProperty {
 }
 
 impl PropertyTrait for FloatRangeProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -61,8 +67,8 @@ impl PropertyTrait for FloatRangeProperty {
 
         let begin = asset.position();
 
-        asset.write_f32::<LittleEndian>(self.lower_bound.0)?;
-        asset.write_f32::<LittleEndian>(self.upper_bound.0)?;
+        asset.write_f32::<LE>(self.lower_bound.0)?;
+        asset.write_f32::<LE>(self.upper_bound.0)?;
 
         Ok((asset.position() - begin) as usize)
     }

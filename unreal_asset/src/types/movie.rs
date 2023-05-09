@@ -1,11 +1,11 @@
 //! Structs related to movies
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     error::Error,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
 };
 
 /// Frame number
@@ -74,17 +74,17 @@ pub struct FFrameNumberRangeBound {
 
 impl FFrameNumberRangeBound {
     /// Read a `FFrameNumberRangeBound` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let ty: ERangeBoundTypes = ERangeBoundTypes::try_from(asset.read_i8()?)?;
-        let value = FrameNumber::new(asset.read_i32::<LittleEndian>()?);
+        let value = FrameNumber::new(asset.read_i32::<LE>()?);
 
         Ok(FFrameNumberRangeBound { ty, value })
     }
 
     /// Write a `FFrameNumberRangeBound` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i8(self.ty as i8)?;
-        asset.write_i32::<LittleEndian>(self.value.value)?;
+        asset.write_i32::<LE>(self.value.value)?;
         Ok(())
     }
 }
@@ -100,7 +100,7 @@ pub struct FFrameNumberRange {
 
 impl FFrameNumberRange {
     /// Read a `FFrameNumberRange` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let lower_bound = FFrameNumberRangeBound::new(asset)?;
         let upper_bound = FFrameNumberRangeBound::new(asset)?;
 
@@ -111,7 +111,7 @@ impl FFrameNumberRange {
     }
 
     /// Write a `FFrameNumberRange` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.lower_bound.write(asset)?;
         self.upper_bound.write(asset)?;
         Ok(())

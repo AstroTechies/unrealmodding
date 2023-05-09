@@ -1,15 +1,17 @@
 //! Font data property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     custom_version::FEditorObjectVersion,
     error::{Error, PropertyError},
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::{FName, Guid, PackageIndex},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::{fname::FName, Guid, PackageIndex},
+    unversioned::ancestry::Ancestry,
 };
 
 /// Font hinting
@@ -41,15 +43,18 @@ pub enum EFontLoadingPolicy {
 }
 
 /// Font data
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FontData {
     /// UObject
+    #[container_ignore]
     local_font_face_asset: PackageIndex,
     /// Font filename
     font_filename: Option<String>,
     /// Hinting
+    #[container_ignore]
     hinting: Option<EFontHinting>,
     /// Loading policy
+    #[container_ignore]
     loading_policy: Option<EFontLoadingPolicy>,
     /// Sub face index
     sub_face_index: Option<i32>,
@@ -59,14 +64,14 @@ pub struct FontData {
 
 impl FontData {
     /// Read `FontData` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Option<Self>, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Option<Self>, Error> {
         if asset.get_custom_version::<FEditorObjectVersion>().version
             < FEditorObjectVersion::AddedFontFaceAssets as i32
         {
             return Ok(None);
         }
 
-        let is_cooked = asset.read_i32::<LittleEndian>()? != 0;
+        let is_cooked = asset.read_i32::<LE>()? != 0;
 
         let mut local_font_face_asset = PackageIndex::new(0);
         let mut font_filename = None;
@@ -75,7 +80,7 @@ impl FontData {
         let mut sub_face_index = None;
 
         if is_cooked {
-            local_font_face_asset = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+            local_font_face_asset = PackageIndex::new(asset.read_i32::<LE>()?);
 
             if local_font_face_asset.index == 0 {
                 font_filename = asset.read_fstring()?;
@@ -83,7 +88,7 @@ impl FontData {
                 loading_policy = Some(EFontLoadingPolicy::try_from(asset.read_u8()?)?);
             }
 
-            sub_face_index = Some(asset.read_i32::<LittleEndian>()?);
+            sub_face_index = Some(asset.read_i32::<LE>()?);
         }
 
         Ok(Some(FontData {
@@ -97,20 +102,20 @@ impl FontData {
     }
 
     /// Write `FontData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         if asset.get_custom_version::<FEditorObjectVersion>().version
             < FEditorObjectVersion::AddedFontFaceAssets as i32
         {
             return Ok(());
         }
 
-        asset.write_i32::<LittleEndian>(match self.is_cooked {
+        asset.write_i32::<LE>(match self.is_cooked {
             true => 1,
             false => 0,
         })?;
 
         if self.is_cooked {
-            asset.write_i32::<LittleEndian>(self.local_font_face_asset.index)?;
+            asset.write_i32::<LE>(self.local_font_face_asset.index)?;
 
             if self.local_font_face_asset.index == 0 {
                 asset.write_fstring(self.font_filename.as_deref())?;
@@ -127,10 +132,12 @@ impl FontData {
 }
 
 /// Font data property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FontDataProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -142,9 +149,10 @@ impl_property_data_trait!(FontDataProperty);
 
 impl FontDataProperty {
     /// Read a `FontDataProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -155,6 +163,7 @@ impl FontDataProperty {
 
         Ok(FontDataProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -163,7 +172,7 @@ impl FontDataProperty {
 }
 
 impl PropertyTrait for FontDataProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

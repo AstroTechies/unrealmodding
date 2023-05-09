@@ -2,6 +2,9 @@
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+/// Cityhash64 hash version
+pub const HASH_VERSION_CITYHASH64: u64 = 0x00000000C1640000;
+
 /// Array dimension
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
@@ -50,4 +53,17 @@ pub enum ELifetimeCondition {
     CondNever = 15,
     /// Max
     CondMax = 16,
+}
+
+/// Custom version serialization format
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum ECustomVersionSerializationFormat {
+    /// Unknown
+    Unknown,
+    /// Guids
+    Guids,
+    /// Enums
+    Enums,
+    /// Optimized
+    Optimized,
 }

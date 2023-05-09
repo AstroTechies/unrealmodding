@@ -2,11 +2,12 @@
 
 use std::{fmt::Debug, hash::Hash};
 
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::movie::FFrameNumberRange,
 };
 
@@ -23,10 +24,10 @@ pub struct FEntry {
 
 impl FEntry {
     /// Read an `FEntry` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let start_index = asset.read_i32::<LittleEndian>()?;
-        let size = asset.read_i32::<LittleEndian>()?;
-        let capacity = asset.read_i32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let start_index = asset.read_i32::<LE>()?;
+        let size = asset.read_i32::<LE>()?;
+        let capacity = asset.read_i32::<LE>()?;
 
         Ok(FEntry {
             start_index,
@@ -36,10 +37,10 @@ impl FEntry {
     }
 
     /// Write an `FEntry` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.start_index)?;
-        asset.write_i32::<LittleEndian>(self.size)?;
-        asset.write_i32::<LittleEndian>(self.capacity)?;
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        asset.write_i32::<LE>(self.start_index)?;
+        asset.write_i32::<LE>(self.size)?;
+        asset.write_i32::<LE>(self.capacity)?;
         Ok(())
     }
 }
@@ -53,15 +54,15 @@ pub struct EvaluationTreeEntryHandle {
 
 impl EvaluationTreeEntryHandle {
     /// Read an `EvaluationTreeEntryHandle` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let entry_index = asset.read_i32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let entry_index = asset.read_i32::<LE>()?;
 
         Ok(EvaluationTreeEntryHandle { entry_index })
     }
 
     /// Write an `EvaluationTreeEntryHandle` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.entry_index)?;
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        asset.write_i32::<LE>(self.entry_index)?;
         Ok(())
     }
 }
@@ -77,9 +78,9 @@ pub struct MovieSceneEvaluationTreeNodeHandle {
 
 impl MovieSceneEvaluationTreeNodeHandle {
     /// Read a `MovieSceneEvaluationTreeNodeHandle` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let children_handle = EvaluationTreeEntryHandle::new(asset)?;
-        let index = asset.read_i32::<LittleEndian>()?;
+        let index = asset.read_i32::<LE>()?;
 
         Ok(MovieSceneEvaluationTreeNodeHandle {
             children_handle,
@@ -88,21 +89,22 @@ impl MovieSceneEvaluationTreeNodeHandle {
     }
 
     /// Write a `MovieSceneEvaluationTreeNodeHandle` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.children_handle.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.index)?;
+        asset.write_i32::<LE>(self.index)?;
 
         Ok(())
     }
 }
 
 /// Generic evaluation tree entry container
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TEvaluationTreeEntryContainer<T>
 where
     T: Debug + Clone + PartialEq + Eq + Hash,
 {
     /// Entries
+    #[container_ignore]
     pub entries: Vec<FEntry>,
     /// Items
     pub items: Vec<T>,
@@ -118,18 +120,18 @@ where
     }
 
     /// Read a `TEvaluationTreeEntryContainer` from an asset
-    pub fn read<Reader: AssetReader>(
+    pub fn read<Reader: ArchiveReader>(
         asset: &mut Reader,
         item_reader: fn(&mut Reader) -> Result<T, Error>,
     ) -> Result<Self, Error> {
-        let entries_amount = asset.read_i32::<LittleEndian>()?;
+        let entries_amount = asset.read_i32::<LE>()?;
         let mut entries = Vec::with_capacity(entries_amount as usize);
 
         for _ in 0..entries_amount {
             entries.push(FEntry::new(asset)?);
         }
 
-        let items_amount = asset.read_i32::<LittleEndian>()?;
+        let items_amount = asset.read_i32::<LE>()?;
         let mut items = Vec::with_capacity(items_amount as usize);
 
         for _ in 0..entries_amount {
@@ -140,17 +142,17 @@ where
     }
 
     /// Write a `TEvaluationTreeEntryContainer` to an asset
-    pub fn write<Writer: AssetWriter>(
+    pub fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         node_writer: fn(&mut Writer, &T) -> Result<(), Error>,
     ) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.entries.len() as i32)?;
+        asset.write_i32::<LE>(self.entries.len() as i32)?;
         for entry in &self.entries {
             entry.write(asset)?;
         }
 
-        asset.write_i32::<LittleEndian>(self.items.len() as i32)?;
+        asset.write_i32::<LE>(self.items.len() as i32)?;
         for item in &self.items {
             node_writer(asset, item)?;
         }
@@ -160,14 +162,16 @@ where
 }
 
 /// Generic movie scene evaluation tree
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TMovieSceneEvaluationTree<T>
 where
     T: Debug + Clone + PartialEq + Eq + Hash,
 {
     /// Root node
+    #[container_ignore]
     pub root_node: MovieSceneEvaluationTreeNode,
     /// Child nodes
+    #[container_ignore]
     pub child_nodes: TEvaluationTreeEntryContainer<MovieSceneEvaluationTreeNode>,
     /// Data
     pub data: TEvaluationTreeEntryContainer<T>,
@@ -191,7 +195,7 @@ where
     }
 
     /// Read a `TMovieSceneEvaluationTree` from an asset
-    pub fn read<Reader: AssetReader>(
+    pub fn read<Reader: ArchiveReader>(
         asset: &mut Reader,
         data_node_reader: fn(&mut Reader) -> Result<T, Error>,
     ) -> Result<Self, Error> {
@@ -210,7 +214,7 @@ where
     }
 
     /// Write a `TMovieSceneEvaluationTree` to an asset
-    pub fn write<Writer: AssetWriter>(
+    pub fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         data_node_writer: fn(&mut Writer, &T) -> Result<(), Error>,
@@ -243,7 +247,7 @@ pub struct MovieSceneEvaluationTreeNode {
 
 impl MovieSceneEvaluationTreeNode {
     /// Read a `MovieSceneEvaluationTreeNode` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let range = FFrameNumberRange::new(asset)?;
         let parent = MovieSceneEvaluationTreeNodeHandle::new(asset)?;
         let children_id = EvaluationTreeEntryHandle::new(asset)?;
@@ -258,7 +262,7 @@ impl MovieSceneEvaluationTreeNode {
     }
 
     /// Write a `MovieSceneEvaluationTreeNode` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.range.write(asset)?;
         self.parent.write(asset)?;
         self.children_id.write(asset)?;
@@ -279,9 +283,9 @@ pub struct FEntityAndMetaDataIndex {
 
 impl FEntityAndMetaDataIndex {
     /// Read an `FEntityAndMetaDataIndex` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let entity_index = asset.read_i32::<LittleEndian>()?;
-        let meta_data_index = asset.read_i32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let entity_index = asset.read_i32::<LE>()?;
+        let meta_data_index = asset.read_i32::<LE>()?;
 
         Ok(FEntityAndMetaDataIndex {
             entity_index,
@@ -290,9 +294,9 @@ impl FEntityAndMetaDataIndex {
     }
 
     /// Write an `FEntityAndMetaDataIndex` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_i32::<LittleEndian>(self.entity_index)?;
-        asset.write_i32::<LittleEndian>(self.meta_data_index)?;
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        asset.write_i32::<LE>(self.entity_index)?;
+        asset.write_i32::<LE>(self.meta_data_index)?;
 
         Ok(())
     }
@@ -307,7 +311,7 @@ pub struct MovieSceneEvaluationFieldEntityTree {
 
 impl MovieSceneEvaluationFieldEntityTree {
     /// Read a `MovieSceneEvaluationFieldEntityTree` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let serialized_data =
             TMovieSceneEvaluationTree::read(asset, |reader| FEntityAndMetaDataIndex::new(reader))?;
 
@@ -315,7 +319,7 @@ impl MovieSceneEvaluationFieldEntityTree {
     }
 
     /// Write a `MovieSceneEvaluationFieldEntityTree` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.serialized_data.write(asset, |writer, node| {
             node.write(writer)?;
             Ok(())

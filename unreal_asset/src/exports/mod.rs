@@ -1,5 +1,6 @@
 //! UAsset exports
 use enum_dispatch::enum_dispatch;
+use unreal_asset_proc_macro::FNameContainer;
 
 pub mod base_export;
 pub mod class_export;
@@ -14,7 +15,7 @@ pub mod string_table_export;
 pub mod struct_export;
 
 use crate::error::Error;
-use crate::reader::asset_writer::AssetWriter;
+use crate::reader::archive_writer::ArchiveWriter;
 
 use std::fmt::Debug;
 
@@ -75,12 +76,13 @@ macro_rules! implement_get {
 #[enum_dispatch]
 pub trait ExportTrait: Debug + Clone + PartialEq + Eq {
     /// Write this `Export` to an asset
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
 /// Export
 #[enum_dispatch(ExportTrait, ExportNormalTrait, ExportBaseTrait)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
+#[container_nobounds]
 pub enum Export {
     /// Base export
     BaseExport,

@@ -3,19 +3,23 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::enums::{EArrayDim, ELifetimeCondition};
 use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{FName, PackageIndex, ToFName};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{
+    fname::{FName, ToSerializedName},
+    PackageIndex,
+};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
@@ -23,7 +27,7 @@ macro_rules! parse_simple_property {
 
         impl $prop_name {
             /// Read an `$prop_name` from an asset
-            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                 })
@@ -31,7 +35,7 @@ macro_rules! parse_simple_property {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 Ok(())
             }
@@ -48,33 +52,34 @@ macro_rules! parse_simple_property_index {
         ),*
     ) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
             $(
                 $(#[$inner $($args)*])*
+                #[container_ignore]
                 pub $index_name: PackageIndex,
             )*
         }
 
         impl $prop_name {
             /// Read an `$prop_name` from an asset
-            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                     $(
-                        $index_name: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                        $index_name: PackageIndex::new(asset.read_i32::<LE>()?),
                     )*
                 })
             }
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 $(
-                    asset.write_i32::<LittleEndian>(self.$index_name.index)?;
+                    asset.write_i32::<LE>(self.$index_name.index)?;
                 )*
                 Ok(())
             }
@@ -91,7 +96,7 @@ macro_rules! parse_simple_property_prop {
         ),*
     ) => {
         /// $prop_name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
@@ -103,7 +108,7 @@ macro_rules! parse_simple_property_prop {
 
         impl $prop_name {
             /// Read an `$prop_name` from an asset
-            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                     $(
@@ -114,7 +119,7 @@ macro_rules! parse_simple_property_prop {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 $(
                     FProperty::write(self.$prop.as_ref(), asset)?;
@@ -129,12 +134,13 @@ macro_rules! parse_simple_property_prop {
 #[enum_dispatch]
 pub trait FPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
     /// Write `FProperty` to an asset
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
 }
 
 /// FProperty
 #[enum_dispatch(FPropertyTrait)]
-#[derive(Hash, PartialEq, Clone, Debug)]
+#[derive(FNameContainer, Hash, PartialEq, Clone, Debug)]
+#[container_nobounds]
 pub enum FProperty {
     /// Generic FProperty
     FGenericProperty,
@@ -176,9 +182,9 @@ impl Eq for FProperty {}
 
 impl FProperty {
     /// Read an `FProperty` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let serialized_type = asset.read_fname()?;
-        let res: FProperty = match serialized_type.content.as_str() {
+        let res: FProperty = match serialized_type.get_content().as_str() {
             "EnumProperty" => FEnumProperty::new(asset)?.into(),
             "ArrayProperty" => FArrayProperty::new(asset)?.into(),
             "SetProperty" => FSetProperty::new(asset)?.into(),
@@ -197,92 +203,99 @@ impl FProperty {
             "ByteProperty" => FByteProperty::new(asset)?.into(),
             "StructProperty" => FStructProperty::new(asset)?.into(),
             "NumericProperty" => FNumericProperty::new(asset)?.into(),
-            _ => {
-                FGenericProperty::with_serialized_type(asset, Some(serialized_type.clone()))?.into()
-            }
+            _ => FGenericProperty::with_serialized_type(asset, Some(serialized_type))?.into(),
         };
 
         Ok(res)
     }
 
     /// Write an `FProperty` to an asset
-    pub fn write<Writer: AssetWriter>(
+    pub fn write<Writer: ArchiveWriter>(
         property: &FProperty,
         asset: &mut Writer,
     ) -> Result<(), Error> {
-        asset.write_fname(&property.to_fname())?;
+        let property_serialized_name = property.to_serialized_name();
+        asset.write_fname(
+            &asset
+                .get_name_map()
+                .get_mut()
+                .add_fname(&property_serialized_name),
+        )?;
         property.write(asset)
     }
 }
 
-impl ToFName for FProperty {
-    fn to_fname(&self) -> FName {
+impl ToSerializedName for FProperty {
+    fn to_serialized_name(&self) -> String {
         match self {
-            FProperty::FEnumProperty(_) => FName::from_slice("EnumProperty"),
-            FProperty::FArrayProperty(_) => FName::from_slice("ArrayProperty"),
-            FProperty::FSetProperty(_) => FName::from_slice("SetProperty"),
-            FProperty::FObjectProperty(_) => FName::from_slice("ObjectProperty"),
-            FProperty::FSoftObjectProperty(_) => FName::from_slice("SoftObjectProperty"),
-            FProperty::FClassProperty(_) => FName::from_slice("ClassProperty"),
-            FProperty::FSoftClassProperty(_) => FName::from_slice("SoftClassProperty"),
-            FProperty::FDelegateProperty(_) => FName::from_slice("DelegateProperty"),
-            FProperty::FMulticastDelegateProperty(_) => {
-                FName::from_slice("MulticastDelegateProperty")
-            }
+            FProperty::FEnumProperty(_) => String::from("EnumProperty"),
+            FProperty::FArrayProperty(_) => String::from("ArrayProperty"),
+            FProperty::FSetProperty(_) => String::from("SetProperty"),
+            FProperty::FObjectProperty(_) => String::from("ObjectProperty"),
+            FProperty::FSoftObjectProperty(_) => String::from("SoftObjectProperty"),
+            FProperty::FClassProperty(_) => String::from("ClassProperty"),
+            FProperty::FSoftClassProperty(_) => String::from("SoftClassProperty"),
+            FProperty::FDelegateProperty(_) => String::from("DelegateProperty"),
+            FProperty::FMulticastDelegateProperty(_) => String::from("MulticastDelegateProperty"),
             FProperty::FMulticastInlineDelegateProperty(_) => {
-                FName::from_slice("MulticastInlineDelegateProperty")
+                String::from("MulticastInlineDelegateProperty")
             }
-            FProperty::FInterfaceProperty(_) => FName::from_slice("InterfaceProperty"),
-            FProperty::FMapProperty(_) => FName::from_slice("MapProperty"),
-            FProperty::FBoolProperty(_) => FName::from_slice("BoolProperty"),
-            FProperty::FByteProperty(_) => FName::from_slice("ByteProperty"),
-            FProperty::FStructProperty(_) => FName::from_slice("StructProperty"),
-            FProperty::FNumericProperty(_) => FName::from_slice("NumericProperty"),
+            FProperty::FInterfaceProperty(_) => String::from("InterfaceProperty"),
+            FProperty::FMapProperty(_) => String::from("MapProperty"),
+            FProperty::FBoolProperty(_) => String::from("BoolProperty"),
+            FProperty::FByteProperty(_) => String::from("ByteProperty"),
+            FProperty::FStructProperty(_) => String::from("StructProperty"),
+            FProperty::FNumericProperty(_) => String::from("NumericProperty"),
             FProperty::FGenericProperty(generic) => generic
                 .serialized_type
                 .as_ref()
-                .cloned()
-                .unwrap_or_else(|| FName::from_slice("Generic")),
+                .map(|e| e.get_content())
+                .unwrap_or_else(|| String::from("Generic")),
         }
     }
 }
 
 /// Generic FProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FGenericProperty {
     /// Property name
     pub name: FName,
     /// Object flags
+    #[container_ignore]
     pub flags: EObjectFlags,
     /// Array dimension
+    #[container_ignore]
     pub array_dim: EArrayDim,
     /// Array element size
     pub element_size: i32,
     /// Property flags
+    #[container_ignore]
     pub property_flags: EPropertyFlags,
     /// Replication index
     pub rep_index: u16,
     /// Replication notify function
     pub rep_notify_func: FName,
     /// Replication condition
+    #[container_ignore]
     pub blueprint_replication_condition: ELifetimeCondition,
     /// Serialized type
     pub serialized_type: Option<FName>,
 }
 
 /// Enum FProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FEnumProperty {
     /// Generic property
     generic_property: FGenericProperty,
     /// Enum value
+    #[container_ignore]
     enum_value: PackageIndex,
     /// Underlying property
     underlying_prop: Box<FProperty>,
 }
 
 /// Boolean FProperty
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FBoolProperty {
     /// Generic property
     generic_property: FGenericProperty,
@@ -303,19 +316,18 @@ pub struct FBoolProperty {
 
 impl FGenericProperty {
     /// Read an `FGenericProperty` from an asset with a serialized type
-    pub fn with_serialized_type<Reader: AssetReader>(
+    pub fn with_serialized_type<Reader: ArchiveReader>(
         asset: &mut Reader,
         serialized_type: Option<FName>,
     ) -> Result<Self, Error> {
         let name = asset.read_fname()?;
-        let flags: EObjectFlags = EObjectFlags::from_bits(asset.read_u32::<LittleEndian>()?)
+        let flags: EObjectFlags = EObjectFlags::from_bits(asset.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid object flags".to_string()))?; // todo: maybe other error type than invalid_file?
-        let array_dim: EArrayDim = asset.read_i32::<LittleEndian>()?.try_into()?;
-        let element_size = asset.read_i32::<LittleEndian>()?;
-        let property_flags: EPropertyFlags =
-            EPropertyFlags::from_bits(asset.read_u64::<LittleEndian>()?)
-                .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
-        let rep_index = asset.read_u16::<LittleEndian>()?;
+        let array_dim: EArrayDim = asset.read_i32::<LE>()?.try_into()?;
+        let element_size = asset.read_i32::<LE>()?;
+        let property_flags: EPropertyFlags = EPropertyFlags::from_bits(asset.read_u64::<LE>()?)
+            .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
+        let rep_index = asset.read_u16::<LE>()?;
         let rep_notify_func = asset.read_fname()?;
         let blueprint_replication_condition: ELifetimeCondition = asset.read_u8()?.try_into()?;
 
@@ -333,19 +345,19 @@ impl FGenericProperty {
     }
 
     /// Read an `FGenericProperty` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         FGenericProperty::with_serialized_type(asset, None)
     }
 }
 
 impl FPropertyTrait for FGenericProperty {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.name)?;
-        asset.write_u32::<LittleEndian>(self.flags.bits())?;
-        asset.write_i32::<LittleEndian>(self.array_dim.into())?;
-        asset.write_i32::<LittleEndian>(self.element_size)?;
-        asset.write_u64::<LittleEndian>(self.property_flags.bits())?;
-        asset.write_u16::<LittleEndian>(self.rep_index)?;
+        asset.write_u32::<LE>(self.flags.bits())?;
+        asset.write_i32::<LE>(self.array_dim.into())?;
+        asset.write_i32::<LE>(self.element_size)?;
+        asset.write_u64::<LE>(self.property_flags.bits())?;
+        asset.write_u16::<LE>(self.rep_index)?;
         asset.write_fname(&self.rep_notify_func)?;
         asset.write_u8(self.blueprint_replication_condition.into())?;
         Ok(())
@@ -354,9 +366,9 @@ impl FPropertyTrait for FGenericProperty {
 
 impl FEnumProperty {
     /// Read an `FEnumProperty` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
-        let enum_value = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+        let enum_value = PackageIndex::new(asset.read_i32::<LE>()?);
         let underlying_prop = FProperty::new(asset)?;
 
         Ok(FEnumProperty {
@@ -368,9 +380,9 @@ impl FEnumProperty {
 }
 
 impl FPropertyTrait for FEnumProperty {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.generic_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.enum_value.index)?;
+        asset.write_i32::<LE>(self.enum_value.index)?;
         FProperty::write(self.underlying_prop.as_ref(), asset)?;
         Ok(())
     }
@@ -378,7 +390,7 @@ impl FPropertyTrait for FEnumProperty {
 
 impl FBoolProperty {
     /// Read an `FBoolProperty` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
         let field_size = asset.read_u8()?;
         let byte_offset = asset.read_u8()?;
@@ -400,7 +412,7 @@ impl FBoolProperty {
 }
 
 impl FPropertyTrait for FBoolProperty {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.generic_property.write(asset)?;
         asset.write_u8(self.field_size)?;
         asset.write_u8(self.byte_offset)?;

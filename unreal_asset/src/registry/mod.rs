@@ -3,19 +3,18 @@
 //! Asset Registry is used for storing information about assets
 //! The information from Asset Registry is primarily used in Content Browser,
 //! but some games might require modifying it before your assets will get loaded
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::io::{Cursor, SeekFrom};
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 
-use crate::containers::indexed_map::IndexedMap;
+use crate::asset::name_map::NameMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::crc;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{
-    asset_reader::AssetReader, asset_trait::AssetTrait, asset_writer::AssetWriter,
+    archive_reader::ArchiveReader, archive_trait::ArchiveTrait, archive_writer::ArchiveWriter,
     raw_writer::RawWriter,
 };
 use crate::registry::{
@@ -41,20 +40,18 @@ pub struct AssetRegistryState {
     pub package_data: Vec<AssetPackageData>,
 
     /// Name map
-    name_map: Option<Vec<String>>,
+    name_map: Option<SharedResource<NameMap>>,
     /// Object version
     object_version: ObjectVersion,
     /// UE5 Object version
     object_version_ue5: ObjectVersionUE5,
-    /// Name map lookup
-    name_map_lookup: Option<IndexedMap<u64, i32>>,
     /// Asset registry version
     version: FAssetRegistryVersionType,
 }
 
 impl AssetRegistryState {
     /// Read an `AssetRegistryState` from an asset
-    fn load<Reader: AssetReader>(
+    fn load<Reader: ArchiveReader>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
         assets_data: &mut Vec<AssetData>,
@@ -64,7 +61,7 @@ impl AssetRegistryState {
         *assets_data = asset.read_array(|asset: &mut Reader| AssetData::new(asset, version))?;
 
         if version < FAssetRegistryVersionType::AddedDependencyFlags {
-            let local_num_depends_nodes = asset.read_i32::<LittleEndian>()?;
+            let local_num_depends_nodes = asset.read_i32::<LE>()?;
             *depends_nodes = Vec::with_capacity(local_num_depends_nodes as usize);
 
             for i in 0..local_num_depends_nodes {
@@ -78,9 +75,9 @@ impl AssetRegistryState {
                 }
             }
         } else {
-            let dependency_section_size = asset.read_i64::<LittleEndian>()?;
+            let dependency_section_size = asset.read_i64::<LE>()?;
             let dependency_section_end = asset.position() + dependency_section_size as u64;
-            let local_num_depends_nodes = asset.read_i32::<LittleEndian>()?;
+            let local_num_depends_nodes = asset.read_i32::<LE>()?;
 
             *depends_nodes = Vec::with_capacity(local_num_depends_nodes as usize);
             for i in 0..local_num_depends_nodes {
@@ -94,7 +91,7 @@ impl AssetRegistryState {
                 }
             }
 
-            asset.set_position(dependency_section_end);
+            asset.set_position(dependency_section_end)?;
         }
 
         *package_data =
@@ -104,34 +101,34 @@ impl AssetRegistryState {
     }
 
     /// Write an `AssetRegistryState` to an asset
-    fn write_data<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
-        writer.write_i32::<LittleEndian>(self.assets_data.len() as i32)?;
+    fn write_data<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+        writer.write_i32::<LE>(self.assets_data.len() as i32)?;
         for asset_data in &self.assets_data {
             asset_data.write(writer)?;
         }
 
         if self.version < FAssetRegistryVersionType::AddedDependencyFlags {
-            writer.write_i32::<LittleEndian>(self.depends_nodes.len() as i32)?;
+            writer.write_i32::<LE>(self.depends_nodes.len() as i32)?;
 
             for depends_node in &self.depends_nodes {
                 depends_node.save_dependencies_before_flags(writer)?;
             }
         } else {
             let pos = writer.position();
-            writer.write_i64::<LittleEndian>(0)?;
-            writer.write_i32::<LittleEndian>(self.depends_nodes.len() as i32)?;
+            writer.write_i64::<LE>(0)?;
+            writer.write_i32::<LE>(self.depends_nodes.len() as i32)?;
 
             for depends_node in &self.depends_nodes {
                 depends_node.save_dependencies(writer)?;
             }
 
             let end_pos = writer.position();
-            writer.set_position(pos);
-            writer.write_i64::<LittleEndian>(end_pos as i64 - pos as i64)?;
-            writer.set_position(end_pos);
+            writer.set_position(pos)?;
+            writer.write_i64::<LE>(end_pos as i64 - pos as i64)?;
+            writer.set_position(end_pos)?;
         }
 
-        writer.write_i32::<LittleEndian>(self.package_data.len() as i32)?;
+        writer.write_i32::<LE>(self.package_data.len() as i32)?;
         for package_data in &self.package_data {
             package_data.write(writer)?;
         }
@@ -163,6 +160,8 @@ impl AssetRegistryState {
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
     ///     reader::raw_reader::RawReader,
+    ///     asset::name_map::NameMap,
+    ///     containers::chain::Chain
     /// };
     ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();
@@ -171,19 +170,18 @@ impl AssetRegistryState {
     ///
     /// let cursor = Cursor::new(data);
     /// let (object_version, object_version_ue5) = engine_version::get_object_versions(EngineVersion::VER_UE4_25);
-    /// let mut raw_reader = RawReader::new(cursor, object_version, object_version_ue5);
+    /// let mut raw_reader = RawReader::new(Chain::new(cursor, None), object_version, object_version_ue5, false, NameMap::new());
     /// let asset_registry = AssetRegistryState::new(&mut raw_reader).unwrap();
     ///
     /// println!("{:#?}", asset_registry);
     /// ```
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let version = FAssetRegistryVersionType::new(asset)?;
         let mut assets_data = Vec::new();
         let mut depends_nodes = Vec::new();
         let mut package_data = Vec::new();
 
         let mut name_map = None;
-        let mut name_map_lookup = None;
 
         if version < FAssetRegistryVersionType::RemovedMD5Hash {
             return Err(Error::invalid_file(format!(
@@ -193,8 +191,6 @@ impl AssetRegistryState {
         } else if version < FAssetRegistryVersionType::FixedTags {
             // name table reader
             let mut name_table_reader = NameTableReader::new(asset)?;
-            name_map = Some(name_table_reader.name_map.clone()); // todo: something else instead of cloning?
-            name_map_lookup = Some(name_table_reader.name_map_lookup.clone());
             Self::load(
                 &mut name_table_reader,
                 version,
@@ -202,6 +198,7 @@ impl AssetRegistryState {
                 &mut depends_nodes,
                 &mut package_data,
             )?;
+            name_map = Some(name_table_reader.name_map);
         } else {
             Self::load(
                 asset,
@@ -219,7 +216,6 @@ impl AssetRegistryState {
             package_data,
 
             name_map,
-            name_map_lookup,
 
             object_version: asset.get_object_version(),
             object_version_ue5: asset.get_object_version_ue5(),
@@ -250,6 +246,8 @@ impl AssetRegistryState {
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
     ///     reader::raw_reader::RawReader,
+    ///     asset::name_map::NameMap,
+    ///     containers::chain::Chain
     /// };
     ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();
@@ -258,7 +256,7 @@ impl AssetRegistryState {
     ///
     /// let cursor = Cursor::new(data);
     /// let (object_version, object_version_ue5) = engine_version::get_object_versions(EngineVersion::VER_UE4_25);
-    /// let mut raw_reader = RawReader::new(cursor, object_version, object_version_ue5);
+    /// let mut raw_reader = RawReader::new(Chain::new(cursor, None), object_version, object_version_ue5, false, NameMap::new());
     /// let asset_registry = AssetRegistryState::new(&mut raw_reader).unwrap();
     ///
     /// let mut cursor = Cursor::new(Vec::new());
@@ -267,7 +265,13 @@ impl AssetRegistryState {
     /// println!("{:#?}", cursor.get_ref());
     /// ```
     pub fn write(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
-        let mut writer = RawWriter::new(cursor, self.object_version, self.object_version_ue5);
+        let mut writer = RawWriter::new(
+            cursor,
+            self.object_version,
+            self.object_version_ue5,
+            false,
+            NameMap::new(),
+        );
         self.version.write(&mut writer)?;
 
         if self.version < FAssetRegistryVersionType::RemovedMD5Hash {
@@ -277,31 +281,26 @@ impl AssetRegistryState {
             )));
         } else if self.version < FAssetRegistryVersionType::FixedTags {
             let pos = writer.position();
-            writer.write_i64::<LittleEndian>(0)?;
-
-            let name_map_lookup = self.name_map_lookup.as_ref().ok_or_else(|| {
-                RegistryError::version("Name map lookup".to_string(), self.version)
-            })?;
+            writer.write_i64::<LE>(0)?;
 
             let name_map = self
                 .name_map
                 .as_ref()
                 .ok_or_else(|| RegistryError::version("Name map".to_string(), self.version))?;
 
-            let mut name_table_writer =
-                NameTableWriter::new(&mut writer, name_map, name_map_lookup);
+            let mut name_table_writer = NameTableWriter::new(&mut writer, name_map.clone());
 
             self.write_data(&mut name_table_writer)?;
 
             let offset = writer.position();
-            writer.write_i32::<LittleEndian>(name_map.len() as i32)?;
-            for name in name_map {
+            writer.write_i32::<LE>(name_map.get_ref().get_name_map_index_list().len() as i32)?;
+            for name in name_map.get_ref().get_name_map_index_list() {
                 writer.write_fstring(Some(name))?;
 
                 match writer.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                     true => {
                         let hash = crc::generate_hash(name);
-                        writer.write_u32::<LittleEndian>(hash)?;
+                        writer.write_u32::<LE>(hash)?;
                     }
                     false => {}
                 }
@@ -310,7 +309,7 @@ impl AssetRegistryState {
             let end = writer.position();
 
             writer.seek(SeekFrom::Start(pos))?;
-            writer.write_i64::<LittleEndian>(offset as i64)?;
+            writer.write_i64::<LE>(offset as i64)?;
             writer.seek(SeekFrom::Start(end))?;
         } else {
             self.write_data(&mut writer)?;
@@ -321,24 +320,11 @@ impl AssetRegistryState {
 
     /// Adds a name reference to the string lookup table
     pub fn add_name_reference(&mut self, string: &str, add_duplicates: bool) -> i32 {
-        let mut hasher = DefaultHasher::new();
-        string.hash(&mut hasher);
-
-        let hash = hasher.finish();
-
-        if let Some(lookup) = self.name_map_lookup.as_mut() {
-            if !add_duplicates {
-                if let Some(index) = lookup.get_by_key(&hash) {
-                    return *index;
-                }
-            }
-
-            let name_map = self.name_map.as_mut().expect("Corrupted memory");
-            name_map.push(string.to_string());
-            lookup.insert(hash, name_map.len() as i32 - 1);
-
-            return name_map.len() as i32 - 1;
-        }
+        if let Some(ref mut name_map) = self.name_map {
+            return name_map
+                .get_mut()
+                .add_name_reference(string.to_string(), add_duplicates);
+        };
 
         0
     }

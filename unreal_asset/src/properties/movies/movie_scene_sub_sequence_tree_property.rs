@@ -1,11 +1,14 @@
 //! Movie scene sub sequence tree property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::{FName, Guid},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::{fname::FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::{
@@ -24,7 +27,7 @@ pub struct MovieSceneSubSequenceTreeEntry {
 
 impl MovieSceneSubSequenceTreeEntry {
     /// Read a `MovieSceneSubSequenceTreeEntry` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let sequence_id = MovieSceneSequenceId::new(asset)?;
         let flags: ESectionEvaluationFlags = ESectionEvaluationFlags::try_from(asset.read_u8()?)?;
 
@@ -32,7 +35,7 @@ impl MovieSceneSubSequenceTreeEntry {
     }
 
     /// Write a `MovieSceneSubSequenceTreeEntry` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.sequence_id.write(asset)?;
         asset.write_u8(self.flags as u8)?;
 
@@ -49,7 +52,7 @@ pub struct MovieSceneSubSequenceTree {
 
 impl MovieSceneSubSequenceTree {
     /// Read a `MovieSceneSubSequenceTree` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let data = TMovieSceneEvaluationTree::read(asset, |reader| {
             MovieSceneSubSequenceTreeEntry::new(reader)
         })?;
@@ -58,7 +61,7 @@ impl MovieSceneSubSequenceTree {
     }
 
     /// Write a `MovieSceneSubSequenceTree` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.data.write(asset, |writer, node| {
             node.write(writer)?;
             Ok(())
@@ -69,24 +72,28 @@ impl MovieSceneSubSequenceTree {
 }
 
 /// Movie scene sub sequence tree property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneSubSequenceTreeProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneSubSequenceTree,
 }
 impl_property_data_trait!(MovieSceneSubSequenceTreeProperty);
 
 impl MovieSceneSubSequenceTreeProperty {
     /// Read a `MovieSceneSubSequenceTreeProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -96,6 +103,7 @@ impl MovieSceneSubSequenceTreeProperty {
 
         Ok(MovieSceneSubSequenceTreeProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -104,7 +112,7 @@ impl MovieSceneSubSequenceTreeProperty {
 }
 
 impl PropertyTrait for MovieSceneSubSequenceTreeProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

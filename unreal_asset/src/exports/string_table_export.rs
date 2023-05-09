@@ -1,6 +1,7 @@
 //! String table export
 
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
@@ -9,10 +10,10 @@ use crate::exports::{
     ExportTrait,
 };
 use crate::implement_get;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 
 /// String table export
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
 pub struct StringTableExport {
     /// Base normal export
     pub normal_export: NormalExport,
@@ -26,17 +27,17 @@ implement_get!(StringTableExport);
 
 impl StringTableExport {
     /// Read a `StringTableExport` from an asset
-    pub fn from_base<Reader: AssetReader>(
+    pub fn from_base<Reader: ArchiveReader>(
         base: &BaseExport,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
-        asset.read_i32::<LittleEndian>()?;
+        asset.read_i32::<LE>()?;
 
         let namespace = asset.read_fstring()?;
 
         let mut table = IndexedMap::new();
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         for _ in 0..num_entries {
             table.insert(
                 asset
@@ -57,12 +58,12 @@ impl StringTableExport {
 }
 
 impl ExportTrait for StringTableExport {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
-        asset.write_i32::<LittleEndian>(0)?;
+        asset.write_i32::<LE>(0)?;
 
         asset.write_fstring(self.namespace.as_deref())?;
-        asset.write_i32::<LittleEndian>(self.table.len() as i32)?;
+        asset.write_i32::<LE>(self.table.len() as i32)?;
         for (_, key, value) in &self.table {
             asset.write_fstring(Some(key))?;
             asset.write_fstring(Some(value))?;

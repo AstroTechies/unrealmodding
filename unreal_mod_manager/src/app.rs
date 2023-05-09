@@ -327,8 +327,6 @@ impl ModLoaderApp {
     }
 
     fn show_table(&mut self, ui: &mut egui::Ui) {
-        let mut data = self.data.lock();
-
         TableBuilder::new(ui)
             .striped(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -360,6 +358,8 @@ impl ModLoaderApp {
                 });
             })
             .body(|mut body| {
+                let mut data = self.data.lock();
+
                 // ugly hack to bypass borrow checker
                 // this is safe because we are getting mut references to different struct fields
                 let dependency_graph = &data.dependency_graph as *const Option<DependencyGraph>;

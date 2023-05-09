@@ -34,12 +34,12 @@ fn unknown_properties() -> Result<(), Error> {
         ("EvenMoreGarbageTestingPropertyy", false),
     ]);
 
-    for export in &asset.exports {
+    for export in &asset.asset_data.exports {
         if let Some(normal_export) = export.get_normal_export() {
             for property in &normal_export.properties {
                 if let Some(unknown_property) = cast!(Property, UnknownProperty, property) {
                     if let Some(entry) = new_unknown_properties
-                        .get_mut(unknown_property.serialized_type.content.as_str())
+                        .get_mut(unknown_property.serialized_type.get_content().as_str())
                     {
                         *entry = true;
                     } else {

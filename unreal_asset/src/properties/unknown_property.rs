@@ -1,20 +1,25 @@
 //! Unknown property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{FName, Guid};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{fname::FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Unknown property
 ///
 /// This gets created when an unknown property was encountered while deserializing
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct UnknownProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -28,9 +33,10 @@ impl_property_data_trait!(UnknownProperty);
 
 impl UnknownProperty {
     /// Read an `UnknownProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -42,6 +48,7 @@ impl UnknownProperty {
 
         Ok(UnknownProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -51,7 +58,7 @@ impl UnknownProperty {
 }
 
 impl PropertyTrait for UnknownProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

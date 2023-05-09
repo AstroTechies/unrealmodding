@@ -1,16 +1,18 @@
 //! Niagara variable property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     properties::{struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::FName,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::fname::FName,
+    unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
 
 /// Niagara variable property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableProperty {
     /// Base struct property
     pub struct_property: StructProperty,
@@ -22,9 +24,10 @@ pub struct NiagaraVariableProperty {
 
 impl NiagaraVariableProperty {
     /// Read a `NiagaraVariableProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         _include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -32,15 +35,23 @@ impl NiagaraVariableProperty {
         let variable_name = asset.read_fname()?;
 
         let mut properties = Vec::new();
-        while let Some(property) = Property::new(asset, Some(&name), true)? {
+        let mut unversioned_header = UnversionedHeader::new(asset)?;
+        let new_ancestry = ancestry.with_parent(name.clone());
+        while let Some(property) = Property::new(
+            asset,
+            new_ancestry.clone(),
+            unversioned_header.as_mut(),
+            true,
+        )? {
             properties.push(property);
         }
 
-        let variable_offset = asset.read_i32::<LittleEndian>()?;
+        let variable_offset = asset.read_i32::<LE>()?;
 
         Ok(NiagaraVariableProperty {
             struct_property: StructProperty {
                 name,
+                ancestry,
                 struct_type: None,
                 struct_guid: None,
                 property_guid: None,
@@ -70,10 +81,18 @@ impl PropertyDataTrait for NiagaraVariableProperty {
     fn get_property_guid(&self) -> Option<crate::types::Guid> {
         self.struct_property.get_property_guid()
     }
+
+    fn get_ancestry(&self) -> &Ancestry {
+        self.struct_property.get_ancestry()
+    }
+
+    fn get_ancestry_mut(&mut self) -> &mut Ancestry {
+        self.struct_property.get_ancestry_mut()
+    }
 }
 
 impl PropertyTrait for NiagaraVariableProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         _include_header: bool,
@@ -82,19 +101,35 @@ impl PropertyTrait for NiagaraVariableProperty {
 
         asset.write_fname(&self.variable_name)?;
 
-        for property in &self.struct_property.value {
+        let (unversioned_header, sorted_properties) = match asset
+            .generate_unversioned_header(&self.struct_property.value, &self.struct_property.name)?
+        {
+            Some((a, b)) => (Some(a), Some(b)),
+            None => (None, None),
+        };
+
+        if let Some(unversioned_header) = unversioned_header {
+            unversioned_header.write(asset)?;
+        }
+
+        let properties = sorted_properties
+            .as_ref()
+            .unwrap_or(&self.struct_property.value);
+        for property in properties.iter() {
             Property::write(property, asset, true)?;
         }
 
-        asset.write_fname(&FName::from_slice("None"))?;
-        asset.write_i32::<LittleEndian>(self.variable_offset)?;
+        if !asset.has_unversioned_properties() {
+            asset.write_fname(&asset.get_name_map().get_mut().add_fname("None"))?;
+        }
+        asset.write_i32::<LE>(self.variable_offset)?;
 
         Ok((asset.position() - begin) as usize)
     }
 }
 
 /// Niagara variable with offset property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct NiagaraVariableWithOffsetProperty {
     /// Variable
     pub niagara_variable: NiagaraVariableProperty,
@@ -102,9 +137,10 @@ pub struct NiagaraVariableWithOffsetProperty {
 
 impl NiagaraVariableWithOffsetProperty {
     /// Read a `NiagaraVariableWithOffsetProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -113,6 +149,7 @@ impl NiagaraVariableWithOffsetProperty {
             niagara_variable: NiagaraVariableProperty::new(
                 asset,
                 name,
+                ancestry,
                 include_header,
                 length,
                 duplication_index,
@@ -137,10 +174,18 @@ impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
     fn get_property_guid(&self) -> Option<crate::types::Guid> {
         self.niagara_variable.get_property_guid()
     }
+
+    fn get_ancestry(&self) -> &Ancestry {
+        self.niagara_variable.get_ancestry()
+    }
+
+    fn get_ancestry_mut(&mut self) -> &mut Ancestry {
+        self.niagara_variable.get_ancestry_mut()
+    }
 }
 
 impl PropertyTrait for NiagaraVariableWithOffsetProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

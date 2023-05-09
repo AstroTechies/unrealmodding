@@ -2,22 +2,25 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
-    reader::asset_reader::AssetReader,
-    reader::asset_writer::AssetWriter,
-    types::{FName, Guid, PackageIndex},
+    reader::archive_reader::ArchiveReader,
+    reader::archive_writer::ArchiveWriter,
+    types::{fname::FName, Guid, PackageIndex},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::PropertyTrait;
 
 /// Delegate
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct Delegate {
     /// Delegate object
+    #[container_ignore]
     pub object: PackageIndex,
     /// Delegate name
     pub delegate: FName,
@@ -31,10 +34,12 @@ impl Delegate {
 }
 
 /// Delegate property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct DelegateProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -46,9 +51,10 @@ impl_property_data_trait!(DelegateProperty);
 
 impl DelegateProperty {
     /// Read a `DelegateProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -57,10 +63,11 @@ impl DelegateProperty {
 
         Ok(DelegateProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: Delegate::new(
-                PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                PackageIndex::new(asset.read_i32::<LE>()?),
                 asset.read_fname()?,
             ),
         })
@@ -68,14 +75,14 @@ impl DelegateProperty {
 }
 
 impl PropertyTrait for DelegateProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
 
-        asset.write_i32::<LittleEndian>(self.value.object.index)?;
+        asset.write_i32::<LE>(self.value.object.index)?;
         asset.write_fname(&self.value.delegate)?;
 
         Ok(size_of::<i32>() * 3)
@@ -86,10 +93,12 @@ impl PropertyTrait for DelegateProperty {
 macro_rules! impl_multicast {
     ($property_name:ident) => {
         /// $property_name
-        #[derive(Debug, Hash, Clone, PartialEq, Eq)]
+        #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
         pub struct $property_name {
             /// Name
             pub name: FName,
+            /// Property ancestry
+            pub ancestry: Ancestry,
             /// Property guid
             pub property_guid: Option<Guid>,
             /// Property duplication index
@@ -100,26 +109,28 @@ macro_rules! impl_multicast {
         impl_property_data_trait!($property_name);
         impl $property_name {
             /// Read a `$property_name` from an asset
-            pub fn new<Reader: AssetReader>(
+            pub fn new<Reader: ArchiveReader>(
                 asset: &mut Reader,
                 name: FName,
+                ancestry: Ancestry,
                 include_header: bool,
                 _length: i64,
                 duplication_index: i32,
             ) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
 
-                let length = asset.read_i32::<LittleEndian>()?;
+                let length = asset.read_i32::<LE>()?;
                 let mut value = Vec::with_capacity(length as usize);
                 for _ in 0..length {
                     value.push(Delegate::new(
-                        PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+                        PackageIndex::new(asset.read_i32::<LE>()?),
                         asset.read_fname()?,
                     ));
                 }
 
                 Ok($property_name {
                     name,
+                    ancestry,
                     property_guid,
                     duplication_index,
                     value,
@@ -128,16 +139,16 @@ macro_rules! impl_multicast {
         }
 
         impl PropertyTrait for $property_name {
-            fn write<Writer: AssetWriter>(
+            fn write<Writer: ArchiveWriter>(
                 &self,
                 asset: &mut Writer,
                 include_header: bool,
             ) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, include_header);
 
-                asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+                asset.write_i32::<LE>(self.value.len() as i32)?;
                 for entry in &self.value {
-                    asset.write_i32::<LittleEndian>(entry.object.index)?;
+                    asset.write_i32::<LE>(entry.object.index)?;
                     asset.write_fname(&entry.delegate)?;
                 }
                 Ok(size_of::<i32>() + size_of::<i32>() * 3 * self.value.len())

@@ -1,50 +1,69 @@
 //! Binary archive reader
 
-use std::io::{self, Cursor, Read, Seek};
+use std::io::{self, Read, Seek};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::ReadBytesExt;
 
 use unreal_helpers::UnrealReadExt;
 
+use crate::asset::name_map::NameMap;
+use crate::containers::chain::Chain;
 use crate::containers::indexed_map::IndexedMap;
+use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
 use crate::error::Error;
+use crate::exports::class_export::ClassExport;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::{asset_reader::AssetReader, asset_trait::AssetTrait};
-use crate::types::{FName, Guid, PackageIndex};
+use crate::reader::{archive_reader::ArchiveReader, archive_trait::ArchiveTrait};
+use crate::types::{PackageIndex, SerializedNameHeader};
+use crate::unversioned::Usmap;
 use crate::Import;
 
-/// A binary reader
-pub struct RawReader {
-    /// Reader cursor
-    cursor: Cursor<Vec<u8>>,
-    /// Object version
-    object_version: ObjectVersion,
-    /// UE5 object version
-    object_version_ue5: ObjectVersionUE5,
+use super::archive_trait::ArchiveType;
 
-    /// Dummy name map
+/// A binary reader
+pub struct RawReader<C: Read + Seek> {
+    /// Reader cursor
+    cursor: Chain<C>,
+    /// Object version
+    pub(crate) object_version: ObjectVersion,
+    /// UE5 object version
+    pub(crate) object_version_ue5: ObjectVersionUE5,
+    /// Does the reader use the event driven loader
+    pub(crate) use_event_driven_loader: bool,
+    /// Name map
+    pub(crate) name_map: SharedResource<NameMap>,
+    /// Empty map
     empty_map: IndexedMap<String, String>,
 }
 
-impl RawReader {
-    /// Create a new instance of `RawReader` with the specified object versions
+impl<C: Read + Seek> RawReader<C> {
+    /// Create a new instance of `RawReader` with the specified object versions and a name map
     pub fn new(
-        cursor: Cursor<Vec<u8>>,
+        cursor: Chain<C>,
         object_version: ObjectVersion,
         object_version_ue5: ObjectVersionUE5,
+        use_event_driven_loader: bool,
+        name_map: SharedResource<NameMap>,
     ) -> Self {
         RawReader {
             cursor,
             object_version,
             object_version_ue5,
+            use_event_driven_loader,
+            name_map,
             empty_map: IndexedMap::new(),
         }
     }
 }
 
-impl AssetTrait for RawReader {
+impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
+    #[inline(always)]
+    fn get_archive_type(&self) -> ArchiveType {
+        ArchiveType::Raw
+    }
+
     fn get_custom_version<T>(&self) -> CustomVersion
     where
         T: CustomVersionTrait + Into<i32>,
@@ -52,24 +71,24 @@ impl AssetTrait for RawReader {
         CustomVersion::new([0u8; 16], 0)
     }
 
-    fn position(&mut self) -> u64 {
-        self.cursor.position()
+    fn has_unversioned_properties(&self) -> bool {
+        false
     }
 
-    fn set_position(&mut self, pos: u64) {
-        self.cursor.set_position(pos)
+    fn use_event_driven_loader(&self) -> bool {
+        self.use_event_driven_loader
+    }
+
+    fn position(&mut self) -> u64 {
+        self.cursor.stream_position().unwrap_or_default()
     }
 
     fn seek(&mut self, style: io::SeekFrom) -> io::Result<u64> {
         self.cursor.seek(style)
     }
 
-    fn get_name_map_index_list(&self) -> &[String] {
-        &[]
-    }
-
-    fn get_name_reference(&self, _: i32) -> String {
-        "".to_string()
+    fn get_name_map(&self) -> SharedResource<NameMap> {
+        self.name_map.clone()
     }
 
     fn get_array_struct_type_override(&self) -> &IndexedMap<String, String> {
@@ -84,14 +103,6 @@ impl AssetTrait for RawReader {
         &self.empty_map
     }
 
-    fn get_parent_class(&self) -> Option<crate::ParentClassInfo> {
-        None
-    }
-
-    fn get_parent_class_cached(&mut self) -> Option<&crate::ParentClassInfo> {
-        None
-    }
-
     fn get_engine_version(&self) -> EngineVersion {
         guess_engine_version(self.object_version, self.object_version_ue5, &[])
     }
@@ -104,57 +115,20 @@ impl AssetTrait for RawReader {
         self.object_version_ue5
     }
 
-    fn get_import(&self, _index: PackageIndex) -> Option<&Import> {
+    fn get_mappings(&self) -> Option<&Usmap> {
         None
     }
 
-    fn get_export_class_type(&self, _index: PackageIndex) -> Option<FName> {
+    fn get_class_export(&self) -> Option<&ClassExport> {
         None
     }
 
-    fn add_fname(&mut self, value: &str) -> FName {
-        FName::new(value.to_string(), 0)
-    }
-
-    fn add_fname_with_number(&mut self, value: &str, number: i32) -> FName {
-        FName::new(value.to_string(), number)
-    }
-
-    fn get_mappings(&self) -> Option<&crate::unversioned::Usmap> {
+    fn get_import(&self, _: PackageIndex) -> Option<Import> {
         None
     }
 }
 
-impl AssetReader for RawReader {
-    fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
-        Ok(None)
-    }
-
-    fn read_fname(&mut self) -> Result<FName, Error> {
-        let string = self.read_fstring()?.unwrap_or_else(|| "None".to_string());
-        Ok(FName::new(string, 0))
-    }
-
-    fn read_array_with_length<T>(
-        &mut self,
-        length: i32,
-        getter: impl Fn(&mut Self) -> Result<T, Error>,
-    ) -> Result<Vec<T>, Error> {
-        let mut result = Vec::new();
-        for _ in 0..length {
-            result.push(getter(self)?);
-        }
-        Ok(result)
-    }
-
-    fn read_array<T>(
-        &mut self,
-        getter: impl Fn(&mut Self) -> Result<T, Error>,
-    ) -> Result<Vec<T>, Error> {
-        let length = self.read_i32::<LittleEndian>()?;
-        self.read_array_with_length(length, getter)
-    }
-
+impl<C: Read + Seek> ArchiveReader for RawReader<C> {
     fn read_u8(&mut self) -> io::Result<u8> {
         self.cursor.read_u8()
     }
@@ -199,11 +173,24 @@ impl AssetReader for RawReader {
         Ok(self.cursor.read_fstring()?)
     }
 
+    fn read_fstring_name_header(
+        &mut self,
+        serialized_name_header: SerializedNameHeader,
+    ) -> Result<Option<String>, Error> {
+        if serialized_name_header.len == 0 {
+            return Ok(None);
+        }
+
+        Ok(self
+            .cursor
+            .read_fstring_len(serialized_name_header.len, serialized_name_header.is_wide)?)
+    }
+
     fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
         self.cursor.read_exact(buf)
     }
 
     fn read_bool(&mut self) -> io::Result<bool> {
-        Ok(self.read_u8()? != 0)
+        self.cursor.read_bool()
     }
 }

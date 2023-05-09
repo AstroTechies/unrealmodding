@@ -28,7 +28,7 @@ fn duplicate_name_map_entries() -> Result<(), Error> {
 
     let mut enumerated_entries = HashMap::new();
 
-    for entry in asset.get_name_map_index_list() {
+    for entry in asset.get_name_map().get_ref().get_name_map_index_list() {
         if enumerated_entries.contains_key(entry) {
             has_duplicates = true;
             break;

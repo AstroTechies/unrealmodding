@@ -391,3 +391,11 @@ bitflags! {
         const ALL_MASK = 0x7 | 0x0 | 0x8;
     }
 }
+
+impl Default for EObjectFlags {
+    fn default() -> Self {
+        Self {
+            bits: EObjectFlags::RF_NO_FLAGS.bits(),
+        }
+    }
+}

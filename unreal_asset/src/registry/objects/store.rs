@@ -2,12 +2,12 @@
 
 use std::io::SeekFrom;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::error::Error;
-use crate::reader::asset_reader::AssetReader;
-use crate::types::FName;
+use crate::reader::archive_reader::ArchiveReader;
+use crate::types::fname::FName;
 
 /// Value type
 #[repr(u32)]
@@ -42,8 +42,8 @@ const INDEX_BITS: u32 = 32 - TYPE_BITS;
 
 impl ValueId {
     /// Read a `ValueId` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let id = asset.read_u32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let id = asset.read_u32::<LE>()?;
         let value_type = EValueType::try_from((id << INDEX_BITS) >> INDEX_BITS)?;
         let index = id as i32 >> TYPE_BITS;
 
@@ -61,7 +61,7 @@ pub struct NumberedPair {
 
 impl NumberedPair {
     /// Read a `NumberedPair` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key = asset.read_fname()?;
         let value = ValueId::new(asset)?;
 
@@ -79,8 +79,8 @@ pub struct NumberlessPair {
 
 impl NumberlessPair {
     /// Read a `NumberlessPair` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let key = asset.read_u32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let key = asset.read_u32::<LE>()?;
         let value = ValueId::new(asset)?;
 
         Ok(Self { key, value })
@@ -99,10 +99,10 @@ pub struct NumberlessExportPath {
 
 impl NumberlessExportPath {
     /// Read a `NumberlessExportPath` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let class = asset.read_u32::<LittleEndian>()?;
-        let object = asset.read_u32::<LittleEndian>()?;
-        let package = asset.read_u32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let class = asset.read_u32::<LE>()?;
+        let object = asset.read_u32::<LE>()?;
+        let package = asset.read_u32::<LE>()?;
 
         Ok(Self {
             class,
@@ -124,7 +124,7 @@ pub struct AssetRegistryExportPath {
 
 impl AssetRegistryExportPath {
     /// Read an `AssetRegistryExportPath` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let class = asset.read_fname()?;
         let object = asset.read_fname()?;
         let package = asset.read_fname()?;
@@ -182,21 +182,21 @@ impl Store {
     }
 
     /// Read a `Store` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let magic = asset.read_u32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let magic = asset.read_u32::<LE>()?;
         let order = Store::get_load_order(magic)?;
 
-        let numberless_names_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let names_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let numberless_export_paths_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let export_paths_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let texts_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let ansi_string_offsets_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let wide_string_offsets_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let ansi_strings_size: i32 = asset.read_i32::<LittleEndian>()?;
-        let wide_strings_size: i32 = asset.read_i32::<LittleEndian>()?;
-        let numberless_pairs_count: i32 = asset.read_i32::<LittleEndian>()?;
-        let pairs_count: i32 = asset.read_i32::<LittleEndian>()?;
+        let numberless_names_count: i32 = asset.read_i32::<LE>()?;
+        let names_count: i32 = asset.read_i32::<LE>()?;
+        let numberless_export_paths_count: i32 = asset.read_i32::<LE>()?;
+        let export_paths_count: i32 = asset.read_i32::<LE>()?;
+        let texts_count: i32 = asset.read_i32::<LE>()?;
+        let ansi_string_offsets_count: i32 = asset.read_i32::<LE>()?;
+        let wide_string_offsets_count: i32 = asset.read_i32::<LE>()?;
+        let ansi_strings_size: i32 = asset.read_i32::<LE>()?;
+        let wide_strings_size: i32 = asset.read_i32::<LE>()?;
+        let numberless_pairs_count: i32 = asset.read_i32::<LE>()?;
+        let pairs_count: i32 = asset.read_i32::<LE>()?;
 
         let mut texts = Vec::new();
         if order == ELoadOrder::TextFirst {
@@ -207,7 +207,7 @@ impl Store {
 
         let numberless_names = asset
             .read_array_with_length(numberless_names_count, |asset: &mut Reader| {
-                Ok(asset.read_u32::<LittleEndian>()?)
+                Ok(asset.read_u32::<LE>()?)
             })?;
 
         let names =
@@ -230,12 +230,12 @@ impl Store {
 
         let ansi_string_offsets = asset
             .read_array_with_length(ansi_string_offsets_count, |asset: &mut Reader| {
-                Ok(asset.read_i32::<LittleEndian>()?)
+                Ok(asset.read_i32::<LE>()?)
             })?;
 
         let wide_string_offsets = asset
             .read_array_with_length(wide_string_offsets_count, |asset: &mut Reader| {
-                Ok(asset.read_i32::<LittleEndian>()?)
+                Ok(asset.read_i32::<LE>()?)
             })?;
 
         let mut ansi_strings_buf = vec![0u8; ansi_strings_size as usize];

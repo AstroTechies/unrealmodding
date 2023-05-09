@@ -1,6 +1,7 @@
 //! Smart name property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::FAnimPhysObjectVersion;
 use crate::error::PropertyError;
@@ -8,15 +9,18 @@ use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{FName, Guid};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{fname::FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 use crate::Error;
 
 /// Smart name property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct SmartNameProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -32,9 +36,10 @@ impl_property_data_trait!(SmartNameProperty);
 
 impl SmartNameProperty {
     /// Read a `SmartNameProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -49,7 +54,7 @@ impl SmartNameProperty {
         let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
 
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
-            smart_name_id = Some(asset.read_u16::<LittleEndian>()?);
+            smart_name_id = Some(asset.read_u16::<LE>()?);
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
@@ -60,6 +65,7 @@ impl SmartNameProperty {
 
         Ok(SmartNameProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             display_name,
@@ -70,7 +76,7 @@ impl SmartNameProperty {
 }
 
 impl PropertyTrait for SmartNameProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -82,7 +88,7 @@ impl PropertyTrait for SmartNameProperty {
 
         let custom_version = asset.get_custom_version::<FAnimPhysObjectVersion>().version;
         if custom_version < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize as i32 {
-            asset.write_u16::<LittleEndian>(
+            asset.write_u16::<LE>(
                 self.smart_name_id
                     .ok_or_else(|| PropertyError::property_field_none("smart_name_id", "u16"))?,
             )?;

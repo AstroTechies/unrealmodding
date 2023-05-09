@@ -2,20 +2,29 @@
 
 use std::io::SeekFrom;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
-use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{default_guid, FName, Guid, ToFName};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{
+    default_guid,
+    fname::{FName, ToSerializedName},
+    Guid,
+};
+use crate::unversioned::ancestry::Ancestry;
+use crate::unversioned::properties::{UsmapPropertyData, UsmapPropertyDataTrait};
+use crate::{cast, impl_property_data_trait};
 
 /// Array property
-#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -31,10 +40,10 @@ impl_property_data_trait!(ArrayProperty);
 
 impl ArrayProperty {
     /// Read an `ArrayProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         include_header: bool,
         length: i64,
         duplication_index: i32,
@@ -47,7 +56,7 @@ impl ArrayProperty {
         ArrayProperty::new_no_header(
             asset,
             name,
-            parent_name,
+            ancestry,
             include_header,
             length,
             duplication_index,
@@ -58,9 +67,15 @@ impl ArrayProperty {
     }
 
     /// Create an `ArrayProperty` from an array of properties
-    pub fn from_arr(name: FName, array_type: Option<FName>, value: Vec<Property>) -> Self {
+    pub fn from_arr(
+        name: FName,
+        ancestry: Ancestry,
+        array_type: Option<FName>,
+        value: Vec<Property>,
+    ) -> Self {
         ArrayProperty {
             name,
+            ancestry,
             property_guid: None,
             array_type,
             value,
@@ -71,18 +86,18 @@ impl ArrayProperty {
 
     /// Read an `ArrayProperty` from an asset without reading the property header
     #[allow(clippy::too_many_arguments)]
-    pub fn new_no_header<Reader: AssetReader>(
+    pub fn new_no_header<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         _include_header: bool,
         length: i64,
         duplication_index: i32,
         serialize_struct_differently: bool,
-        array_type: Option<FName>,
+        mut array_type: Option<FName>,
         property_guid: Option<Guid>,
     ) -> Result<Self, Error> {
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut entries = Vec::new();
         let mut name = name;
 
@@ -90,31 +105,61 @@ impl ArrayProperty {
         let mut struct_guid = None;
 
         let mut dummy_struct = None;
+
+        let mut array_struct_type = None;
+        if array_type.is_none() {
+            if let Some(struct_data) = asset
+                .get_mappings()
+                .and_then(|e| e.get_property(&name, &ancestry))
+                .and_then(|e| cast!(UsmapPropertyData, UsmapArrayPropertyData, &e.property_data))
+            {
+                array_type = Some(FName::new_dummy(
+                    struct_data.inner_type.get_property_type().to_string(),
+                    0,
+                ));
+                if let Some(inner_struct_data) = cast!(
+                    UsmapPropertyData,
+                    UsmapStructPropertyData,
+                    struct_data.inner_type.as_ref()
+                ) {
+                    array_struct_type =
+                        Some(FName::new_dummy(inner_struct_data.struct_type.clone(), 0));
+                }
+            }
+        }
+
+        if asset.has_unversioned_properties() && array_type.is_none() {
+            return Err(PropertyError::no_type(&name.get_content(), &ancestry).into());
+        }
+
+        let new_ancestry = ancestry.with_parent(name.clone());
+
         if (array_type.is_some()
-            && array_type.as_ref().unwrap().content.as_str() == "StructProperty")
+            && array_type.as_ref().unwrap().get_content().as_str() == "StructProperty")
             && serialize_struct_differently
+            && !asset.has_unversioned_properties()
         {
-            let mut full_type = FName::new(String::from("Generic"), 0);
+            let mut full_type = FName::from_slice("Generic");
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 name = asset.read_fname()?;
-                if &name.content == "None" {
+                if &name.get_content() == "None" {
                     return Ok(ArrayProperty::default());
                 }
 
                 let this_array_type = asset.read_fname()?;
-                if &this_array_type.content == "None" {
+                if &this_array_type.get_content() == "None" {
                     return Ok(ArrayProperty::default());
                 }
 
-                if this_array_type.content != array_type.as_ref().unwrap().content {
+                if this_array_type.get_content() != array_type.as_ref().unwrap().get_content() {
                     return Err(Error::invalid_file(format!(
                         "Invalid array type {} vs {}",
-                        this_array_type.content,
-                        array_type.as_ref().unwrap().content
+                        this_array_type.get_content(),
+                        array_type.as_ref().unwrap().get_content()
                     )));
                 }
 
-                struct_length = asset.read_i64::<LittleEndian>()?;
+                struct_length = asset.read_i64::<LE>()?;
                 full_type = asset.read_fname()?;
 
                 let mut guid = [0u8; 16];
@@ -123,7 +168,7 @@ impl ArrayProperty {
                 asset.read_property_guid()?;
             } else if let Some(type_override) = asset
                 .get_array_struct_type_override()
-                .get_by_key(&name.content)
+                .get_by_key(&name.get_content())
                 .cloned()
             {
                 full_type = asset.add_fname(&type_override);
@@ -132,6 +177,7 @@ impl ArrayProperty {
             if num_entries == 0 {
                 dummy_struct = Some(StructProperty::dummy(
                     name.clone(),
+                    ancestry.with_parent(name.clone()),
                     full_type.clone(),
                     struct_guid,
                 ));
@@ -140,7 +186,7 @@ impl ArrayProperty {
                 let data = StructProperty::custom_header(
                     asset,
                     name.clone(),
-                    parent_name,
+                    new_ancestry.clone(),
                     struct_length,
                     0,
                     Some(full_type.clone()),
@@ -156,22 +202,43 @@ impl ArrayProperty {
                 .as_ref()
                 .ok_or_else(|| Error::invalid_file("Unknown array type".to_string()))?;
             for i in 0..num_entries {
-                let entry = Property::from_type(
-                    asset,
-                    array_type,
-                    FName::new(i.to_string(), i32::MIN),
-                    parent_name,
-                    false,
-                    size_est_1,
-                    size_est_2,
-                    0,
-                )?;
+                let entry: Property = if array_type.get_content() == "StructProperty" {
+                    let struct_type = match array_struct_type {
+                        Some(ref e) => Some(e.clone()),
+                        None => Some(FName::from_slice("Generic")),
+                    };
+                    StructProperty::custom_header(
+                        asset,
+                        FName::new_dummy(i.to_string(), i32::MIN),
+                        new_ancestry.clone(),
+                        size_est_1,
+                        0,
+                        struct_type,
+                        None,
+                        None,
+                    )?
+                    .into()
+                } else {
+                    Property::from_type(
+                        asset,
+                        array_type,
+                        FName::new_dummy(i.to_string(), i32::MIN),
+                        ancestry.clone(),
+                        false,
+                        size_est_1,
+                        size_est_2,
+                        0,
+                        false,
+                    )?
+                };
+
                 entries.push(entry);
             }
         }
 
         Ok(ArrayProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             array_type,
@@ -181,14 +248,17 @@ impl ArrayProperty {
     }
 
     /// Write an `ArrayProperty` to an asset
-    pub fn write_full<Writer: AssetWriter>(
+    pub fn write_full<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
         serialize_structs_differently: bool,
     ) -> Result<usize, Error> {
         let array_type = match !self.value.is_empty() {
-            true => Some(self.value[0].to_fname()),
+            true => {
+                let value = self.value[0].to_serialized_name();
+                Some(asset.get_name_map().get_mut().add_fname(&value))
+            }
             false => self.array_type.clone(),
         };
 
@@ -198,10 +268,10 @@ impl ArrayProperty {
         }
 
         let begin = asset.position();
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
 
         if (array_type.is_some()
-            && array_type.as_ref().unwrap().content.as_str() == "StructProperty")
+            && array_type.as_ref().unwrap().get_content().as_str() == "StructProperty")
             && serialize_structs_differently
         {
             let property: &StructProperty = match !self.value.is_empty() {
@@ -209,7 +279,7 @@ impl ArrayProperty {
                     Property::StructProperty(ref e) => Ok(e),
                     _ => Err(PropertyError::invalid_array(format!(
                         "expected StructProperty got {}",
-                        self.value[0].to_fname().content
+                        self.value[0].to_serialized_name()
                     ))),
                 },
                 false => match self.dummy_property {
@@ -223,9 +293,9 @@ impl ArrayProperty {
             let mut length_loc = None;
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 asset.write_fname(&property.name)?;
-                asset.write_fname(&FName::from_slice("StructProperty"))?;
+                asset.write_fname(&asset.get_name_map().get_mut().add_fname("StructProperty"))?;
                 length_loc = Some(asset.position());
-                asset.write_i64::<LittleEndian>(0)?;
+                asset.write_i64::<LE>(0)?;
                 asset.write_fname(
                     property.struct_type.as_ref().ok_or_else(|| {
                         PropertyError::property_field_none("struct_type", "FName")
@@ -247,7 +317,7 @@ impl ArrayProperty {
                     Property::StructProperty(e) => Ok(e),
                     _ => Err(PropertyError::invalid_array(format!(
                         "expected StructProperty got {}",
-                        property.to_fname().content
+                        property.to_serialized_name()
                     ))),
                 }?;
                 struct_property.write(asset, false)?;
@@ -265,7 +335,7 @@ impl ArrayProperty {
                         false => 0,
                     };
 
-                asset.write_i32::<LittleEndian>(length as i32)?;
+                asset.write_i32::<LE>(length as i32)?;
                 asset.seek(SeekFrom::Start(new_loc))?;
             }
         } else {
@@ -278,7 +348,7 @@ impl ArrayProperty {
 }
 
 impl PropertyTrait for ArrayProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

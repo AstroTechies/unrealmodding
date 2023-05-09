@@ -2,22 +2,26 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{FName, Guid};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{fname::FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Per platform bool property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -28,10 +32,12 @@ pub struct PerPlatformBoolProperty {
 impl_property_data_trait!(PerPlatformBoolProperty);
 
 /// Per platform int property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -42,10 +48,12 @@ pub struct PerPlatformIntProperty {
 impl_property_data_trait!(PerPlatformIntProperty);
 
 /// Per platform float property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -57,16 +65,17 @@ impl_property_data_trait!(PerPlatformFloatProperty);
 
 impl PerPlatformBoolProperty {
     /// Read a `PerPlatformBoolProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
@@ -75,6 +84,7 @@ impl PerPlatformBoolProperty {
 
         Ok(PerPlatformBoolProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -83,13 +93,13 @@ impl PerPlatformBoolProperty {
 }
 
 impl PropertyTrait for PerPlatformBoolProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
         for entry in &self.value {
             asset.write_bool(*entry)?;
         }
@@ -99,24 +109,26 @@ impl PropertyTrait for PerPlatformBoolProperty {
 
 impl PerPlatformIntProperty {
     /// Read a `PerPlatformIntProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
-            value.push(asset.read_i32::<LittleEndian>()?);
+            value.push(asset.read_i32::<LE>()?);
         }
 
         Ok(PerPlatformIntProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -125,15 +137,15 @@ impl PerPlatformIntProperty {
 }
 
 impl PropertyTrait for PerPlatformIntProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
         for entry in &self.value {
-            asset.write_i32::<LittleEndian>(*entry)?;
+            asset.write_i32::<LE>(*entry)?;
         }
         Ok(size_of::<i32>() + size_of::<i32>() * self.value.len())
     }
@@ -141,24 +153,26 @@ impl PropertyTrait for PerPlatformIntProperty {
 
 impl PerPlatformFloatProperty {
     /// Read a `PerPlatformFloatProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         _length: i64,
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
 
-        let num_entries = asset.read_i32::<LittleEndian>()?;
+        let num_entries = asset.read_i32::<LE>()?;
         let mut value = Vec::with_capacity(num_entries as usize);
 
         for _i in 0..num_entries as usize {
-            value.push(OrderedFloat(asset.read_f32::<LittleEndian>()?));
+            value.push(OrderedFloat(asset.read_f32::<LE>()?));
         }
 
         Ok(PerPlatformFloatProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -167,15 +181,15 @@ impl PerPlatformFloatProperty {
 }
 
 impl PropertyTrait for PerPlatformFloatProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_i32::<LittleEndian>(self.value.len() as i32)?;
+        asset.write_i32::<LE>(self.value.len() as i32)?;
         for entry in &self.value {
-            asset.write_f32::<LittleEndian>(entry.0)?;
+            asset.write_f32::<LE>(entry.0)?;
         }
         Ok(size_of::<i32>() + size_of::<f32>() * self.value.len())
     }

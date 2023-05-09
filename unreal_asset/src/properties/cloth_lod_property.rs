@@ -2,13 +2,15 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::FName,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::fname::FName,
+    unversioned::ancestry::Ancestry,
 };
 
 use super::{
@@ -17,7 +19,7 @@ use super::{
 };
 
 /// Mesh to mesh vertex data
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct MeshToMeshVertData {
     /// Position barycentric coords and distance
     pub position_bary_coords_and_dist: Vector4Property,
@@ -35,35 +37,47 @@ pub struct MeshToMeshVertData {
 
 impl MeshToMeshVertData {
     /// Read `MeshToMeshVertData` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let position_bary_coords_and_dist = Vector4Property::new(
             asset,
-            FName::from_slice("PositionBaryCoordsAndDist"),
+            asset
+                .get_name_map()
+                .get_mut()
+                .add_fname("PositionBaryCoordsAndDist"),
+            Ancestry::default(),
             false,
             0,
         )?;
 
         let normal_bary_coords_and_dist = Vector4Property::new(
             asset,
-            FName::from_slice("NormalBaryCoordsAndDist"),
+            asset
+                .get_name_map()
+                .get_mut()
+                .add_fname("NormalBaryCoordsAndDist"),
+            Ancestry::default(),
             false,
             0,
         )?;
 
         let tangent_bary_coords_and_dist = Vector4Property::new(
             asset,
-            FName::from_slice("TangentBaryCoordsAndDist"),
+            asset
+                .get_name_map()
+                .get_mut()
+                .add_fname("TangentBaryCoordsAndDist"),
+            Ancestry::default(),
             false,
             0,
         )?;
 
         let mut source_mesh_vert_indices = Vec::with_capacity(4);
         for _ in 0..4 {
-            source_mesh_vert_indices.push(asset.read_u16::<LittleEndian>()?);
+            source_mesh_vert_indices.push(asset.read_u16::<LE>()?);
         }
 
-        let weight = asset.read_f32::<LittleEndian>()?;
-        let padding = asset.read_u32::<LittleEndian>()?;
+        let weight = asset.read_f32::<LE>()?;
+        let padding = asset.read_u32::<LE>()?;
 
         Ok(MeshToMeshVertData {
             position_bary_coords_and_dist,
@@ -76,7 +90,7 @@ impl MeshToMeshVertData {
     }
 
     /// Write `MeshToMeshVertData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut size = 0;
         size += self.position_bary_coords_and_dist.write(asset, false)?;
         size += self.normal_bary_coords_and_dist.write(asset, false)?;
@@ -84,14 +98,14 @@ impl MeshToMeshVertData {
 
         for i in 0..4 {
             match i < self.source_mesh_vert_indices.len() {
-                true => asset.write_u16::<LittleEndian>(self.source_mesh_vert_indices[i]),
-                false => asset.write_u16::<LittleEndian>(0),
+                true => asset.write_u16::<LE>(self.source_mesh_vert_indices[i]),
+                false => asset.write_u16::<LE>(0),
             }?;
             size += size_of::<u16>();
 
-            asset.write_f32::<LittleEndian>(self.weight.0)?;
+            asset.write_f32::<LE>(self.weight.0)?;
             size += size_of::<f32>();
-            asset.write_u32::<LittleEndian>(self.padding)?;
+            asset.write_u32::<LE>(self.padding)?;
             size += size_of::<u32>();
         }
 
@@ -100,7 +114,7 @@ impl MeshToMeshVertData {
 }
 
 /// Cloth lod data property
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct ClothLodDataProperty {
     /// Base struct property
     pub struct_property: StructProperty,
@@ -112,10 +126,10 @@ pub struct ClothLodDataProperty {
 
 impl ClothLodDataProperty {
     /// Read a `ClothLodDataProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
-        parent_name: Option<&FName>,
+        ancestry: Ancestry,
         _include_header: bool,
         _length: i64,
         duplication_index: i32,
@@ -123,7 +137,7 @@ impl ClothLodDataProperty {
         let struct_property = StructProperty::custom_header(
             asset,
             name,
-            parent_name,
+            ancestry,
             1,
             duplication_index,
             Some(FName::from_slice("Generic")),
@@ -131,13 +145,13 @@ impl ClothLodDataProperty {
             None,
         )?;
 
-        let transition_up_skin_data_len = asset.read_i32::<LittleEndian>()?;
+        let transition_up_skin_data_len = asset.read_i32::<LE>()?;
         let mut transition_up_skin_data = Vec::with_capacity(transition_up_skin_data_len as usize);
         for _ in 0..transition_up_skin_data_len {
             transition_up_skin_data.push(MeshToMeshVertData::new(asset)?);
         }
 
-        let transition_down_skin_data_len = asset.read_i32::<LittleEndian>()?;
+        let transition_down_skin_data_len = asset.read_i32::<LE>()?;
         let mut transition_down_skin_data =
             Vec::with_capacity(transition_down_skin_data_len as usize);
         for _ in 0..transition_down_skin_data_len {
@@ -168,10 +182,18 @@ impl PropertyDataTrait for ClothLodDataProperty {
     fn get_property_guid(&self) -> Option<crate::types::Guid> {
         self.struct_property.get_property_guid()
     }
+
+    fn get_ancestry(&self) -> &Ancestry {
+        self.struct_property.get_ancestry()
+    }
+
+    fn get_ancestry_mut(&mut self) -> &mut Ancestry {
+        self.struct_property.get_ancestry_mut()
+    }
 }
 
 impl PropertyTrait for ClothLodDataProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -182,13 +204,13 @@ impl PropertyTrait for ClothLodDataProperty {
             Some(FName::from_slice("Generic")),
         )?;
 
-        asset.write_i32::<LittleEndian>(self.transition_up_skin_data.len() as i32)?;
+        asset.write_i32::<LE>(self.transition_up_skin_data.len() as i32)?;
         size += size_of::<i32>();
         for transition_up_skin_data in &self.transition_up_skin_data {
             size += transition_up_skin_data.write(asset)?;
         }
 
-        asset.write_i32::<LittleEndian>(self.transition_down_skin_data.len() as i32)?;
+        asset.write_i32::<LE>(self.transition_down_skin_data.len() as i32)?;
         size += size_of::<i32>();
         for transition_down_skin_data in &self.transition_down_skin_data {
             size += transition_down_skin_data.write(asset)?;

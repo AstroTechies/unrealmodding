@@ -1,6 +1,8 @@
 //! Shallow property
 
-use crate::{error::Error, unversioned::usmap_writer::UsmapWriter};
+use crate::{
+    error::Error, reader::archive_writer::ArchiveWriter, unversioned::usmap_writer::UsmapWriter,
+};
 
 use super::{EPropertyType, UsmapPropertyDataTrait};
 
@@ -12,8 +14,12 @@ pub struct UsmapShallowPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapShallowPropertyData {
-    fn write<Writer: UsmapWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<W: ArchiveWriter>(&self, asset: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error> {
         asset.write_u8(self.property_type as u8)?;
         Ok(0)
+    }
+
+    fn get_property_type(&self) -> EPropertyType {
+        self.property_type
     }
 }

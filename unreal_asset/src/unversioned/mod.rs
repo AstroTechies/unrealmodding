@@ -1,55 +1,84 @@
 //! Allows reading unversioned assets using mappings
 
 use std::hash::Hash;
-use std::io::{self, Cursor};
+use std::io::{Cursor, Read, Seek};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use bitflags::bitflags;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use unreal_helpers::UnrealReadExt;
-
+use crate::asset::name_map::NameMap;
+use crate::containers::chain::Chain;
 use crate::containers::indexed_map::IndexedMap;
+use crate::custom_version::CustomVersion;
 use crate::error::{Error, UsmapError};
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
+use crate::reader::archive_reader::ArchiveReader;
+use crate::reader::archive_trait::ArchiveTrait;
+use crate::reader::raw_reader::RawReader;
+use crate::types::fname::FName;
 
-use self::{properties::UsmapProperty, usmap_reader::UsmapReader};
+use self::ancestry::Ancestry;
+use self::properties::UsmapProperty;
+use self::usmap_reader::UsmapReader;
 
+pub mod ancestry;
+pub mod header;
+#[cfg(feature = "oodle")]
+pub(crate) mod oodle;
 pub mod properties;
 pub mod usmap_reader;
 pub mod usmap_writer;
 
-#[cfg(feature = "oodle")]
-pub(crate) mod oodle;
-
 /// Usmap file version
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(
+    Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
+)]
 #[repr(u8)]
-pub enum UsmapVersion {
+pub enum EUsmapVersion {
     /// Initial
-    INITIAL,
+    Initial,
+
+    /// Adds package versioning to aid with compatibililty
+    PackageVersioning,
+
     /// Latest
-    LATEST,
+    Latest,
     /// Latest plus one
-    LATEST_PLUS_ONE,
+    LatestPlusOne,
+}
+
+bitflags! {
+    /// Usmap extension version
+    pub struct UsmapExtensionVersion : u32 {
+        /// No extension data is present
+        const NONE = 0;
+        /// Module path information is present
+        const PATHS = 1;
+    }
 }
 
 /// Usmap file compression method
-#[derive(Debug, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
-pub enum ECompressionMethod {
+pub enum EUsmapCompressionMethod {
     /// None
     None,
     /// Oodle
     Oodle,
     /// Brotli
     Brotli,
+    /// ZStandard
+    ZStandard,
 
     /// Unknown
     Unknown = 0xFF,
 }
 
+type UsmapPropertyKey = (String, u32);
+
 /// Usmap file schema
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UsmapSchema {
     /// Name
     pub name: String,
@@ -57,58 +86,227 @@ pub struct UsmapSchema {
     pub super_type: String,
     /// Properties count
     pub prop_count: u16,
+    /// Module path
+    pub module_path: Option<String>,
     /// Properties
-    pub properties: Vec<UsmapProperty>,
+    pub properties: IndexedMap<UsmapPropertyKey, UsmapProperty>,
+}
+
+impl UsmapSchema {
+    /// Read a `UsmapSchema` from an archive
+    pub fn read<R: ArchiveReader>(
+        reader: &mut UsmapReader<'_, '_, R>,
+    ) -> Result<UsmapSchema, Error> {
+        let name = reader.read_name()?;
+        let super_type = reader.read_name()?;
+
+        let prop_count = reader.read_u16::<LE>()?;
+        let serializable_property_count = reader.read_u16::<LE>()?;
+
+        let mut properties = IndexedMap::with_capacity(prop_count as usize);
+
+        for _ in 0..serializable_property_count {
+            let property = UsmapProperty::new(reader)?;
+
+            for j in 0..property.array_size {
+                let mut property = property.clone();
+                property.array_index = j as u16;
+                property.schema_index += j as u16;
+
+                properties.insert(
+                    (property.name.clone(), property.schema_index as u32),
+                    property,
+                );
+            }
+        }
+
+        Ok(UsmapSchema {
+            name,
+            super_type,
+            prop_count,
+            module_path: None,
+            properties,
+        })
+    }
+
+    /// Gets a usmap property
+    pub fn get_property(&self, name: &str, duplication_index: u32) -> Option<&UsmapProperty> {
+        // todo: remove to_string
+        self.properties
+            .get_by_key(&(name.to_string(), duplication_index))
+    }
 }
 
 /// Usmap file
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Usmap {
     /// File version
-    pub version: UsmapVersion,
+    pub version: EUsmapVersion,
     /// Name map
     pub name_map: Vec<String>,
     /// Enum map
     pub enum_map: IndexedMap<String, Vec<String>>,
     /// Schemas
     pub schemas: IndexedMap<String, UsmapSchema>,
-
-    /// Binary cursor
-    cursor: Cursor<Vec<u8>>,
+    /// Extension version
+    pub extension_version: UsmapExtensionVersion,
+    /// UE4 object version
+    pub object_version: ObjectVersion,
+    /// UE5 object version
+    pub object_version_ue5: ObjectVersionUE5,
+    /// Custom version container
+    pub custom_versions: Vec<CustomVersion>,
+    /// Compression method
+    pub compression_method: EUsmapCompressionMethod,
+    /// Net CL
+    pub net_cl: u32,
 }
 
 impl Usmap {
     const ASSET_MAGIC: u16 = u16::from_be_bytes([0xc4, 0x30]);
 
-    /// Parse usmap file header
-    fn parse_header(&mut self) -> Result<(), Error> {
-        let magic = self.cursor.read_u16::<LittleEndian>()?;
-        if magic != Usmap::ASSET_MAGIC {
+    /// Gets usmap property for a given property name + ancestry
+    pub fn get_property(
+        &self,
+        property_name: &FName,
+        ancestry: &Ancestry,
+    ) -> Option<&UsmapProperty> {
+        self.get_property_with_duplication_index(property_name, ancestry, 0)
+            .map(|(property, _)| property)
+    }
+
+    /// Gets all usmap mappings for a given schema
+    pub fn get_all_properties<'name>(
+        &'name self,
+        mut schema_name: &'name str,
+    ) -> Vec<&UsmapProperty> {
+        let mut properties = Vec::new();
+
+        while let Some(schema) = self.schemas.get_by_key(schema_name) {
+            properties.extend(schema.properties.values());
+            schema_name = schema.super_type.as_str();
+        }
+
+        properties
+    }
+
+    /// Gets usmap property and it's "global" index for a given proeprty name + ancestry with a duplication index
+    pub fn get_property_with_duplication_index(
+        &self,
+        property_name: &FName,
+        ancestry: &Ancestry,
+        duplication_index: u32,
+    ) -> Option<(&UsmapProperty, u32)> {
+        let mut optional_schema_name = ancestry.get_parent().map(|e| e.get_content());
+
+        let mut global_index = 0;
+        loop {
+            let Some(schema_name) = optional_schema_name else {
+                break;
+            };
+
+            let Some(schema) = self.schemas.get_by_key(&schema_name) else {
+                break;
+            };
+
+            if let Some(property) =
+                schema.get_property(&property_name.get_content(), duplication_index)
+            {
+                global_index += property.schema_index as u32;
+                return Some((property, global_index));
+            }
+
+            global_index += schema.prop_count as u32;
+
+            optional_schema_name = Some(schema.super_type.clone());
+        }
+
+        // this name is not an actual property name, but an array index
+        let Ok(_) = property_name.get_content().parse::<u32>() else {
+            return None;
+        };
+
+        let Some(parent) = ancestry.get_parent() else {
+            return None;
+        };
+
+        self.get_property_with_duplication_index(
+            parent,
+            &ancestry.without_parent(),
+            duplication_index,
+        )
+    }
+
+    /// Parse usmap file
+    pub fn parse_data<C: Read + Seek>(&mut self, cursor: C) -> Result<(), Error> {
+        let mut reader = RawReader::new(
+            Chain::new(cursor, None),
+            ObjectVersion::UNKNOWN,
+            ObjectVersionUE5::UNKNOWN,
+            false,
+            NameMap::new(),
+        );
+
+        let magic = reader.read_u16::<LE>()?;
+        if magic != Self::ASSET_MAGIC {
             return Err(Error::invalid_file(
                 "File is not a valid usmap file".to_string(),
             ));
         }
 
-        let version: UsmapVersion = UsmapVersion::try_from(self.cursor.read_u8()?)?;
-        self.version = version;
+        let usmap_version = EUsmapVersion::try_from(reader.read_u8()?)?;
 
-        let compression = self.cursor.read_u8()?;
-        let compression_method: ECompressionMethod = ECompressionMethod::try_from(compression)?;
+        let mut has_versioning = usmap_version >= EUsmapVersion::PackageVersioning;
+        if has_versioning {
+            has_versioning = reader.read_bool()?;
+        }
 
-        let compressed_size = self.cursor.read_u32::<LittleEndian>()?;
-        let decompressed_size = self.cursor.read_u32::<LittleEndian>()?;
+        if has_versioning {
+            self.object_version = ObjectVersion::try_from(reader.read_i32::<LE>()?)?;
+            self.object_version_ue5 = ObjectVersionUE5::try_from(reader.read_i32::<LE>()?)?;
+            self.custom_versions = reader.read_array(|e| CustomVersion::read(e))?;
+            self.net_cl = reader.read_u32::<LE>()?;
+        }
 
-        match compression_method {
-            ECompressionMethod::None => {
+        self.compression_method = EUsmapCompressionMethod::try_from(reader.read_u8()?)?;
+
+        let compressed_size = reader.read_u32::<LE>()?;
+        let decompressed_size = reader.read_u32::<LE>()?;
+
+        let mut compressed_data = vec![0u8; compressed_size as usize];
+        reader.read_exact(&mut compressed_data)?;
+
+        let data = match self.compression_method {
+            EUsmapCompressionMethod::None => {
                 if compressed_size != decompressed_size {
                     return Err(Error::invalid_file(
                         "compressed_size != decompressed size on an uncompressed file".to_string(),
                     ));
                 }
+
+                compressed_data
             }
-            ECompressionMethod::Oodle => {
+            EUsmapCompressionMethod::Brotli => {
+                let mut decompressed_data = Cursor::new(vec![0u8; decompressed_size as usize]);
+                brotli::BrotliDecompress(
+                    &mut Cursor::new(compressed_data),
+                    &mut decompressed_data,
+                )?;
+                decompressed_data.into_inner()
+            }
+            EUsmapCompressionMethod::ZStandard => {
+                let mut decompressed_data = Cursor::new(vec![0u8; decompressed_size as usize]);
+                zstd::stream::copy_decode(
+                    &mut Cursor::new(compressed_data),
+                    &mut decompressed_data,
+                )?;
+                decompressed_data.into_inner()
+            }
+            EUsmapCompressionMethod::Oodle => {
                 #[cfg(not(feature = "oodle"))]
-                return Err(UsmapError::unsupported_compression(compression).into());
+                return Err(
+                    UsmapError::unsupported_compression(self.compression_method as u8).into(),
+                );
 
                 #[cfg(feature = "oodle")]
                 {
@@ -121,62 +319,81 @@ impl Usmap {
                     )
                     .ok_or_else(|| UsmapError::invalid_compression_data())?;
 
-                    self.cursor = Cursor::new(decompressed);
+                    decompressed
                 }
             }
-            _ => return Err(UsmapError::unsupported_compression(compression).into()),
-        }
-
-        Ok(())
-    }
-
-    /// Parse usmap file
-    pub fn parse_data(&mut self) -> Result<(), Error> {
-        self.parse_header()?;
-
-        let names_len = self.read_i32()?;
-        for _ in 0..names_len {
-            let name = self.read_fstring()?.unwrap_or_default();
-            self.name_map.push(name);
-        }
-
-        let enums_len = self.read_i32()?;
-        for _ in 0..enums_len {
-            let enum_name = self.read_name()?;
-
-            let enum_entries_len = self.read_u8()?;
-            for _ in 0..enum_entries_len {
-                let name = self.read_name()?;
-                self.enum_map
-                    .entry(enum_name.clone())
-                    .or_insert_with(Vec::new)
-                    .push(name);
+            EUsmapCompressionMethod::Unknown => {
+                return Err(
+                    UsmapError::unsupported_compression(self.compression_method as u8).into(),
+                );
             }
+        };
+
+        let mut reader = RawReader::new(
+            Chain::new(Cursor::new(data), None),
+            self.object_version,
+            self.object_version_ue5,
+            false,
+            NameMap::new(),
+        );
+
+        self.name_map = reader.read_array(|reader| {
+            let name_length = reader.read_u8()?;
+            let mut buf = vec![0u8; name_length as usize - 1];
+            reader.read_exact(&mut buf)?;
+            Ok(String::from_utf8(buf)?)
+        })?;
+
+        let enum_len = reader.read_u32::<LE>()?;
+        self.enum_map = IndexedMap::with_capacity(enum_len as usize);
+
+        let mut reader = UsmapReader::new(&mut reader, &self.name_map, &self.custom_versions);
+
+        for _ in 0..enum_len {
+            let enum_name = reader.read_name()?;
+
+            let enum_names_len = reader.read_u8()?;
+            let mut enum_names = Vec::with_capacity(enum_names_len as usize);
+
+            for _ in 0..enum_names_len {
+                enum_names.push(reader.read_name()?);
+            }
+
+            self.enum_map.insert(enum_name, enum_names);
         }
 
-        let schemas_len = self.read_i32()?;
+        let schemas_len = reader.read_u32::<LE>()?;
+        self.schemas = IndexedMap::with_capacity(schemas_len as usize);
+
         for _ in 0..schemas_len {
-            let schema_name = self.read_name()?;
-            let schema_super_type = self.read_name()?;
-            let num_props = self.read_u16()?;
-            let serializable_prop_count = self.read_u16()?;
+            let schema = UsmapSchema::read(&mut reader)?;
+            self.schemas.insert(schema.name.clone(), schema);
+        }
 
-            let mut properties = Vec::new();
+        // read extensions
 
-            for _ in 0..serializable_prop_count {
-                let property = UsmapProperty::new(self)?;
-                properties.push(property);
+        if reader.data_length()? > reader.position() {
+            self.extension_version = UsmapExtensionVersion::from_bits(reader.read_u32::<LE>()?)
+                .ok_or_else(|| Error::invalid_file("Invalid extension version".to_string()))?;
+
+            if self
+                .extension_version
+                .contains(UsmapExtensionVersion::PATHS)
+            {
+                let num_module_paths = reader.read_u16::<LE>()?;
+                let module_paths = reader
+                    .read_array_with_length(num_module_paths as i32, |reader| {
+                        Ok(reader.read_fstring()?.unwrap_or_default())
+                    })?;
+
+                for (_, _, schema) in self.schemas.iter_mut() {
+                    let index = match num_module_paths > u8::MAX as u16 {
+                        true => reader.read_u16::<LE>()?,
+                        false => reader.read_u8()? as u16,
+                    };
+                    schema.module_path = Some(module_paths[index as usize].clone());
+                }
             }
-
-            self.schemas.insert(
-                schema_name.clone(),
-                UsmapSchema {
-                    name: schema_name,
-                    super_type: schema_super_type,
-                    prop_count: num_props,
-                    properties,
-                },
-            );
         }
 
         Ok(())
@@ -184,66 +401,19 @@ impl Usmap {
 
     /// Create a new usmap file
     pub fn new(cursor: Cursor<Vec<u8>>) -> Result<Self, Error> {
-        Ok(Usmap {
-            version: UsmapVersion::INITIAL,
+        let mut usmap = Usmap {
+            version: EUsmapVersion::Initial,
             name_map: Vec::new(),
             enum_map: IndexedMap::new(),
             schemas: IndexedMap::new(),
-            cursor,
-        })
-    }
-}
-
-impl UsmapReader for Usmap {
-    fn read_i8(&mut self) -> io::Result<i8> {
-        self.cursor.read_i8()
-    }
-
-    fn read_u8(&mut self) -> io::Result<u8> {
-        self.cursor.read_u8()
-    }
-
-    fn read_i16(&mut self) -> io::Result<i16> {
-        self.cursor.read_i16::<LittleEndian>()
-    }
-
-    fn read_u16(&mut self) -> io::Result<u16> {
-        self.cursor.read_u16::<LittleEndian>()
-    }
-
-    fn read_i32(&mut self) -> io::Result<i32> {
-        self.cursor.read_i32::<LittleEndian>()
-    }
-
-    fn read_u32(&mut self) -> io::Result<u32> {
-        self.cursor.read_u32::<LittleEndian>()
-    }
-
-    fn read_i64(&mut self) -> io::Result<i64> {
-        self.cursor.read_i64::<LittleEndian>()
-    }
-
-    fn read_u64(&mut self) -> io::Result<u64> {
-        self.cursor.read_u64::<LittleEndian>()
-    }
-
-    fn read_f32(&mut self) -> io::Result<f32> {
-        self.cursor.read_f32::<LittleEndian>()
-    }
-
-    fn read_f64(&mut self) -> io::Result<f64> {
-        self.cursor.read_f64::<LittleEndian>()
-    }
-
-    fn read_fstring(&mut self) -> Result<Option<String>, Error> {
-        Ok(self.cursor.read_fstring()?)
-    }
-
-    fn read_name(&mut self) -> io::Result<String> {
-        let index = self.read_i32()?;
-        if index < 0 {
-            return Ok("".to_string());
-        }
-        Ok(self.name_map[index as usize].clone())
+            extension_version: UsmapExtensionVersion::NONE,
+            object_version: ObjectVersion::UNKNOWN,
+            object_version_ue5: ObjectVersionUE5::UNKNOWN,
+            custom_versions: Vec::new(),
+            compression_method: EUsmapCompressionMethod::None,
+            net_cl: 0,
+        };
+        usmap.parse_data(cursor)?;
+        Ok(usmap)
     }
 }

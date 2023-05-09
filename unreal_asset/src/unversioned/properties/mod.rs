@@ -1,10 +1,14 @@
 //! Usmap properties
 
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::{fmt::Debug, hash::Hash};
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+};
 
 use self::{
     array_property::UsmapArrayPropertyData, enum_property::UsmapEnumPropertyData,
@@ -86,11 +90,49 @@ pub enum EPropertyType {
     Unknown = 0xFF,
 }
 
+impl ToString for EPropertyType {
+    fn to_string(&self) -> String {
+        match *self {
+            EPropertyType::ByteProperty => "ByteProperty".to_string(),
+            EPropertyType::BoolProperty => "BoolProperty".to_string(),
+            EPropertyType::IntProperty => "IntProperty".to_string(),
+            EPropertyType::FloatProperty => "FloatProperty".to_string(),
+            EPropertyType::ObjectProperty => "ObjectProperty".to_string(),
+            EPropertyType::NameProperty => "NameProperty".to_string(),
+            EPropertyType::DelegateProperty => "DelegateProperty".to_string(),
+            EPropertyType::DoubleProperty => "DoubleProperty".to_string(),
+            EPropertyType::ArrayProperty => "ArrayProperty".to_string(),
+            EPropertyType::StructProperty => "StructProperty".to_string(),
+            EPropertyType::StrProperty => "StrProperty".to_string(),
+            EPropertyType::TextProperty => "TextProperty".to_string(),
+            EPropertyType::InterfaceProperty => "InterfaceProperty".to_string(),
+            EPropertyType::MulticastDelegateProperty => "MulticastDelegateProperty".to_string(),
+            EPropertyType::WeakObjectProperty => "WeakObjectProperty".to_string(),
+            EPropertyType::LazyObjectProperty => "LazyObjectProperty".to_string(),
+            EPropertyType::AssetObjectProperty => "AssetObjectProperty".to_string(),
+            EPropertyType::SoftObjectProperty => "SoftObjectProperty".to_string(),
+            EPropertyType::UInt64Property => "UInt64Property".to_string(),
+            EPropertyType::UInt32Property => "UInt32Property".to_string(),
+            EPropertyType::UInt16Property => "UInt16Property".to_string(),
+            EPropertyType::Int64Property => "Int64Property".to_string(),
+            EPropertyType::Int16Property => "Int16Property".to_string(),
+            EPropertyType::Int8Property => "Int8Property".to_string(),
+            EPropertyType::MapProperty => "MapProperty".to_string(),
+            EPropertyType::SetProperty => "SetProperty".to_string(),
+            EPropertyType::EnumProperty => "EnumProperty".to_string(),
+            EPropertyType::FieldPathProperty => "FieldPathProperty".to_string(),
+            EPropertyType::Unknown => "Unknown".to_string(),
+        }
+    }
+}
+
 /// This must be implemented for all UsmapPropertyDatas
 #[enum_dispatch]
 pub trait UsmapPropertyDataTrait: Debug + Hash + Clone + PartialEq + Eq {
+    /// Get `UsmapPropertyData` property type
+    fn get_property_type(&self) -> EPropertyType;
     /// Write `UsmapPropertyData` to an asset
-    fn write<Writer: UsmapWriter>(&self, writer: &mut Writer) -> Result<usize, Error>;
+    fn write<W: ArchiveWriter>(&self, writer: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error>;
 }
 
 /// UsmapPropertyData
@@ -114,7 +156,7 @@ pub enum UsmapPropertyData {
 
 impl UsmapPropertyData {
     /// Read an `UsmapPropertyData` from an asset
-    pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
         let prop_type: EPropertyType = EPropertyType::try_from(asset.read_u8()?)?;
 
         let res: UsmapPropertyData = match prop_type {
@@ -142,14 +184,16 @@ pub struct UsmapProperty {
     pub schema_index: u16,
     /// Array size
     pub array_size: u8,
+    /// Array index (not serialized)
+    pub array_index: u16,
     /// Property data
     pub property_data: UsmapPropertyData,
 }
 
 impl UsmapProperty {
     /// Read an `UsmapProperty` from an asset
-    pub fn new<Reader: UsmapReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let schema_index = asset.read_u16()?;
+    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
+        let schema_index = asset.read_u16::<LE>()?;
         let array_size = asset.read_u8()?;
         let name = asset.read_name()?;
 
@@ -158,6 +202,7 @@ impl UsmapProperty {
             name,
             schema_index,
             array_size,
+            array_index: 0,
             property_data,
         })
     }

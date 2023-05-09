@@ -1,16 +1,18 @@
 //! Movie scene event parameters property
-use byteorder::LittleEndian;
+use byteorder::LE;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{object_property::SoftObjectPath, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::{FName, Guid},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::{fname::FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 /// Movie scene event parameters
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParameters {
     /// Struct type
     pub struct_type: SoftObjectPath,
@@ -20,10 +22,10 @@ pub struct MovieSceneEventParameters {
 
 impl MovieSceneEventParameters {
     /// Read `MovieSceneEventParameters` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let struct_type = SoftObjectPath::new(asset)?;
 
-        let struct_bytes_length = asset.read_i32::<LittleEndian>()?;
+        let struct_bytes_length = asset.read_i32::<LE>()?;
         let mut struct_bytes = vec![0u8; struct_bytes_length as usize];
         asset.read_exact(&mut struct_bytes)?;
 
@@ -34,10 +36,10 @@ impl MovieSceneEventParameters {
     }
 
     /// Write `MovieSceneEventParameters` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_type.write(asset)?;
 
-        asset.write_i32::<LittleEndian>(self.struct_bytes.len() as i32)?;
+        asset.write_i32::<LE>(self.struct_bytes.len() as i32)?;
         asset.write_all(&self.struct_bytes)?;
 
         Ok(())
@@ -45,10 +47,12 @@ impl MovieSceneEventParameters {
 }
 
 /// Movie scene event parameters property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParametersProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -60,9 +64,10 @@ impl_property_data_trait!(MovieSceneEventParametersProperty);
 
 impl MovieSceneEventParametersProperty {
     /// Read `MovieSceneEventParametersProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -71,6 +76,7 @@ impl MovieSceneEventParametersProperty {
 
         Ok(MovieSceneEventParametersProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -79,7 +85,7 @@ impl MovieSceneEventParametersProperty {
 }
 
 impl PropertyTrait for MovieSceneEventParametersProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

@@ -3,16 +3,17 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::KismetError;
-use crate::object_version::ObjectVersion;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::vector::{Transform, Vector, Vector4};
-use crate::types::{FName, PackageIndex};
+use crate::types::{fname::FName, PackageIndex};
 use crate::Error;
 
 /// Kismet expression token
@@ -280,11 +281,12 @@ pub enum EBlueprintTextLiteralType {
 }
 
 /// Kismet field path
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FieldPath {
     /// Path
     pub path: Vec<FName>,
     /// Path owner
+    #[container_ignore]
     pub resolved_owner: PackageIndex,
 }
 
@@ -299,7 +301,7 @@ impl FieldPath {
 }
 
 /// Read a UTF-8 kismet string
-fn read_kismet_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String, Error> {
+fn read_kismet_string<Reader: ArchiveReader>(asset: &mut Reader) -> Result<String, Error> {
     let mut data = Vec::new();
     loop {
         let read = asset.read_u8()?;
@@ -312,7 +314,7 @@ fn read_kismet_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String,
 }
 
 /// Read a UTF-16 kismet string
-fn read_kismet_unicode_string<Reader: AssetReader>(asset: &mut Reader) -> Result<String, Error> {
+fn read_kismet_unicode_string<Reader: ArchiveReader>(asset: &mut Reader) -> Result<String, Error> {
     let mut data = Vec::new();
     loop {
         let b1 = asset.read_u8()?;
@@ -326,7 +328,7 @@ fn read_kismet_unicode_string<Reader: AssetReader>(asset: &mut Reader) -> Result
 }
 
 /// Write a UTF-8 kismet string
-fn write_kismet_string<Writer: AssetWriter>(
+fn write_kismet_string<Writer: ArchiveWriter>(
     string: &str,
     asset: &mut Writer,
 ) -> Result<usize, Error> {
@@ -337,7 +339,7 @@ fn write_kismet_string<Writer: AssetWriter>(
 }
 
 /// Write a UTF-16 kismet string
-fn write_kismet_unicode_string<Writer: AssetWriter>(
+fn write_kismet_unicode_string<Writer: ArchiveWriter>(
     string: &str,
     asset: &mut Writer,
 ) -> Result<usize, Error> {
@@ -363,9 +365,10 @@ macro_rules! declare_expression {
         ),*
     ) => {
         /// $name
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $name {
             /// Kismet token
+            #[container_ignore]
             pub token: EExprToken,
             $(
                 $(#[$inner $($args)*])*
@@ -392,14 +395,15 @@ macro_rules! implement_expression {
     ) => {
         $(
             $(#[$inner $($args)*])*
-            #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+            #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
             pub struct $name {
                 /// Kismet token
+                #[container_ignore]
                 pub token: EExprToken
             }
 
             impl KismetExpressionTrait for $name {
-                fn write<Writer: AssetWriter>(&self, _asset: &mut Writer) -> Result<usize, Error> {
+                fn write<Writer: ArchiveWriter>(&self, _asset: &mut Writer) -> Result<usize, Error> {
                     Ok(0)
                 }
             }
@@ -414,7 +418,7 @@ macro_rules! implement_expression {
 
             impl $name {
                 /// Read `$name` from an asset
-                pub fn new<Reader: AssetReader>(_asset: &mut Reader) -> Result<Self, Error> {
+                pub fn new<Reader: ArchiveReader>(_asset: &mut Reader) -> Result<Self, Error> {
                     Ok($name {
                         token: EExprToken::$name
                     })
@@ -439,7 +443,7 @@ macro_rules! implement_value_expression {
         );
         impl $name {
             /// Read `$name` from an asset
-            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($name {
                     token: EExprToken::$name,
                     value: asset.$read_func()?,
@@ -448,7 +452,7 @@ macro_rules! implement_value_expression {
         }
 
         impl KismetExpressionTrait for $name {
-            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
                 asset.$write_func(self.value)?;
                 Ok(size_of::<$param>())
             }
@@ -463,7 +467,7 @@ macro_rules! implement_value_expression {
         );
         impl $name {
             /// Read `$name` from an asset
-            pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($name {
                     token: EExprToken::$name,
                     value: asset.$read_func::<$endianness>()?,
@@ -472,7 +476,7 @@ macro_rules! implement_value_expression {
         }
 
         impl KismetExpressionTrait for $name {
-            fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
                 asset.$write_func::<$endianness>(self.value)?;
                 Ok(size_of::<$param>())
             }
@@ -481,9 +485,10 @@ macro_rules! implement_value_expression {
 }
 
 /// Kismet script text
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FScriptText {
     /// Literal type
+    #[container_ignore]
     text_literal_type: EBlueprintTextLiteralType,
     /// Localized source
     localized_source: Option<KismetExpression>,
@@ -496,6 +501,7 @@ pub struct FScriptText {
     /// Literal string
     literal_string: Option<KismetExpression>,
     /// String table asset this text is localized from
+    #[container_ignore]
     string_table_asset: Option<PackageIndex>,
     /// String table id in the string table asset
     string_table_id: Option<KismetExpression>,
@@ -505,7 +511,7 @@ pub struct FScriptText {
 
 impl FScriptText {
     /// Read a `FScriptText` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let text_literal_type: EBlueprintTextLiteralType = asset.read_u8()?.try_into()?;
         let (
             mut localized_source,
@@ -531,7 +537,7 @@ impl FScriptText {
                 literal_string = Some(KismetExpression::new(asset)?);
             }
             EBlueprintTextLiteralType::StringTableEntry => {
-                string_table_asset = Some(PackageIndex::new(asset.read_i32::<LittleEndian>()?));
+                string_table_asset = Some(PackageIndex::new(asset.read_i32::<LE>()?));
                 string_table_id = Some(KismetExpression::new(asset)?);
                 string_table_key = Some(KismetExpression::new(asset)?);
             }
@@ -551,7 +557,7 @@ impl FScriptText {
         })
     }
 
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u8>();
         asset.write_u8(self.text_literal_type.into())?;
         match self.text_literal_type {
@@ -608,14 +614,14 @@ impl FScriptText {
                 )?;
             }
             EBlueprintTextLiteralType::StringTableEntry => {
-                asset.write_i32::<LittleEndian>(
-                    self.string_table_asset.map(|e| e.index).ok_or_else(|| {
+                asset.write_i32::<LE>(self.string_table_asset.map(|e| e.index).ok_or_else(
+                    || {
                         Error::no_data(
                             "text_literal_type is StringTableEntry but string_table_asset is None"
                                 .to_string(),
                         )
-                    })?,
-                )?;
+                    },
+                )?)?;
                 offset += size_of::<u64>();
                 offset += KismetExpression::write(
                     self.string_table_id.as_ref().ok_or_else(|| {
@@ -641,10 +647,12 @@ impl FScriptText {
     }
 }
 
+// todo: replace with an enum with 2 variants
 /// Represents a Kismet bytecode pointer to an FProperty or FField.
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct KismetPropertyPointer {
     /// Pointer serialized as PackageIndex. Used in versions older than [`KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`]
+    #[container_ignore]
     pub old: Option<PackageIndex>,
     /// Pointer serialized as an FFieldPath. Used in versions newer than [`KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION`]
     pub new: Option<FieldPath>,
@@ -671,28 +679,28 @@ impl KismetPropertyPointer {
     }
 
     /// Read a `KismetPropertyPointer` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         if asset.get_object_version()
             >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
         {
-            let num_entries = asset.read_i32::<LittleEndian>()?;
+            let num_entries = asset.read_i32::<LE>()?;
             let mut names = Vec::with_capacity(num_entries as usize);
             for _i in 0..num_entries as usize {
                 names.push(asset.read_fname()?);
             }
-            let owner = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+            let owner = PackageIndex::new(asset.read_i32::<LE>()?);
             Ok(KismetPropertyPointer::from_new(FieldPath::new(
                 names, owner,
             )))
         } else {
             Ok(KismetPropertyPointer::from_old(PackageIndex::new(
-                asset.read_i32::<LittleEndian>()?,
+                asset.read_i32::<LE>()?,
             )))
         }
     }
 
     /// Write a `KismetPropertyPointer` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         if asset.get_object_version()
             >= KismetPropertyPointer::XFER_PROP_POINTER_SWITCH_TO_SERIALIZING_AS_FIELD_PATH_VERSION
         {
@@ -701,13 +709,13 @@ impl KismetPropertyPointer {
                     "engine_version >= UE4_ADDED_PACKAGE_OWNER but new is None".to_string(),
                 )
             })?;
-            asset.write_i32::<LittleEndian>(new.path.len() as i32)?;
+            asset.write_i32::<LE>(new.path.len() as i32)?;
             for entry in &new.path {
                 asset.write_fname(entry)?;
             }
-            asset.write_i32::<LittleEndian>(new.resolved_owner.index)?;
+            asset.write_i32::<LE>(new.resolved_owner.index)?;
         } else {
-            asset.write_i32::<LittleEndian>(self.old.map(|e| e.index).ok_or_else(|| {
+            asset.write_i32::<LE>(self.old.map(|e| e.index).ok_or_else(|| {
                 Error::no_data(
                     "engine_version < UE4_ADDED_PAFCKAGE_OWNER but old is None".to_string(),
                 )
@@ -718,7 +726,7 @@ impl KismetPropertyPointer {
 }
 
 /// Kismet switch case
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KismetSwitchCase {
     /// Case value index
     pub case_index_value_term: KismetExpression,
@@ -747,7 +755,7 @@ impl KismetSwitchCase {
 #[enum_dispatch]
 pub trait KismetExpressionTrait: Debug + Clone + PartialEq + Eq + Hash {
     /// Write a `KismetExpression` to an asset
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error>;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error>;
 }
 
 /// Allows for getting a token from a KismetExpression
@@ -770,7 +778,8 @@ pub trait KismetExpressionEnumEqTrait {
     KismetExpressionEnumEqTrait,
     KismetExpressionDataTrait
 )]
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Hash)]
+#[container_nobounds]
 pub enum KismetExpression {
     /// A local variable.
     ExLocalVariable,
@@ -964,7 +973,7 @@ impl Eq for KismetExpression {}
 
 impl KismetExpression {
     /// Read a `KismetExpression` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let token: EExprToken = asset.read_u8()?.try_into()?;
         let expr: Result<Self, Error> = match token {
             EExprToken::ExLocalVariable => Ok(ExLocalVariable::new(asset)?.into()),
@@ -1078,7 +1087,7 @@ impl KismetExpression {
     }
 
     /// Read an array of `KismetExpression`s stopping at end_token
-    pub fn read_arr<Reader: AssetReader>(
+    pub fn read_arr<Reader: ArchiveReader>(
         asset: &mut Reader,
         end_token: EExprToken,
     ) -> Result<Vec<Self>, Error> {
@@ -1094,7 +1103,7 @@ impl KismetExpression {
     }
 
     /// Write a `KismetExpression`
-    pub fn write<Writer: AssetWriter>(
+    pub fn write<Writer: ArchiveWriter>(
         expr: &KismetExpression,
         asset: &mut Writer,
     ) -> Result<usize, Error> {
@@ -1110,7 +1119,7 @@ declare_expression!(
 );
 impl ExFieldPathConst {
     /// Read a `ExFieldPathConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFieldPathConst {
             token: EExprToken::ExFieldPathConst,
             value: Box::new(KismetExpression::new(asset)?),
@@ -1118,7 +1127,7 @@ impl ExFieldPathConst {
     }
 }
 impl KismetExpressionTrait for ExFieldPathConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         KismetExpression::write(self.value.as_ref(), asset)
     }
 }
@@ -1129,7 +1138,7 @@ declare_expression!(
 );
 impl ExNameConst {
     /// Read a `ExNameConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExNameConst {
             token: EExprToken::ExNameConst,
             value: asset.read_fname()?,
@@ -1137,7 +1146,7 @@ impl ExNameConst {
     }
 }
 impl KismetExpressionTrait for ExNameConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         asset.write_fname(&self.value)?;
         Ok(12)
     }
@@ -1145,20 +1154,21 @@ impl KismetExpressionTrait for ExNameConst {
 declare_expression!(
     ExObjectConst,
     /// Value
+    #[container_ignore]
     value: PackageIndex
 );
 impl ExObjectConst {
     /// Read a `ExObjectConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExObjectConst {
             token: EExprToken::ExObjectConst,
-            value: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            value: PackageIndex::new(asset.read_i32::<LE>()?),
         })
     }
 }
 impl KismetExpressionTrait for ExObjectConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_i32::<LittleEndian>(self.value.index)?;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_i32::<LE>(self.value.index)?;
         Ok(size_of::<u64>())
     }
 }
@@ -1169,7 +1179,7 @@ declare_expression!(
 );
 impl ExSoftObjectConst {
     /// Read a `ExSoftObjectConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExSoftObjectConst {
             token: EExprToken::ExSoftObjectConst,
             value: Box::new(KismetExpression::new(asset)?),
@@ -1177,79 +1187,147 @@ impl ExSoftObjectConst {
     }
 }
 impl KismetExpressionTrait for ExSoftObjectConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         KismetExpression::write(self.value.as_ref(), asset)
     }
 }
 declare_expression!(
     ExTransformConst,
     /// Value
-    value: Transform<OrderedFloat<f32>>
+    #[container_ignore]
+    value: Transform<OrderedFloat<f64>>
 );
 impl ExTransformConst {
     /// Read a `ExTransformConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let rotation = Vector4::new(
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-        );
-        let translation = Vector::new(
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-        );
-        let scale = Vector::new(
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            OrderedFloat(asset.read_f32::<LittleEndian>()?),
-        );
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let transform =
+            match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+                true => {
+                    let rotation = Vector4::new(
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                    );
+                    let translation = Vector::new(
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                    );
+                    let scale = Vector::new(
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                        OrderedFloat(asset.read_f64::<LE>()?),
+                    );
+                    Transform::new(rotation, translation, scale)
+                }
+                false => {
+                    let rotation = Vector4::new(
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    );
+                    let translation = Vector::new(
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    );
+                    let scale = Vector::new(
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                        OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    );
+                    Transform::new(rotation, translation, scale)
+                }
+            };
+
         Ok(ExTransformConst {
             token: EExprToken::ExTransformConst,
-            value: Transform::new(rotation, translation, scale),
+            value: transform,
         })
     }
 }
 impl KismetExpressionTrait for ExTransformConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.rotation.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.z.0)?;
-        asset.write_f32::<LittleEndian>(self.value.rotation.w.0)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.translation.z.0)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.scale.z.0)?;
-        Ok(size_of::<f32>() * 10)
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                asset.write_f64::<LE>(self.value.rotation.x.0)?;
+                asset.write_f64::<LE>(self.value.rotation.y.0)?;
+                asset.write_f64::<LE>(self.value.rotation.z.0)?;
+                asset.write_f64::<LE>(self.value.rotation.w.0)?;
+                asset.write_f64::<LE>(self.value.translation.x.0)?;
+                asset.write_f64::<LE>(self.value.translation.y.0)?;
+                asset.write_f64::<LE>(self.value.translation.z.0)?;
+                asset.write_f64::<LE>(self.value.scale.x.0)?;
+                asset.write_f64::<LE>(self.value.scale.y.0)?;
+                asset.write_f64::<LE>(self.value.scale.z.0)?;
+
+                Ok(size_of::<f64>() * 10)
+            }
+            false => {
+                asset.write_f32::<LE>(self.value.rotation.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.rotation.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.rotation.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.rotation.w.0 as f32)?;
+                asset.write_f32::<LE>(self.value.translation.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.translation.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.translation.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.scale.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.scale.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.scale.z.0 as f32)?;
+
+                Ok(size_of::<f32>() * 10)
+            }
+        }
     }
 }
 declare_expression!(
     ExVectorConst,
     /// Value
-    value: Vector<OrderedFloat<f32>>
+    #[container_ignore]
+    value: Vector<OrderedFloat<f64>>
 );
 impl ExVectorConst {
     /// Read a `ExVectorConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let value =
+            match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+                true => Vector::new(
+                    OrderedFloat(asset.read_f64::<LE>()?),
+                    OrderedFloat(asset.read_f64::<LE>()?),
+                    OrderedFloat(asset.read_f64::<LE>()?),
+                ),
+                false => Vector::new(
+                    OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    OrderedFloat(asset.read_f32::<LE>()? as f64),
+                    OrderedFloat(asset.read_f32::<LE>()? as f64),
+                ),
+            };
         Ok(ExVectorConst {
             token: EExprToken::ExVectorConst,
-            value: Vector::new(
-                OrderedFloat(asset.read_f32::<LittleEndian>()?),
-                OrderedFloat(asset.read_f32::<LittleEndian>()?),
-                OrderedFloat(asset.read_f32::<LittleEndian>()?),
-            ),
+            value,
         })
     }
 }
 impl KismetExpressionTrait for ExVectorConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.x.0)?;
-        asset.write_f32::<LittleEndian>(self.value.y.0)?;
-        asset.write_f32::<LittleEndian>(self.value.z.0)?;
-        Ok(size_of::<f32>() * 3)
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                asset.write_f64::<LE>(self.value.x.0)?;
+                asset.write_f64::<LE>(self.value.y.0)?;
+                asset.write_f64::<LE>(self.value.z.0)?;
+
+                Ok(size_of::<f64>() * 3)
+            }
+            false => {
+                asset.write_f32::<LE>(self.value.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.z.0 as f32)?;
+
+                Ok(size_of::<f32>() * 3)
+            }
+        }
     }
 }
 declare_expression!(
@@ -1259,7 +1337,7 @@ declare_expression!(
 );
 impl ExTextConst {
     /// Read a `ExTextConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExTextConst {
             token: EExprToken::ExTextConst,
             value: Box::new(FScriptText::new(asset)?),
@@ -1267,7 +1345,7 @@ impl ExTextConst {
     }
 }
 impl KismetExpressionTrait for ExTextConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         self.value.write(asset)
     }
 }
@@ -1280,7 +1358,7 @@ declare_expression!(
 );
 impl ExAddMulticastDelegate {
     /// Read a `ExAddMulticastDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExAddMulticastDelegate {
             token: EExprToken::ExAddMulticastDelegate,
             delegate: Box::new(KismetExpression::new(asset)?),
@@ -1289,7 +1367,7 @@ impl ExAddMulticastDelegate {
     }
 }
 impl KismetExpressionTrait for ExAddMulticastDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.delegate.as_ref(), asset)?
             + KismetExpression::write(self.delegate_to_add.as_ref(), asset)?;
         Ok(offset)
@@ -1304,9 +1382,9 @@ declare_expression!(
 );
 impl ExArrayConst {
     /// Read a `ExArrayConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_property = KismetPropertyPointer::new(asset)?;
-        asset.read_i32::<LittleEndian>()?; // num_entries
+        asset.read_i32::<LE>()?; // num_entries
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndArrayConst)?;
         Ok(ExArrayConst {
             token: EExprToken::ExArrayConst,
@@ -1316,10 +1394,10 @@ impl ExArrayConst {
     }
 }
 impl KismetExpressionTrait for ExArrayConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += self.inner_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -1336,7 +1414,7 @@ declare_expression!(
 );
 impl ExArrayGetByRef {
     /// Read a `ExArrayGetByRef` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExArrayGetByRef {
             token: EExprToken::ExArrayGetByRef,
             array_variable: Box::new(KismetExpression::new(asset)?),
@@ -1345,7 +1423,7 @@ impl ExArrayGetByRef {
     }
 }
 impl KismetExpressionTrait for ExArrayGetByRef {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.array_variable.as_ref(), asset)?
             + KismetExpression::write(self.array_index.as_ref(), asset)?;
         Ok(offset)
@@ -1362,18 +1440,18 @@ declare_expression!(
 );
 impl ExAssert {
     /// Read a `ExAssert` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExAssert {
             token: EExprToken::ExAssert,
-            line_number: asset.read_u16::<LittleEndian>()?,
+            line_number: asset.read_u16::<LE>()?,
             debug_mode: asset.read_bool()?,
             assert_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExAssert {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_u16::<LittleEndian>(self.line_number)?;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_u16::<LE>(self.line_number)?;
         asset.write_bool(self.debug_mode)?;
         let offset = size_of::<u32>()
             + size_of::<bool>()
@@ -1392,7 +1470,7 @@ declare_expression!(
 );
 impl ExBindDelegate {
     /// Read a `ExBindDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExBindDelegate {
             token: EExprToken::ExBindDelegate,
             function_name: asset.read_fname()?,
@@ -1402,7 +1480,7 @@ impl ExBindDelegate {
     }
 }
 impl KismetExpressionTrait for ExBindDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         asset.write_fname(&self.function_name)?;
         let offset = 12 /* FScriptName's iCode offset */ +
             KismetExpression::write(self.delegate.as_ref(), asset)? +
@@ -1413,24 +1491,25 @@ impl KismetExpressionTrait for ExBindDelegate {
 declare_expression!(
     ExCallMath,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Parameters
     parameters: Vec<KismetExpression>
 );
 impl ExCallMath {
     /// Read a `ExCallMath` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExCallMath {
             token: EExprToken::ExCallMath,
-            stack_node: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            stack_node: PackageIndex::new(asset.read_i32::<LE>()?),
             parameters: KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?,
         })
     }
 }
 impl KismetExpressionTrait for ExCallMath {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }
@@ -1441,6 +1520,7 @@ impl KismetExpressionTrait for ExCallMath {
 declare_expression!(
     ExCallMulticastDelegate,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Parameters
     parameters: Vec<KismetExpression>,
@@ -1449,8 +1529,8 @@ declare_expression!(
 );
 impl ExCallMulticastDelegate {
     /// Read a `ExCallMulticastDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let stack_node = PackageIndex::new(asset.read_i32::<LittleEndian>()?);
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let stack_node = PackageIndex::new(asset.read_i32::<LE>()?);
         let delegate = KismetExpression::new(asset)?;
         let parameters = KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?;
         Ok(ExCallMulticastDelegate {
@@ -1462,9 +1542,9 @@ impl ExCallMulticastDelegate {
     }
 }
 impl KismetExpressionTrait for ExCallMulticastDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         offset += KismetExpression::write(&self.delegate, asset)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
@@ -1486,21 +1566,21 @@ declare_expression!(
 );
 impl ExClassContext {
     /// Read a `ExClassContext` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExClassContext {
             token: EExprToken::ExClassContext,
             object_expression: Box::new(KismetExpression::new(asset)?),
-            offset: asset.read_u32::<LittleEndian>()?,
+            offset: asset.read_u32::<LE>()?,
             r_value_pointer: KismetPropertyPointer::new(asset)?,
             context_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExClassContext {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         offset += KismetExpression::write(self.object_expression.as_ref(), asset)?;
-        asset.write_u32::<LittleEndian>(self.offset)?;
+        asset.write_u32::<LE>(self.offset)?;
         offset += self.r_value_pointer.write(asset)?;
         offset += KismetExpression::write(self.context_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1513,7 +1593,7 @@ declare_expression!(
 );
 impl ExClassSparseDataVariable {
     /// Read a `ExClassSparseDataVariable` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExClassSparseDataVariable {
             token: EExprToken::ExClassSparseDataVariable,
             variable: KismetPropertyPointer::new(asset)?,
@@ -1521,7 +1601,7 @@ impl ExClassSparseDataVariable {
     }
 }
 impl KismetExpressionTrait for ExClassSparseDataVariable {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         self.variable.write(asset)
     }
 }
@@ -1532,7 +1612,7 @@ declare_expression!(
 );
 impl ExClearMulticastDelegate {
     /// Read a `ExClearMulticastDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExClearMulticastDelegate {
             token: EExprToken::ExClearMulticastDelegate,
             delegate_to_clear: Box::new(KismetExpression::new(asset)?),
@@ -1540,7 +1620,7 @@ impl ExClearMulticastDelegate {
     }
 }
 impl KismetExpressionTrait for ExClearMulticastDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         KismetExpression::write(self.delegate_to_clear.as_ref(), asset)
     }
 }
@@ -1551,7 +1631,7 @@ declare_expression!(
 );
 impl ExComputedJump {
     /// Read a `ExComputedJump` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExComputedJump {
             token: EExprToken::ExComputedJump,
             code_offset_expression: Box::new(KismetExpression::new(asset)?),
@@ -1559,7 +1639,7 @@ impl ExComputedJump {
     }
 }
 impl KismetExpressionTrait for ExComputedJump {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         KismetExpression::write(self.code_offset_expression.as_ref(), asset)
     }
 }
@@ -1576,21 +1656,21 @@ declare_expression!(
 );
 impl ExContext {
     /// Read a `ExContext` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExContext {
             token: EExprToken::ExContext,
             object_expression: Box::new(KismetExpression::new(asset)?),
-            offset: asset.read_u32::<LittleEndian>()?,
+            offset: asset.read_u32::<LE>()?,
             r_value_pointer: KismetPropertyPointer::new(asset)?,
             context_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExContext {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         offset += KismetExpression::write(self.object_expression.as_ref(), asset)?;
-        asset.write_u32::<LittleEndian>(self.offset)?;
+        asset.write_u32::<LE>(self.offset)?;
         offset += self.r_value_pointer.write(asset)?;
         offset += KismetExpression::write(self.context_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1609,21 +1689,21 @@ declare_expression!(
 );
 impl ExContextFailSilent {
     /// Read a `ExContextFailSilent` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExContextFailSilent {
             token: EExprToken::ExContextFailSilent,
             object_expression: Box::new(KismetExpression::new(asset)?),
-            offset: asset.read_u32::<LittleEndian>()?,
+            offset: asset.read_u32::<LE>()?,
             r_value_pointer: KismetPropertyPointer::new(asset)?,
             context_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExContextFailSilent {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
         offset += KismetExpression::write(self.object_expression.as_ref(), asset)?;
-        asset.write_u32::<LittleEndian>(self.offset)?;
+        asset.write_u32::<LE>(self.offset)?;
         offset += self.r_value_pointer.write(asset)?;
         offset += KismetExpression::write(self.context_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1632,24 +1712,25 @@ impl KismetExpressionTrait for ExContextFailSilent {
 declare_expression!(
     ExCrossInterfaceCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Cast target
     target: Box<KismetExpression>
 );
 impl ExCrossInterfaceCast {
     /// Read a `ExCrossInterfaceCast` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExCrossInterfaceCast {
             token: EExprToken::ExCrossInterfaceCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExCrossInterfaceCast {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
         Ok(offset)
     }
@@ -1661,7 +1742,7 @@ declare_expression!(
 );
 impl ExDefaultVariable {
     /// Read a `ExDefaultVariable` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExDefaultVariable {
             token: EExprToken::ExDefaultVariable,
             variable: KismetPropertyPointer::new(asset)?,
@@ -1669,31 +1750,32 @@ impl ExDefaultVariable {
     }
 }
 impl KismetExpressionTrait for ExDefaultVariable {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         self.variable.write(asset)
     }
 }
 declare_expression!(
     ExDynamicCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Cast target
     target_expression: Box<KismetExpression>
 );
 impl ExDynamicCast {
     /// Read a `ExDynamicCast` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExDynamicCast {
             token: EExprToken::ExDynamicCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExDynamicCast {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -1701,24 +1783,25 @@ impl KismetExpressionTrait for ExDynamicCast {
 declare_expression!(
     ExFinalFunction,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Parameters
     parameters: Vec<KismetExpression>
 );
 impl ExFinalFunction {
     /// Read a `ExFinalFunction` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFinalFunction {
             token: EExprToken::ExFinalFunction,
-            stack_node: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            stack_node: PackageIndex::new(asset.read_i32::<LE>()?),
             parameters: KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?,
         })
     }
 }
 impl KismetExpressionTrait for ExFinalFunction {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }
@@ -1733,7 +1816,7 @@ declare_expression!(
 );
 impl ExInstanceDelegate {
     /// Read a `ExInstanceDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInstanceDelegate {
             token: EExprToken::ExInstanceDelegate,
             function_name: asset.read_fname()?,
@@ -1741,7 +1824,7 @@ impl ExInstanceDelegate {
     }
 }
 impl KismetExpressionTrait for ExInstanceDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         asset.write_fname(&self.function_name)?;
         Ok(12) // FScriptName's iCode offset
     }
@@ -1753,7 +1836,7 @@ declare_expression!(
 );
 impl ExInstanceVariable {
     /// Read a `ExInstanceVariable` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInstanceVariable {
             token: EExprToken::ExInstanceVariable,
             variable: KismetPropertyPointer::new(asset)?,
@@ -1761,7 +1844,7 @@ impl ExInstanceVariable {
     }
 }
 impl KismetExpressionTrait for ExInstanceVariable {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         self.variable.write(asset)
     }
 }
@@ -1772,7 +1855,7 @@ declare_expression!(
 );
 impl ExInterfaceContext {
     /// Read a `ExInterfaceContext` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInterfaceContext {
             token: EExprToken::ExInterfaceContext,
             interface_value: Box::new(KismetExpression::new(asset)?),
@@ -1780,31 +1863,32 @@ impl ExInterfaceContext {
     }
 }
 impl KismetExpressionTrait for ExInterfaceContext {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         KismetExpression::write(self.interface_value.as_ref(), asset)
     }
 }
 declare_expression!(
     ExInterfaceToObjCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Cast target
     target: Box<KismetExpression>
 );
 impl ExInterfaceToObjCast {
     /// Read a `ExInterfaceToObjCast` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExInterfaceToObjCast {
             token: EExprToken::ExInterfaceToObjCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExInterfaceToObjCast {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
         Ok(offset)
     }
@@ -1816,16 +1900,16 @@ declare_expression!(
 );
 impl ExJump {
     /// Read a `ExJump` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExJump {
             token: EExprToken::ExJump,
-            code_offset: asset.read_u32::<LittleEndian>()?,
+            code_offset: asset.read_u32::<LE>()?,
         })
     }
 }
 impl KismetExpressionTrait for ExJump {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_u32::<LittleEndian>(self.code_offset)?;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_u32::<LE>(self.code_offset)?;
         Ok(size_of::<u32>())
     }
 }
@@ -1838,18 +1922,18 @@ declare_expression!(
 );
 impl ExJumpIfNot {
     /// Read a `ExJumpIfNot` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExJumpIfNot {
             token: EExprToken::ExJumpIfNot,
-            code_offset: asset.read_u32::<LittleEndian>()?,
+            code_offset: asset.read_u32::<LE>()?,
             boolean_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExJumpIfNot {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
-        asset.write_u32::<LittleEndian>(self.code_offset)?;
+        asset.write_u32::<LE>(self.code_offset)?;
         offset += KismetExpression::write(self.boolean_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -1865,7 +1949,7 @@ declare_expression!(
 );
 impl ExLet {
     /// Read a `ExLet` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLet {
             token: EExprToken::ExLet,
             value: KismetPropertyPointer::new(asset)?,
@@ -1875,7 +1959,7 @@ impl ExLet {
     }
 }
 impl KismetExpressionTrait for ExLet {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = self.value.write(asset)?;
         offset += KismetExpression::write(self.variable.as_ref(), asset)?;
         offset += KismetExpression::write(self.expression.as_ref(), asset)?;
@@ -1891,7 +1975,7 @@ declare_expression!(
 );
 impl ExLetBool {
     /// Read a `ExLetBool` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetBool {
             token: EExprToken::ExLetBool,
             variable_expression: Box::new(KismetExpression::new(asset)?),
@@ -1900,7 +1984,7 @@ impl ExLetBool {
     }
 }
 impl KismetExpressionTrait for ExLetBool {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.variable_expression.as_ref(), asset)?
             + KismetExpression::write(self.assignment_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1915,7 +1999,7 @@ declare_expression!(
 );
 impl ExLetDelegate {
     /// Read a `ExLetDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetDelegate {
             token: EExprToken::ExLetDelegate,
             variable_expression: Box::new(KismetExpression::new(asset)?),
@@ -1924,7 +2008,7 @@ impl ExLetDelegate {
     }
 }
 impl KismetExpressionTrait for ExLetDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.variable_expression.as_ref(), asset)?
             + KismetExpression::write(self.assignment_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1939,7 +2023,7 @@ declare_expression!(
 );
 impl ExLetMulticastDelegate {
     /// Read a `ExLetMulticastDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetMulticastDelegate {
             token: EExprToken::ExLetMulticastDelegate,
             variable_expression: Box::new(KismetExpression::new(asset)?),
@@ -1948,7 +2032,7 @@ impl ExLetMulticastDelegate {
     }
 }
 impl KismetExpressionTrait for ExLetMulticastDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.variable_expression.as_ref(), asset)?
             + KismetExpression::write(self.assignment_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1963,7 +2047,7 @@ declare_expression!(
 );
 impl ExLetObj {
     /// Read a `ExLetObj` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetObj {
             token: EExprToken::ExLetObj,
             variable_expression: Box::new(KismetExpression::new(asset)?),
@@ -1972,7 +2056,7 @@ impl ExLetObj {
     }
 }
 impl KismetExpressionTrait for ExLetObj {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.variable_expression.as_ref(), asset)?
             + KismetExpression::write(self.assignment_expression.as_ref(), asset)?;
         Ok(offset)
@@ -1987,7 +2071,7 @@ declare_expression!(
 );
 impl ExLetValueOnPersistentFrame {
     /// Read a `ExLetValueOnPersistentFrame` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetValueOnPersistentFrame {
             token: EExprToken::ExLetValueOnPersistentFrame,
             destination_property: KismetPropertyPointer::new(asset)?,
@@ -1996,7 +2080,7 @@ impl ExLetValueOnPersistentFrame {
     }
 }
 impl KismetExpressionTrait for ExLetValueOnPersistentFrame {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = self.destination_property.write(asset)?
             + KismetExpression::write(self.assignment_expression.as_ref(), asset)?;
         Ok(offset)
@@ -2011,7 +2095,7 @@ declare_expression!(
 );
 impl ExLetWeakObjPtr {
     /// Read a `ExLetWeakObjPtr` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLetWeakObjPtr {
             token: EExprToken::ExLetWeakObjPtr,
             variable_expression: Box::new(KismetExpression::new(asset)?),
@@ -2020,7 +2104,7 @@ impl ExLetWeakObjPtr {
     }
 }
 impl KismetExpressionTrait for ExLetWeakObjPtr {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.variable_expression.as_ref(), asset)?
             + KismetExpression::write(self.assignment_expression.as_ref(), asset)?;
         Ok(offset)
@@ -2029,24 +2113,25 @@ impl KismetExpressionTrait for ExLetWeakObjPtr {
 declare_expression!(
     ExLocalFinalFunction,
     /// Stack node
+    #[container_ignore]
     stack_node: PackageIndex,
     /// Function parameters
     parameters: Vec<KismetExpression>
 );
 impl ExLocalFinalFunction {
     /// Read a `ExLocalFinalFunction` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalFinalFunction {
             token: EExprToken::ExLocalFinalFunction,
-            stack_node: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            stack_node: PackageIndex::new(asset.read_i32::<LE>()?),
             parameters: KismetExpression::read_arr(asset, EExprToken::ExEndFunctionParms)?,
         })
     }
 }
 impl KismetExpressionTrait for ExLocalFinalFunction {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.stack_node.index)?;
+        asset.write_i32::<LE>(self.stack_node.index)?;
         for parameter in &self.parameters {
             offset += KismetExpression::write(parameter, asset)?;
         }
@@ -2061,7 +2146,7 @@ declare_expression!(
 );
 impl ExLocalOutVariable {
     /// Read a `ExLocalOutVariable` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalOutVariable {
             token: EExprToken::ExLocalOutVariable,
             variable: KismetPropertyPointer::new(asset)?,
@@ -2069,7 +2154,7 @@ impl ExLocalOutVariable {
     }
 }
 impl KismetExpressionTrait for ExLocalOutVariable {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         self.variable.write(asset)
     }
 }
@@ -2080,7 +2165,7 @@ declare_expression!(
 );
 impl ExLocalVariable {
     /// Read a `ExLocalVariable` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalVariable {
             token: EExprToken::ExLocalVariable,
             variable: KismetPropertyPointer::new(asset)?,
@@ -2088,7 +2173,7 @@ impl ExLocalVariable {
     }
 }
 impl KismetExpressionTrait for ExLocalVariable {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         self.variable.write(asset)
     }
 }
@@ -2101,7 +2186,7 @@ declare_expression!(
 );
 impl ExLocalVirtualFunction {
     /// Read a `ExLocalVirtualFunction` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExLocalVirtualFunction {
             token: EExprToken::ExLocalVirtualFunction,
             virtual_function_name: asset.read_fname()?,
@@ -2110,7 +2195,7 @@ impl ExLocalVirtualFunction {
     }
 }
 impl KismetExpressionTrait for ExLocalVirtualFunction {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = 12; // FScriptName's iCode offset
         asset.write_fname(&self.virtual_function_name)?;
         for parameter in &self.parameters {
@@ -2131,10 +2216,10 @@ declare_expression!(
 );
 impl ExMapConst {
     /// Read a `ExMapConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let key_property = KismetPropertyPointer::new(asset)?;
         let value_property = KismetPropertyPointer::new(asset)?;
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndMapConst)?;
         Ok(ExMapConst {
             token: EExprToken::ExMapConst,
@@ -2145,11 +2230,11 @@ impl ExMapConst {
     }
 }
 impl KismetExpressionTrait for ExMapConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += self.key_property.write(asset)?;
         offset += self.value_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2160,24 +2245,25 @@ impl KismetExpressionTrait for ExMapConst {
 declare_expression!(
     ExMetaCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Target expression
     target_expression: Box<KismetExpression>
 );
 impl ExMetaCast {
     /// Read a `ExMetaCast` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExMetaCast {
             token: EExprToken::ExMetaCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExMetaCast {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2185,24 +2271,25 @@ impl KismetExpressionTrait for ExMetaCast {
 declare_expression!(
     ExObjToInterfaceCast,
     /// Class pointer
+    #[container_ignore]
     class_ptr: PackageIndex,
     /// Target expression
     target: Box<KismetExpression>
 );
 impl ExObjToInterfaceCast {
     /// Read a `ExObjToInterfaceCast` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExObjToInterfaceCast {
             token: EExprToken::ExObjToInterfaceCast,
-            class_ptr: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
+            class_ptr: PackageIndex::new(asset.read_i32::<LE>()?),
             target: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExObjToInterfaceCast {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>();
-        asset.write_i32::<LittleEndian>(self.class_ptr.index)?;
+        asset.write_i32::<LE>(self.class_ptr.index)?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2214,7 +2301,7 @@ declare_expression!(
 );
 impl ExPopExecutionFlowIfNot {
     /// Read a `ExPopExecutionFlowIfNot` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPopExecutionFlowIfNot {
             token: EExprToken::ExPopExecutionFlowIfNot,
             boolean_expression: Box::new(KismetExpression::new(asset)?),
@@ -2222,20 +2309,21 @@ impl ExPopExecutionFlowIfNot {
     }
 }
 impl KismetExpressionTrait for ExPopExecutionFlowIfNot {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         KismetExpression::write(self.boolean_expression.as_ref(), asset)
     }
 }
 declare_expression!(
     ExPrimitiveCast,
     /// Conversion type
+    #[container_ignore]
     conversion_type: ECastToken,
     /// Cast target
     target: Box<KismetExpression>
 );
 impl ExPrimitiveCast {
     /// Read a `ExPrimitiveCast` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPrimitiveCast {
             token: EExprToken::ExPrimitiveCast,
             conversion_type: asset.read_u8()?.try_into()?,
@@ -2244,7 +2332,7 @@ impl ExPrimitiveCast {
     }
 }
 impl KismetExpressionTrait for ExPrimitiveCast {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u8>();
         asset.write_u8(self.conversion_type.into())?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
@@ -2258,7 +2346,7 @@ declare_expression!(
 );
 impl ExPropertyConst {
     /// Read a `ExPropertyConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPropertyConst {
             token: EExprToken::ExPropertyConst,
             property: KismetPropertyPointer::new(asset)?,
@@ -2266,7 +2354,7 @@ impl ExPropertyConst {
     }
 }
 impl KismetExpressionTrait for ExPropertyConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         self.property.write(asset)
     }
 }
@@ -2277,16 +2365,16 @@ declare_expression!(
 );
 impl ExPushExecutionFlow {
     /// Read a `ExPushExecutionFlow` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExPushExecutionFlow {
             token: EExprToken::ExPushExecutionFlow,
-            pushing_address: asset.read_u32::<LittleEndian>()?,
+            pushing_address: asset.read_u32::<LE>()?,
         })
     }
 }
 impl KismetExpressionTrait for ExPushExecutionFlow {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_u32::<LittleEndian>(self.pushing_address)?;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_u32::<LE>(self.pushing_address)?;
         Ok(size_of::<u32>())
     }
 }
@@ -2299,7 +2387,7 @@ declare_expression!(
 );
 impl ExRemoveMulticastDelegate {
     /// Read a `ExRemoveMulticastDelegate` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExRemoveMulticastDelegate {
             token: EExprToken::ExRemoveMulticastDelegate,
             delegate: Box::new(KismetExpression::new(asset)?),
@@ -2308,7 +2396,7 @@ impl ExRemoveMulticastDelegate {
     }
 }
 impl KismetExpressionTrait for ExRemoveMulticastDelegate {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let offset = KismetExpression::write(self.delegate.as_ref(), asset)?
             + KismetExpression::write(self.delegate_to_add.as_ref(), asset)?;
         Ok(offset)
@@ -2321,7 +2409,7 @@ declare_expression!(
 );
 impl ExReturn {
     /// Read a `ExReturn` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExReturn {
             token: EExprToken::ExReturn,
             return_expression: Box::new(KismetExpression::new(asset)?),
@@ -2329,36 +2417,60 @@ impl ExReturn {
     }
 }
 impl KismetExpressionTrait for ExReturn {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         KismetExpression::write(self.return_expression.as_ref(), asset)
     }
 }
 declare_expression!(
     ExRotationConst,
-    /// Pitch
-    pitch: i32,
-    /// Yaw
-    yaw: i32,
-    /// Roll
-    roll: i32
+    /// Rotator
+    #[container_ignore]
+    rotator: Vector<OrderedFloat<f64>>
 );
 impl ExRotationConst {
     /// Read a `ExRotationConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let rotator =
+            match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+                true => {
+                    let pitch = asset.read_f64::<LE>()?;
+                    let yaw = asset.read_f64::<LE>()?;
+                    let roll = asset.read_f64::<LE>()?;
+                    Vector::new(OrderedFloat(pitch), OrderedFloat(yaw), OrderedFloat(roll))
+                }
+                false => {
+                    let pitch = asset.read_f32::<LE>()?;
+                    let yaw = asset.read_f32::<LE>()?;
+                    let roll = asset.read_f32::<LE>()?;
+                    Vector::new(
+                        OrderedFloat(pitch as f64),
+                        OrderedFloat(yaw as f64),
+                        OrderedFloat(roll as f64),
+                    )
+                }
+            };
         Ok(ExRotationConst {
             token: EExprToken::ExRotationConst,
-            pitch: asset.read_i32::<LittleEndian>()?,
-            yaw: asset.read_i32::<LittleEndian>()?,
-            roll: asset.read_i32::<LittleEndian>()?,
+            rotator,
         })
     }
 }
 impl KismetExpressionTrait for ExRotationConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_i32::<LittleEndian>(self.pitch)?;
-        asset.write_i32::<LittleEndian>(self.yaw)?;
-        asset.write_i32::<LittleEndian>(self.roll)?;
-        Ok(size_of::<i32>() * 3)
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                asset.write_f64::<LE>(self.rotator.x.0)?;
+                asset.write_f64::<LE>(self.rotator.y.0)?;
+                asset.write_f64::<LE>(self.rotator.z.0)?;
+                Ok(size_of::<f64>() * 3)
+            }
+            false => {
+                asset.write_f32::<LE>(self.rotator.x.0 as f32)?;
+                asset.write_f32::<LE>(self.rotator.y.0 as f32)?;
+                asset.write_f32::<LE>(self.rotator.z.0 as f32)?;
+                Ok(size_of::<f32>() * 3)
+            }
+        }
     }
 }
 declare_expression!(
@@ -2366,20 +2478,18 @@ declare_expression!(
     /// Assigning property
     assigning_property: Option<Box<KismetExpression>>,
     /// Array inner prop
+    #[container_ignore]
     array_inner_prop: Option<PackageIndex>,
     /// Elements
     elements: Vec<KismetExpression>
 );
 impl ExSetArray {
     /// Read a `ExSetArray` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let (assigning_property, array_inner_prop) =
             match asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
                 true => (Some(Box::new(KismetExpression::new(asset)?)), None),
-                false => (
-                    None,
-                    Some(PackageIndex::new(asset.read_i32::<LittleEndian>()?)),
-                ),
+                false => (None, Some(PackageIndex::new(asset.read_i32::<LE>()?))),
             };
         Ok(ExSetArray {
             token: EExprToken::ExSetArray,
@@ -2390,7 +2500,7 @@ impl ExSetArray {
     }
 }
 impl KismetExpressionTrait for ExSetArray {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = 0;
         if asset.get_object_version() >= ObjectVersion::VER_UE4_CHANGE_SETARRAY_BYTECODE {
             offset += KismetExpression::write(
@@ -2403,14 +2513,12 @@ impl KismetExpressionTrait for ExSetArray {
                 asset,
             )?;
         } else {
-            asset.write_i32::<LittleEndian>(self.array_inner_prop.map(|e| e.index).ok_or_else(
-                || {
-                    Error::no_data(
+            asset.write_i32::<LE>(self.array_inner_prop.map(|e| e.index).ok_or_else(|| {
+                Error::no_data(
                     "engine_version < UE4_CHANGE_SETARRAY_BYTECODE but array_inner_prop is None"
                         .to_string(),
                 )
-                },
-            )?)?;
+            })?)?;
             offset += size_of::<u64>();
         }
 
@@ -2430,9 +2538,9 @@ declare_expression!(
 );
 impl ExSetConst {
     /// Read a `ExSetConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let inner_property = KismetPropertyPointer::new(asset)?;
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndSetConst)?;
         Ok(ExSetConst {
             token: EExprToken::ExSetConst,
@@ -2442,10 +2550,10 @@ impl ExSetConst {
     }
 }
 impl KismetExpressionTrait for ExSetConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += self.inner_property.write(asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2462,9 +2570,9 @@ declare_expression!(
 );
 impl ExSetMap {
     /// Read a `ExSetMap` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let map_property = Box::new(KismetExpression::new(asset)?);
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndMap)?;
         Ok(ExSetMap {
             token: EExprToken::ExSetMap,
@@ -2474,10 +2582,10 @@ impl ExSetMap {
     }
 }
 impl KismetExpressionTrait for ExSetMap {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += KismetExpression::write(self.map_property.as_ref(), asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2494,9 +2602,9 @@ declare_expression!(
 );
 impl ExSetSet {
     /// Read a `ExSetSet` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let set_property = Box::new(KismetExpression::new(asset)?);
-        let _num_entries = asset.read_i32::<LittleEndian>()?;
+        let _num_entries = asset.read_i32::<LE>()?;
         let elements = KismetExpression::read_arr(asset, EExprToken::ExEndSet)?;
         Ok(ExSetSet {
             token: EExprToken::ExSetSet,
@@ -2506,10 +2614,10 @@ impl ExSetSet {
     }
 }
 impl KismetExpressionTrait for ExSetSet {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<i32>();
         offset += KismetExpression::write(self.set_property.as_ref(), asset)?;
-        asset.write_i32::<LittleEndian>(self.elements.len() as i32)?;
+        asset.write_i32::<LE>(self.elements.len() as i32)?;
         for element in &self.elements {
             offset += KismetExpression::write(element, asset)?;
         }
@@ -2526,18 +2634,18 @@ declare_expression!(
 );
 impl ExSkip {
     /// Read a `ExSkip` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExSkip {
             token: EExprToken::ExSkip,
-            code_offset: asset.read_u32::<LittleEndian>()?,
+            code_offset: asset.read_u32::<LE>()?,
             skip_expression: Box::new(KismetExpression::new(asset)?),
         })
     }
 }
 impl KismetExpressionTrait for ExSkip {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u32>();
-        asset.write_u32::<LittleEndian>(self.code_offset)?;
+        asset.write_u32::<LE>(self.code_offset)?;
         offset += KismetExpression::write(self.skip_expression.as_ref(), asset)?;
         Ok(offset)
     }
@@ -2545,6 +2653,7 @@ impl KismetExpressionTrait for ExSkip {
 declare_expression!(
     ExStructConst,
     /// Struct value
+    #[container_ignore]
     struct_value: PackageIndex,
     /// Struct size
     struct_size: i32,
@@ -2553,20 +2662,20 @@ declare_expression!(
 );
 impl ExStructConst {
     /// Read a `ExStructConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExStructConst {
             token: EExprToken::ExStructConst,
-            struct_value: PackageIndex::new(asset.read_i32::<LittleEndian>()?),
-            struct_size: asset.read_i32::<LittleEndian>()?,
+            struct_value: PackageIndex::new(asset.read_i32::<LE>()?),
+            struct_size: asset.read_i32::<LE>()?,
             value: KismetExpression::read_arr(asset, EExprToken::ExEndStructConst)?,
         })
     }
 }
 impl KismetExpressionTrait for ExStructConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u64>() + size_of::<i32>();
-        asset.write_i32::<LittleEndian>(self.struct_value.index)?;
-        asset.write_i32::<LittleEndian>(self.struct_size)?;
+        asset.write_i32::<LE>(self.struct_value.index)?;
+        asset.write_i32::<LE>(self.struct_size)?;
         for entry in &self.value {
             offset += KismetExpression::write(entry, asset)?;
         }
@@ -2583,7 +2692,7 @@ declare_expression!(
 );
 impl ExStructMemberContext {
     /// Read a `ExStructMemberContext` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let struct_member_expression = KismetPropertyPointer::new(asset)?;
         let struct_expression = KismetExpression::new(asset)?;
         Ok(ExStructMemberContext {
@@ -2594,7 +2703,7 @@ impl ExStructMemberContext {
     }
 }
 impl KismetExpressionTrait for ExStructMemberContext {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = 0;
         offset += self.struct_member_expression.write(asset)?;
         offset += KismetExpression::write(self.struct_expression.as_ref(), asset)?;
@@ -2614,15 +2723,15 @@ declare_expression!(
 );
 impl ExSwitchValue {
     /// Read a `ExSwitchValue` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let num_cases = asset.read_u16::<LittleEndian>()?;
-        let end_goto_offset = asset.read_u32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let num_cases = asset.read_u16::<LE>()?;
+        let end_goto_offset = asset.read_u32::<LE>()?;
         let index_term = Box::new(KismetExpression::new(asset)?);
 
         let mut cases = Vec::with_capacity(num_cases as usize);
         for _i in 0..num_cases as usize {
             let term_a = KismetExpression::new(asset)?;
-            let term_b = asset.read_u32::<LittleEndian>()?;
+            let term_b = asset.read_u32::<LE>()?;
             let term_c = KismetExpression::new(asset)?;
             cases.push(KismetSwitchCase::new(term_a, term_b, term_c));
         }
@@ -2637,15 +2746,15 @@ impl ExSwitchValue {
     }
 }
 impl KismetExpressionTrait for ExSwitchValue {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = size_of::<u16>() + size_of::<u32>();
-        asset.write_u16::<LittleEndian>(self.cases.len() as u16)?;
-        asset.write_u32::<LittleEndian>(self.end_goto_offset)?;
+        asset.write_u16::<LE>(self.cases.len() as u16)?;
+        asset.write_u32::<LE>(self.end_goto_offset)?;
         offset += KismetExpression::write(self.index_term.as_ref(), asset)?;
         for case in &self.cases {
             offset += KismetExpression::write(&case.case_index_value_term, asset)?;
             offset += size_of::<u32>();
-            asset.write_u32::<LittleEndian>(case.next_offset)?;
+            asset.write_u32::<LE>(case.next_offset)?;
             offset += KismetExpression::write(&case.case_term, asset)?;
         }
         offset += KismetExpression::write(self.default_term.as_ref(), asset)?;
@@ -2661,7 +2770,7 @@ declare_expression!(
 );
 impl ExVirtualFunction {
     /// Read a `ExVirtualFunction` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExVirtualFunction {
             token: EExprToken::ExVirtualFunction,
             virtual_function_name: asset.read_fname()?,
@@ -2670,7 +2779,7 @@ impl ExVirtualFunction {
     }
 }
 impl KismetExpressionTrait for ExVirtualFunction {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         let mut offset = 12; // FScriptName's iCode offset
         asset.write_fname(&self.virtual_function_name)?;
         for parameter in &self.parameters {
@@ -2687,7 +2796,7 @@ declare_expression!(
 );
 impl ExStringConst {
     /// Read a `ExStringConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExStringConst {
             token: EExprToken::ExStringConst,
             value: read_kismet_string(asset)?,
@@ -2695,7 +2804,7 @@ impl ExStringConst {
     }
 }
 impl KismetExpressionTrait for ExStringConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         write_kismet_string(&self.value, asset)
     }
 }
@@ -2706,7 +2815,7 @@ declare_expression!(
 );
 impl ExUnicodeStringConst {
     /// Read a `ExUnicodeStringConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExUnicodeStringConst {
             token: EExprToken::ExUnicodeStringConst,
             value: read_kismet_unicode_string(asset)?,
@@ -2714,7 +2823,7 @@ impl ExUnicodeStringConst {
     }
 }
 impl KismetExpressionTrait for ExUnicodeStringConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         write_kismet_unicode_string(&self.value, asset)
     }
 }
@@ -2722,13 +2831,14 @@ impl KismetExpressionTrait for ExUnicodeStringConst {
 declare_expression!(
     ExInstrumentationEvent,
     /// Event type
+    #[container_ignore]
     event_type: EScriptInstrumentationType,
     /// Event name
     event_name: Option<FName>
 );
 impl ExInstrumentationEvent {
     /// Read a `ExInstrumentationEvent` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let event_type: EScriptInstrumentationType =
             EScriptInstrumentationType::try_from(asset.read_u8()?)?;
 
@@ -2745,7 +2855,7 @@ impl ExInstrumentationEvent {
     }
 }
 impl KismetExpressionTrait for ExInstrumentationEvent {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
         asset.write_u8(self.event_type as u8)?;
 
         if self.event_type == EScriptInstrumentationType::InlineEvent {
@@ -2762,20 +2872,21 @@ impl KismetExpressionTrait for ExInstrumentationEvent {
 declare_expression!(
     ExFloatConst,
     /// Value
+    #[container_ignore]
     value: OrderedFloat<f32>
 );
 impl ExFloatConst {
     /// Read a `ExFloatConst` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         Ok(ExFloatConst {
             token: EExprToken::ExFloatConst,
-            value: OrderedFloat(asset.read_f32::<LittleEndian>()?),
+            value: OrderedFloat(asset.read_f32::<LE>()?),
         })
     }
 }
 impl KismetExpressionTrait for ExFloatConst {
-    fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
-        asset.write_f32::<LittleEndian>(self.value.0)?;
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_f32::<LE>(self.value.0)?;
         Ok(size_of::<f32>())
     }
 }
@@ -2830,8 +2941,8 @@ implement_expression!(
 );
 
 implement_value_expression!(ExByteConst, u8, read_u8, write_u8);
-implement_value_expression!(ExInt64Const, i64, read_i64, write_i64, LittleEndian);
-implement_value_expression!(ExIntConst, i32, read_i32, write_i32, LittleEndian);
+implement_value_expression!(ExInt64Const, i64, read_i64, write_i64, LE);
+implement_value_expression!(ExIntConst, i32, read_i32, write_i32, LE);
 implement_value_expression!(ExIntConstByte, u8, read_u8, write_u8);
-implement_value_expression!(ExSkipOffsetConst, u32, read_u32, write_u32, LittleEndian);
-implement_value_expression!(ExUInt64Const, u64, read_u64, write_u64, LittleEndian);
+implement_value_expression!(ExSkipOffsetConst, u32, read_u32, write_u32, LE);
+implement_value_expression!(ExUInt64Const, u64, read_u64, write_u64, LE);

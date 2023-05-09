@@ -1,17 +1,20 @@
 //! Movie scene float channel property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{rich_curve_key_property::RichCurveExtrapolation, PropertyTrait},
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
     types::{
+        fname::FName,
         movie::{FrameNumber, FrameRate},
-        FName, Guid,
+        Guid,
     },
+    unversioned::ancestry::Ancestry,
 };
 
 use super::movie_scene_float_value_property::MovieSceneFloatValue;
@@ -44,22 +47,22 @@ pub struct MovieSceneFloatChannel {
 
 impl MovieSceneFloatChannel {
     /// Read a `MovieSceneFloatChannel` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let pre_infinity_extrap: RichCurveExtrapolation =
             RichCurveExtrapolation::try_from(asset.read_u8()?)?;
         let post_infinity_extrap: RichCurveExtrapolation =
             RichCurveExtrapolation::try_from(asset.read_u8()?)?;
 
-        let times_struct_length = asset.read_i32::<LittleEndian>()?;
-        let times_length = asset.read_i32::<LittleEndian>()?;
+        let times_struct_length = asset.read_i32::<LE>()?;
+        let times_length = asset.read_i32::<LE>()?;
 
         let mut times = Vec::with_capacity(times_length as usize);
         for _ in 0..times_length {
-            times.push(FrameNumber::new(asset.read_i32::<LittleEndian>()?));
+            times.push(FrameNumber::new(asset.read_i32::<LE>()?));
         }
 
-        let values_struct_length = asset.read_i32::<LittleEndian>()?;
-        let values_length = asset.read_i32::<LittleEndian>()?;
+        let values_struct_length = asset.read_i32::<LE>()?;
+        let values_length = asset.read_i32::<LE>()?;
 
         let mut values = Vec::with_capacity(values_length as usize);
         for _ in 0..values_length {
@@ -67,13 +70,10 @@ impl MovieSceneFloatChannel {
             values.push(MovieSceneFloatValue::new(asset, false)?);
         }
 
-        let default_value = asset.read_f32::<LittleEndian>()?;
-        let has_default_value = asset.read_i32::<LittleEndian>()? == 1;
+        let default_value = asset.read_f32::<LE>()?;
+        let has_default_value = asset.read_i32::<LE>()? == 1;
 
-        let tick_resolution = FrameRate::new(
-            asset.read_i32::<LittleEndian>()?,
-            asset.read_i32::<LittleEndian>()?,
-        );
+        let tick_resolution = FrameRate::new(asset.read_i32::<LE>()?, asset.read_i32::<LE>()?);
 
         Ok(MovieSceneFloatChannel {
             pre_infinity_extrap,
@@ -89,56 +89,60 @@ impl MovieSceneFloatChannel {
     }
 
     /// Write a `MovieSceneFloatChannel` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_u8(self.pre_infinity_extrap as u8)?;
         asset.write_u8(self.post_infinity_extrap as u8)?;
 
-        asset.write_i32::<LittleEndian>(self.times_struct_length)?;
-        asset.write_i32::<LittleEndian>(self.times.len() as i32)?;
+        asset.write_i32::<LE>(self.times_struct_length)?;
+        asset.write_i32::<LE>(self.times.len() as i32)?;
 
         for time in &self.times {
-            asset.write_i32::<LittleEndian>(time.value)?;
+            asset.write_i32::<LE>(time.value)?;
         }
 
-        asset.write_i32::<LittleEndian>(self.values_struct_length)?;
-        asset.write_i32::<LittleEndian>(self.values.len() as i32)?;
+        asset.write_i32::<LE>(self.values_struct_length)?;
+        asset.write_i32::<LE>(self.values.len() as i32)?;
 
         for value in &self.values {
             value.write(asset)?;
         }
 
-        asset.write_f32::<LittleEndian>(self.default_value.0)?;
-        asset.write_i32::<LittleEndian>(match self.has_default_value {
+        asset.write_f32::<LE>(self.default_value.0)?;
+        asset.write_i32::<LE>(match self.has_default_value {
             true => 1,
             false => 0,
         })?;
 
-        asset.write_i32::<LittleEndian>(self.tick_resolution.numerator)?;
-        asset.write_i32::<LittleEndian>(self.tick_resolution.denominator)?;
+        asset.write_i32::<LE>(self.tick_resolution.numerator)?;
+        asset.write_i32::<LE>(self.tick_resolution.denominator)?;
 
         Ok(())
     }
 }
 
 /// Movie scene float channel property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatChannelProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneFloatChannel,
 }
 impl_property_data_trait!(MovieSceneFloatChannelProperty);
 
 impl MovieSceneFloatChannelProperty {
     /// Read a `MovieSceneFloatChannelProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -148,6 +152,7 @@ impl MovieSceneFloatChannelProperty {
 
         Ok(MovieSceneFloatChannelProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -156,7 +161,7 @@ impl MovieSceneFloatChannelProperty {
 }
 
 impl PropertyTrait for MovieSceneFloatChannelProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

@@ -1,11 +1,14 @@
 //! Movie scene track field data property
 
+use unreal_asset_proc_macro::FNameContainer;
+
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::{FName, Guid},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::{fname::FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::{
@@ -22,7 +25,7 @@ pub struct MovieSceneTrackFieldData {
 
 impl MovieSceneTrackFieldData {
     /// Read `MovieSceneTrackFieldData` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let field = TMovieSceneEvaluationTree::read(asset, |reader| {
             MovieSceneTrackIdentifier::new(reader)
         })?;
@@ -31,7 +34,7 @@ impl MovieSceneTrackFieldData {
     }
 
     /// Write `MovieSceneTrackFieldData` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.field.write(asset, |writer, node| {
             node.write(writer)?;
             Ok(())
@@ -42,24 +45,28 @@ impl MovieSceneTrackFieldData {
 }
 
 /// Movie scene track field data property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackFieldDataProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneTrackFieldData,
 }
 impl_property_data_trait!(MovieSceneTrackFieldDataProperty);
 
 impl MovieSceneTrackFieldDataProperty {
     /// Read a `MovieSceneTrackFieldDataProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -69,6 +76,7 @@ impl MovieSceneTrackFieldDataProperty {
 
         Ok(MovieSceneTrackFieldDataProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -77,7 +85,7 @@ impl MovieSceneTrackFieldDataProperty {
 }
 
 impl PropertyTrait for MovieSceneTrackFieldDataProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

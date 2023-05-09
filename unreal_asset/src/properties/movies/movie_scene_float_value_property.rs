@@ -1,7 +1,8 @@
 //! Movie scene float value property
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use ordered_float::OrderedFloat;
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::{
     error::Error,
@@ -10,8 +11,9 @@ use crate::{
         rich_curve_key_property::{RichCurveInterpMode, RichCurveTangentMode},
         PropertyTrait,
     },
-    reader::{asset_reader::AssetReader, asset_writer::AssetWriter},
-    types::{FName, Guid},
+    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    types::{fname::FName, Guid},
+    unversioned::ancestry::Ancestry,
 };
 
 use super::MovieSceneTangentData;
@@ -31,8 +33,11 @@ pub struct MovieSceneFloatValue {
 
 impl MovieSceneFloatValue {
     /// Read a `MovieSceneFloatValue` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader, clang_win64: bool) -> Result<Self, Error> {
-        let value = asset.read_f32::<LittleEndian>()?;
+    pub fn new<Reader: ArchiveReader>(
+        asset: &mut Reader,
+        clang_win64: bool,
+    ) -> Result<Self, Error> {
+        let value = asset.read_f32::<LE>()?;
         let tangent = MovieSceneTangentData::new(asset, clang_win64)?;
         let interp_mode: RichCurveInterpMode = RichCurveInterpMode::try_from(asset.read_i8()?)?;
         let tangent_mode: RichCurveTangentMode = RichCurveTangentMode::try_from(asset.read_i8()?)?;
@@ -46,8 +51,8 @@ impl MovieSceneFloatValue {
     }
 
     /// Write a `MovieSceneFloatValue` to an asset
-    pub fn write<Writer: AssetWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_f32::<LittleEndian>(self.value.0)?;
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        asset.write_f32::<LE>(self.value.0)?;
         self.tangent.write(asset)?;
         asset.write_i8(self.interp_mode as i8)?;
         asset.write_i8(self.tangent_mode as i8)?;
@@ -56,24 +61,28 @@ impl MovieSceneFloatValue {
 }
 
 /// Movie scene float value property
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatValueProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
     /// Value
+    #[container_ignore]
     pub value: MovieSceneFloatValue,
 }
 impl_property_data_trait!(MovieSceneFloatValueProperty);
 
 impl MovieSceneFloatValueProperty {
     /// Read a `MovieSceneFloatValueProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -84,6 +93,7 @@ impl MovieSceneFloatValueProperty {
 
         Ok(MovieSceneFloatValueProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -92,7 +102,7 @@ impl MovieSceneFloatValueProperty {
 }
 
 impl PropertyTrait for MovieSceneFloatValueProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

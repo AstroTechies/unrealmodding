@@ -2,8 +2,9 @@
 
 use std::mem::size_of;
 
-use byteorder::LittleEndian;
+use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::{CustomVersion, FEditorObjectVersion};
 use crate::error::{Error, PropertyError};
@@ -12,11 +13,14 @@ use crate::object_version::ObjectVersion;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::{FName, Guid};
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::{fname::FName, Guid};
+use crate::unversioned::ancestry::Ancestry;
 
 /// Text history type
-#[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(
+    FNameContainer, Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive,
+)]
 #[repr(i8)]
 pub enum TextHistoryType {
     /// None
@@ -58,10 +62,12 @@ impl Default for TextHistoryType {
 }
 
 /// String property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct StrProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -72,10 +78,12 @@ pub struct StrProperty {
 impl_property_data_trait!(StrProperty);
 
 /// Text property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TextProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -96,10 +104,12 @@ pub struct TextProperty {
 impl_property_data_trait!(TextProperty);
 
 /// Name property
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct NameProperty {
     /// Name
     pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
     /// Property guid
     pub property_guid: Option<Guid>,
     /// Property duplication index
@@ -111,9 +121,10 @@ impl_property_data_trait!(NameProperty);
 
 impl StrProperty {
     /// Read a `StrProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -121,6 +132,7 @@ impl StrProperty {
 
         Ok(StrProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value: asset.read_fstring()?,
@@ -129,7 +141,7 @@ impl StrProperty {
 }
 
 impl PropertyTrait for StrProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -143,9 +155,10 @@ impl PropertyTrait for StrProperty {
 
 impl TextProperty {
     /// Read a `TextProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -168,7 +181,7 @@ impl TextProperty {
             }
         }
 
-        let flags = asset.read_u32::<LittleEndian>()?;
+        let flags = asset.read_u32::<LE>()?;
         let mut history_type = TextHistoryType::Base;
         let mut table_id = None;
         if asset.get_object_version() >= ObjectVersion::VER_UE4_FTEXT_HISTORY {
@@ -182,7 +195,7 @@ impl TextProperty {
                         >= FEditorObjectVersion::CultureInvariantTextSerializationKeyStability
                             as i32
                     {
-                        let has_culture_invariant_string = asset.read_i32::<LittleEndian>()? == 1;
+                        let has_culture_invariant_string = asset.read_i32::<LE>()? == 1;
                         if has_culture_invariant_string {
                             culture_invariant_string = asset.read_fstring()?;
                         }
@@ -207,6 +220,7 @@ impl TextProperty {
 
         Ok(TextProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             culture_invariant_string,
@@ -220,7 +234,7 @@ impl TextProperty {
 }
 
 impl PropertyTrait for TextProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -239,7 +253,7 @@ impl PropertyTrait for TextProperty {
                 asset.write_fstring(self.value.as_deref())?;
             }
         }
-        asset.write_u32::<LittleEndian>(self.flags)?;
+        asset.write_u32::<LE>(self.flags)?;
 
         if asset.get_object_version() >= ObjectVersion::VER_UE4_FTEXT_HISTORY {
             let history_type = self.history_type;
@@ -255,9 +269,9 @@ impl PropertyTrait for TextProperty {
                             None => true,
                         };
                         match is_empty {
-                            true => asset.write_i32::<LittleEndian>(0)?,
+                            true => asset.write_i32::<LE>(0)?,
                             false => {
-                                asset.write_i32::<LittleEndian>(1)?;
+                                asset.write_i32::<LE>(1)?;
                                 asset.write_fstring(self.culture_invariant_string.as_deref())?;
                             }
                         }
@@ -289,9 +303,10 @@ impl PropertyTrait for TextProperty {
 
 impl NameProperty {
     /// Read a `NameProperty` from an asset
-    pub fn new<Reader: AssetReader>(
+    pub fn new<Reader: ArchiveReader>(
         asset: &mut Reader,
         name: FName,
+        ancestry: Ancestry,
         include_header: bool,
         duplication_index: i32,
     ) -> Result<Self, Error> {
@@ -299,6 +314,7 @@ impl NameProperty {
         let value = asset.read_fname()?;
         Ok(NameProperty {
             name,
+            ancestry,
             property_guid,
             duplication_index,
             value,
@@ -307,7 +323,7 @@ impl NameProperty {
 }
 
 impl PropertyTrait for NameProperty {
-    fn write<Writer: AssetWriter>(
+    fn write<Writer: ArchiveWriter>(
         &self,
         asset: &mut Writer,
         include_header: bool,

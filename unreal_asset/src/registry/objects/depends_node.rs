@@ -1,7 +1,7 @@
 //! Asset bundle depends node
 
 use bitvec::{order::Lsb0, prelude::BitVec};
-use byteorder::LittleEndian;
+use byteorder::LE;
 use lazy_static::lazy_static;
 
 use unreal_helpers::BitVecExt;
@@ -9,8 +9,8 @@ use unreal_helpers::BitVecExt;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::flags::EDependencyProperty;
-use crate::reader::{asset_reader::AssetReader, asset_writer::AssetWriter};
-use crate::types::FName;
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::fname::FName;
 
 /// Asset identifier
 #[derive(Debug, Clone, Default)]
@@ -29,7 +29,7 @@ type LoadedDependencyNodes = (Vec<DependsNode>, Vec<DependsNode>, BitVec<u32, Ls
 
 impl AssetIdentifier {
     /// Read an `AssetIdentifier` from an asset
-    pub fn new<Reader: AssetReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let field_bits = asset.read_u8()?;
         let package_name = match (field_bits & (1 << 0)) != 0 {
             true => Some(asset.read_fname()?),
@@ -60,7 +60,7 @@ impl AssetIdentifier {
     }
 
     /// Write an `AssetIdentifier` to an asset
-    pub fn write<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
         #[allow(clippy::identity_op)]
         let field_bits = (self.package_name.is_some() as u8) << 0u8
             | (self.primary_asset_type.is_some() as u8) << 1u8
@@ -149,7 +149,7 @@ impl DependsNode {
     }
 
     /// Read `DependsNode` dependencies
-    fn read_dependencies<Reader: AssetReader>(
+    fn read_dependencies<Reader: ArchiveReader>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
         flag_set_width: i32,
@@ -157,15 +157,14 @@ impl DependsNode {
         let mut sort_indexes = Vec::new();
         let mut pointer_dependencies = Vec::new();
 
-        let in_dependencies =
-            asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LittleEndian>()?))?;
+        let in_dependencies = asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LE>()?))?;
 
         let num_flag_bits = flag_set_width * in_dependencies.len() as i32;
         let num_flag_words = (num_flag_bits + 31) / 32;
         let in_flag_bits = match num_flag_words != 0 {
             true => BitVec::from_vec(
                 asset.read_array_with_length(num_flag_words, |asset: &mut Reader| {
-                    Ok(asset.read_u32::<LittleEndian>()?)
+                    Ok(asset.read_u32::<LE>()?)
                 })?,
             ),
             false => BitVec::<u32, Lsb0>::new(),
@@ -233,7 +232,7 @@ impl DependsNode {
     }
 
     /// Write `DependsNode` dependencies
-    fn write_dependencies<Writer: AssetWriter>(
+    fn write_dependencies<Writer: ArchiveWriter>(
         writer: &mut Writer,
         flag_set_width: i32,
         flags: &BitVec<u32, Lsb0>,
@@ -243,10 +242,10 @@ impl DependsNode {
         let dependencies_length = hard_dependencies.len() as i32 + soft_dependencies.len() as i32;
         let mut out_flag_bits = BitVec::<u32, Lsb0>::new();
 
-        writer.write_i32::<LittleEndian>(dependencies_length)?;
+        writer.write_i32::<LE>(dependencies_length)?;
 
         for (i, hard_dependency) in hard_dependencies.iter().enumerate() {
-            writer.write_i32::<LittleEndian>(hard_dependency.index)?;
+            writer.write_i32::<LE>(hard_dependency.index)?;
 
             let index = out_flag_bits.len() as i32;
             out_flag_bits.reserve(flag_set_width as usize);
@@ -261,7 +260,7 @@ impl DependsNode {
         let inital_soft_index = hard_dependencies.len() as i32;
 
         for (i, soft_dependency) in soft_dependencies.iter().enumerate() {
-            writer.write_i32::<LittleEndian>(soft_dependency.index)?;
+            writer.write_i32::<LE>(soft_dependency.index)?;
 
             let index = out_flag_bits.len() as i32 + inital_soft_index;
             out_flag_bits.reserve(flag_set_width as usize);
@@ -274,7 +273,7 @@ impl DependsNode {
         }
 
         let bit_vec_size = ((out_flag_bits.len() + 31) / 32) as i32;
-        writer.write_i32::<LittleEndian>(bit_vec_size)?;
+        writer.write_i32::<LE>(bit_vec_size)?;
 
         for byte in out_flag_bits.chunks(8).map(|chunk| {
             let mut byte = 0u8;
@@ -292,13 +291,12 @@ impl DependsNode {
     }
 
     /// Read `DependsNode` dependencies without flags
-    fn read_dependencies_no_flags<Reader: AssetReader>(
+    fn read_dependencies_no_flags<Reader: ArchiveReader>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
     ) -> Result<Vec<DependsNode>, Error> {
         let mut pointer_dependencies = Vec::new();
-        let in_dependencies =
-            asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LittleEndian>()?))?;
+        let in_dependencies = asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LE>()?))?;
 
         for serialize_index in &in_dependencies {
             if *serialize_index < 0
@@ -333,13 +331,13 @@ impl DependsNode {
     }
 
     /// Write `DependsNode` dependencies without flags
-    fn write_dependencies_no_flags<Writer: AssetWriter>(
+    fn write_dependencies_no_flags<Writer: ArchiveWriter>(
         writer: &mut Writer,
         dependencies: &Vec<DependsNode>,
     ) -> Result<(), Error> {
-        writer.write_i32::<LittleEndian>(dependencies.len() as i32)?;
+        writer.write_i32::<LE>(dependencies.len() as i32)?;
         for dependency in dependencies {
-            writer.write_i32::<LittleEndian>(dependency.index)?;
+            writer.write_i32::<LE>(dependency.index)?;
         }
         Ok(())
     }
@@ -362,7 +360,7 @@ impl DependsNode {
     }
 
     /// Load `DependsNode` dependencies
-    pub fn load_dependencies<Reader: AssetReader>(
+    pub fn load_dependencies<Reader: ArchiveReader>(
         &mut self,
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
@@ -406,7 +404,10 @@ impl DependsNode {
     }
 
     /// Save `DependsNode` dependencies
-    pub fn save_dependencies<Writer: AssetWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn save_dependencies<Writer: ArchiveWriter>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         self.identifier.write(writer)?;
 
         let package_flags = self
@@ -443,14 +444,14 @@ impl DependsNode {
     }
 
     /// Read `DependsNode` array
-    fn read_node_array<Reader: AssetReader>(
+    fn read_node_array<Reader: ArchiveReader>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &[DependsNode],
         num: i32,
         nodes: &mut Vec<DependsNode>,
     ) -> Result<(), Error> {
         for _ in 0..num {
-            let index = asset.read_i32::<LittleEndian>()?;
+            let index = asset.read_i32::<LE>()?;
             if index < 0 || nodes.len() <= index as usize {
                 return Err(RegistryError::InvalidIndex(index).into());
             }
@@ -463,22 +464,22 @@ impl DependsNode {
     }
 
     /// Load `DependsNode` dependencies before flags
-    pub fn load_dependencies_before_flags<Reader: AssetReader>(
+    pub fn load_dependencies_before_flags<Reader: ArchiveReader>(
         &mut self,
         asset: &mut Reader,
         preallocated_depends_node_buffer: &[DependsNode],
     ) -> Result<(), Error> {
         let identifier = AssetIdentifier::new(asset)?;
 
-        let num_hard = asset.read_i32::<LittleEndian>()?;
-        let num_soft = asset.read_i32::<LittleEndian>()?;
-        let num_name = asset.read_i32::<LittleEndian>()?;
-        let num_soft_manage = asset.read_i32::<LittleEndian>()?;
+        let num_hard = asset.read_i32::<LE>()?;
+        let num_soft = asset.read_i32::<LE>()?;
+        let num_name = asset.read_i32::<LE>()?;
+        let num_soft_manage = asset.read_i32::<LE>()?;
         let num_hard_manage = match self.version >= FAssetRegistryVersionType::AddedHardManage {
-            true => asset.read_i32::<LittleEndian>()?,
+            true => asset.read_i32::<LE>()?,
             false => 0,
         };
-        let num_referencers = asset.read_i32::<LittleEndian>()?;
+        let num_referencers = asset.read_i32::<LE>()?;
 
         let mut name_dependencies = Vec::with_capacity(num_name as usize);
         let mut referencers = Vec::with_capacity(num_referencers as usize);
@@ -530,45 +531,45 @@ impl DependsNode {
     }
 
     /// Save `DependsNode` dependencies before flags
-    pub fn save_dependencies_before_flags<Writer: AssetWriter>(
+    pub fn save_dependencies_before_flags<Writer: ArchiveWriter>(
         &self,
         writer: &mut Writer,
     ) -> Result<(), Error> {
         self.identifier.write(writer)?;
 
-        writer.write_i32::<LittleEndian>(self.hard_dependencies.len() as i32)?;
-        writer.write_i32::<LittleEndian>(self.soft_dependencies.len() as i32)?;
-        writer.write_i32::<LittleEndian>(self.name_dependencies.len() as i32)?;
-        writer.write_i32::<LittleEndian>(self.soft_manage_dependencies.len() as i32)?;
+        writer.write_i32::<LE>(self.hard_dependencies.len() as i32)?;
+        writer.write_i32::<LE>(self.soft_dependencies.len() as i32)?;
+        writer.write_i32::<LE>(self.name_dependencies.len() as i32)?;
+        writer.write_i32::<LE>(self.soft_manage_dependencies.len() as i32)?;
         if self.version >= FAssetRegistryVersionType::AddedHardManage {
-            writer.write_i32::<LittleEndian>(self.hard_manage_dependencies.len() as i32)?;
+            writer.write_i32::<LE>(self.hard_manage_dependencies.len() as i32)?;
         }
-        writer.write_i32::<LittleEndian>(self.referencers.len() as i32)?;
+        writer.write_i32::<LE>(self.referencers.len() as i32)?;
 
         for hard_dependency in &self.hard_dependencies {
-            writer.write_i32::<LittleEndian>(hard_dependency.index)?;
+            writer.write_i32::<LE>(hard_dependency.index)?;
         }
 
         for soft_dependency in &self.soft_dependencies {
-            writer.write_i32::<LittleEndian>(soft_dependency.index)?;
+            writer.write_i32::<LE>(soft_dependency.index)?;
         }
 
         for name_dependency in &self.name_dependencies {
-            writer.write_i32::<LittleEndian>(name_dependency.index)?;
+            writer.write_i32::<LE>(name_dependency.index)?;
         }
 
         for soft_manage_dependency in &self.soft_manage_dependencies {
-            writer.write_i32::<LittleEndian>(soft_manage_dependency.index)?;
+            writer.write_i32::<LE>(soft_manage_dependency.index)?;
         }
 
         if self.version >= FAssetRegistryVersionType::AddedHardManage {
             for hard_manage_dependency in &self.hard_manage_dependencies {
-                writer.write_i32::<LittleEndian>(hard_manage_dependency.index)?;
+                writer.write_i32::<LE>(hard_manage_dependency.index)?;
             }
         }
 
         for referencer in &self.referencers {
-            writer.write_i32::<LittleEndian>(referencer.index)?;
+            writer.write_i32::<LE>(referencer.index)?;
         }
 
         Ok(())
