@@ -581,7 +581,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         PackageIndex::new(index)
     }
 
-    /// Find an import
+    /// Find an import, FName comparison is content-based
     pub fn find_import(
         &self,
         class_package: &FName,
@@ -591,10 +591,10 @@ impl<'a, C: Read + Seek> Asset<C> {
     ) -> Option<i32> {
         for i in 0..self.imports.len() {
             let import = &self.imports[i];
-            if import.class_package == *class_package
-                && import.class_name == *class_name
+            if import.class_package.eq_content(class_package)
+                && import.class_name.eq_content(class_name)
                 && import.outer_index == outer_index
-                && import.object_name == *object_name
+                && import.object_name.eq_content(object_name)
             {
                 return Some(-(i as i32) - 1);
             }
@@ -602,7 +602,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         None
     }
 
-    /// Find an import without specifying outer index
+    /// Find an import without specifying outer index, FName comparison is content-based
     pub fn find_import_no_index(
         &self,
         class_package: &FName,
@@ -611,9 +611,9 @@ impl<'a, C: Read + Seek> Asset<C> {
     ) -> Option<i32> {
         for i in 0..self.imports.len() {
             let import = &self.imports[i];
-            if import.class_package == *class_package
-                && import.class_name == *class_name
-                && import.object_name == *object_name
+            if import.class_package.eq_content(class_package)
+                && import.class_name.eq_content(class_name)
+                && import.object_name.eq_content(object_name)
             {
                 return Some(-(i as i32) - 1);
             }

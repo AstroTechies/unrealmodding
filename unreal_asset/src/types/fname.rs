@@ -132,6 +132,37 @@ impl FName {
             FName::Dummy { value: _, number } => *number,
         }
     }
+
+    /// Compare FNames based on their content
+    pub fn eq_content(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                FName::Backed {
+                    index: _,
+                    number: _,
+                    ty: _,
+                    name_map: _,
+                },
+                FName::Dummy {
+                    value: _,
+                    number: _,
+                },
+            ) => self.get_content().eq(&other.get_content()),
+            (
+                FName::Dummy {
+                    value: _,
+                    number: _,
+                },
+                FName::Backed {
+                    index: _,
+                    number: _,
+                    ty: _,
+                    name_map: _,
+                },
+            ) => self.get_content().eq(&other.get_content()),
+            _ => self.eq(other),
+        }
+    }
 }
 
 impl PartialEq for FName {
