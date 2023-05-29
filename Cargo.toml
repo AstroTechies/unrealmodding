@@ -14,22 +14,22 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.14"
+version = "0.1.15"
 authors = ["AstroTechies, localcc, konsti219"]
 license = "MIT"
 description = "Tools for making and loading Unreal Engine Mods."
 homepage = "https://github.com/AstroTechies/unrealmodding"
 
 [workspace.dependencies]
-dll_injector = { path = "./dll_injector", version = "0.1.14" }
-github_helpers = { path = "./github_helpers", version = "0.1.14" }
-unreal_asset = { path = "./unreal_asset", version = "0.1.14" }
-unreal_cpp_bootstrapper = { path = "./unreal_cpp_bootstrapper", version = "0.1.14" }
-unreal_asset_proc_macro = { path = "./unreal_asset/unreal_asset_proc_macro", version = "0.1.14" }
-unreal_helpers = { path = "./unreal_helpers", version = "0.1.14" }
-unreal_mod_integrator = { path = "./unreal_mod_integrator", version = "0.1.14" }
-unreal_mod_metadata = { path = "./unreal_mod_metadata", version = "0.1.14" }
-unreal_pak = { path = "./unreal_pak", version = "0.1.14" }
+dll_injector = { path = "./dll_injector", version = "0.1.15" }
+github_helpers = { path = "./github_helpers", version = "0.1.15" }
+unreal_asset = { path = "./unreal_asset", version = "0.1.15" }
+unreal_cpp_bootstrapper = { path = "./unreal_cpp_bootstrapper", version = "0.1.15" }
+unreal_asset_proc_macro = { path = "./unreal_asset/unreal_asset_proc_macro", version = "0.1.15" }
+unreal_helpers = { path = "./unreal_helpers", version = "0.1.15" }
+unreal_mod_integrator = { path = "./unreal_mod_integrator", version = "0.1.15" }
+unreal_mod_metadata = { path = "./unreal_mod_metadata", version = "0.1.15" }
+unreal_pak = { path = "./unreal_pak", version = "0.1.15" }
 
 bitvec = "1.0.1"
 byteorder = "1.4.3"
