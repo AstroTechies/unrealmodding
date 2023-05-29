@@ -13,6 +13,7 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::vector::Plane;
 use crate::types::vector::Vector2;
 use crate::types::vector::{Vector, Vector4};
 use crate::types::{fname::FName, Guid};
@@ -159,6 +160,23 @@ pub struct Box2DProperty {
     pub is_valid: bool,
 }
 impl_property_data_trait!(Box2DProperty);
+
+/// Plane property
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+pub struct PlaneProperty {
+    /// Name
+    pub name: FName,
+    /// Property ancestry
+    pub ancestry: Ancestry,
+    /// Property guid
+    pub property_guid: Option<Guid>,
+    /// Property duplication index
+    pub duplication_index: i32,
+    /// Value
+    #[container_ignore]
+    pub value: Plane<OrderedFloat<f64>>,
+}
+impl_property_data_trait!(PlaneProperty);
 
 impl VectorProperty {
     /// Read a `VectorProperty` from an asset
@@ -589,5 +607,74 @@ impl PropertyTrait for Box2DProperty {
 
         asset.write_bool(self.is_valid)?;
         Ok(total_size + size_of::<bool>())
+    }
+}
+
+impl PlaneProperty {
+    /// Read a `PlaneProperty` from an asset
+    pub fn new<Reader: ArchiveReader>(
+        asset: &mut Reader,
+        name: FName,
+        ancestry: Ancestry,
+        include_header: bool,
+        duplication_index: i32,
+    ) -> Result<Self, Error> {
+        let property_guid = optional_guid!(asset, include_header);
+        let value =
+            match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+                true => {
+                    let x = OrderedFloat(asset.read_f64::<LE>()?);
+                    let y = OrderedFloat(asset.read_f64::<LE>()?);
+                    let z = OrderedFloat(asset.read_f64::<LE>()?);
+                    let w = OrderedFloat(asset.read_f64::<LE>()?);
+
+                    Plane::new(x, y, z, w)
+                }
+                false => {
+                    let x = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let y = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let z = OrderedFloat(asset.read_f32::<LE>()? as f64);
+                    let w = OrderedFloat(asset.read_f32::<LE>()? as f64);
+
+                    Plane::new(x, y, z, w)
+                }
+            };
+
+        Ok(PlaneProperty {
+            name,
+            ancestry,
+            property_guid,
+            duplication_index,
+            value,
+        })
+    }
+}
+
+impl PropertyTrait for PlaneProperty {
+    fn write<Writer: ArchiveWriter>(
+        &self,
+        asset: &mut Writer,
+        include_header: bool,
+    ) -> Result<usize, Error> {
+        optional_guid_write!(self, asset, include_header);
+
+        match asset.get_object_version_ue5() >= ObjectVersionUE5::LARGE_WORLD_COORDINATES {
+            true => {
+                asset.write_f64::<LE>(self.value.x.0)?;
+                asset.write_f64::<LE>(self.value.y.0)?;
+                asset.write_f64::<LE>(self.value.z.0)?;
+                asset.write_f64::<LE>(self.value.w.0)?;
+
+                Ok(size_of::<f64>() * 4)
+            }
+            false => {
+                asset.write_f32::<LE>(self.value.x.0 as f32)?;
+                asset.write_f32::<LE>(self.value.y.0 as f32)?;
+                asset.write_f32::<LE>(self.value.z.0 as f32)?;
+                asset.write_f32::<LE>(self.value.w.0 as f32)?;
+
+                Ok(size_of::<f32>() * 4)
+            }
+        }
     }
 }

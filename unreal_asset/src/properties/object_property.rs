@@ -7,6 +7,7 @@ use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
+use crate::object_version::ObjectVersionUE5;
 use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
@@ -47,11 +48,65 @@ pub struct AssetObjectProperty {
 }
 impl_property_data_trait!(AssetObjectProperty);
 
+/// Top level asset path
+#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+pub struct TopLevelAssetPath {
+    /// Package name that contains the asset e.g. /Some/Path/Package
+    /// Only present in 5.1 and higher
+    pub package_name: Option<FName>,
+    /// If 5.1 and higher contains the name of the asset within the package
+    /// If less than 5.1 contians the full path to the asset
+    pub asset_name: FName,
+}
+
+impl TopLevelAssetPath {
+    /// Create a new `TopLevelAssetPath` instance
+    pub fn new(package_name: Option<FName>, asset_name: FName) -> Self {
+        TopLevelAssetPath {
+            package_name,
+            asset_name,
+        }
+    }
+
+    /// Read a `TopLevelAssetPath` from an asset
+    pub fn read<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        let package_name = match asset.get_object_version_ue5()
+            >= ObjectVersionUE5::FSOFTOBJECTPATH_REMOVE_ASSET_PATH_FNAMES
+        {
+            true => Some(asset.read_fname()?),
+            false => None,
+        };
+        let asset_name = asset.read_fname()?;
+
+        Ok(TopLevelAssetPath {
+            package_name,
+            asset_name,
+        })
+    }
+
+    /// Write a `TopLevelAssetPath` to an asset
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        if asset.get_object_version_ue5()
+            >= ObjectVersionUE5::FSOFTOBJECTPATH_REMOVE_ASSET_PATH_FNAMES
+        {
+            let Some(package_name) = self.package_name.as_ref() else {
+                return Err(Error::no_data("ObjectVersionUE5 is >= FSOFTOBJECTPATH_REMOVE_ASSET_PATH_FNAMES, but package_name is None".to_string()));
+            };
+
+            asset.write_fname(package_name)?;
+        }
+
+        asset.write_fname(&self.asset_name)?;
+
+        Ok(())
+    }
+}
+
 /// Soft object path
 #[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SoftObjectPath {
-    /// Asset path name
-    pub asset_path_name: FName,
+    /// Asset path
+    pub asset_path: TopLevelAssetPath,
     /// Sub path string
     pub sub_path_string: Option<String>,
 }
@@ -59,18 +114,18 @@ pub struct SoftObjectPath {
 impl SoftObjectPath {
     /// Read a `SoftObjectPath` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        let asset_path_name = asset.read_fname()?;
+        let asset_path = TopLevelAssetPath::read(asset)?;
         let sub_path_string = asset.read_fstring()?;
 
         Ok(SoftObjectPath {
-            asset_path_name,
+            asset_path,
             sub_path_string,
         })
     }
 
     /// Write a `SoftObjectPath` to an asset
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
-        asset.write_fname(&self.asset_path_name)?;
+        self.asset_path.write(asset)?;
         asset.write_fstring(self.sub_path_string.as_deref())?;
 
         Ok(())

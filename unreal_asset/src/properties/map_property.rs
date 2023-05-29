@@ -13,8 +13,10 @@ use crate::types::{
     fname::{FName, ToSerializedName},
     Guid,
 };
-use crate::unversioned::ancestry::Ancestry;
-use crate::unversioned::properties::UsmapPropertyData;
+use crate::unversioned::{
+    ancestry::Ancestry,
+    properties::{UsmapPropertyData, UsmapPropertyDataTrait},
+};
 use crate::{cast, impl_property_data_trait};
 
 /// Map property
@@ -137,10 +139,25 @@ impl MapProperty {
         let mut type_2 = None;
         let mut property_guid = None;
 
-        if include_header {
+        if include_header && !asset.has_unversioned_properties() {
             type_1 = Some(asset.read_fname()?);
             type_2 = Some(asset.read_fname()?);
             property_guid = asset.read_property_guid()?;
+        }
+
+        if type_1.is_none() && type_2.is_none() {
+            if let Some(property) = asset
+                .get_mappings()
+                .and_then(|e| e.get_property(&name, &ancestry))
+                .and_then(|e| cast!(UsmapPropertyData, UsmapMapPropertyData, &e.property_data))
+            {
+                type_1 = Some(FName::from_slice(
+                    &property.inner_type.get_property_type().to_string(),
+                ));
+                type_2 = Some(FName::from_slice(
+                    &property.value_type.get_property_type().to_string(),
+                ));
+            }
         }
 
         let num_keys_to_remove = asset.read_i32::<LE>()?;
@@ -207,7 +224,7 @@ impl PropertyTrait for MapProperty {
         asset: &mut Writer,
         include_header: bool,
     ) -> Result<usize, Error> {
-        if include_header {
+        if include_header && !asset.has_unversioned_properties() {
             if let Some((_, key, value)) = self.value.iter().next() {
                 let key_name = key.to_serialized_name();
                 let value_name = value.to_serialized_name();

@@ -82,6 +82,10 @@ pub enum EngineVersion {
 
     /// 5.0
     VER_UE5_0,
+    /// 5.1
+    VER_UE5_1,
+    /// 5.2
+    VER_UE5_2,
 
     /// The newest specified version of the Unreal Engine.
     VER_UE4_AUTOMATIC_VERSION,
@@ -207,12 +211,30 @@ lazy_static! {
             ObjectVersion::VER_UE4_CORRECT_LICENSEE_FLAG,
             EngineVersion::VER_UE5_0
         ),
+        (
+            ObjectVersion::VER_UE4_CORRECT_LICENSEE_FLAG,
+            EngineVersion::VER_UE5_1
+        ),
+        (
+            ObjectVersion::VER_UE4_CORRECT_LICENSEE_FLAG,
+            EngineVersion::VER_UE5_2
+        ),
     ]);
     static ref OBJECT_VERSION_TO_ENGINE_VERSION_UE5: Vec<(ObjectVersionUE5, EngineVersion)> =
-        Vec::from([(
-            ObjectVersionUE5::LARGE_WORLD_COORDINATES,
-            EngineVersion::VER_UE4_5
-        )]);
+        Vec::from([
+            (
+                ObjectVersionUE5::LARGE_WORLD_COORDINATES,
+                EngineVersion::VER_UE5_0
+            ),
+            (
+                ObjectVersionUE5::ADD_SOFTOBJECTPATH_LIST,
+                EngineVersion::VER_UE5_1
+            ),
+            (
+                ObjectVersionUE5::AUTOMATIC_VERSION,
+                EngineVersion::VER_UE5_2
+            )
+        ]);
 }
 
 /// Get possible engine versions for given object versions

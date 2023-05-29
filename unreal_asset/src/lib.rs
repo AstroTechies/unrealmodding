@@ -132,6 +132,8 @@ pub struct Import {
     pub outer_index: PackageIndex,
     /// Object name
     pub object_name: FName,
+    /// Is the import optional
+    pub optional: bool,
 }
 
 impl Import {
@@ -141,12 +143,14 @@ impl Import {
         class_name: FName,
         outer_index: PackageIndex,
         object_name: FName,
+        optional: bool,
     ) -> Self {
         Import {
             class_package,
             class_name,
             object_name,
             outer_index,
+            optional,
         }
     }
 }
@@ -240,6 +244,10 @@ pub struct Asset<C: Read + Seek> {
     name_count: i32,
     /// Name offset
     name_offset: i32,
+    /// Names count
+    soft_object_paths_count: i32,
+    /// Names offset
+    soft_object_paths_offset: i32,
     /// Gatherable text data count
     gatherable_text_data_count: i32,
     /// Gatherable text data offset
@@ -274,6 +282,12 @@ pub struct Asset<C: Read + Seek> {
     preload_dependency_count: i32,
     /// Preload dependency offset
     preload_dependency_offset: i32,
+    /// Amount of names referenced from exports
+    names_referenced_from_export_data_count: i32,
+    /// TOC payload offset
+    payload_toc_offset: i32,
+    /// Data resource offset
+    data_resource_offset: i32,
 
     /// Overriden name map hashes
     #[container_ignore]
@@ -332,6 +346,8 @@ impl<'a, C: Read + Seek> Asset<C> {
             header_offset: 0,
             name_count: 0,
             name_offset: 0,
+            soft_object_paths_count: 0,
+            soft_object_paths_offset: 0,
             gatherable_text_data_count: 0,
             gatherable_text_data_offset: 0,
             export_count: 0,
@@ -349,6 +365,9 @@ impl<'a, C: Read + Seek> Asset<C> {
             world_tile_info_offset: 0,
             preload_dependency_count: 0,
             preload_dependency_offset: 0,
+            names_referenced_from_export_data_count: 0,
+            payload_toc_offset: 0,
+            data_resource_offset: 0,
 
             override_name_map_hashes: IndexedMap::new(),
             name_map,
@@ -403,6 +422,23 @@ impl<'a, C: Read + Seek> Asset<C> {
             self.asset_data.object_version = file_version;
         }
 
+        if self.legacy_file_version <= -8 {
+            let object_version_ue5: ObjectVersionUE5 = self.read_i32::<LE>()?.try_into()?;
+            if object_version_ue5 > ObjectVersionUE5::UNKNOWN {
+                self.asset_data.object_version_ue5 = object_version_ue5;
+            }
+        }
+
+        if self.asset_data.object_version_ue5 == ObjectVersionUE5::UNKNOWN {
+            let mappings_version = self
+                .get_mappings()
+                .map(|e| e.object_version_ue5)
+                .unwrap_or(ObjectVersionUE5::UNKNOWN);
+            if mappings_version > ObjectVersionUE5::UNKNOWN {
+                self.asset_data.object_version_ue5 = mappings_version;
+            }
+        }
+
         // read file license version
         self.asset_data.file_license_version = self.read_i32::<LE>()?;
 
@@ -431,6 +467,12 @@ impl<'a, C: Read + Seek> Asset<C> {
         // read name count and offset
         self.name_count = self.read_i32::<LE>()?;
         self.name_offset = self.read_i32::<LE>()?;
+
+        if self.get_object_version_ue5() >= ObjectVersionUE5::ADD_SOFTOBJECTPATH_LIST {
+            self.soft_object_paths_count = self.read_i32::<LE>()?;
+            self.soft_object_paths_offset = self.read_i32::<LE>()?;
+        }
+
         // read text gatherable data
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
             self.gatherable_text_data_count = self.read_i32::<LE>()?;
@@ -538,6 +580,22 @@ impl<'a, C: Read + Seek> Asset<C> {
             self.preload_dependency_count = self.read_i32::<LE>()?;
             self.preload_dependency_offset = self.read_i32::<LE>()?;
         }
+
+        self.names_referenced_from_export_data_count = match self.get_object_version_ue5()
+            >= ObjectVersionUE5::NAMES_REFERENCED_FROM_EXPORT_DATA
+        {
+            true => self.read_i32::<LE>()?,
+            false => self.name_count,
+        };
+
+        if self.get_object_version_ue5() >= ObjectVersionUE5::PAYLOAD_TOC {
+            self.payload_toc_offset = self.read_i32::<LE>()?;
+        }
+
+        if self.get_object_version_ue5() >= ObjectVersionUE5::DATA_RESOURCES {
+            self.data_resource_offset = self.read_i32::<LE>()?;
+        }
+
         Ok(())
     }
 
@@ -660,11 +718,22 @@ impl<'a, C: Read + Seek> Asset<C> {
         if self.import_offset > 0 {
             self.seek(SeekFrom::Start(self.import_offset as u64))?;
             for _i in 0..self.import_count {
+                let class_package = self.read_fname()?;
+                let class_name = self.read_fname()?;
+                let outer_index = PackageIndex::new(self.read_i32::<LE>()?);
+                let object_name = self.read_fname()?;
+                let optional =
+                    match self.get_object_version_ue5() >= ObjectVersionUE5::OPTIONAL_RESOURCES {
+                        true => self.read_i32::<LE>()? == 1,
+                        false => false,
+                    };
+
                 let import = Import::new(
-                    self.read_fname()?,
-                    self.read_fname()?,
-                    PackageIndex::new(self.read_i32::<LE>()?),
-                    self.read_fname()?,
+                    class_package,
+                    class_name,
+                    outer_index,
+                    object_name,
+                    optional,
                 );
                 self.imports.push(import);
             }
@@ -678,10 +747,18 @@ impl<'a, C: Read + Seek> Asset<C> {
             }
         }
 
-        if self.depends_offset > 0 {
+        let depends_offset_zero_version_range =
+            ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
+                ..ObjectVersion::VER_UE4_64BIT_EXPORTMAP_SERIALSIZES;
+        if self.depends_offset > 0
+            || depends_offset_zero_version_range.contains(&self.get_object_version())
+        {
             let mut depends_map = Vec::with_capacity(self.export_count as usize);
 
-            self.seek(SeekFrom::Start(self.depends_offset as u64))?;
+            // 4.14-4.15 the depends offset wasnt updated so always serialized as 0
+            if self.depends_offset > 0 {
+                self.seek(SeekFrom::Start(self.depends_offset as u64))?;
+            }
 
             for _i in 0..self.export_count as usize {
                 let size = self.read_i32::<LE>()?;
@@ -786,6 +863,13 @@ impl<'a, C: Read + Seek> Asset<C> {
             false => cursor.write_i32::<LE>(self.asset_data.object_version as i32)?,
         };
 
+        if self.legacy_file_version <= -8 {
+            match self.asset_data.unversioned {
+                true => cursor.write_i32::<LE>(0)?,
+                false => cursor.write_i32::<LE>(self.get_object_version_ue5() as i32)?,
+            };
+        }
+
         cursor.write_i32::<LE>(self.asset_data.file_license_version)?;
         if self.legacy_file_version <= -2 {
             match self.asset_data.unversioned {
@@ -805,6 +889,11 @@ impl<'a, C: Read + Seek> Asset<C> {
         cursor.write_u32::<LE>(self.package_flags.bits())?;
         cursor.write_i32::<LE>(self.name_map.get_ref().get_name_map_index_list().len() as i32)?;
         cursor.write_i32::<LE>(asset_header.name_offset)?;
+
+        if self.get_object_version_ue5() >= ObjectVersionUE5::ADD_SOFTOBJECTPATH_LIST {
+            cursor.write_i32::<LE>(self.soft_object_paths_count)?;
+            cursor.write_i32::<LE>(self.soft_object_paths_offset)?;
+        }
 
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_SERIALIZE_TEXT_IN_PACKAGES {
             cursor.write_i32::<LE>(self.gatherable_text_data_count)?;
@@ -883,6 +972,18 @@ impl<'a, C: Read + Seek> Asset<C> {
         {
             cursor.write_i32::<LE>(asset_header.preload_dependency_count)?;
             cursor.write_i32::<LE>(asset_header.preload_dependency_offset)?;
+        }
+
+        if self.get_object_version_ue5() >= ObjectVersionUE5::NAMES_REFERENCED_FROM_EXPORT_DATA {
+            cursor.write_i32::<LE>(self.names_referenced_from_export_data_count)?;
+        }
+
+        if self.get_object_version_ue5() >= ObjectVersionUE5::PAYLOAD_TOC {
+            cursor.write_i32::<LE>(self.payload_toc_offset)?;
+        }
+
+        if self.get_object_version_ue5() >= ObjectVersionUE5::DATA_RESOURCES {
+            cursor.write_i32::<LE>(self.data_resource_offset)?;
         }
 
         Ok(())
@@ -964,6 +1065,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         };
 
         for name in self.name_map.get_ref().get_name_map_index_list() {
+            // todo: case preserving FString
             serializer.write_fstring(Some(name))?;
 
             if self.asset_data.object_version >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
@@ -984,6 +1086,12 @@ impl<'a, C: Read + Seek> Asset<C> {
             serializer.write_fname(&import.class_name)?;
             serializer.write_i32::<LE>(import.outer_index.index)?;
             serializer.write_fname(&import.object_name)?;
+            if serializer.get_object_version_ue5() >= ObjectVersionUE5::OPTIONAL_RESOURCES {
+                serializer.write_i32::<LE>(match import.optional {
+                    true => 1,
+                    false => 0,
+                })?;
+            }
         }
 
         let export_offset = match !self.asset_data.exports.is_empty() {

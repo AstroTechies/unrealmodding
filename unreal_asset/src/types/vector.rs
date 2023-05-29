@@ -113,3 +113,23 @@ impl<T> Transform<T> {
         }
     }
 }
+
+/// Plane
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct Plane<T> {
+    /// X component
+    pub x: T,
+    /// Y component
+    pub y: T,
+    /// Z component
+    pub z: T,
+    /// Real component
+    pub w: T,
+}
+
+impl<T> Plane<T> {
+    /// Create a new `Plane` instance
+    pub fn new(x: T, y: T, z: T, w: T) -> Self {
+        Plane { x, y, z, w }
+    }
+}

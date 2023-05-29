@@ -144,7 +144,7 @@ impl StructProperty {
                 let name_map_index = asset.read_i32::<LE>()?;
                 asset.seek(SeekFrom::Current(-(size_of::<u32>() as i64)))?;
 
-                if name_map_index >= 0
+                let is_lower_bound = match name_map_index >= 0
                     && name_map_index
                         < asset
                             .get_name_map()
@@ -152,10 +152,10 @@ impl StructProperty {
                             .get_name_map_index_list()
                             .len() as i32
                 {
-                    custom_serialization = asset.get_name_reference(name_map_index) != "LowerBound";
-                } else {
-                    custom_serialization = true;
-                }
+                    true => asset.get_name_reference(name_map_index) == "LowerBound",
+                    false => false,
+                };
+                custom_serialization = !(asset.has_unversioned_properties() || is_lower_bound);
             }
             "RichCurveKey"
                 if asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY =>

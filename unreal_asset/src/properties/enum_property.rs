@@ -28,7 +28,7 @@ pub struct EnumProperty {
     /// Inner type, used only with unversioned properties
     pub inner_type: Option<FName>,
     /// Enum value
-    pub value: FName,
+    pub value: Option<FName>,
 }
 impl_property_data_trait!(EnumProperty);
 
@@ -67,7 +67,10 @@ impl EnumProperty {
                                     + &enum_ty.get_content(),
                             )
                         })?;
-                    let value = FName::new_dummy(info[enum_index as usize].clone(), 0);
+                    let value = match enum_index == u8::MAX {
+                        true => None,
+                        false => Some(FName::new_dummy(info[enum_index as usize].clone(), 0)),
+                    };
 
                     return Ok(EnumProperty {
                         name,
@@ -101,7 +104,7 @@ impl EnumProperty {
             duplication_index,
             enum_type,
             inner_type,
-            value,
+            value: Some(value),
         })
     }
 }
@@ -136,16 +139,21 @@ impl PropertyTrait for EnumProperty {
                     Error::invalid_file("Missing unversioned info for: ".to_string() + &enum_type)
                 })?;
 
-            let enum_index = info
-                .iter()
-                .enumerate()
-                .find(|(_, e)| **e == self.value.get_content())
-                .map(|(index, _)| index)
-                .ok_or_else(|| {
-                    Error::invalid_file("Missing unversioned info for: ".to_string() + &enum_type)
-                })?;
+            let enum_index = match self.value.as_ref() {
+                Some(value) => info
+                    .iter()
+                    .enumerate()
+                    .find(|(_, e)| **e == value.get_content())
+                    .map(|(index, _)| index as u8)
+                    .ok_or_else(|| {
+                        Error::invalid_file(
+                            "Missing unversioned info for: ".to_string() + &enum_type,
+                        )
+                    })?,
+                None => u8::MAX,
+            };
 
-            asset.write_u8(enum_index as u8)?;
+            asset.write_u8(enum_index)?;
             return Ok(size_of::<u8>());
         }
 
@@ -157,7 +165,7 @@ impl PropertyTrait for EnumProperty {
             )?;
             asset.write_property_guid(&self.property_guid)?;
         }
-        asset.write_fname(&self.value)?;
+        asset.write_fname(self.value.as_ref().unwrap())?;
 
         Ok(size_of::<i32>() * 2)
     }

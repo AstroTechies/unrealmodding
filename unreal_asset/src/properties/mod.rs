@@ -78,7 +78,7 @@ use self::niagara::niagara_variable_property::{
 use self::raw_struct_property::RawStructProperty;
 use self::slate_core::font_data_property::FontDataProperty;
 use self::soft_path_property::StringAssetReferenceProperty;
-use self::vector_property::Box2DProperty;
+use self::vector_property::{Box2DProperty, PlaneProperty};
 use self::{
     array_property::ArrayProperty,
     color_property::{ColorProperty, LinearColorProperty},
@@ -340,6 +340,8 @@ pub enum Property {
     QuatProperty,
     /// Rotator property
     RotatorProperty,
+    /// Plane property
+    PlaneProperty,
     /// Linear color property
     LinearColorProperty,
     /// Color property
@@ -741,6 +743,9 @@ impl Property {
             "Rotator" => {
                 RotatorProperty::new(asset, name, ancestry, include_header, duplication_index)?
                     .into()
+            }
+            "Plane" => {
+                PlaneProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
             }
             "LinearColor" => {
                 LinearColorProperty::new(asset, name, ancestry, include_header, duplication_index)?
@@ -1321,6 +1326,7 @@ property_inner_serialized_name! {
     LinearColorProperty: "LinearColor",
     QuatProperty: "Quat",
     RotatorProperty: "Rotator",
+    PlaneProperty: "Plane",
     StructProperty: "StructProperty",
     Vector2DProperty: "Vector2D",
     BoxProperty: "Box",

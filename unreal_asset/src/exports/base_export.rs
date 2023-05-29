@@ -160,7 +160,10 @@ impl BaseExport {
         export.forced_export = reader.read_i32::<LE>()? == 1;
         export.not_for_client = reader.read_i32::<LE>()? == 1;
         export.not_for_server = reader.read_i32::<LE>()? == 1;
-        reader.read_exact(&mut export.package_guid)?;
+
+        if reader.get_object_version_ue5() < ObjectVersionUE5::REMOVE_OBJECT_EXPORT_PACKAGE_GUID {
+            reader.read_exact(&mut export.package_guid)?;
+        }
 
         if reader.get_object_version_ue5() >= ObjectVersionUE5::TRACK_OBJECT_EXPORT_IS_INHERITED {
             export.is_inherited_instance = reader.read_i32::<LE>()? == 1;
@@ -255,7 +258,10 @@ impl BaseExport {
             true => 1,
             false => 0,
         })?;
-        writer.write_all(&self.package_guid)?;
+
+        if writer.get_object_version_ue5() < ObjectVersionUE5::REMOVE_OBJECT_EXPORT_PACKAGE_GUID {
+            writer.write_all(&self.package_guid)?;
+        }
 
         if writer.get_object_version_ue5() >= ObjectVersionUE5::TRACK_OBJECT_EXPORT_IS_INHERITED {
             writer.write_i32::<LE>(match self.is_inherited_instance {
