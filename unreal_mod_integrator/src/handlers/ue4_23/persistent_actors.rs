@@ -114,6 +114,7 @@ pub fn handle_persistent_actors(
                 class_name: asset.add_fname("Package"),
                 outer_index: PackageIndex::new(0),
                 object_name: asset.add_fname(&component_path_raw),
+                optional: false,
             };
             let package_import = asset.add_import(package_import);
 
@@ -122,6 +123,7 @@ pub fn handle_persistent_actors(
                 class_name: asset.add_fname("BlueprintGeneratedClass"),
                 outer_index: package_import,
                 object_name: asset.add_fname(&(String::from(component) + "_C")),
+                optional: false,
             };
             let blueprint_generated_class_import =
                 asset.add_import(blueprint_generated_class_import);
@@ -131,6 +133,7 @@ pub fn handle_persistent_actors(
                 class_name: asset.add_fname(&(String::from(component) + "_C")),
                 outer_index: package_import,
                 object_name: asset.add_fname(&(String::from("Default__") + component + "_C")),
+                optional: false,
             };
             let default_import = asset.add_import(default_import);
 
@@ -354,8 +357,9 @@ pub fn handle_persistent_actors(
                         property_guid: Some([0u8; 16]),
                         duplication_index: 0,
                         enum_type: Some(asset.add_fname("EComponentCreationMethod")),
-                        value: asset
-                            .add_fname("EComponentCreationMethod::SimpleConstructionScript"),
+                        value: Some(
+                            asset.add_fname("EComponentCreationMethod::SimpleConstructionScript"),
+                        ),
                     }
                     .into(),
                 ]);
@@ -411,6 +415,7 @@ pub fn handle_persistent_actors(
                     object_name: asset.add_fname(
                         &(created_component.internal_variable_name.clone() + "_GEN_VARIABLE"),
                     ),
+                    optional: false,
                 };
                 asset.add_import(import);
             }
