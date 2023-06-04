@@ -10,10 +10,16 @@ macro_rules! assets_folder {
     };
 }
 
-const TEST_ASSETS: [(&[u8], &[u8]); 1] = [(
-    include_bytes!(concat!(assets_folder!(), "PublicHousingPlot_Root.umap")),
-    include_bytes!(concat!(assets_folder!(), "PublicHousingPlot_Root.uexp")),
-)];
+const TEST_ASSETS: [(&[u8], &[u8]); 2] = [
+    (
+        include_bytes!(concat!(assets_folder!(), "PublicHousingPlot_Root.umap")),
+        include_bytes!(concat!(assets_folder!(), "PublicHousingPlot_Root.uexp")),
+    ),
+    (
+        include_bytes!(concat!(assets_folder!(), "Village_Root.umap")),
+        include_bytes!(concat!(assets_folder!(), "Village_Root.uexp")),
+    ),
+];
 
 #[test]
 fn ue5() -> Result<(), Error> {

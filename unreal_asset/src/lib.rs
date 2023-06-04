@@ -227,9 +227,6 @@ pub struct Asset<C: Read + Seek> {
     pub engine_version_compatible: FEngineVersion,
     /// Chunk ids
     chunk_ids: Vec<i32>,
-    /// Asset flags
-    #[container_ignore]
-    pub package_flags: EPackageFlags,
     /// Asset source
     pub package_source: u32,
     /// Folder name
@@ -340,7 +337,6 @@ impl<'a, C: Read + Seek> Asset<C> {
             engine_version_recorded: FEngineVersion::unknown(),
             engine_version_compatible: FEngineVersion::unknown(),
             chunk_ids: Vec::new(),
-            package_flags: EPackageFlags::PKG_NONE,
             package_source: 0,
             folder_name: String::from(""),
             header_offset: 0,
@@ -461,7 +457,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
-        self.package_flags = EPackageFlags::from_bits(self.read_u32::<LE>()?)
+        self.asset_data.package_flags = EPackageFlags::from_bits(self.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
         // read name count and offset
@@ -886,7 +882,7 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         cursor.write_i32::<LE>(asset_header.header_offset)?;
         cursor.write_fstring(Some(&self.folder_name))?;
-        cursor.write_u32::<LE>(self.package_flags.bits())?;
+        cursor.write_u32::<LE>(self.asset_data.package_flags.bits())?;
         cursor.write_i32::<LE>(self.name_map.get_ref().get_name_map_index_list().len() as i32)?;
         cursor.write_i32::<LE>(asset_header.name_offset)?;
 
@@ -1430,7 +1426,7 @@ impl<C: Read + Seek> Debug for Asset<C> {
             .field("engine_version_recorded", &self.engine_version_recorded)
             .field("engine_version_compatible", &self.engine_version_compatible)
             .field("chunk_ids", &self.chunk_ids)
-            .field("package_flags", &self.package_flags)
+            .field("package_flags", &self.asset_data.package_flags)
             .field("package_source", &self.package_source)
             .field("folder_name", &self.folder_name)
             // map struct type override
