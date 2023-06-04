@@ -15,7 +15,7 @@ members = [
 
 [workspace.package]
 version = "0.1.15"
-authors = ["AstroTechies, localcc, konsti219"]
+authors = ["AstroTechies", "localcc", "konsti219"]
 license = "MIT"
 description = "Tools for making and loading Unreal Engine Mods."
 homepage = "https://github.com/AstroTechies/unrealmodding"
