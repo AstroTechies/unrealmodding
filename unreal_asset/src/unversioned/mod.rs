@@ -205,12 +205,12 @@ impl Usmap {
                 break;
             };
 
-            let Some(schema) = self.schemas.get_by_key(&schema_name) else {
+            let Some(schema) = self.schemas.get_by_key(schema_name) else {
                 break;
             };
 
             if let Some(property) =
-                schema.get_property(&property_name.get_content(), duplication_index)
+                schema.get_property(property_name.get_content(), duplication_index)
             {
                 global_index += property.schema_index as u32;
                 return Some((property, global_index));
@@ -218,7 +218,7 @@ impl Usmap {
 
             global_index += schema.prop_count as u32;
 
-            optional_schema_name = Some(schema.super_type.clone());
+            optional_schema_name = Some(&schema.super_type);
         }
 
         // this name is not an actual property name, but an array index

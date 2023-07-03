@@ -60,11 +60,11 @@ impl EnumProperty {
                         .get_mappings()
                         .unwrap()
                         .enum_map
-                        .get_by_key(&enum_ty.get_content())
+                        .get_by_key(enum_ty.get_content())
                         .ok_or_else(|| {
                             Error::invalid_file(
                                 "Missing unversioned info for: ".to_string()
-                                    + &enum_ty.get_content(),
+                                    + enum_ty.get_content(),
                             )
                         })?;
                     let value = match enum_index == u8::MAX {
@@ -134,7 +134,7 @@ impl PropertyTrait for EnumProperty {
                 .get_mappings()
                 .ok_or_else(PropertyError::no_mappings)?
                 .enum_map
-                .get_by_key(&enum_type)
+                .get_by_key(enum_type)
                 .ok_or_else(|| {
                     Error::invalid_file("Missing unversioned info for: ".to_string() + &enum_type)
                 })?;

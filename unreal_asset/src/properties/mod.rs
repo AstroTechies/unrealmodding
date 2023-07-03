@@ -5,7 +5,6 @@ use std::io::SeekFrom;
 
 use byteorder::LE;
 use enum_dispatch::enum_dispatch;
-use lazy_static::lazy_static;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::{Error, PropertyError};
@@ -194,67 +193,65 @@ macro_rules! impl_property_data_trait {
     };
 }
 
-lazy_static! {
-    static ref CUSTOM_SERIALIZATION: Vec<String> = Vec::from([
-        String::from("SkeletalMeshSamplingLODBuiltData"),
-        String::from("SkeletalMeshAreaWeightedTriangleSampler"),
-        String::from("SmartName"),
-        String::from("SoftObjectPath"),
-        String::from("WeightedRandomSampler"),
-        String::from("SoftClassPath"),
-        String::from("StringAssetReference"),
-        String::from("Color"),
-        String::from("ExpressionInput"),
-        String::from("MaterialAttributesInput"),
-        String::from("ColorMaterialInput"),
-        String::from("ScalarMaterialInput"),
-        String::from("ShadingModelMaterialInput"),
-        String::from("VectorMaterialInput"),
-        String::from("Vector2MaterialInput"),
-        String::from("GameplayTagContainer"),
-        String::from("PerPlatformBool"),
-        String::from("PerPlatformInt"),
-        String::from("RichCurveKey"),
-        String::from("SoftAssetPath"),
-        String::from("Timespan"),
-        String::from("DateTime"),
-        String::from("Guid"),
-        String::from("IntPoint"),
-        String::from("LinearColor"),
-        String::from("Quat"),
-        String::from("Rotator"),
-        String::from("Vector2D"),
-        String::from("Box"),
-        String::from("PerPlatformFloat"),
-        String::from("Vector4"),
-        String::from("Vector"),
-        String::from("ViewTargetBlendParams"),
-        String::from("FontCharacter"),
-        String::from("UniqueNetIdRepl"),
-        String::from("NiagaraVariable"),
-        String::from("FontData"),
-        String::from("ClothLODData"),
-        String::from("FloatRange"),
-        String::from("RawStructProperty"),
-        //
-        String::from("MovieSceneEvalTemplatePtr"),
-        String::from("MovieSceneTrackImplementationPtr"),
-        String::from("MovieSceneEvaluationFieldEntityTree"),
-        String::from("MovieSceneSubSequenceTree"),
-        String::from("MovieSceneSequenceInstanceDataPtr"),
-        String::from("SectionEvaluationDataTree"),
-        String::from("MovieSceneTrackFieldData"),
-        String::from("MovieSceneEventParameters"),
-        String::from("MovieSceneFloatChannel"),
-        String::from("MovieSceneFloatValue"),
-        String::from("MovieSceneFrameRange"),
-        String::from("MovieSceneSegment"),
-        String::from("MovieSceneSegmentIdentifier"),
-        String::from("MovieSceneTrackIdentifier"),
-        String::from("MovieSceneSequenceId"),
-        String::from("MovieSceneEvaluationKey")
-    ]);
-}
+const CUSTOM_SERIALIZATION: [&str; 56] = [
+    "SkeletalMeshSamplingLODBuiltData",
+    "SkeletalMeshAreaWeightedTriangleSampler",
+    "SmartName",
+    "SoftObjectPath",
+    "WeightedRandomSampler",
+    "SoftClassPath",
+    "StringAssetReference",
+    "Color",
+    "ExpressionInput",
+    "MaterialAttributesInput",
+    "ColorMaterialInput",
+    "ScalarMaterialInput",
+    "ShadingModelMaterialInput",
+    "VectorMaterialInput",
+    "Vector2MaterialInput",
+    "GameplayTagContainer",
+    "PerPlatformBool",
+    "PerPlatformInt",
+    "RichCurveKey",
+    "SoftAssetPath",
+    "Timespan",
+    "DateTime",
+    "Guid",
+    "IntPoint",
+    "LinearColor",
+    "Quat",
+    "Rotator",
+    "Vector2D",
+    "Box",
+    "PerPlatformFloat",
+    "Vector4",
+    "Vector",
+    "ViewTargetBlendParams",
+    "FontCharacter",
+    "UniqueNetIdRepl",
+    "NiagaraVariable",
+    "FontData",
+    "ClothLODData",
+    "FloatRange",
+    "RawStructProperty",
+    //
+    "MovieSceneEvalTemplatePtr",
+    "MovieSceneTrackImplementationPtr",
+    "MovieSceneEvaluationFieldEntityTree",
+    "MovieSceneSubSequenceTree",
+    "MovieSceneSequenceInstanceDataPtr",
+    "SectionEvaluationDataTree",
+    "MovieSceneTrackFieldData",
+    "MovieSceneEventParameters",
+    "MovieSceneFloatChannel",
+    "MovieSceneFloatValue",
+    "MovieSceneFrameRange",
+    "MovieSceneSegment",
+    "MovieSceneSegmentIdentifier",
+    "MovieSceneTrackIdentifier",
+    "MovieSceneSequenceId",
+    "MovieSceneEvaluationKey",
+];
 
 /// This must be implemented for all properties
 #[enum_dispatch]
@@ -502,10 +499,10 @@ impl Property {
             let mut practicing_unversioned_property_index = header.unversioned_property_index;
             let mut schema = mappings
                 .schemas
-                .get_by_key(&parent_name.get_content())
+                .get_by_key(parent_name.get_content())
                 .ok_or_else(|| {
                     PropertyError::no_schema(
-                        parent_name.get_content(),
+                        parent_name.get_content().to_string(),
                         practicing_unversioned_property_index,
                     )
                 })?;
@@ -519,7 +516,7 @@ impl Property {
                         .get_by_key(&schema.super_type)
                         .ok_or_else(|| {
                             PropertyError::no_schema(
-                                parent_name.get_content(),
+                                parent_name.get_content().to_string(),
                                 practicing_unversioned_property_index,
                             )
                         })?;
@@ -550,7 +547,7 @@ impl Property {
             }
         } else {
             name = asset.read_fname()?;
-            if &name.get_content() == "None" {
+            if name.get_content() == "None" {
                 return Ok(None);
             }
 
@@ -590,7 +587,7 @@ impl Property {
             return Ok(EmptyProperty::new(type_name.clone(), name, ancestry).into());
         }
 
-        let res = match type_name.get_content().as_str() {
+        let res = match type_name.get_content() {
             "BoolProperty" => BoolProperty::new(
                 asset,
                 name,
@@ -1275,8 +1272,8 @@ impl Property {
     }
 
     /// Check if a property type has custom serialization
-    pub fn has_custom_serialization(name: &String) -> bool {
-        CUSTOM_SERIALIZATION.contains(name)
+    pub fn has_custom_serialization(name: &str) -> bool {
+        CUSTOM_SERIALIZATION.contains(&name)
     }
 }
 
@@ -1290,8 +1287,8 @@ macro_rules! property_inner_serialized_name {
                         Self::$inner(_) => String::from($name),
                     )*
                     Self::UnknownProperty(unk) => unk
-                        .serialized_type.get_content(),
-                    Self::EmptyProperty(empty) => empty.type_name.get_content()
+                        .serialized_type.get_content().to_string(),
+                    Self::EmptyProperty(empty) => empty.type_name.get_content().to_string()
                 }
             }
         }

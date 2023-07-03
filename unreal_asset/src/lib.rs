@@ -618,7 +618,7 @@ impl<'a, C: Read + Seek> Asset<C> {
     }
 
     /// Get a name reference by an FName map index
-    pub fn get_name_reference(&self, index: i32) -> String {
+    pub fn get_name_reference(&self, index: i32) -> &str {
         self.name_map.get_ref().get_name_reference(index)
     }
 
@@ -992,15 +992,15 @@ impl<'a, C: Read + Seek> Asset<C> {
     pub fn rebuild_name_map(&mut self) {
         let mut current_name_map = self.name_map.clone();
         self.traverse_fnames(&mut |mut name| {
-            let content = name.get_content();
-            let FName::Backed { index, number: _, ty: _, name_map } = &mut name else {
+            let content = name.get_content().to_string();
+            let FName::Backed { index, name_map, .. } = &mut name else {
                 return;
             };
 
             if *name_map != current_name_map {
                 let new_index = current_name_map
                     .get_mut()
-                    .add_name_reference(content, false);
+                    .add_name_reference(content.to_string(), false);
 
                 *index = new_index;
                 *name_map = current_name_map.clone();
@@ -1311,7 +1311,7 @@ impl<C: Read + Seek> AssetTrait for Asset<C> {
             .add_name_reference(name, force_add_duplicates)
     }
 
-    fn get_name_reference(&self, index: i32) -> String {
+    fn get_name_reference(&self, index: i32) -> &str {
         self.name_map.get_ref().get_name_reference(index)
     }
 

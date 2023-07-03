@@ -99,7 +99,7 @@ pub trait ArchiveTrait {
     /// Get FName name map
     fn get_name_map(&self) -> SharedResource<NameMap>;
     /// Get FName name reference by name map index
-    fn get_name_reference(&self, index: i32) -> String {
+    fn get_name_reference(&self, index: i32) -> &str {
         self.get_name_map().get_ref().get_name_reference(index)
     }
 

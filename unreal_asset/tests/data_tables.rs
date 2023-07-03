@@ -75,7 +75,7 @@ fn data_tables() -> Result<(), Error> {
         if let Some(bool_prop) = cast!(Property, BoolProperty, property) {
             assert_eq!(
                 *flipped_values
-                    .get(&bool_prop.get_name().get_content())
+                    .get(bool_prop.get_name().get_content())
                     .unwrap(),
                 bool_prop.value
             );

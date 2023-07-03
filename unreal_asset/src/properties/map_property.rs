@@ -64,7 +64,7 @@ impl MapProperty {
         is_key: bool,
     ) -> Result<Property, Error> {
         let new_ancestry = ancestry.with_parent(name.clone());
-        match type_name.get_content().as_str() {
+        match type_name.get_content() {
             "StructProperty" => {
                 let mut struct_type = None;
 
@@ -92,11 +92,11 @@ impl MapProperty {
                     .or_else(|| match is_key {
                         true => asset
                             .get_map_key_override()
-                            .get_by_key(&name.get_content())
+                            .get_by_key(name.get_content())
                             .map(|s| FName::new_dummy(s.to_owned(), 0)),
                         false => asset
                             .get_map_value_override()
-                            .get_by_key(&name.get_content())
+                            .get_by_key(name.get_content())
                             .map(|s| FName::new_dummy(s.to_owned(), 0)),
                     })
                     .unwrap_or_else(|| FName::from_slice("Generic"));

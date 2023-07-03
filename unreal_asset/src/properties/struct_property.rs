@@ -123,11 +123,11 @@ impl StructProperty {
         }
 
         if asset.has_unversioned_properties() && struct_type.is_none() {
-            return Err(PropertyError::no_type(&name.get_content(), &ancestry).into());
+            return Err(PropertyError::no_type(name.get_content(), &ancestry).into());
         }
 
         let mut custom_serialization = match struct_type {
-            Some(ref e) => Property::has_custom_serialization(&e.get_content()),
+            Some(ref e) => Property::has_custom_serialization(e.get_content()),
             None => false,
         };
 
@@ -135,7 +135,6 @@ impl StructProperty {
             .as_ref()
             .map(|e| e.get_content())
             .unwrap_or_default()
-            .as_str()
         {
             "FloatRange" => {
                 // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
@@ -264,7 +263,7 @@ impl StructProperty {
         }
 
         let mut has_custom_serialization = match struct_type {
-            Some(ref e) => Property::has_custom_serialization(&e.get_content()),
+            Some(ref e) => Property::has_custom_serialization(e.get_content()),
             None => false,
         };
 
@@ -308,7 +307,7 @@ impl StructProperty {
                     struct_type
                         .as_ref()
                         .map(|e| e.get_content())
-                        .unwrap_or_else(|| "Generic".to_string())
+                        .unwrap_or("Generic")
                 ))
                 .into());
             }

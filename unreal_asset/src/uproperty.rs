@@ -161,7 +161,7 @@ impl UProperty {
         asset: &mut Reader,
         serialized_type: FName,
     ) -> Result<Self, Error> {
-        let prop: UProperty = match serialized_type.get_content().as_str() {
+        let prop: UProperty = match serialized_type.get_content() {
             "EnumProperty" => UEnumProperty::new(asset)?.into(),
             "ArrayProperty" => UArrayProperty::new(asset)?.into(),
             "SetProperty" => USetProperty::new(asset)?.into(),

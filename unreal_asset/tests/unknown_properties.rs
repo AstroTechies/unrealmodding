@@ -39,7 +39,7 @@ fn unknown_properties() -> Result<(), Error> {
             for property in &normal_export.properties {
                 if let Some(unknown_property) = cast!(Property, UnknownProperty, property) {
                     if let Some(entry) = new_unknown_properties
-                        .get_mut(unknown_property.serialized_type.get_content().as_str())
+                        .get_mut(unknown_property.serialized_type.get_content())
                     {
                         *entry = true;
                     } else {

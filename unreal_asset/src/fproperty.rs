@@ -184,7 +184,7 @@ impl FProperty {
     /// Read an `FProperty` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let serialized_type = asset.read_fname()?;
-        let res: FProperty = match serialized_type.get_content().as_str() {
+        let res: FProperty = match serialized_type.get_content() {
             "EnumProperty" => FEnumProperty::new(asset)?.into(),
             "ArrayProperty" => FArrayProperty::new(asset)?.into(),
             "SetProperty" => FSetProperty::new(asset)?.into(),
@@ -250,7 +250,8 @@ impl ToSerializedName for FProperty {
                 .serialized_type
                 .as_ref()
                 .map(|e| e.get_content())
-                .unwrap_or_else(|| String::from("Generic")),
+                .unwrap_or("Generic")
+                .to_string(),
         }
     }
 }

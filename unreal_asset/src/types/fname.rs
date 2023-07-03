@@ -107,16 +107,12 @@ impl FName {
     }
 
     /// Get this FName content
-    pub fn get_content(&self) -> String {
-        // todo: return string ref
+    pub fn get_content(&self) -> &str {
         match self {
             FName::Backed {
-                index,
-                number: _,
-                ty: _,
-                name_map,
+                name_map, index, ..
             } => name_map.get_ref().get_name_reference(*index),
-            FName::Dummy { value, number: _ } => value.clone(),
+            FName::Dummy { value, .. } => &value,
         }
     }
 
@@ -147,7 +143,7 @@ impl FName {
                     value: _,
                     number: _,
                 },
-            ) => self.get_content().eq(&other.get_content()),
+            ) => self.get_content().eq(other.get_content()),
             (
                 FName::Dummy {
                     value: _,
@@ -159,7 +155,7 @@ impl FName {
                     ty: _,
                     name_map: _,
                 },
-            ) => self.get_content().eq(&other.get_content()),
+            ) => self.get_content().eq(other.get_content()),
             _ => self.eq(other),
         }
     }

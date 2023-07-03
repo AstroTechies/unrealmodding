@@ -71,7 +71,7 @@ pub trait ArchiveWriter: ArchiveTrait {
                 property.get_ancestry(),
                 property.get_duplication_index() as u32,
             ) else {
-                return Err(PropertyError::no_mapping(&property.get_name().get_content(), property.get_ancestry()).into());
+                return Err(PropertyError::no_mapping(property.get_name().get_content(), property.get_ancestry()).into());
             };
 
             if matches!(property, Property::EmptyProperty(_)) {
@@ -157,9 +157,7 @@ pub trait ArchiveWriter: ArchiveTrait {
         } else {
             fragments.push(UnversionedHeaderFragment {
                 skip_num: usize::min(
-                    mappings
-                        .get_all_properties(&parent_name.get_content())
-                        .len(),
+                    mappings.get_all_properties(parent_name.get_content()).len(),
                     i8::MAX as usize,
                 ) as u8,
                 value_num: 0,

@@ -309,7 +309,7 @@ pub trait AssetTrait {
     fn add_name_reference(&mut self, name: String, force_add_duplicates: bool) -> i32;
 
     /// Get a name reference by an FName map index
-    fn get_name_reference(&self, index: i32) -> String;
+    fn get_name_reference(&self, index: i32) -> &str;
 
     /// Add an `FName`
     fn add_fname(&mut self, slice: &str) -> FName;
@@ -352,7 +352,7 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
         let mut new_map_value_overrides = IndexedMap::new();
         let new_array_overrides = IndexedMap::new();
 
-        let mut export: Export = match export_class_type.get_content().as_str() {
+        let mut export: Export = match export_class_type.get_content() {
             "Level" => LevelExport::from_base(&base_export, self, next_starting)?.into(),
             "StringTable" => StringTableExport::from_base(&base_export, self)?.into(),
             "Enum" | "UserDefinedEnum" => EnumExport::from_base(&base_export, self)?.into(),
@@ -375,15 +375,17 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
                                     match struct_property.struct_value.is_import() {
                                         true => self
                                             .get_import(struct_property.struct_value)
-                                            .map(|e| e.object_name.get_content()),
+                                            .map(|e| e.object_name.get_content().to_string()),
                                         false => None,
                                     }
                                 }
                                 _ => None,
                             };
                             if let Some(key) = key_override {
-                                new_map_key_overrides
-                                    .insert(map.generic_property.name.get_content(), key);
+                                new_map_key_overrides.insert(
+                                    map.generic_property.name.get_content().to_string(),
+                                    key,
+                                );
                             }
 
                             let value_override = match &*map.value_prop {
@@ -391,7 +393,7 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
                                     match struct_property.struct_value.is_import() {
                                         true => self
                                             .get_import(struct_property.struct_value)
-                                            .map(|e| e.object_name.get_content()),
+                                            .map(|e| e.object_name.get_content().to_string()),
                                         false => None,
                                     }
                                 }
@@ -399,8 +401,10 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
                             };
 
                             if let Some(value) = value_override {
-                                new_map_value_overrides
-                                    .insert(map.generic_property.name.get_content(), value);
+                                new_map_value_overrides.insert(
+                                    map.generic_property.name.get_content().to_string(),
+                                    value,
+                                );
                             }
                         }
                     }

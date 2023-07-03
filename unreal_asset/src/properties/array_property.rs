@@ -129,25 +129,24 @@ impl ArrayProperty {
         }
 
         if asset.has_unversioned_properties() && array_type.is_none() {
-            return Err(PropertyError::no_type(&name.get_content(), &ancestry).into());
+            return Err(PropertyError::no_type(name.get_content(), &ancestry).into());
         }
 
         let new_ancestry = ancestry.with_parent(name.clone());
 
-        if (array_type.is_some()
-            && array_type.as_ref().unwrap().get_content().as_str() == "StructProperty")
+        if (array_type.is_some() && array_type.as_ref().unwrap().get_content() == "StructProperty")
             && serialize_struct_differently
             && !asset.has_unversioned_properties()
         {
             let mut full_type = FName::from_slice("Generic");
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 name = asset.read_fname()?;
-                if &name.get_content() == "None" {
+                if name.get_content() == "None" {
                     return Ok(ArrayProperty::default());
                 }
 
                 let this_array_type = asset.read_fname()?;
-                if &this_array_type.get_content() == "None" {
+                if this_array_type.get_content() == "None" {
                     return Ok(ArrayProperty::default());
                 }
 
@@ -168,7 +167,7 @@ impl ArrayProperty {
                 asset.read_property_guid()?;
             } else if let Some(type_override) = asset
                 .get_array_struct_type_override()
-                .get_by_key(&name.get_content())
+                .get_by_key(name.get_content())
                 .cloned()
             {
                 full_type = asset.add_fname(&type_override);
@@ -270,8 +269,7 @@ impl ArrayProperty {
         let begin = asset.position();
         asset.write_i32::<LE>(self.value.len() as i32)?;
 
-        if (array_type.is_some()
-            && array_type.as_ref().unwrap().get_content().as_str() == "StructProperty")
+        if (array_type.is_some() && array_type.as_ref().unwrap().get_content() == "StructProperty")
             && serialize_structs_differently
         {
             let property: &StructProperty = match !self.value.is_empty() {

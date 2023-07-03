@@ -33,10 +33,7 @@ impl UsmapEnumPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapEnumPropertyData {
-    fn write<W: ArchiveWriter>(
-        &self,
-        asset: &mut UsmapWriter<'_, '_, W>,
-    ) -> Result<usize, Error> {
+    fn write<W: ArchiveWriter>(&self, asset: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::EnumProperty as u8)?;
         let size = self.inner_property.write(asset)?;
         asset.write_name(&self.name)?;

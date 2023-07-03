@@ -10,7 +10,7 @@ use crate::{
         indexed_map::IndexedMap,
         shared_resource::{CyclicSharedResource, SharedResource, SharedResourceWeakRef},
     },
-    types::fname::{FName, EMappedNameType},
+    types::fname::{EMappedNameType, FName},
 };
 
 /// Asset name map
@@ -79,14 +79,16 @@ impl NameMap {
     }
 
     /// Get a name reference by an FName map index
-    pub fn get_name_reference(&self, index: i32) -> String {
-        if index < 0 {
-            return (-index).to_string(); // is this right even?
-        }
-        if index >= self.name_map_index_list.len() as i32 {
-            return index.to_string();
-        }
-        self.name_map_index_list[index as usize].to_owned()
+    pub fn get_name_reference(&self, index: i32) -> &str {
+        // to avoid the panic this could return an option instead
+
+        // if index < 0 {
+        //     return (-index).to_string(); // is this right even?
+        // }
+        // if index >= self.name_map_index_list.len() as i32 {
+        //     return index.to_string();
+        // }
+        &self.name_map_index_list[index as usize]
     }
 
     /// Get a mutable name reference by an FName map index
