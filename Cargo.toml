@@ -10,7 +10,7 @@ members = [
     "unreal_mod_manager",
     "unreal_mod_metadata",
     "unreal_pak",
-    "unreal_pak_cli",
+    "unreal_pak_cli"
 ]
 
 [workspace.package]
