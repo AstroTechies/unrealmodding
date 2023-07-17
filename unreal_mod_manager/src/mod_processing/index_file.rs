@@ -206,7 +206,7 @@ pub(crate) fn insert_index_file_data(
             }
 
             if game_mod.versions.contains_key(version) {
-                let mut existing_version_data = game_mod.versions.get_mut(version).unwrap();
+                let existing_version_data = game_mod.versions.get_mut(version).unwrap();
 
                 existing_version_data.download_url = Some(version_info.download_url.clone());
             } else {
