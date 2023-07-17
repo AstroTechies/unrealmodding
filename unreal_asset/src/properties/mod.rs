@@ -225,9 +225,11 @@ lazy_static! {
         String::from("Rotator"),
         String::from("Vector2D"),
         String::from("Box"),
+        String::from("Box2D"),
         String::from("PerPlatformFloat"),
         String::from("Vector4"),
         String::from("Vector"),
+        String::from("Plane"),
         String::from("ViewTargetBlendParams"),
         String::from("FontCharacter"),
         String::from("UniqueNetIdRepl"),
@@ -252,7 +254,10 @@ lazy_static! {
         String::from("MovieSceneSegmentIdentifier"),
         String::from("MovieSceneTrackIdentifier"),
         String::from("MovieSceneSequenceId"),
-        String::from("MovieSceneEvaluationKey")
+        String::from("MovieSceneEvaluationKey"),
+        String::from("MovieSceneSequenceID"),
+        String::from("NiagaraVariableWithOffset"),
+        String::from("FrameNumber"),
     ]);
 }
 
