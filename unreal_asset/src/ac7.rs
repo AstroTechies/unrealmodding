@@ -1,6 +1,108 @@
 //! AC7 Encryption
 
-use crate::UE4_ASSET_MAGIC;
+use std::io::{Read, Seek, Write};
+
+/// A reader which aligns bytes for AC7-encrypted assets
+pub struct AC7Reader<C: Read + Seek> {
+    key: AC7XorKey,
+    inner: C,
+}
+
+impl<C: Read + Seek> AC7Reader<C> {
+    /// Creates a new AC7Reader for an asset with the specified key
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::fs::File;
+    /// use unreal_asset::{Asset, EngineVersion, ac7::*};
+    ///
+    /// let key = AC7XorKey::new("ex02_IGC_03_Subtitle");
+    /// let mut asset = Asset::new(
+    ///     AC7Reader::new(key, File::open("ex02_IGC_03_Subtitle.uasset").unwrap()),
+    ///     Some(AC7Reader::new(key, File::open("ex02_IGC_03_Subtitle.uexp").unwrap()))
+    ///     EngineVersion::VER_UE4_18,
+    /// )?;
+    /// ```
+    pub fn new(key: AC7XorKey, inner: C) -> Self {
+        Self { key, inner }
+    }
+    /// Consumes this reader, returning the underlying value.
+    pub fn into_inner(self) -> C {
+        self.inner
+    }
+}
+
+impl<C: Read + Seek> Read for AC7Reader<C> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let read = self.inner.read(buf);
+        for byte in buf.iter_mut() {
+            *byte = self.key.xor_byte(*byte)
+        }
+        read
+    }
+}
+
+impl<C: Read + Seek> Seek for AC7Reader<C> {
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        self.inner.seek(pos)
+    }
+}
+
+/// A writer which aligns bytes for AC7-encrypted assets
+pub struct AC7Writer<C: Seek + Write> {
+    key: AC7XorKey,
+    inner: C,
+}
+
+impl<C: Seek + Write> AC7Writer<C> {
+    /// Creates a new AC7Reader for an asset with the specified key
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::fs::File;
+    /// use unreal_asset::{Asset, EngineVersion, ac7::*};
+    ///
+    /// let key = AC7XorKey::new("ex02_IGC_03_Subtitle");
+    /// let mut asset = Asset::new(
+    ///     AC7Reader::new(key, File::open("ex02_IGC_03_Subtitle.uasset").unwrap()),
+    ///     Some(AC7Reader::new(key, File::open("ex02_IGC_03_Subtitle.uexp").unwrap()))
+    ///     EngineVersion::VER_UE4_18,
+    /// )?;
+    /// asset.write_data(
+    ///      AC7Writer::new(key, File::create("ex02_IGC_03_Subtitle.uasset")),
+    ///      Some(AC7Writer::new(key, File::create("ex02_IGC_03_Subtitle.uexp"))
+    /// ))?;
+    /// ```
+    pub fn new(key: AC7XorKey, inner: C) -> Self {
+        Self { key, inner }
+    }
+    /// Consumes this writer, returning the underlying value.
+    pub fn into_inner(self) -> C {
+        self.inner
+    }
+}
+
+impl<C: Seek + Write> Seek for AC7Writer<C> {
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        self.inner.seek(pos)
+    }
+}
+
+impl<C: Seek + Write> Write for AC7Writer<C> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let mut written = 0;
+        for byte in buf.iter().map(|byte| self.key.xor_byte(*byte)) {
+            written += self.inner.write(&[byte])?;
+        }
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
 
 /// AC7 Encryption xor key
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -16,29 +118,6 @@ const AC7_KEY: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/vend
 impl AC7XorKey {
     /// Creates a new AC7XorKey for an asset with the specified name
     /// Note: name should be without extension
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use std::{
-    ///     fs::File,
-    ///     io::{Cursor, Read}
-    /// };
-    ///
-    /// use unreal_asset::ac7::{self, AC7XorKey};
-    ///
-    /// let mut file = File::open("ex02_IGC_03_Subtitle.uasset").unwrap();
-    /// let mut bulk_file = File::open("ex02_IGC_03_Subtitle.uexp").unwrap();
-    ///
-    /// let mut data = Vec::new();
-    /// file.read_to_end(&mut data).unwrap();
-    ///
-    /// let mut bulk_data = Vec::new();
-    /// bulk_file.read_to_end(&mut bulk_data).unwrap();
-    ///
-    /// let key = AC7XorKey::new("ex02_IGC_03_Subtitle");
-    /// let (decrypted_data, decrypted_bulk) = ac7::decrypt(&data, &bulk_data, key);
-    /// ```
     pub fn new(name: &str) -> Self {
         let name_key = Self::calc_name_key(name);
         let offset = 4;
@@ -117,68 +196,4 @@ impl AC7XorKey {
 
         (pk1, pk2)
     }
-}
-
-/// Decrypt uasset+uexp files using a given key
-pub fn decrypt(uasset: &[u8], uexp: &[u8], mut key: AC7XorKey) -> (Vec<u8>, Vec<u8>) {
-    (
-        decrypt_uasset(uasset, &mut key),
-        decrypt_uexp(uexp, &mut key),
-    )
-}
-
-/// Decrypt a uasset file using a given key
-pub fn decrypt_uasset(uasset: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
-    let mut decrypted = vec![0u8; uasset.len()];
-    decrypted[..4].copy_from_slice(&u32::to_be_bytes(UE4_ASSET_MAGIC)); // todo: replace with constant
-
-    for i in 4..uasset.len() {
-        decrypted[i] = key.xor_byte(uasset[i]);
-    }
-
-    decrypted
-}
-
-/// Decrypt a uexp file using a given key
-pub fn decrypt_uexp(uexp: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
-    let mut decrypted = vec![0u8; uexp.len()];
-
-    for i in 0..uexp.len() {
-        decrypted[i] = key.xor_byte(uexp[i]);
-    }
-
-    decrypted
-}
-
-/// Encrypt uasset+uexp files using a given key
-pub fn encrypt(uasset: &[u8], uexp: &[u8], mut key: AC7XorKey) -> (Vec<u8>, Vec<u8>) {
-    (
-        encrypt_uasset(uasset, &mut key),
-        encrypt_uexp(uexp, &mut key),
-    )
-}
-
-const AC7_ASSET_MAGIC: u32 = 0x37454341;
-
-/// Encrypt a uasset file using a given key
-pub fn encrypt_uasset(uasset: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
-    let mut encrypted = vec![0u8; uasset.len()];
-    encrypted[..4].copy_from_slice(&u32::to_le_bytes(AC7_ASSET_MAGIC));
-
-    for i in 4..uasset.len() {
-        encrypted[i] = key.xor_byte(uasset[i]);
-    }
-
-    encrypted
-}
-
-/// Encrypt a uexp file using a given key
-pub fn encrypt_uexp(uexp: &[u8], key: &mut AC7XorKey) -> Vec<u8> {
-    let mut encrypted = vec![0u8; uexp.len()];
-
-    for i in 0..uexp.len() {
-        encrypted[i] = key.xor_byte(uexp[i]);
-    }
-
-    encrypted
 }
