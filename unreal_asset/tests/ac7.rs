@@ -1,11 +1,6 @@
 use std::io::Cursor;
 
-use unreal_asset::{
-    ac7::{self, AC7XorKey},
-    engine_version::EngineVersion,
-    error::Error,
-    Asset,
-};
+use unreal_asset::{ac7::*, engine_version::EngineVersion, error::Error, Asset};
 
 mod shared;
 
@@ -32,30 +27,25 @@ const TEST_ASSETS: [(&str, &[u8], &[u8]); 2] = [
 fn ac7() -> Result<(), Error> {
     for (name, asset_data, bulk_data) in TEST_ASSETS {
         let key = AC7XorKey::new(name);
-        let (decrypted_data, decrypted_bulk) = ac7::decrypt(asset_data, bulk_data, key);
-
         let mut parsed = Asset::new(
-            Cursor::new(decrypted_data.as_slice()),
-            Some(Cursor::new(decrypted_bulk.as_slice())),
+            AC7Reader::new(key, Cursor::new(asset_data)),
+            Some(AC7Reader::new(key, Cursor::new(bulk_data))),
             EngineVersion::VER_UE4_18,
             None,
         )?;
 
-        shared::verify_binary_equality(&decrypted_data, Some(&decrypted_bulk), &mut parsed)?;
+        shared::verify_binary_equality(&asset_data, Some(&bulk_data), &mut parsed)?;
         shared::verify_all_exports_parsed(&parsed);
 
-        let mut data = Cursor::new(Vec::new());
-        let mut bulk = Cursor::new(Vec::new());
+        let mut data = AC7Writer::new(key, Cursor::new(Vec::new()));
+        let mut bulk = AC7Writer::new(key, Cursor::new(Vec::new()));
         parsed.write_data(&mut data, Some(&mut bulk))?;
 
-        let data = data.into_inner();
-        let bulk = bulk.into_inner();
+        let data = data.into_inner().into_inner();
+        let bulk = bulk.into_inner().into_inner();
 
-        let key = AC7XorKey::new(name);
-        let (encrypted_data, encrypted_bulk) = ac7::encrypt(&data, &bulk, key);
-
-        assert_eq!(asset_data, encrypted_data);
-        assert_eq!(bulk_data, encrypted_bulk);
+        assert_eq!(asset_data, data);
+        assert_eq!(bulk_data, bulk);
     }
 
     Ok(())

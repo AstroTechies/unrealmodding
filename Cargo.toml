@@ -12,6 +12,7 @@ members = [
     "unreal_pak",
     "unreal_pak_cli",
 ]
+resolver = "2"
 
 [workspace.package]
 version = "0.1.16"

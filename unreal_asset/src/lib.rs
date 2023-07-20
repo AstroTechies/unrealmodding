@@ -42,7 +42,7 @@ use std::fmt::{Debug, Formatter};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
-use byteorder::{BigEndian, LE};
+use byteorder::{BE, LE};
 use containers::shared_resource::SharedResource;
 use custom_version::{CustomVersion, CustomVersionTrait};
 use engine_version::EngineVersion;
@@ -397,7 +397,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.seek(SeekFrom::Start(0))?;
 
         // read and check magic
-        if self.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {
+        if self.read_u32::<BE>()? != UE4_ASSET_MAGIC {
             return Err(Error::invalid_file(
                 "File is not a valid uasset file".to_string(),
             ));
@@ -849,7 +849,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         cursor: &mut Writer,
         asset_header: &AssetHeader,
     ) -> Result<(), Error> {
-        cursor.write_u32::<BigEndian>(UE4_ASSET_MAGIC)?;
+        cursor.write_u32::<BE>(UE4_ASSET_MAGIC)?;
         cursor.write_i32::<LE>(self.legacy_file_version)?;
 
         if self.legacy_file_version != 4 {
@@ -1014,7 +1014,7 @@ impl<'a, C: Read + Seek> Asset<C> {
     }
 
     /// Write asset data
-    pub fn write_data<W: Read + Seek + Write>(
+    pub fn write_data<W: Seek + Write>(
         &self,
         cursor: &mut W,
         uexp_cursor: Option<&mut W>,
