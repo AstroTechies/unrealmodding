@@ -47,7 +47,7 @@ fn cdo_modification() -> Result<(), Error> {
     let pickup_actor = cdo_export
         .properties
         .iter_mut()
-        .find(|e| e.get_name().get_content() == "PickupActor")
+        .find(|e| e.get_name().is("PickupActor"))
         .expect("Failed to find PickupActor");
 
     *pickup_actor = ObjectProperty {

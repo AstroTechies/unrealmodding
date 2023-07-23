@@ -161,37 +161,39 @@ impl UProperty {
         asset: &mut Reader,
         serialized_type: FName,
     ) -> Result<Self, Error> {
-        let prop: UProperty = match serialized_type.get_content() {
-            "EnumProperty" => UEnumProperty::new(asset)?.into(),
-            "ArrayProperty" => UArrayProperty::new(asset)?.into(),
-            "SetProperty" => USetProperty::new(asset)?.into(),
-            "ObjectProperty" => UObjectProperty::new(asset)?.into(),
-            "SoftObjectProperty" => USoftObjectProperty::new(asset)?.into(),
-            "LazyObjectProperty" => ULazyObjectProperty::new(asset)?.into(),
-            "ClassProperty" => UClassProperty::new(asset)?.into(),
-            "SoftClassProperty" => USoftClassProperty::new(asset)?.into(),
-            "DelegateProperty" => UDelegateProperty::new(asset)?.into(),
-            "MulticastDelegateProperty" => UMulticastDelegateProperty::new(asset)?.into(),
-            "MulticastInlineDelegateProperty" => {
-                UMulticastInlineDelegateProperty::new(asset)?.into()
-            }
-            "InterfaceProperty" => UInterfaceProperty::new(asset)?.into(),
-            "MapProperty" => UMapProperty::new(asset)?.into(),
-            "ByteProperty" => UByteProperty::new(asset)?.into(),
-            "StructProperty" => UStructProperty::new(asset)?.into(),
-            "DoubleProperty" => UDoubleProperty::new(asset)?.into(),
-            "FloatProperty" => UFloatProperty::new(asset)?.into(),
-            "IntProperty" => UIntProperty::new(asset)?.into(),
-            "Int8Property" => UInt8Property::new(asset)?.into(),
-            "Int16Property" => UInt16Property::new(asset)?.into(),
-            "Int64Property" => UInt64Property::new(asset)?.into(),
-            "UInt8Property" => UUInt8Property::new(asset)?.into(),
-            "UInt16Property" => UUInt16Property::new(asset)?.into(),
-            "UInt64Property" => UUInt64Property::new(asset)?.into(),
-            "NameProperty" => UNameProperty::new(asset)?.into(),
-            "StrProperty" => UStrProperty::new(asset)?.into(),
-            _ => UGenericProperty::new(asset)?.into(),
-        };
+        let prop: UProperty = serialized_type.get_content(|ty| {
+            Ok::<UProperty, Error>(match ty {
+                "EnumProperty" => UEnumProperty::new(asset)?.into(),
+                "ArrayProperty" => UArrayProperty::new(asset)?.into(),
+                "SetProperty" => USetProperty::new(asset)?.into(),
+                "ObjectProperty" => UObjectProperty::new(asset)?.into(),
+                "SoftObjectProperty" => USoftObjectProperty::new(asset)?.into(),
+                "LazyObjectProperty" => ULazyObjectProperty::new(asset)?.into(),
+                "ClassProperty" => UClassProperty::new(asset)?.into(),
+                "SoftClassProperty" => USoftClassProperty::new(asset)?.into(),
+                "DelegateProperty" => UDelegateProperty::new(asset)?.into(),
+                "MulticastDelegateProperty" => UMulticastDelegateProperty::new(asset)?.into(),
+                "MulticastInlineDelegateProperty" => {
+                    UMulticastInlineDelegateProperty::new(asset)?.into()
+                }
+                "InterfaceProperty" => UInterfaceProperty::new(asset)?.into(),
+                "MapProperty" => UMapProperty::new(asset)?.into(),
+                "ByteProperty" => UByteProperty::new(asset)?.into(),
+                "StructProperty" => UStructProperty::new(asset)?.into(),
+                "DoubleProperty" => UDoubleProperty::new(asset)?.into(),
+                "FloatProperty" => UFloatProperty::new(asset)?.into(),
+                "IntProperty" => UIntProperty::new(asset)?.into(),
+                "Int8Property" => UInt8Property::new(asset)?.into(),
+                "Int16Property" => UInt16Property::new(asset)?.into(),
+                "Int64Property" => UInt64Property::new(asset)?.into(),
+                "UInt8Property" => UUInt8Property::new(asset)?.into(),
+                "UInt16Property" => UUInt16Property::new(asset)?.into(),
+                "UInt64Property" => UUInt64Property::new(asset)?.into(),
+                "NameProperty" => UNameProperty::new(asset)?.into(),
+                "StrProperty" => UStrProperty::new(asset)?.into(),
+                _ => UGenericProperty::new(asset)?.into(),
+            })
+        })?;
 
         Ok(prop)
     }

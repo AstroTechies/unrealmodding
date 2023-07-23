@@ -71,7 +71,7 @@ pub trait ArchiveWriter: ArchiveTrait {
                 property.get_ancestry(),
                 property.get_duplication_index() as u32,
             ) else {
-                return Err(PropertyError::no_mapping(property.get_name().get_content(), property.get_ancestry()).into());
+                return property.get_name().get_content(|name| Err(PropertyError::no_mapping(name, property.get_ancestry()).into()));
             };
 
             if matches!(property, Property::EmptyProperty(_)) {
@@ -155,16 +155,14 @@ pub trait ArchiveWriter: ArchiveTrait {
                 last_num_before_fragment = end_index - 1;
             }
         } else {
-            fragments.push(UnversionedHeaderFragment {
-                skip_num: usize::min(
-                    mappings.get_all_properties(parent_name.get_content()).len(),
-                    i8::MAX as usize,
-                ) as u8,
+            fragments.push(parent_name.get_content(|name| UnversionedHeaderFragment {
+                skip_num: usize::min(mappings.get_all_properties(name).len(), i8::MAX as usize)
+                    as u8,
                 value_num: 0,
                 first_num: 0,
                 is_last: true,
                 has_zeros: false,
-            });
+            }));
         }
 
         if let Some(fragment) = fragments.last_mut() {

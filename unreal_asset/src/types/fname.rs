@@ -106,14 +106,32 @@ impl FName {
         FName::new_dummy(value.to_string(), 0)
     }
 
-    /// Get this FName content
-    pub fn get_content(&self) -> &str {
+    /// Get access to this FName's content
+    pub fn get_content<T>(&self, func: impl FnOnce(&str) -> T) -> T {
         match self {
             FName::Backed {
                 name_map, index, ..
-            } => name_map.get_ref().get_name_reference(*index),
-            FName::Dummy { value, .. } => &value,
+            } => {
+                let name_map = name_map.get_ref();
+                func(name_map.get_name_reference(*index))
+            }
+            FName::Dummy { value, .. } => func(&value),
         }
+    }
+
+    /// Get this FName's content as a string
+    pub fn get_owned_content(&self) -> String {
+        self.get_content(str::to_string)
+    }
+
+    /// Checks if an FName's content is the given &str
+    pub fn is(&self, pat: impl AsRef<str>) -> bool {
+        self.get_content(|name| name == pat.as_ref())
+    }
+
+    /// Checks if an FName's content ends with the given &str
+    pub fn ends_with(&self, pat: impl AsRef<str>) -> bool {
+        self.get_content(|name| name.ends_with(pat.as_ref()))
     }
 
     /// Get this FName instance number
@@ -131,33 +149,7 @@ impl FName {
 
     /// Compare FNames based on their content
     pub fn eq_content(&self, other: &Self) -> bool {
-        match (self, other) {
-            (
-                FName::Backed {
-                    index: _,
-                    number: _,
-                    ty: _,
-                    name_map: _,
-                },
-                FName::Dummy {
-                    value: _,
-                    number: _,
-                },
-            ) => self.get_content().eq(other.get_content()),
-            (
-                FName::Dummy {
-                    value: _,
-                    number: _,
-                },
-                FName::Backed {
-                    index: _,
-                    number: _,
-                    ty: _,
-                    name_map: _,
-                },
-            ) => self.get_content().eq(other.get_content()),
-            _ => self.eq(other),
-        }
+        self.get_content(|this| other.is(this))
     }
 }
 

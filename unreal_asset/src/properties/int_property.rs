@@ -324,7 +324,7 @@ impl ByteProperty {
                             .get_name_map_index_list()
                             .len() as i32
                     && name_map_index == 0
-                    && !asset.get_name_reference(name_map_index).contains('/')
+                    && !asset.get_name_reference(name_map_index, |name| name.contains('/'))
                 {
                     BytePropertyValue::FName(asset.read_fname()?)
                 } else {

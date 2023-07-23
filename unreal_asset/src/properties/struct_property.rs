@@ -115,7 +115,7 @@ impl StructProperty {
         {
             if struct_type
                 .as_ref()
-                .map(|e| e.get_content() == "Generic")
+                .map(|e| e.is("Generic"))
                 .unwrap_or(true)
             {
                 struct_type = Some(FName::new_dummy(struct_mapping.struct_type.clone(), 0));
@@ -123,65 +123,70 @@ impl StructProperty {
         }
 
         if asset.has_unversioned_properties() && struct_type.is_none() {
-            return Err(PropertyError::no_type(name.get_content(), &ancestry).into());
+            return name.get_content(|name| Err(PropertyError::no_type(name, &ancestry).into()));
         }
 
         let mut custom_serialization = match struct_type {
-            Some(ref e) => Property::has_custom_serialization(e.get_content()),
+            Some(ref e) => e.get_content(|e| Property::has_custom_serialization(e)),
             None => false,
         };
 
-        match struct_type
+        struct_type
             .as_ref()
-            .map(|e| e.get_content())
-            .unwrap_or_default()
-        {
-            "FloatRange" => {
-                // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
-                // The best solution is to just check and see if the next bit is an FName or not
+            .unwrap_or(&FName::from_slice(""))
+            .get_content(|ty| {
+                Ok::<(), Error>(match ty {
+                    "FloatRange" => {
+                        // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
+                        // The best solution is to just check and see if the next bit is an FName or not
 
-                let name_map_index = asset.read_i32::<LE>()?;
-                asset.seek(SeekFrom::Current(-(size_of::<u32>() as i64)))?;
+                        let name_map_index = asset.read_i32::<LE>()?;
+                        asset.seek(SeekFrom::Current(-(size_of::<u32>() as i64)))?;
 
-                let is_lower_bound = match name_map_index >= 0
-                    && name_map_index
-                        < asset
-                            .get_name_map()
-                            .get_ref()
-                            .get_name_map_index_list()
-                            .len() as i32
-                {
-                    true => asset.get_name_reference(name_map_index) == "LowerBound",
-                    false => false,
-                };
-                custom_serialization = !(asset.has_unversioned_properties() || is_lower_bound);
-            }
-            "RichCurveKey"
-                if asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY =>
-            {
-                custom_serialization = false;
-            }
-            "MovieSceneTrackIdentifier"
-                if asset.get_custom_version::<FEditorObjectVersion>().version
-                    < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32 =>
-            {
-                custom_serialization = false;
-            }
-            "MovieSceneFloatChannel" => {
-                if asset
-                    .get_custom_version::<FSequencerObjectVersion>()
-                    .version
-                    < FSequencerObjectVersion::SerializeFloatChannelCompletely as i32
-                    && asset
-                        .get_custom_version::<FFortniteMainBranchObjectVersion>()
-                        .version
-                        < FFortniteMainBranchObjectVersion::SerializeFloatChannelShowCurve as i32
-                {
-                    custom_serialization = false;
-                }
-            }
-            _ => {}
-        }
+                        let is_lower_bound = match name_map_index >= 0
+                            && name_map_index
+                                < asset
+                                    .get_name_map()
+                                    .get_ref()
+                                    .get_name_map_index_list()
+                                    .len() as i32
+                        {
+                            true => asset
+                                .get_name_reference(name_map_index, |name| name == "LowerBound"),
+                            false => false,
+                        };
+                        custom_serialization =
+                            !(asset.has_unversioned_properties() || is_lower_bound);
+                    }
+                    "RichCurveKey"
+                        if asset.get_object_version()
+                            < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY =>
+                    {
+                        custom_serialization = false;
+                    }
+                    "MovieSceneTrackIdentifier"
+                        if asset.get_custom_version::<FEditorObjectVersion>().version
+                            < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32 =>
+                    {
+                        custom_serialization = false;
+                    }
+                    "MovieSceneFloatChannel" => {
+                        if asset
+                            .get_custom_version::<FSequencerObjectVersion>()
+                            .version
+                            < FSequencerObjectVersion::SerializeFloatChannelCompletely as i32
+                            && asset
+                                .get_custom_version::<FFortniteMainBranchObjectVersion>()
+                                .version
+                                < FFortniteMainBranchObjectVersion::SerializeFloatChannelShowCurve
+                                    as i32
+                        {
+                            custom_serialization = false;
+                        }
+                    }
+                    _ => {}
+                })
+            })?;
 
         if length == 0 {
             return Ok(StructProperty {
@@ -263,30 +268,30 @@ impl StructProperty {
         }
 
         let mut has_custom_serialization = match struct_type {
-            Some(ref e) => Property::has_custom_serialization(e.get_content()),
+            Some(ref e) => e.get_content(|e| Property::has_custom_serialization(e)),
             None => false,
         };
 
         if let Some(ref struct_type) = struct_type {
-            if struct_type.get_content() == "FloatRange" {
+            if struct_type.is("FloatRange") {
                 has_custom_serialization = self.value.len() == 1
                     && cast!(Property, FloatRangeProperty, &self.value[0]).is_some();
             }
 
-            if struct_type.get_content() == "RichCurveKey"
+            if struct_type.is("RichCurveKey")
                 && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
             {
                 has_custom_serialization = false;
             }
 
-            if struct_type.get_content() == "MovieSceneTrackIdentifier"
+            if struct_type.is("MovieSceneTrackIdentifier")
                 && asset.get_custom_version::<FEditorObjectVersion>().version
                     < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32
             {
                 has_custom_serialization = false;
             }
 
-            if struct_type.get_content() == "MovieSceneFloatChannel"
+            if struct_type.is("MovieSceneFloatChannel")
                 && asset
                     .get_custom_version::<FSequencerObjectVersion>()
                     .version
@@ -302,13 +307,13 @@ impl StructProperty {
 
         if has_custom_serialization {
             if self.value.len() != 1 {
-                return Err(PropertyError::invalid_struct(format!(
-                    "Structs with type {} must have exactly 1 entry",
+                return Err(PropertyError::invalid_struct(
                     struct_type
-                        .as_ref()
-                        .map(|e| e.get_content())
-                        .unwrap_or("Generic")
-                ))
+                        .unwrap_or_else(|| FName::from_slice("Generic"))
+                        .get_content(|e| {
+                            format!("Structs with type {} must have exactly 1 entry", e)
+                        }),
+                )
                 .into());
             }
             self.value[0].write(asset, false)

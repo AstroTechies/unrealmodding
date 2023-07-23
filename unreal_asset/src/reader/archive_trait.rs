@@ -98,9 +98,9 @@ pub trait ArchiveTrait {
 
     /// Get FName name map
     fn get_name_map(&self) -> SharedResource<NameMap>;
-    /// Get FName name reference by name map index
-    fn get_name_reference(&self, index: i32) -> &str {
-        self.get_name_map().get_ref().get_name_reference(index)
+    /// Get FName name reference by name map index and do something with it
+    fn get_name_reference<T>(&self, index: i32, func: impl FnOnce(&str) -> T) -> T {
+        func(self.get_name_map().get_ref().get_name_reference(index))
     }
 
     /// Get struct overrides for an `ArrayProperty`

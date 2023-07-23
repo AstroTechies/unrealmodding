@@ -129,34 +129,40 @@ impl ArrayProperty {
         }
 
         if asset.has_unversioned_properties() && array_type.is_none() {
-            return Err(PropertyError::no_type(name.get_content(), &ancestry).into());
+            return name.get_content(|name| Err(PropertyError::no_type(name, &ancestry).into()));
         }
 
         let new_ancestry = ancestry.with_parent(name.clone());
 
-        if (array_type.is_some() && array_type.as_ref().unwrap().get_content() == "StructProperty")
+        if array_type
+            .as_ref()
+            .is_some_and(|ty| ty.is("StructProperty"))
             && serialize_struct_differently
             && !asset.has_unversioned_properties()
         {
             let mut full_type = FName::from_slice("Generic");
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 name = asset.read_fname()?;
-                if name.get_content() == "None" {
+                if name.is("None") {
                     return Ok(ArrayProperty::default());
                 }
 
                 let this_array_type = asset.read_fname()?;
-                if this_array_type.get_content() == "None" {
+                if this_array_type.is("None") {
                     return Ok(ArrayProperty::default());
                 }
 
-                if this_array_type.get_content() != array_type.as_ref().unwrap().get_content() {
-                    return Err(Error::invalid_file(format!(
-                        "Invalid array type {} vs {}",
-                        this_array_type.get_content(),
-                        array_type.as_ref().unwrap().get_content()
-                    )));
-                }
+                this_array_type.get_content(|this_array_type| {
+                    array_type.as_ref().unwrap().get_content(|array_type| {
+                        if this_array_type != array_type {
+                            return Err(Error::invalid_file(format!(
+                                "Invalid array type {} vs {}",
+                                this_array_type, array_type
+                            )));
+                        }
+                        Ok(())
+                    })
+                })?;
 
                 struct_length = asset.read_i64::<LE>()?;
                 full_type = asset.read_fname()?;
@@ -165,9 +171,8 @@ impl ArrayProperty {
                 asset.read_exact(&mut guid)?;
                 struct_guid = Some(guid);
                 asset.read_property_guid()?;
-            } else if let Some(type_override) = asset
-                .get_array_struct_type_override()
-                .get_by_key(name.get_content())
+            } else if let Some(type_override) = name
+                .get_content(|name| asset.get_array_struct_type_override().get_by_key(name))
                 .cloned()
             {
                 full_type = asset.add_fname(&type_override);
@@ -201,7 +206,7 @@ impl ArrayProperty {
                 .as_ref()
                 .ok_or_else(|| Error::invalid_file("Unknown array type".to_string()))?;
             for i in 0..num_entries {
-                let entry: Property = if array_type.get_content() == "StructProperty" {
+                let entry: Property = if array_type.is("StructProperty") {
                     let struct_type = match array_struct_type {
                         Some(ref e) => Some(e.clone()),
                         None => Some(FName::from_slice("Generic")),
@@ -269,7 +274,9 @@ impl ArrayProperty {
         let begin = asset.position();
         asset.write_i32::<LE>(self.value.len() as i32)?;
 
-        if (array_type.is_some() && array_type.as_ref().unwrap().get_content() == "StructProperty")
+        if array_type
+            .as_ref()
+            .is_some_and(|ty| ty.is("StructProperty"))
             && serialize_structs_differently
         {
             let property: &StructProperty = match !self.value.is_empty() {

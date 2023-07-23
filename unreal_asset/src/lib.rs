@@ -618,8 +618,8 @@ impl<'a, C: Read + Seek> Asset<C> {
     }
 
     /// Get a name reference by an FName map index
-    pub fn get_name_reference(&self, index: i32) -> &str {
-        self.name_map.get_ref().get_name_reference(index)
+    pub fn get_name_reference<T>(&self, index: i32, func: impl FnOnce(&str) -> T) -> T {
+        func(self.name_map.get_ref().get_name_reference(index))
     }
 
     /// Add an `FName`
@@ -992,7 +992,7 @@ impl<'a, C: Read + Seek> Asset<C> {
     pub fn rebuild_name_map(&mut self) {
         let mut current_name_map = self.name_map.clone();
         self.traverse_fnames(&mut |mut name| {
-            let content = name.get_content().to_string();
+            let content = name.get_owned_content();
             let FName::Backed { index, name_map, .. } = &mut name else {
                 return;
             };
@@ -1311,8 +1311,8 @@ impl<C: Read + Seek> AssetTrait for Asset<C> {
             .add_name_reference(name, force_add_duplicates)
     }
 
-    fn get_name_reference(&self, index: i32) -> &str {
-        self.name_map.get_ref().get_name_reference(index)
+    fn get_name_reference<T>(&self, index: i32, func: impl FnOnce(&str) -> T) -> T {
+        func(self.name_map.get_ref().get_name_reference(index))
     }
 
     fn add_fname(&mut self, slice: &str) -> FName {

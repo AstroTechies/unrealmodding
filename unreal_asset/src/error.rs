@@ -147,7 +147,7 @@ impl PropertyError {
             ancestry
                 .ancestry
                 .iter()
-                .map(|e| e.get_content())
+                .map(|e| e.get_owned_content())
                 .collect::<Vec<_>>()
                 .join("/")
                 .into_boxed_str(),
@@ -166,7 +166,7 @@ impl PropertyError {
             ancestry
                 .ancestry
                 .iter()
-                .map(|e| e.get_content())
+                .map(|e| e.get_owned_content())
                 .collect::<Vec<_>>()
                 .join("/")
                 .into_boxed_str(),

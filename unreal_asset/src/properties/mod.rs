@@ -497,15 +497,14 @@ impl Property {
             }
 
             let mut practicing_unversioned_property_index = header.unversioned_property_index;
-            let mut schema = mappings
-                .schemas
-                .get_by_key(parent_name.get_content())
-                .ok_or_else(|| {
+            let mut schema = parent_name.get_content(|name| {
+                mappings.schemas.get_by_key(name).ok_or_else(|| {
                     PropertyError::no_schema(
-                        parent_name.get_content().to_string(),
+                        name.to_string(),
                         practicing_unversioned_property_index,
                     )
-                })?;
+                })
+            })?;
 
             while practicing_unversioned_property_index >= schema.prop_count as usize {
                 practicing_unversioned_property_index -= schema.prop_count as usize;
@@ -516,7 +515,7 @@ impl Property {
                         .get_by_key(&schema.super_type)
                         .ok_or_else(|| {
                             PropertyError::no_schema(
-                                parent_name.get_content().to_string(),
+                                parent_name.get_owned_content(),
                                 practicing_unversioned_property_index,
                             )
                         })?;
@@ -547,7 +546,7 @@ impl Property {
             }
         } else {
             name = asset.read_fname()?;
-            if name.get_content() == "None" {
+            if name.is("None") {
                 return Ok(None);
             }
 
@@ -587,301 +586,9 @@ impl Property {
             return Ok(EmptyProperty::new(type_name.clone(), name, ancestry).into());
         }
 
-        let res = match type_name.get_content() {
-            "BoolProperty" => BoolProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "UInt16Property" => UInt16Property::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "UInt32Property" => UInt32Property::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "UInt64Property" => UInt64Property::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "FloatProperty" => FloatProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "Int16Property" => Int16Property::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "Int64Property" => Int64Property::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "Int8Property" => Int8Property::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "IntProperty" => IntProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "ByteProperty" => ByteProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                fallback_length,
-                duplication_index,
-            )?
-            .into(),
-            "DoubleProperty" => DoubleProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-
-            "NameProperty" => {
-                NameProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-            "StrProperty" => {
-                StrProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-            "TextProperty" => {
-                TextProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-
-            "ObjectProperty" => {
-                ObjectProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "AssetObjectProperty" => {
-                AssetObjectProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "SoftObjectProperty" => {
-                SoftObjectProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-
-            "IntPoint" => {
-                IntPointProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "Vector" => {
-                VectorProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "Vector4" => {
-                Vector4Property::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "Vector2D" => {
-                Vector2DProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "Box" => {
-                BoxProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-            "Box2D" => {
-                Box2DProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-            "Quat" => {
-                QuatProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-            "Rotator" => {
-                RotatorProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "Plane" => {
-                PlaneProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-            "LinearColor" => {
-                LinearColorProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "Color" => {
-                ColorProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-            "Timespan" => {
-                TimeSpanProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "DateTime" => {
-                DateTimeProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "Guid" => {
-                GuidProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-
-            "SetProperty" => SetProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "ArrayProperty" => ArrayProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-                true,
-            )?
-            .into(),
-            "MapProperty" => {
-                MapProperty::new(asset, name, ancestry, include_header, duplication_index)?.into()
-            }
-
-            "PerPlatformBool" => PerPlatformBoolProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "PerPlatformInt" => PerPlatformIntProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "PerPlatformFloat" => PerPlatformFloatProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-
-            "MaterialAttributesInput" => MaterialAttributesInputProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "ExpressionInput" => ExpressionInputProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "ColorMaterialInput" => ColorMaterialInputProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "ScalarMaterialInput" => ScalarMaterialInputProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "ShadingModelMaterialInput" => ShadingModelMaterialInputProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "VectorMaterialInput" => VectorMaterialInputProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "Vector2MaterialInput" => Vector2MaterialInputProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-
-            "WeightedRandomSampler" => WeightedRandomSamplerProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "SkeletalMeshAreaWeightedTriangleSampler" => {
-                SkeletalMeshAreaWeightedTriangleSampler::new(
+        type_name.get_content(|ty| {
+            Ok::<Property, Error>(match ty {
+                "BoolProperty" => BoolProperty::new(
                     asset,
                     name,
                     ancestry,
@@ -889,358 +596,682 @@ impl Property {
                     length,
                     duplication_index,
                 )?
-                .into()
-            }
-            "SkeletalMeshSamplingLODBuiltData" => SkeletalMeshSamplingLODBuiltDataProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "SoftAssetPath" => SoftAssetPathProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "SoftObjectPath" => SoftObjectPathProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "SoftClassPath" => SoftClassPathProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "StringAssetReference" => StringAssetReferenceProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
+                .into(),
+                "UInt16Property" => UInt16Property::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "UInt32Property" => UInt32Property::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "UInt64Property" => UInt64Property::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "FloatProperty" => FloatProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "Int16Property" => Int16Property::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "Int64Property" => Int64Property::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "Int8Property" => Int8Property::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "IntProperty" => IntProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "ByteProperty" => ByteProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    fallback_length,
+                    duplication_index,
+                )?
+                .into(),
+                "DoubleProperty" => DoubleProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
 
-            "DelegateProperty" => DelegateProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "MulticastDelegateProperty" => MulticastDelegateProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "MulticastSparseDelegateProperty" => MulticastSparseDelegateProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "MulticastInlineDelegateProperty" => MulticastInlineDelegateProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "RichCurveKey" => RichCurveKeyProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "ViewTargetBlendParams" => ViewTargetBlendParamsProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "GameplayTagContainer" => GameplayTagContainerProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "SmartName" => SmartNameProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
+                "NameProperty" => {
+                    NameProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "StrProperty" => {
+                    StrProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "TextProperty" => {
+                    TextProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
 
-            "StructProperty" => StructProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "EnumProperty" => EnumProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "ClothLODData" => ClothLodDataProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-
-            "FontCharacter" => FontCharacterProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "UniqueNetIdRepl" => UniqueNetIdProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "NiagaraVariable" => NiagaraVariableProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "NiagaraVariableWithOffset" => NiagaraVariableWithOffsetProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "FontData" => FontDataProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-            )?
-            .into(),
-            "FloatRange" => {
-                FloatRangeProperty::new(asset, name, ancestry, include_header, duplication_index)?
-                    .into()
-            }
-            "RawStructProperty" => RawStructProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-                length,
-            )?
-            .into(),
-
-            "MovieSceneEvalTemplatePtr" => MovieSceneEvalTemplatePtrProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneTrackImplementationPtr" => MovieSceneTrackImplementationPtrProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneEvaluationFieldEntityTree" => {
-                MovieSceneEvaluationFieldEntityTreeProperty::new(
+                "ObjectProperty" => {
+                    ObjectProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "AssetObjectProperty" => AssetObjectProperty::new(
                     asset,
                     name,
                     ancestry,
                     include_header,
                     duplication_index,
                 )?
-                .into()
-            }
-            "MovieSceneSubSequenceTree" => MovieSceneSubSequenceTreeProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneSequenceInstanceDataPtr" => MovieSceneSequenceInstanceDataPtrProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "SectionEvaluationDataTree" => SectionEvaluationDataTreeProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneTrackFieldData" => MovieSceneTrackFieldDataProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneEventParameters" => MovieSceneEventParametersProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneFloatChannel" => MovieSceneFloatChannelProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneFloatValue" => MovieSceneFloatValueProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneFrameRange" => MovieSceneFrameRangeProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneSegment" => MovieSceneSegmentProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneSegmentIdentifier" => MovieSceneSegmentIdentifierProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneTrackIdentifier" => MovieSceneTrackIdentifierProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneSequenceId" => MovieSceneSequenceIdProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
-            "MovieSceneEvaluationKey" => MovieSceneEvaluationKeyProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                duplication_index,
-            )?
-            .into(),
+                .into(),
+                "SoftObjectProperty" => SoftObjectProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
 
-            _ => UnknownProperty::new(
-                asset,
-                name,
-                ancestry,
-                include_header,
-                length,
-                duplication_index,
-                type_name.clone(),
-            )?
-            .into(),
-        };
+                "IntPoint" => {
+                    IntPointProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Vector" => {
+                    VectorProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Vector4" => {
+                    Vector4Property::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Vector2D" => {
+                    Vector2DProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Box" => {
+                    BoxProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Box2D" => {
+                    Box2DProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Quat" => {
+                    QuatProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Rotator" => {
+                    RotatorProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Plane" => {
+                    PlaneProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "LinearColor" => LinearColorProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "Color" => {
+                    ColorProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Timespan" => {
+                    TimeSpanProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "DateTime" => {
+                    DateTimeProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+                "Guid" => {
+                    GuidProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
 
-        Ok(res)
+                "SetProperty" => SetProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "ArrayProperty" => ArrayProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                    true,
+                )?
+                .into(),
+                "MapProperty" => {
+                    MapProperty::new(asset, name, ancestry, include_header, duplication_index)?
+                        .into()
+                }
+
+                "PerPlatformBool" => PerPlatformBoolProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "PerPlatformInt" => PerPlatformIntProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "PerPlatformFloat" => PerPlatformFloatProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+
+                "MaterialAttributesInput" => MaterialAttributesInputProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "ExpressionInput" => ExpressionInputProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "ColorMaterialInput" => ColorMaterialInputProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "ScalarMaterialInput" => ScalarMaterialInputProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "ShadingModelMaterialInput" => ShadingModelMaterialInputProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "VectorMaterialInput" => VectorMaterialInputProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "Vector2MaterialInput" => Vector2MaterialInputProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+
+                "WeightedRandomSampler" => WeightedRandomSamplerProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "SkeletalMeshAreaWeightedTriangleSampler" => {
+                    SkeletalMeshAreaWeightedTriangleSampler::new(
+                        asset,
+                        name,
+                        ancestry,
+                        include_header,
+                        length,
+                        duplication_index,
+                    )?
+                    .into()
+                }
+                "SkeletalMeshSamplingLODBuiltData" => {
+                    SkeletalMeshSamplingLODBuiltDataProperty::new(
+                        asset,
+                        name,
+                        ancestry,
+                        include_header,
+                        length,
+                        duplication_index,
+                    )?
+                    .into()
+                }
+                "SoftAssetPath" => SoftAssetPathProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "SoftObjectPath" => SoftObjectPathProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "SoftClassPath" => SoftClassPathProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "StringAssetReference" => StringAssetReferenceProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+
+                "DelegateProperty" => DelegateProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "MulticastDelegateProperty" => MulticastDelegateProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "MulticastSparseDelegateProperty" => MulticastSparseDelegateProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "MulticastInlineDelegateProperty" => MulticastInlineDelegateProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "RichCurveKey" => RichCurveKeyProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "ViewTargetBlendParams" => ViewTargetBlendParamsProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "GameplayTagContainer" => GameplayTagContainerProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "SmartName" => SmartNameProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+
+                "StructProperty" => StructProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "EnumProperty" => EnumProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "ClothLODData" => ClothLodDataProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+
+                "FontCharacter" => FontCharacterProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "UniqueNetIdRepl" => UniqueNetIdProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "NiagaraVariable" => NiagaraVariableProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "NiagaraVariableWithOffset" => NiagaraVariableWithOffsetProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "FontData" => FontDataProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                )?
+                .into(),
+                "FloatRange" => FloatRangeProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "RawStructProperty" => RawStructProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                    length,
+                )?
+                .into(),
+
+                "MovieSceneEvalTemplatePtr" => MovieSceneEvalTemplatePtrProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneTrackImplementationPtr" => {
+                    MovieSceneTrackImplementationPtrProperty::new(
+                        asset,
+                        name,
+                        ancestry,
+                        include_header,
+                        duplication_index,
+                    )?
+                    .into()
+                }
+                "MovieSceneEvaluationFieldEntityTree" => {
+                    MovieSceneEvaluationFieldEntityTreeProperty::new(
+                        asset,
+                        name,
+                        ancestry,
+                        include_header,
+                        duplication_index,
+                    )?
+                    .into()
+                }
+                "MovieSceneSubSequenceTree" => MovieSceneSubSequenceTreeProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneSequenceInstanceDataPtr" => {
+                    MovieSceneSequenceInstanceDataPtrProperty::new(
+                        asset,
+                        name,
+                        ancestry,
+                        include_header,
+                        duplication_index,
+                    )?
+                    .into()
+                }
+                "SectionEvaluationDataTree" => SectionEvaluationDataTreeProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneTrackFieldData" => MovieSceneTrackFieldDataProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneEventParameters" => MovieSceneEventParametersProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneFloatChannel" => MovieSceneFloatChannelProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneFloatValue" => MovieSceneFloatValueProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneFrameRange" => MovieSceneFrameRangeProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneSegment" => MovieSceneSegmentProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneSegmentIdentifier" => MovieSceneSegmentIdentifierProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneTrackIdentifier" => MovieSceneTrackIdentifierProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneSequenceId" => MovieSceneSequenceIdProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+                "MovieSceneEvaluationKey" => MovieSceneEvaluationKeyProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    duplication_index,
+                )?
+                .into(),
+
+                _ => UnknownProperty::new(
+                    asset,
+                    name,
+                    ancestry,
+                    include_header,
+                    length,
+                    duplication_index,
+                    type_name.clone(),
+                )?
+                .into(),
+            })
+        })
     }
 
     /// Writes a property to an ArchiveWriter
@@ -1287,8 +1318,8 @@ macro_rules! property_inner_serialized_name {
                         Self::$inner(_) => String::from($name),
                     )*
                     Self::UnknownProperty(unk) => unk
-                        .serialized_type.get_content().to_string(),
-                    Self::EmptyProperty(empty) => empty.type_name.get_content().to_string()
+                        .serialized_type.get_owned_content(),
+                    Self::EmptyProperty(empty) => empty.type_name.get_owned_content()
                 }
             }
         }
