@@ -106,7 +106,7 @@ impl FName {
         FName::new_dummy(value.to_string(), 0)
     }
 
-    /// Get access to this FName's content
+    /// Get access to this `FName`'s content
     pub fn get_content<T>(&self, func: impl FnOnce(&str) -> T) -> T {
         match self {
             FName::Backed {
@@ -119,22 +119,22 @@ impl FName {
         }
     }
 
-    /// Get this FName's content as a string
+    /// Get this `FName`'s content as a `String`
     pub fn get_owned_content(&self) -> String {
         self.get_content(str::to_string)
     }
 
-    /// Checks if an FName's content is the given &str
+    /// Checks if an `FName`'s content is the given `&str`
     pub fn is(&self, pat: impl AsRef<str>) -> bool {
         self.get_content(|name| name == pat.as_ref())
     }
 
-    /// Checks if an FName's content ends with the given &str
+    /// Checks if an `FName`'s content ends with the given `&str`
     pub fn ends_with(&self, pat: impl AsRef<str>) -> bool {
         self.get_content(|name| name.ends_with(pat.as_ref()))
     }
 
-    /// Get this FName instance number
+    /// Get this `FName` instance number
     pub fn get_number(&self) -> i32 {
         match self {
             FName::Backed {
@@ -147,7 +147,7 @@ impl FName {
         }
     }
 
-    /// Compare FNames based on their content
+    /// Compare `FNames` based on their content
     pub fn eq_content(&self, other: &Self) -> bool {
         self.get_content(|this| other.is(this))
     }

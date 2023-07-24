@@ -82,12 +82,12 @@ impl NameMap {
     pub fn get_name_reference(&self, index: i32) -> &str {
         // to avoid the panic this could return an option instead
 
-        // if index < 0 {
-        //     return (-index).to_string(); // is this right even?
-        // }
-        // if index >= self.name_map_index_list.len() as i32 {
-        //     return index.to_string();
-        // }
+        if index < 0 {
+            return "error: name reference index too low";
+        }
+        if index >= self.name_map_index_list.len() as i32 {
+            return "error: name reference index too high";
+        }
         &self.name_map_index_list[index as usize]
     }
 

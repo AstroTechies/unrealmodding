@@ -102,6 +102,10 @@ pub trait ArchiveTrait {
     fn get_name_reference<T>(&self, index: i32, func: impl FnOnce(&str) -> T) -> T {
         func(self.get_name_map().get_ref().get_name_reference(index))
     }
+    /// Get FName name reference by name map index as a `String`
+    fn get_name_reference_owned(&self, index: i32) -> String {
+        self.get_name_reference(index, str::to_string)
+    }
 
     /// Get struct overrides for an `ArrayProperty`
     fn get_array_struct_type_override(&self) -> &IndexedMap<String, String>;
