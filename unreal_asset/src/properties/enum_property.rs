@@ -131,7 +131,7 @@ impl PropertyTrait for EnumProperty {
                         .get_by_key(enum_type)
                         .ok_or_else(|| {
                             Error::invalid_file(
-                                "Missing unversioned info for: ".to_string() + &enum_type,
+                                "Missing unversioned info for: ".to_string() + enum_type,
                             )
                         })?;
 
@@ -143,7 +143,7 @@ impl PropertyTrait for EnumProperty {
                             .map(|(index, _)| index as u8)
                             .ok_or_else(|| {
                                 Error::invalid_file(
-                                    "Missing unversioned info for: ".to_string() + &enum_type,
+                                    "Missing unversioned info for: ".to_string() + enum_type,
                                 )
                             })?,
                         None => u8::MAX,

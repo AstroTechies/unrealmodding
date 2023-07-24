@@ -115,7 +115,7 @@ impl FName {
                 let name_map = name_map.get_ref();
                 func(name_map.get_name_reference(*index))
             }
-            FName::Dummy { value, .. } => func(&value),
+            FName::Dummy { value, .. } => func(value),
         }
     }
 
@@ -144,7 +144,7 @@ impl FName {
 
     /// Compare `FNames` based on their content
     pub fn eq_content(&self, other: &Self) -> bool {
-        self.get_content(|this| other == &this)
+        self.get_content(|this| other == this)
     }
 }
 
@@ -219,7 +219,7 @@ impl std::cmp::PartialEq<str> for FName {
 
 impl std::cmp::PartialEq<&str> for FName {
     fn eq(&self, other: &&str) -> bool {
-        &self == other
+        self == *other
     }
 }
 

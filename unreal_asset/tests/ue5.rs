@@ -30,7 +30,7 @@ fn ue5() -> Result<(), Error> {
             EngineVersion::VER_UE5_2,
         )?;
 
-        shared::verify_binary_equality(&asset_data, Some(&bulk_data), &mut parsed)?;
+        shared::verify_binary_equality(asset_data, Some(bulk_data), &mut parsed)?;
         shared::verify_all_exports_parsed(&parsed);
     }
 

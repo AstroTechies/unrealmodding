@@ -123,7 +123,7 @@ impl StructProperty {
         }
 
         let mut custom_serialization = match struct_type {
-            Some(ref e) => e.get_content(|e| Property::has_custom_serialization(e)),
+            Some(ref e) => e.get_content(Property::has_custom_serialization),
             None => false,
         };
 
@@ -131,7 +131,7 @@ impl StructProperty {
             .as_ref()
             .unwrap_or(&FName::from_slice(""))
             .get_content(|ty| {
-                Ok::<(), Error>(match ty {
+                match ty {
                     "FloatRange" => {
                         // FloatRange is a special case; it can either be manually serialized as two floats (TRange<float>) or as a regular struct (FFloatRange), but the first is overridden to use the same name as the second
                         // The best solution is to just check and see if the next bit is an FName or not
@@ -181,7 +181,8 @@ impl StructProperty {
                         }
                     }
                     _ => {}
-                })
+                };
+                Ok::<(), Error>(())
             })?;
 
         if length == 0 {
@@ -264,7 +265,7 @@ impl StructProperty {
         }
 
         let mut has_custom_serialization = match struct_type {
-            Some(ref e) => e.get_content(|e| Property::has_custom_serialization(e)),
+            Some(ref e) => e.get_content(Property::has_custom_serialization),
             None => false,
         };
 

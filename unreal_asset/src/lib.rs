@@ -1000,7 +1000,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             if *name_map != current_name_map {
                 let new_index = current_name_map
                     .get_mut()
-                    .add_name_reference(content.to_string(), false);
+                    .add_name_reference(content, false);
 
                 *index = new_index;
                 *name_map = current_name_map.clone();

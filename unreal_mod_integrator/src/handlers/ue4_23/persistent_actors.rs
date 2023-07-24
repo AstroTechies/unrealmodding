@@ -232,7 +232,7 @@ pub fn handle_persistent_actors(
 
                     for property in &known_category.properties {
                         property.get_name().get_content(|name| {
-                            Ok::<(), Error>(match name {
+                            match name {
                                 "InternalVariableName" => {
                                     if let Some(name_property) =
                                         cast!(Property, NameProperty, property)
@@ -249,16 +249,12 @@ pub fn handle_persistent_actors(
                                             .get_import(object_property.value)
                                             .ok_or_else(|| {
                                                 io::Error::new(ErrorKind::Other, "No import")
-                                            })?
-                                            .clone();
+                                            })?;
 
                                         second_import = Some(
-                                            actor_asset
-                                                .get_import(import.outer_index)
-                                                .ok_or_else(|| {
-                                                    io::Error::new(ErrorKind::Other, "No import")
-                                                })?
-                                                .clone(),
+                                            actor_asset.get_import(import.outer_index).ok_or_else(
+                                                || io::Error::new(ErrorKind::Other, "No import"),
+                                            )?,
                                         );
                                         first_import = Some(import);
                                     }
@@ -287,7 +283,8 @@ pub fn handle_persistent_actors(
                                     }
                                 }
                                 _ => {}
-                            })
+                            };
+                            Ok::<(), Error>(())
                         })?
                     }
 
