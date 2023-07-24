@@ -7,6 +7,9 @@ license.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/unreal_asset"
 edition = "2021"
+exclude = [
+    "tests/*"
+]
 
 [dependencies]
 unreal_helpers.workspace = true

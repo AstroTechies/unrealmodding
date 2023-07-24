@@ -250,7 +250,7 @@ impl<T: FNameContainer> FNameContainer for Box<T> {
 // todo: fix indexedmap fname key access
 impl<K, V> FNameContainer for IndexedMap<K, V>
 where
-    K: Eq + Hash + FNameContainer,
+    K: Eq + Hash + FNameContainer + Clone,
     V: Eq + Hash + FNameContainer + Clone,
 {
     fn traverse_fnames<F: FnMut(&mut FName)>(&mut self, traverse: &mut F) {

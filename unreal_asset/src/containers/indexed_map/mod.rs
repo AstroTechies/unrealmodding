@@ -14,12 +14,21 @@ pub mod entry;
 #[derive(PartialEq, Eq, Hash)]
 pub struct KeyItem<K: Eq + Hash>(Rc<K>);
 
-impl<K> Clone for KeyItem<K>
+impl<K> KeyItem<K>
 where
     K: Eq + Hash,
 {
+    fn rc_clone(&self) -> Self {
+        Self(Rc::clone(&self.0))
+    }
+}
+
+impl<K> Clone for KeyItem<K>
+where
+    K: Clone + Eq + Hash,
+{
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(Rc::new((*self.0).clone()))
     }
 }
 
@@ -64,7 +73,7 @@ where
 
 impl<K, V> Clone for IndexedValue<K, V>
 where
-    K: Eq + Hash,
+    K: Clone + Eq + Hash,
     V: Clone,
 {
     fn clone(&self) -> Self {
@@ -554,7 +563,7 @@ where
         let key_rc = KeyItem(Rc::new(key));
         let indexed_value = IndexedValue {
             value,
-            key_map_index: key_rc.clone(),
+            key_map_index: key_rc.rc_clone(),
             index_map_index: self.key_map.len(),
             index_iter_map_index: self.index_iter_map.len(),
         };
@@ -757,7 +766,7 @@ impl<K, V> Eq for IndexedMap<K, V> where K: Eq + Hash {}
 
 impl<K, V> Clone for IndexedMap<K, V>
 where
-    K: Eq + Hash,
+    K: Clone + Eq + Hash,
     V: Clone,
 {
     fn clone(&self) -> Self {
