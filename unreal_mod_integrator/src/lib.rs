@@ -341,11 +341,11 @@ fn bake_integrator_data(
         .into(),
     ]);
 
-    let export = asset.asset_data.exports.iter_mut().find(|e| {
-        e.get_base_export()
-            .object_name
-            .is("Default__IntegratorStatics_BP_C")
-    });
+    let export = asset
+        .asset_data
+        .exports
+        .iter_mut()
+        .find(|e| e.get_base_export().object_name == "Default__IntegratorStatics_BP_C");
     if export.is_none() {
         return Err(IntegrationError::corrupted_starter_pak().into());
     }

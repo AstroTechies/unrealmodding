@@ -124,11 +124,6 @@ impl FName {
         self.get_content(str::to_string)
     }
 
-    /// Checks if an `FName`'s content is the given `&str`
-    pub fn is(&self, pat: impl AsRef<str>) -> bool {
-        self.get_content(|name| name == pat.as_ref())
-    }
-
     /// Checks if an `FName`'s content ends with the given `&str`
     pub fn ends_with(&self, pat: impl AsRef<str>) -> bool {
         self.get_content(|name| name.ends_with(pat.as_ref()))
@@ -149,7 +144,7 @@ impl FName {
 
     /// Compare `FNames` based on their content
     pub fn eq_content(&self, other: &Self) -> bool {
-        self.get_content(|this| other.is(this))
+        self.get_content(|this| other == &this)
     }
 }
 
@@ -216,6 +211,23 @@ impl Default for FName {
     }
 }
 
+impl std::cmp::PartialEq<str> for FName {
+    fn eq(&self, other: &str) -> bool {
+        self.get_content(|name| name == other)
+    }
+}
+
+impl std::cmp::PartialEq<&str> for FName {
+    fn eq(&self, other: &&str) -> bool {
+        &self == other
+    }
+}
+
+impl std::cmp::PartialEq<String> for FName {
+    fn eq(&self, other: &String) -> bool {
+        self == other
+    }
+}
 /// A trait that can be implemented for structs that contain an FName
 ///
 /// This trait will be typically used to traverse the whole asset FName tree

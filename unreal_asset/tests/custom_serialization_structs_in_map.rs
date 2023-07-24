@@ -46,7 +46,7 @@ fn custom_serialization_structs_in_map() -> Result<(), Error> {
     let test_map = export_two
         .properties
         .iter()
-        .find(|e| e.get_name().is("KekWait"))
+        .find(|e| e.get_name() == "KekWait")
         .ok_or_else(|| {
             Error::invalid_file("Export doesn't contain a KekWait property".to_string())
         })?;

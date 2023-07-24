@@ -113,11 +113,7 @@ impl StructProperty {
             .and_then(|e| e.get_property(&name, &ancestry))
             .and_then(|e| cast!(UsmapPropertyData, UsmapStructPropertyData, &e.property_data))
         {
-            if struct_type
-                .as_ref()
-                .map(|e| e.is("Generic"))
-                .unwrap_or(true)
-            {
+            if struct_type.as_ref().map(|e| e == "Generic").unwrap_or(true) {
                 struct_type = Some(FName::new_dummy(struct_mapping.struct_type.clone(), 0));
             }
         }
@@ -273,25 +269,25 @@ impl StructProperty {
         };
 
         if let Some(ref struct_type) = struct_type {
-            if struct_type.is("FloatRange") {
+            if struct_type == "FloatRange" {
                 has_custom_serialization = self.value.len() == 1
                     && cast!(Property, FloatRangeProperty, &self.value[0]).is_some();
             }
 
-            if struct_type.is("RichCurveKey")
+            if struct_type == "RichCurveKey"
                 && asset.get_object_version() < ObjectVersion::VER_UE4_SERIALIZE_RICH_CURVE_KEY
             {
                 has_custom_serialization = false;
             }
 
-            if struct_type.is("MovieSceneTrackIdentifier")
+            if struct_type == "MovieSceneTrackIdentifier"
                 && asset.get_custom_version::<FEditorObjectVersion>().version
                     < FEditorObjectVersion::MovieSceneMetaDataSerialization as i32
             {
                 has_custom_serialization = false;
             }
 
-            if struct_type.is("MovieSceneFloatChannel")
+            if struct_type == "MovieSceneFloatChannel"
                 && asset
                     .get_custom_version::<FSequencerObjectVersion>()
                     .version

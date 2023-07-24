@@ -54,7 +54,7 @@ impl EnumProperty {
                 let inner_ty =
                     FName::new_dummy(enum_data.inner_property.get_property_type().to_string(), 0);
 
-                if inner_ty.is("ByteProperty") {
+                if inner_ty == "ByteProperty" {
                     let enum_index = asset.read_u8()?;
                     let info = enum_ty
                         .get_content(|ty| asset.get_mappings().unwrap().enum_map.get_by_key(ty))
@@ -115,7 +115,7 @@ impl PropertyTrait for EnumProperty {
             && self
                 .inner_type
                 .as_ref()
-                .map(|e| e.is("ByteProperty"))
+                .map(|e| e == "ByteProperty")
                 .unwrap_or(false)
         {
             self.enum_type
@@ -139,7 +139,7 @@ impl PropertyTrait for EnumProperty {
                         Some(value) => info
                             .iter()
                             .enumerate()
-                            .find(|(_, e)| value.is(*e))
+                            .find(|(_, e)| value == *e)
                             .map(|(index, _)| index as u8)
                             .ok_or_else(|| {
                                 Error::invalid_file(

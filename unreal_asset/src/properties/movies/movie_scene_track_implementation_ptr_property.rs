@@ -87,7 +87,7 @@ impl PropertyTrait for MovieSceneTrackImplementationPtrProperty {
         let mut had_typename = false;
 
         for property in &self.value {
-            if property.get_name().is("TypeName") {
+            if property.get_name() == "TypeName" {
                 let str_property: &StrProperty = cast!(Property, StrProperty, property)
                     .ok_or_else(|| {
                         Error::no_data("TypeName property is not StrProperty".to_string())

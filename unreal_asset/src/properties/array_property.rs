@@ -134,21 +134,19 @@ impl ArrayProperty {
 
         let new_ancestry = ancestry.with_parent(name.clone());
 
-        if array_type
-            .as_ref()
-            .is_some_and(|ty| ty.is("StructProperty"))
+        if array_type.as_ref().is_some_and(|ty| ty == "StructProperty")
             && serialize_struct_differently
             && !asset.has_unversioned_properties()
         {
             let mut full_type = FName::from_slice("Generic");
             if asset.get_object_version() >= ObjectVersion::VER_UE4_INNER_ARRAY_TAG_INFO {
                 name = asset.read_fname()?;
-                if name.is("None") {
+                if name == "None" {
                     return Ok(ArrayProperty::default());
                 }
 
                 let this_array_type = asset.read_fname()?;
-                if this_array_type.is("None") {
+                if this_array_type == "None" {
                     return Ok(ArrayProperty::default());
                 }
 
@@ -206,7 +204,7 @@ impl ArrayProperty {
                 .as_ref()
                 .ok_or_else(|| Error::invalid_file("Unknown array type".to_string()))?;
             for i in 0..num_entries {
-                let entry: Property = if array_type.is("StructProperty") {
+                let entry: Property = if array_type == "StructProperty" {
                     let struct_type = match array_struct_type {
                         Some(ref e) => Some(e.clone()),
                         None => Some(FName::from_slice("Generic")),
@@ -274,9 +272,7 @@ impl ArrayProperty {
         let begin = asset.position();
         asset.write_i32::<LE>(self.value.len() as i32)?;
 
-        if array_type
-            .as_ref()
-            .is_some_and(|ty| ty.is("StructProperty"))
+        if array_type.as_ref().is_some_and(|ty| ty == "StructProperty")
             && serialize_structs_differently
         {
             let property: &StructProperty = match !self.value.is_empty() {

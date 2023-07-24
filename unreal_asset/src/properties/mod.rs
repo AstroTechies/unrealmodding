@@ -546,7 +546,7 @@ impl Property {
             }
         } else {
             name = asset.read_fname()?;
-            if name.is("None") {
+            if name == "None" {
                 return Ok(None);
             }
 

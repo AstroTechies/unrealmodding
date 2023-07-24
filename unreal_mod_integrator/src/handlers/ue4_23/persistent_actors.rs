@@ -162,7 +162,7 @@ pub fn handle_persistent_actors(
                         let import = asset
                             .get_import(normal_export.base_export.class_index)
                             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Import not found"))?;
-                        if import.object_name.is("SimpleConstructionScript") {
+                        if import.object_name == "SimpleConstructionScript" {
                             scs_location = Some(i);
                             break;
                         }
@@ -182,9 +182,9 @@ pub fn handle_persistent_actors(
                         if array_property
                             .array_type
                             .as_ref()
-                            .map(|e| e.is("ObjectProperty"))
+                            .map(|e| e == "ObjectProperty")
                             .unwrap_or(false)
-                            && array_property.name.is("AllNodes")
+                            && array_property.name == "AllNodes"
                         {
                             for value in &array_property.value {
                                 if let Some(object_property) =
@@ -212,7 +212,7 @@ pub fn handle_persistent_actors(
                                 .ok_or_else(|| {
                                 io::Error::new(ErrorKind::Other, "Import not found")
                             })?;
-                            import.object_name.is("SCS_Node")
+                            import.object_name == "SCS_Node"
                         }
                         false => false,
                     };
@@ -232,13 +232,13 @@ pub fn handle_persistent_actors(
 
                     for property in &known_category.properties {
                         property.get_name().get_content(|name| {
-                            Ok(match name {
+                            Ok::<(), Error>(match name {
                                 "InternalVariableName" => {
                                     if let Some(name_property) =
                                         cast!(Property, NameProperty, property)
                                     {
                                         new_scs.internal_variable_name =
-                                            name_property.value.get_content_owned();
+                                            name_property.value.get_owned_content();
                                     }
                                 }
                                 "ComponentClass" => {
@@ -270,7 +270,7 @@ pub fn handle_persistent_actors(
                                         if array_property
                                             .array_type
                                             .as_ref()
-                                            .map(|e| e.is("ObjectProperty"))
+                                            .map(|e| e == "ObjectProperty")
                                             .unwrap_or(false)
                                         {
                                             for value_property in &array_property.value {
