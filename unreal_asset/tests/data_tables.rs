@@ -39,7 +39,7 @@ fn data_tables() -> Result<(), Error> {
     let mut found_test_name = false;
     // flip all the flags for further testing
     for property in &mut first_entry.value {
-        let property_name = property.get_name().get_content();
+        let property_name = property.get_name().get_owned_content();
         if property_name == "AcceleratorANDDoubleJump" {
             found_test_name = true;
         }
@@ -74,9 +74,9 @@ fn data_tables() -> Result<(), Error> {
     for property in &first_entry.value {
         if let Some(bool_prop) = cast!(Property, BoolProperty, property) {
             assert_eq!(
-                *flipped_values
-                    .get(&bool_prop.get_name().get_content())
-                    .unwrap(),
+                bool_prop
+                    .get_name()
+                    .get_content(|name| *flipped_values.get(name).unwrap()),
                 bool_prop.value
             );
         }

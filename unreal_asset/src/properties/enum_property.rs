@@ -54,18 +54,14 @@ impl EnumProperty {
                 let inner_ty =
                     FName::new_dummy(enum_data.inner_property.get_property_type().to_string(), 0);
 
-                if inner_ty.get_content() == "ByteProperty" {
+                if inner_ty == "ByteProperty" {
                     let enum_index = asset.read_u8()?;
-                    let info = asset
-                        .get_mappings()
-                        .unwrap()
-                        .enum_map
-                        .get_by_key(&enum_ty.get_content())
+                    let info = enum_ty
+                        .get_content(|ty| asset.get_mappings().unwrap().enum_map.get_by_key(ty))
                         .ok_or_else(|| {
-                            Error::invalid_file(
-                                "Missing unversioned info for: ".to_string()
-                                    + &enum_ty.get_content(),
-                            )
+                            Error::invalid_file(enum_ty.get_content(|ty| {
+                                "Missing unversioned info for: ".to_string() + ty
+                            }))
                         })?;
                     let value = match enum_index == u8::MAX {
                         true => None,
@@ -119,41 +115,43 @@ impl PropertyTrait for EnumProperty {
             && self
                 .inner_type
                 .as_ref()
-                .map(|e| e.get_content() == "ByteProperty")
+                .map(|e| e == "ByteProperty")
                 .unwrap_or(false)
         {
-            let enum_type = self
-                .enum_type
+            self.enum_type
                 .as_ref()
                 .ok_or_else(|| {
                     Error::no_data("enum_type is None on an unversioned property".to_string())
                 })?
-                .get_content();
+                .get_content(|enum_type| {
+                    let info = asset
+                        .get_mappings()
+                        .ok_or_else(PropertyError::no_mappings)?
+                        .enum_map
+                        .get_by_key(enum_type)
+                        .ok_or_else(|| {
+                            Error::invalid_file(
+                                "Missing unversioned info for: ".to_string() + enum_type,
+                            )
+                        })?;
 
-            let info = asset
-                .get_mappings()
-                .ok_or_else(PropertyError::no_mappings)?
-                .enum_map
-                .get_by_key(&enum_type)
-                .ok_or_else(|| {
-                    Error::invalid_file("Missing unversioned info for: ".to_string() + &enum_type)
+                    let enum_index = match self.value.as_ref() {
+                        Some(value) => info
+                            .iter()
+                            .enumerate()
+                            .find(|(_, e)| value == *e)
+                            .map(|(index, _)| index as u8)
+                            .ok_or_else(|| {
+                                Error::invalid_file(
+                                    "Missing unversioned info for: ".to_string() + enum_type,
+                                )
+                            })?,
+                        None => u8::MAX,
+                    };
+
+                    asset.write_u8(enum_index)?;
+                    Ok::<(), Error>(())
                 })?;
-
-            let enum_index = match self.value.as_ref() {
-                Some(value) => info
-                    .iter()
-                    .enumerate()
-                    .find(|(_, e)| **e == value.get_content())
-                    .map(|(index, _)| index as u8)
-                    .ok_or_else(|| {
-                        Error::invalid_file(
-                            "Missing unversioned info for: ".to_string() + &enum_type,
-                        )
-                    })?,
-                None => u8::MAX,
-            };
-
-            asset.write_u8(enum_index)?;
             return Ok(size_of::<u8>());
         }
 

@@ -162,7 +162,7 @@ pub fn handle_persistent_actors(
                         let import = asset
                             .get_import(normal_export.base_export.class_index)
                             .ok_or_else(|| io::Error::new(ErrorKind::Other, "Import not found"))?;
-                        if import.object_name.get_content() == "SimpleConstructionScript" {
+                        if import.object_name == "SimpleConstructionScript" {
                             scs_location = Some(i);
                             break;
                         }
@@ -182,9 +182,9 @@ pub fn handle_persistent_actors(
                         if array_property
                             .array_type
                             .as_ref()
-                            .map(|e| e.get_content() == "ObjectProperty")
+                            .map(|e| e == "ObjectProperty")
                             .unwrap_or(false)
-                            && array_property.name.get_content() == "AllNodes"
+                            && array_property.name == "AllNodes"
                         {
                             for value in &array_property.value {
                                 if let Some(object_property) =
@@ -212,7 +212,7 @@ pub fn handle_persistent_actors(
                                 .ok_or_else(|| {
                                 io::Error::new(ErrorKind::Other, "Import not found")
                             })?;
-                            import.object_name.get_content() == "SCS_Node"
+                            import.object_name == "SCS_Node"
                         }
                         false => false,
                     };
@@ -231,61 +231,61 @@ pub fn handle_persistent_actors(
                     let mut second_import = None;
 
                     for property in &known_category.properties {
-                        match property.get_name().get_content().as_str() {
-                            "InternalVariableName" => {
-                                if let Some(name_property) = cast!(Property, NameProperty, property)
-                                {
-                                    new_scs.internal_variable_name =
-                                        name_property.value.get_content();
+                        property.get_name().get_content(|name| {
+                            match name {
+                                "InternalVariableName" => {
+                                    if let Some(name_property) =
+                                        cast!(Property, NameProperty, property)
+                                    {
+                                        new_scs.internal_variable_name =
+                                            name_property.value.get_owned_content();
+                                    }
                                 }
-                            }
-                            "ComponentClass" => {
-                                if let Some(object_property) =
-                                    cast!(Property, ObjectProperty, property)
-                                {
-                                    let import = actor_asset
-                                        .get_import(object_property.value)
-                                        .ok_or_else(|| {
-                                            io::Error::new(ErrorKind::Other, "No import")
-                                        })?
-                                        .clone();
-
-                                    second_import = Some(
-                                        actor_asset
-                                            .get_import(import.outer_index)
+                                "ComponentClass" => {
+                                    if let Some(object_property) =
+                                        cast!(Property, ObjectProperty, property)
+                                    {
+                                        let import = actor_asset
+                                            .get_import(object_property.value)
                                             .ok_or_else(|| {
                                                 io::Error::new(ErrorKind::Other, "No import")
-                                            })?
-                                            .clone(),
-                                    );
-                                    first_import = Some(import);
+                                            })?;
+
+                                        second_import = Some(
+                                            actor_asset.get_import(import.outer_index).ok_or_else(
+                                                || io::Error::new(ErrorKind::Other, "No import"),
+                                            )?,
+                                        );
+                                        first_import = Some(import);
+                                    }
                                 }
-                            }
-                            "ChildNodes" => {
-                                if let Some(array_property) =
-                                    cast!(Property, ArrayProperty, property)
-                                {
-                                    if array_property
-                                        .array_type
-                                        .as_ref()
-                                        .map(|e| e.get_content() == "ObjectProperty")
-                                        .unwrap_or(false)
+                                "ChildNodes" => {
+                                    if let Some(array_property) =
+                                        cast!(Property, ArrayProperty, property)
                                     {
-                                        for value_property in &array_property.value {
-                                            if let Some(object_property) =
-                                                cast!(Property, ObjectProperty, value_property)
-                                            {
-                                                known_parents.insert(
-                                                    object_property.value.index,
-                                                    known_node_category,
-                                                );
+                                        if array_property
+                                            .array_type
+                                            .as_ref()
+                                            .map(|e| e == "ObjectProperty")
+                                            .unwrap_or(false)
+                                        {
+                                            for value_property in &array_property.value {
+                                                if let Some(object_property) =
+                                                    cast!(Property, ObjectProperty, value_property)
+                                                {
+                                                    known_parents.insert(
+                                                        object_property.value.index,
+                                                        known_node_category,
+                                                    );
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                            _ => {}
-                        }
+                                _ => {}
+                            };
+                            Ok::<(), Error>(())
+                        })?
                     }
 
                     if let (Some(first_import), Some(second_import)) = (first_import, second_import)

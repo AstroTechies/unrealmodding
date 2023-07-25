@@ -197,7 +197,7 @@ impl Usmap {
         ancestry: &Ancestry,
         duplication_index: u32,
     ) -> Option<(&UsmapProperty, u32)> {
-        let mut optional_schema_name = ancestry.get_parent().map(|e| e.get_content());
+        let mut optional_schema_name = ancestry.get_parent().map(|e| e.get_owned_content());
 
         let mut global_index = 0;
         loop {
@@ -210,7 +210,7 @@ impl Usmap {
             };
 
             if let Some(property) =
-                schema.get_property(&property_name.get_content(), duplication_index)
+                property_name.get_content(|name| schema.get_property(name, duplication_index))
             {
                 global_index += property.schema_index as u32;
                 return Some((property, global_index));
@@ -222,7 +222,7 @@ impl Usmap {
         }
 
         // this name is not an actual property name, but an array index
-        let Ok(_) = property_name.get_content().parse::<u32>() else {
+        let Ok(_) = property_name.get_content(|name| name.parse::<u32>()) else {
             return None;
         };
 

@@ -184,29 +184,30 @@ impl FProperty {
     /// Read an `FProperty` from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
         let serialized_type = asset.read_fname()?;
-        let res: FProperty = match serialized_type.get_content().as_str() {
-            "EnumProperty" => FEnumProperty::new(asset)?.into(),
-            "ArrayProperty" => FArrayProperty::new(asset)?.into(),
-            "SetProperty" => FSetProperty::new(asset)?.into(),
-            "ObjectProperty" => FObjectProperty::new(asset)?.into(),
-            "SoftObjectProperty" => FSoftObjectProperty::new(asset)?.into(),
-            "ClassProperty" => FClassProperty::new(asset)?.into(),
-            "SoftClassProperty" => FSoftClassProperty::new(asset)?.into(),
-            "DelegateProperty" => FDelegateProperty::new(asset)?.into(),
-            "MulticastDelegateProperty" => FMulticastDelegateProperty::new(asset)?.into(),
-            "MulticastInlineDelegateProperty" => {
-                FMulticastInlineDelegateProperty::new(asset)?.into()
-            }
-            "InterfaceProperty" => FInterfaceProperty::new(asset)?.into(),
-            "MapProperty" => FMapProperty::new(asset)?.into(),
-            "BoolProperty" => FBoolProperty::new(asset)?.into(),
-            "ByteProperty" => FByteProperty::new(asset)?.into(),
-            "StructProperty" => FStructProperty::new(asset)?.into(),
-            "NumericProperty" => FNumericProperty::new(asset)?.into(),
-            _ => FGenericProperty::with_serialized_type(asset, Some(serialized_type))?.into(),
-        };
-
-        Ok(res)
+        serialized_type.get_content(|ty| {
+            Ok::<FProperty, Error>(match ty {
+                "EnumProperty" => FEnumProperty::new(asset)?.into(),
+                "ArrayProperty" => FArrayProperty::new(asset)?.into(),
+                "SetProperty" => FSetProperty::new(asset)?.into(),
+                "ObjectProperty" => FObjectProperty::new(asset)?.into(),
+                "SoftObjectProperty" => FSoftObjectProperty::new(asset)?.into(),
+                "ClassProperty" => FClassProperty::new(asset)?.into(),
+                "SoftClassProperty" => FSoftClassProperty::new(asset)?.into(),
+                "DelegateProperty" => FDelegateProperty::new(asset)?.into(),
+                "MulticastDelegateProperty" => FMulticastDelegateProperty::new(asset)?.into(),
+                "MulticastInlineDelegateProperty" => {
+                    FMulticastInlineDelegateProperty::new(asset)?.into()
+                }
+                "InterfaceProperty" => FInterfaceProperty::new(asset)?.into(),
+                "MapProperty" => FMapProperty::new(asset)?.into(),
+                "BoolProperty" => FBoolProperty::new(asset)?.into(),
+                "ByteProperty" => FByteProperty::new(asset)?.into(),
+                "StructProperty" => FStructProperty::new(asset)?.into(),
+                "NumericProperty" => FNumericProperty::new(asset)?.into(),
+                _ => FGenericProperty::with_serialized_type(asset, Some(serialized_type.clone()))?
+                    .into(),
+            })
+        })
     }
 
     /// Write an `FProperty` to an asset
@@ -249,8 +250,8 @@ impl ToSerializedName for FProperty {
             FProperty::FGenericProperty(generic) => generic
                 .serialized_type
                 .as_ref()
-                .map(|e| e.get_content())
-                .unwrap_or_else(|| String::from("Generic")),
+                .map(|e| e.get_owned_content())
+                .unwrap_or("Generic".to_string()),
         }
     }
 }
