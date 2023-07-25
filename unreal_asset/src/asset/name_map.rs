@@ -91,6 +91,11 @@ impl NameMap {
         &self.name_map_index_list[index as usize]
     }
 
+    /// Get a name reference by an FName map index as a `String`
+    pub fn get_owned_name(&self, index: i32) -> String {
+        self.get_name_reference(index).to_string()
+    }
+
     /// Get a mutable name reference by an FName map index
     pub fn get_name_reference_mut(&mut self, index: i32) -> &mut String {
         &mut self.name_map_index_list[index as usize]
