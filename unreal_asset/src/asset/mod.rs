@@ -9,7 +9,7 @@ use crate::{
     cast,
     containers::{indexed_map::IndexedMap, shared_resource::SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
-    engine_version::{get_object_versions, guess_engine_version, EngineVersion},
+    engine_version::{get_object_versions, EngineVersion},
     error::Error,
     exports::{
         base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
@@ -43,6 +43,9 @@ pub struct AssetData {
     /// File licensee version, used by some games for their own engine versioning.
     pub file_license_version: i32,
 
+    /// Object version
+    #[container_ignore]
+    pub engine_version: EngineVersion,
     /// Object version
     #[container_ignore]
     pub object_version: ObjectVersion,
@@ -142,6 +145,7 @@ impl AssetData {
 
         let (object_version, object_version_ue5) = get_object_versions(engine_version);
 
+        self.engine_version = engine_version;
         self.object_version = object_version;
         self.object_version_ue5 = object_version_ue5;
         self.custom_versions = CustomVersion::get_default_custom_version_container(engine_version);
@@ -177,11 +181,7 @@ impl AssetData {
 
     /// Get engine version
     pub fn get_engine_version(&self) -> EngineVersion {
-        guess_engine_version(
-            self.object_version,
-            self.object_version_ue5,
-            &self.custom_versions,
-        )
+        self.engine_version
     }
 
     /// Get an export
@@ -235,6 +235,7 @@ impl Default for AssetData {
             unversioned: true,
             package_flags: EPackageFlags::PKG_NONE,
             file_license_version: 0,
+            engine_version: EngineVersion::UNKNOWN,
             object_version: ObjectVersion::UNKNOWN,
             object_version_ue5: ObjectVersionUE5::UNKNOWN,
             custom_versions: Vec::new(),
