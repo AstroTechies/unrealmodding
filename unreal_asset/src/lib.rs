@@ -272,7 +272,7 @@ pub struct Asset<C: Read + Seek> {
     /// Asset registry data offset
     asset_registry_data_offset: i32,
     /// Bulk data start offset
-    bulk_data_start_offset: i64,
+    pub bulk_data_start_offset: i64,
     /// World tile info offset
     world_tile_info_offset: i32,
     /// Preload dependency count
