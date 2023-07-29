@@ -44,6 +44,7 @@ pub fn handle_persistent_actors(
         Cursor::new(LEVEL_TEMPLATE_ASSET),
         None,
         EngineVersion::VER_UE4_23,
+        None,
     )
     .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
 

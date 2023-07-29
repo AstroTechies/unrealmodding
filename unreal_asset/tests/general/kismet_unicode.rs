@@ -27,6 +27,7 @@ fn kismet_unicode() -> Result<(), Error> {
             Cursor::new(test_asset),
             Some(Cursor::new(asset_bulk)),
             EngineVersion::VER_UE4_25,
+            None,
         )?;
         shared::verify_binary_equality(test_asset, Some(asset_bulk), &mut asset)?;
     }
