@@ -311,6 +311,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         asset_data: C,
         bulk_data: Option<C>,
         engine_version: EngineVersion,
+        mappings: Option<Usmap>,
     ) -> Result<Self, Error> {
         let use_event_driven_loader = bulk_data.is_some();
 
@@ -373,6 +374,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             parent_class: None,
         };
         asset.set_engine_version(engine_version);
+        asset.asset_data.mappings = mappings;
         asset.parse_data()?;
         Ok(asset)
     }
