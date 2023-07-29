@@ -355,7 +355,7 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
 
         let mut export: Export = export_class_type.get_content(|class| {
             Ok::<Export, Error>(match class {
-                "Level" => LevelExport::from_base(&base_export, self, next_starting)?.into(),
+                "Level" => LevelExport::from_base(&base_export, self)?.into(),
                 "StringTable" => StringTableExport::from_base(&base_export, self)?.into(),
                 "Enum" | "UserDefinedEnum" => EnumExport::from_base(&base_export, self)?.into(),
                 "Function" => FunctionExport::from_base(&base_export, self)?.into(),

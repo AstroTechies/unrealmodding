@@ -12,24 +12,51 @@ use crate::implement_get;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::PackageIndex;
 
+/// Level URL info
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct URL {
+    /// Level protocol like "unreal" or "http"
+    pub protocol: Option<String>,
+    /// Host name like "unreal.epicgames" or "168.192.1.1"
+    pub host: Option<String>,
+    /// Name of the map
+    pub map: Option<String>,
+    /// Portal to enter through
+    pub portal: Option<String>,
+    /// Options
+    pub options: Vec<Option<String>>,
+    /// Host port
+    pub port: i32,
+    /// is valid?
+    pub valid: i32,
+}
+
 /// Level export
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LevelExport {
     /// Base normal export
     pub normal_export: NormalExport,
 
+    /// Level URL info
+    pub url: URL,
     /// Level actors
     #[container_ignore]
     pub actors: Vec<PackageIndex>,
-    /// Level namespace
-    pub namespace: Option<String>,
-    /// Value
-    pub value: Option<String>,
-    /// Flags?
-    pub flags_probably: u64,
-    /// Misc category data
+    /// Model export reference
     #[container_ignore]
-    pub misc_category_data: Vec<PackageIndex>,
+    pub model: PackageIndex,
+    /// Model component references
+    #[container_ignore]
+    pub model_components: Vec<PackageIndex>,
+    /// Level script reference
+    #[container_ignore]
+    pub level_script: PackageIndex,
+    /// start of the navigation component list
+    #[container_ignore]
+    pub nav_list_start: PackageIndex,
+    /// end of the navigation component list
+    #[container_ignore]
+    pub nav_list_end: PackageIndex,
 }
 
 implement_get!(LevelExport);
@@ -39,37 +66,28 @@ impl LevelExport {
     pub fn from_base<Reader: ArchiveReader>(
         unk: &BaseExport,
         asset: &mut Reader,
-        next_starting: u64,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(unk, asset)?;
-
         asset.read_i32::<LE>()?;
-
-        let num_actors = asset.read_i32::<LE>()?;
-        let mut actors = Vec::with_capacity(num_actors as usize);
-        for _i in 0..num_actors as usize {
-            actors.push(PackageIndex::new(asset.read_i32::<LE>()?));
-        }
-
-        let namespace = asset.read_fstring()?;
-        asset.read_i32::<LE>()?; // null
-        let value = asset.read_fstring()?;
-
-        asset.read_i64::<LE>()?; // null
-        let flags_probably = asset.read_u64::<LE>()?;
-        let mut misc_category_data = Vec::new();
-        while asset.position() < next_starting - 1 {
-            misc_category_data.push(PackageIndex::new(asset.read_i32::<LE>()?));
-        }
-        asset.read_exact(&mut [0u8; 1])?;
 
         Ok(LevelExport {
             normal_export,
-            actors,
-            namespace,
-            value,
-            flags_probably,
-            misc_category_data,
+            actors: asset.read_array(|asset| Ok(PackageIndex::new(asset.read_i32::<LE>()?)))?,
+            url: URL {
+                protocol: asset.read_fstring()?,
+                host: asset.read_fstring()?,
+                map: asset.read_fstring()?,
+                portal: asset.read_fstring()?,
+                options: asset.read_array(|asset| asset.read_fstring())?,
+                port: asset.read_i32::<LE>()?,
+                valid: asset.read_i32::<LE>()?,
+            },
+            model: PackageIndex::new(asset.read_i32::<LE>()?),
+            model_components: asset
+                .read_array(|asset| Ok(PackageIndex::new(asset.read_i32::<LE>()?)))?,
+            level_script: PackageIndex::new(asset.read_i32::<LE>()?),
+            nav_list_start: PackageIndex::new(asset.read_i32::<LE>()?),
+            nav_list_end: PackageIndex::new(asset.read_i32::<LE>()?),
         })
     }
 }
@@ -84,17 +102,28 @@ impl ExportTrait for LevelExport {
             asset.write_i32::<LE>(actor.index)?;
         }
 
-        asset.write_fstring(self.namespace.as_deref())?;
-        asset.write_i32::<LE>(0)?;
-        asset.write_fstring(self.value.as_deref())?;
+        asset.write_fstring(self.url.protocol.as_deref())?;
+        asset.write_fstring(self.url.host.as_deref())?;
+        asset.write_fstring(self.url.map.as_deref())?;
+        asset.write_fstring(self.url.portal.as_deref())?;
 
-        asset.write_u64::<LE>(0)?;
-        asset.write_u64::<LE>(self.flags_probably)?;
+        asset.write_i32::<LE>(self.url.options.len() as i32)?;
+        for option in &self.url.options {
+            asset.write_fstring(option.as_deref())?;
+        }
 
-        for data in &self.misc_category_data {
+        asset.write_i32::<LE>(self.url.port)?;
+        asset.write_i32::<LE>(self.url.valid)?;
+
+        asset.write_i32::<LE>(self.model.index)?;
+
+        asset.write_i32::<LE>(self.model_components.len() as i32)?;
+        for data in &self.model_components {
             asset.write_i32::<LE>(data.index)?;
         }
-        asset.write_u8(0)?;
+        asset.write_i32::<LE>(self.level_script.index)?;
+        asset.write_i32::<LE>(self.nav_list_start.index)?;
+        asset.write_i32::<LE>(self.nav_list_end.index)?;
         Ok(())
     }
 }
