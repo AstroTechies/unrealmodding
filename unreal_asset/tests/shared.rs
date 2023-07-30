@@ -15,7 +15,7 @@ pub(crate) fn verify_reparse<C: Read + Seek>(
     }
     asset.write_data(&mut cursor, bulk_cursor.as_mut())?;
 
-    Asset::new(cursor, bulk_cursor, engine_version)?;
+    Asset::new(cursor, bulk_cursor, engine_version, None)?;
 
     Ok(())
 }

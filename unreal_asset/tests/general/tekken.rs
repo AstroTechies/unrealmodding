@@ -20,7 +20,12 @@ const TEST_ASSETS: [&[u8]; 1] = [include_bytes!(concat!(
 #[test]
 fn tekken() -> Result<(), Error> {
     for test_asset in TEST_ASSETS {
-        let mut asset = Asset::new(Cursor::new(test_asset), None, EngineVersion::VER_UE4_14)?;
+        let mut asset = Asset::new(
+            Cursor::new(test_asset),
+            None,
+            EngineVersion::VER_UE4_14,
+            None,
+        )?;
         shared::verify_binary_equality(test_asset, None, &mut asset)?;
         assert!(shared::verify_all_exports_parsed(&asset));
     }

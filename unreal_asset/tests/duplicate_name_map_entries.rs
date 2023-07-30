@@ -22,6 +22,7 @@ fn duplicate_name_map_entries() -> Result<(), Error> {
         Cursor::new(ASSET_FILE),
         Some(Cursor::new(ASSET_BULK_FILE)),
         EngineVersion::VER_UE4_25,
+        None,
     )?;
 
     let mut has_duplicates = false;

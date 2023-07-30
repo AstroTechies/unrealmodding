@@ -42,7 +42,7 @@ use std::{
 let mut data_file = File::open("NPC_Onop_IO_Bech.uasset")?;
 let mut bulk_file = File::open("NPC_Onop_IO_Bech.uexp")?;
 
-let asset = Asset::new(data_file, Some(bulk_file), EngineVersion::VER_UE4_25)?;
+let asset = Asset::new(data_file, Some(bulk_file), EngineVersion::VER_UE4_25, None)?;
 println!("{:#?}", asset);
 ```
 

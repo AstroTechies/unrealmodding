@@ -446,6 +446,7 @@ pub fn integrate_mods<
             Cursor::new(LIST_OF_MODS_ASSET),
             list_of_mods_bulk.map(Cursor::new),
             C::ENGINE_VERSION,
+            None,
         )?;
         bake_mod_data(&mut list_of_mods, &read_mods)?;
         write_asset(
@@ -463,6 +464,7 @@ pub fn integrate_mods<
             Cursor::new(INTEGRATOR_STATICS_ASSET),
             integrator_statics_bulk.map(Cursor::new),
             C::ENGINE_VERSION,
+            None,
         )?;
 
         bake_integrator_data(

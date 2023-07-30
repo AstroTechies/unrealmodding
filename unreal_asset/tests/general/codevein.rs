@@ -27,6 +27,7 @@ fn codevein() -> Result<(), Error> {
             Cursor::new(test_asset),
             Some(Cursor::new(asset_bulk)),
             EngineVersion::VER_UE4_18,
+            None,
         )?;
         shared::verify_binary_equality(test_asset, Some(asset_bulk), &mut asset)?;
         assert!(shared::verify_all_exports_parsed(&asset));

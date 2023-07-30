@@ -25,6 +25,7 @@ fn unknown_properties() -> Result<(), Error> {
         Cursor::new(TEST_ASSET),
         Some(Cursor::new(TEST_BULK)),
         EngineVersion::VER_UE4_25,
+        None,
     )?;
     shared::verify_binary_equality(TEST_ASSET, Some(TEST_BULK), &mut asset)?;
     assert!(shared::verify_all_exports_parsed(&asset));

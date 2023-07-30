@@ -14,7 +14,7 @@
 //! };
 //!
 //! let mut file = File::open("asset.uasset").unwrap();
-//! let mut asset = Asset::new(file, None, EngineVersion::VER_UE4_23).unwrap();
+//! let mut asset = Asset::new(file, None, EngineVersion::VER_UE4_23, None).unwrap();
 //!
 //! println!("{:#?}", asset);
 //! ```
@@ -31,7 +31,7 @@
 //!
 //! let mut file = File::open("asset.uasset").unwrap();
 //! let mut bulk_file = File::open("asset.uexp").unwrap();
-//! let mut asset = Asset::new(file, Some(bulk_file), EngineVersion::VER_UE4_23).unwrap();
+//! let mut asset = Asset::new(file, Some(bulk_file), EngineVersion::VER_UE4_23, None).unwrap();
 //!
 //! println!("{:#?}", asset);
 //! ```
@@ -311,6 +311,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         asset_data: C,
         bulk_data: Option<C>,
         engine_version: EngineVersion,
+        mappings: Option<Usmap>,
     ) -> Result<Self, Error> {
         let use_event_driven_loader = bulk_data.is_some();
 
@@ -373,6 +374,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             parent_class: None,
         };
         asset.set_engine_version(engine_version);
+        asset.asset_data.mappings = mappings;
         asset.parse_data()?;
         Ok(asset)
     }

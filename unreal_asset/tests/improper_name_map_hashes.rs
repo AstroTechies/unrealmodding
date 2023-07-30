@@ -23,6 +23,7 @@ fn improper_name_map_hashes() -> Result<(), Error> {
         Cursor::new(ASSET_FILE),
         Some(Cursor::new(ASSET_BULK_FILE)),
         EngineVersion::VER_UE4_25,
+        None,
     )?;
 
     shared::verify_binary_equality(ASSET_FILE, Some(ASSET_BULK_FILE), &mut asset)?;

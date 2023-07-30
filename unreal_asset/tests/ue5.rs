@@ -28,6 +28,7 @@ fn ue5() -> Result<(), Error> {
             Cursor::new(asset_data),
             Some(Cursor::new(bulk_data)),
             EngineVersion::VER_UE5_2,
+            None,
         )?;
 
         shared::verify_binary_equality(asset_data, Some(bulk_data), &mut parsed)?;

@@ -26,7 +26,12 @@ const TEST_ASSETS: [&[u8]; 5] = [
 #[test]
 fn astroneer_prebulk() -> Result<(), Error> {
     for test_asset in TEST_ASSETS {
-        let mut asset = Asset::new(Cursor::new(test_asset), None, EngineVersion::VER_UE4_23)?;
+        let mut asset = Asset::new(
+            Cursor::new(test_asset),
+            None,
+            EngineVersion::VER_UE4_23,
+            None,
+        )?;
         shared::verify_binary_equality(test_asset, None, &mut asset)?;
         assert!(shared::verify_all_exports_parsed(&asset));
     }
