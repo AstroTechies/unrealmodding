@@ -14,7 +14,7 @@ use super::{EPropertyType, UsmapPropertyDataTrait};
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UsmapStructPropertyData {
     /// Struct type
-    pub struct_type: String,
+    pub struct_type: Option<String>,
 }
 
 impl UsmapStructPropertyData {
@@ -29,7 +29,7 @@ impl UsmapStructPropertyData {
 impl UsmapPropertyDataTrait for UsmapStructPropertyData {
     fn write<W: ArchiveWriter>(&self, asset: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::StructProperty as u8)?;
-        asset.write_name(&self.struct_type)?;
+        asset.write_name(self.struct_type.as_deref())?;
         Ok(size_of::<i32>() * 2)
     }
 

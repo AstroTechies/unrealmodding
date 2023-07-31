@@ -97,8 +97,8 @@ impl UsmapSchema {
     pub fn read<R: ArchiveReader>(
         reader: &mut UsmapReader<'_, '_, R>,
     ) -> Result<UsmapSchema, Error> {
-        let name = reader.read_name()?;
-        let super_type = reader.read_name()?;
+        let name = reader.read_name()?.unwrap_or_default();
+        let super_type = reader.read_name()?.unwrap_or_default();
 
         let prop_count = reader.read_u16::<LE>()?;
         let serializable_property_count = reader.read_u16::<LE>()?;
@@ -350,13 +350,15 @@ impl Usmap {
         let mut reader = UsmapReader::new(&mut reader, &self.name_map, &self.custom_versions);
 
         for _ in 0..enum_len {
-            let enum_name = reader.read_name()?;
+            let enum_name = reader.read_name()?.unwrap_or_default();
 
             let enum_names_len = reader.read_u8()?;
             let mut enum_names = Vec::with_capacity(enum_names_len as usize);
 
             for _ in 0..enum_names_len {
-                enum_names.push(reader.read_name()?);
+                if let Some(name) = reader.read_name()? {
+                    enum_names.push(name)
+                }
             }
 
             self.enum_map.insert(enum_name, enum_names);

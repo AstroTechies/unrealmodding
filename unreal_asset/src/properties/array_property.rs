@@ -120,8 +120,10 @@ impl ArrayProperty {
                     UsmapStructPropertyData,
                     struct_data.inner_type.as_ref()
                 ) {
-                    array_struct_type =
-                        Some(FName::new_dummy(inner_struct_data.struct_type.clone(), 0));
+                    array_struct_type = inner_struct_data
+                        .struct_type
+                        .as_deref()
+                        .map(FName::from_slice)
                 }
             }
         }

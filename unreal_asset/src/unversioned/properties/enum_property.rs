@@ -16,7 +16,7 @@ pub struct UsmapEnumPropertyData {
     /// Inner property
     pub inner_property: Box<UsmapPropertyData>,
     /// Name
-    pub name: String,
+    pub name: Option<String>,
 }
 
 impl UsmapEnumPropertyData {
@@ -36,7 +36,7 @@ impl UsmapPropertyDataTrait for UsmapEnumPropertyData {
     fn write<W: ArchiveWriter>(&self, asset: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::EnumProperty as u8)?;
         let size = self.inner_property.write(asset)?;
-        asset.write_name(&self.name)?;
+        asset.write_name(self.name.as_deref())?;
 
         Ok(size + size_of::<u8>() + size_of::<u32>() * 2)
     }

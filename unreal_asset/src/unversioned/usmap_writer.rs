@@ -30,7 +30,7 @@ pub struct UsmapWriter<'parent_writer, 'asset, W: ArchiveWriter> {
 
 impl<'parent_writer, 'asset, W: ArchiveWriter> UsmapWriter<'parent_writer, 'asset, W> {
     /// Write a name to this archive
-    pub fn write_name(&mut self, _: &str) -> Result<usize, Error> {
+    pub fn write_name(&mut self, _: Option<&str>) -> Result<usize, Error> {
         todo!()
     }
 }

@@ -45,14 +45,19 @@ impl<'parent_reader, 'asset, R: ArchiveReader> UsmapReader<'parent_reader, 'asse
     }
 
     /// Read a name from this archive
-    pub fn read_name(&mut self) -> Result<String, Error> {
+    pub fn read_name(&mut self) -> Result<Option<String>, Error> {
         let index = self.read_i32::<LE>()?;
         if index < 0 {
-            return Err(UsmapError::name_map_index_out_of_range(self.name_map.len(), index).into());
+            return Ok(None);
         }
-        self.name_map.get(index as usize).cloned().ok_or_else(|| {
-            UsmapError::name_map_index_out_of_range(self.name_map.len(), index).into()
-        })
+        Ok(Some(
+            self.name_map.get(index as usize).cloned().ok_or_else(|| {
+                Error::from(UsmapError::name_map_index_out_of_range(
+                    self.name_map.len(),
+                    index,
+                ))
+            })?,
+        ))
     }
 }
 

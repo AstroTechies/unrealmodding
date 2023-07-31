@@ -78,10 +78,10 @@ impl MapProperty {
                         map_data.value_type.as_ref(),
                     ) {
                         (true, UsmapPropertyData::UsmapStructPropertyData(inner_type), _) => {
-                            struct_type = Some(FName::new_dummy(inner_type.struct_type.clone(), 0));
+                            struct_type = inner_type.struct_type.as_deref().map(FName::from_slice)
                         }
                         (false, _, UsmapPropertyData::UsmapStructPropertyData(value_type)) => {
-                            struct_type = Some(FName::new_dummy(value_type.struct_type.clone(), 0))
+                            struct_type = value_type.struct_type.as_deref().map(FName::from_slice)
                         }
                         _ => {}
                     }

@@ -195,7 +195,7 @@ impl UsmapProperty {
     pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
         let schema_index = asset.read_u16::<LE>()?;
         let array_size = asset.read_u8()?;
-        let name = asset.read_name()?;
+        let name = asset.read_name()?.unwrap_or_default();
 
         let property_data = UsmapPropertyData::new(asset)?;
         Ok(UsmapProperty {

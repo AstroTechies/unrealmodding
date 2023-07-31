@@ -51,12 +51,13 @@ impl EnumProperty {
                 .and_then(|e| e.get_property(&name, &ancestry))
                 .and_then(|e| cast!(UsmapPropertyData, UsmapEnumPropertyData, &e.property_data))
             {
-                let enum_ty = FName::new_dummy(enum_data.name.clone(), 0);
+                enum_type = enum_data.name.as_deref().map(FName::from_slice);
                 let inner_ty =
                     FName::new_dummy(enum_data.inner_property.get_property_type().to_string(), 0);
 
                 if inner_ty == "ByteProperty" {
                     let enum_index = asset.read_u8()?;
+                    let enum_ty = enum_type.clone().unwrap_or_default();
                     let info = enum_ty
                         .get_content(|ty| asset.get_mappings().unwrap().enum_map.get_by_key(ty))
                         .ok_or_else(|| {
@@ -74,13 +75,11 @@ impl EnumProperty {
                         ancestry,
                         property_guid: None,
                         duplication_index,
-                        enum_type: Some(enum_ty),
+                        enum_type,
                         inner_type: Some(inner_ty),
                         value,
                     });
                 }
-
-                enum_type = Some(enum_ty);
                 inner_type = Some(inner_ty);
             }
         }

@@ -114,7 +114,7 @@ impl StructProperty {
             .and_then(|e| cast!(UsmapPropertyData, UsmapStructPropertyData, &e.property_data))
         {
             if struct_type.as_ref().map(|e| e == "Generic").unwrap_or(true) {
-                struct_type = Some(FName::new_dummy(struct_mapping.struct_type.clone(), 0));
+                struct_type = struct_mapping.struct_type.as_deref().map(FName::from_slice);
             }
         }
 
