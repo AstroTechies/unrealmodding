@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::io::{Cursor, Read, Seek};
 
 use bitflags::bitflags;
-use byteorder::LE;
+use byteorder::{BE, LE};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::asset::name_map::NameMap;
@@ -247,7 +247,7 @@ impl Usmap {
             NameMap::new(),
         );
 
-        let magic = reader.read_u16::<LE>()?;
+        let magic = reader.read_u16::<BE>()?;
         if magic != Self::ASSET_MAGIC {
             return Err(Error::invalid_file(
                 "File is not a valid usmap file".to_string(),
@@ -339,7 +339,7 @@ impl Usmap {
 
         self.name_map = reader.read_array(|reader| {
             let name_length = reader.read_u8()?;
-            let mut buf = vec![0u8; name_length as usize - 1];
+            let mut buf = vec![0u8; name_length as usize];
             reader.read_exact(&mut buf)?;
             Ok(String::from_utf8(buf)?)
         })?;
@@ -400,7 +400,7 @@ impl Usmap {
     }
 
     /// Create a new usmap file
-    pub fn new(cursor: Cursor<Vec<u8>>) -> Result<Self, Error> {
+    pub fn new<C: Read + Seek>(cursor: C) -> Result<Self, Error> {
         let mut usmap = Usmap {
             version: EUsmapVersion::Initial,
             name_map: Vec::new(),
