@@ -282,7 +282,7 @@ pub struct Asset<C: Read + Seek> {
     /// Amount of names referenced from exports
     names_referenced_from_export_data_count: i32,
     /// TOC payload offset
-    payload_toc_offset: i32,
+    payload_toc_offset: i64,
     /// Data resource offset
     data_resource_offset: i32,
 
@@ -587,7 +587,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         };
 
         if self.get_object_version_ue5() >= ObjectVersionUE5::PAYLOAD_TOC {
-            self.payload_toc_offset = self.read_i32::<LE>()?;
+            self.payload_toc_offset = self.read_i64::<LE>()?;
         }
 
         if self.get_object_version_ue5() >= ObjectVersionUE5::DATA_RESOURCES {
@@ -977,7 +977,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         if self.get_object_version_ue5() >= ObjectVersionUE5::PAYLOAD_TOC {
-            cursor.write_i32::<LE>(self.payload_toc_offset)?;
+            cursor.write_i64::<LE>(self.payload_toc_offset)?;
         }
 
         if self.get_object_version_ue5() >= ObjectVersionUE5::DATA_RESOURCES {

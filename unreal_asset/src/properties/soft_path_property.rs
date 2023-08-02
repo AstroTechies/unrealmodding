@@ -2,7 +2,7 @@
 
 use unreal_asset_proc_macro::FNameContainer;
 
-use crate::error::{Error, PropertyError};
+use crate::error::Error;
 use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersion;
 use crate::optional_guid;
@@ -11,6 +11,41 @@ use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{fname::FName, Guid};
 use crate::unversioned::ancestry::Ancestry;
+
+use super::object_property::SoftObjectPath;
+
+/// Soft path property value
+#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+pub enum SoftObjectPathPropertyValue {
+    /// asset.get_object_version() < ObjectVersion::VER_UE4_ADDED_SOFT_OBJECT_PATH
+    Old(Option<String>),
+    /// asset.get_object_version() >= ObjectVersion::VER_UE4_ADDED_SOFT_OBJECT_PATH
+    New(SoftObjectPath),
+}
+
+impl SoftObjectPathPropertyValue {
+    /// Create a new  `SoftObjectPathPropertyValue` instance
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        match asset.get_object_version() < ObjectVersion::VER_UE4_ADDED_SOFT_OBJECT_PATH {
+            true => Ok(Self::Old(asset.read_fstring()?)),
+            false => Ok(Self::New(SoftObjectPath::new(asset)?)),
+        }
+    }
+
+    /// Write `SoftObjectPathPropertyValue` to an asset
+    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+        match self {
+            Self::Old(e) => {
+                asset.write_fstring(e.as_deref())?;
+            }
+            Self::New(e) => {
+                e.write(asset)?;
+            }
+        };
+
+        Ok(())
+    }
+}
 
 /// Soft asset path property
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
@@ -23,12 +58,8 @@ pub struct SoftAssetPathProperty {
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
-    /// Asset path name
-    pub asset_path_name: Option<FName>,
-    /// Sub-path
-    pub sub_path: Option<String>,
-    /// Path
-    pub path: Option<String>,
+    /// Value
+    pub value: SoftObjectPathPropertyValue,
 }
 impl_property_data_trait!(SoftAssetPathProperty);
 
@@ -43,12 +74,8 @@ pub struct SoftObjectPathProperty {
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
-    /// Asset path name
-    pub asset_path_name: Option<FName>,
-    /// Sub-path
-    pub sub_path: Option<String>,
-    /// Path
-    pub path: Option<String>,
+    /// Value
+    pub value: SoftObjectPathPropertyValue,
 }
 impl_property_data_trait!(SoftObjectPathProperty);
 
@@ -63,12 +90,8 @@ pub struct SoftClassPathProperty {
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
-    /// Asset path name
-    pub asset_path_name: Option<FName>,
-    /// Sub-path
-    pub sub_path: Option<String>,
-    /// Path
-    pub path: Option<String>,
+    /// Value
+    pub value: SoftObjectPathPropertyValue,
 }
 impl_property_data_trait!(SoftClassPathProperty);
 
@@ -83,12 +106,8 @@ pub struct StringAssetReferenceProperty {
     pub property_guid: Option<Guid>,
     /// Property duplication index
     pub duplication_index: i32,
-    /// Asset path name
-    pub asset_path_name: Option<FName>,
-    /// Sub-path
-    pub sub_path: Option<String>,
-    /// Path
-    pub path: Option<String>,
+    /// Value
+    pub value: SoftObjectPathPropertyValue,
 }
 impl_property_data_trait!(StringAssetReferenceProperty);
 
@@ -105,26 +124,14 @@ macro_rules! impl_soft_path_property {
                 duplication_index: i32,
             ) -> Result<Self, Error> {
                 let property_guid = optional_guid!(asset, include_header);
-
-                let mut path = None;
-                let mut asset_path_name = None;
-                let mut sub_path = None;
-
-                if asset.get_object_version() < ObjectVersion::VER_UE4_ADDED_SOFT_OBJECT_PATH {
-                    path = asset.read_fstring()?;
-                } else {
-                    asset_path_name = Some(asset.read_fname()?);
-                    sub_path = asset.read_fstring()?;
-                }
+                let value = SoftObjectPathPropertyValue::new(asset)?;
 
                 Ok($property_name {
                     name,
                     ancestry,
                     property_guid,
                     duplication_index,
-                    asset_path_name,
-                    sub_path,
-                    path,
+                    value,
                 })
             }
         }
@@ -136,15 +143,10 @@ macro_rules! impl_soft_path_property {
                 include_header: bool,
             ) -> Result<usize, Error> {
                 optional_guid_write!(self, asset, include_header);
+
                 let begin = asset.position();
-                if asset.get_object_version() < ObjectVersion::VER_UE4_ADDED_SOFT_OBJECT_PATH {
-                    asset.write_fstring(self.path.as_deref())?;
-                } else {
-                    asset.write_fname(self.asset_path_name.as_ref().ok_or_else(|| {
-                        PropertyError::property_field_none("asset_path_name", "FName")
-                    })?)?;
-                    asset.write_fstring(self.sub_path.as_deref())?;
-                }
+
+                self.value.write(asset)?;
 
                 Ok((asset.position() - begin) as usize)
             }

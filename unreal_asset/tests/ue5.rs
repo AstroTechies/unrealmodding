@@ -27,10 +27,9 @@ fn ue5() -> Result<(), Error> {
         let mut parsed = Asset::new(
             Cursor::new(asset_data),
             Some(Cursor::new(bulk_data)),
-            EngineVersion::VER_UE5_2,
+            EngineVersion::VER_UE5_1,
             None,
         )?;
-
         shared::verify_binary_equality(asset_data, Some(bulk_data), &mut parsed)?;
         shared::verify_all_exports_parsed(&parsed);
     }
