@@ -484,12 +484,12 @@ impl Property {
                 .ok_or_else(PropertyError::no_mappings)?;
             let parent_name = ancestry.get_parent().ok_or_else(PropertyError::no_parent)?;
 
-            loop {
-                let current_fragment = header.fragments[header.current_fragment_index];
-                if header.unversioned_property_index > current_fragment.get_last_num() as usize {
-                    break;
+            while header.unversioned_property_index
+                >= header.fragments[header.current_fragment_index].get_last_num() as usize
+            {
+                if header.fragments[header.current_fragment_index].is_last {
+                    return Err(PropertyError::EarlyFragEnd.into());
                 }
-
                 header.current_fragment_index += 1;
                 header.unversioned_property_index =
                     header.fragments[header.current_fragment_index].first_num as usize;

@@ -129,6 +129,9 @@ pub enum PropertyError {
     /// An unversioned property schema was not found
     #[error("Unversioned property schema for {0} at index {1} was not found")]
     NoSchema(Box<str>, usize),
+    /// The end of the fragment list in the unversioned header was found too early
+    #[error("Encountered end of fragment list too early")]
+    EarlyFragEnd,
     /// Other
     #[error("{0}")]
     Other(Box<str>),

@@ -49,7 +49,7 @@ impl UnversionedHeaderFragment {
 
     /// Get last element index of this fragment
     pub fn get_last_num(&self) -> u8 {
-        self.first_num + self.value_num - 1
+        self.first_num + self.value_num
     }
 
     /// Read an `UnversionedHeaderFragment` from an asset
