@@ -1,4 +1,6 @@
 #![deny(missing_docs)]
+#![allow(non_upper_case_globals)]
+
 //! This crate is used for parsing Unreal Engine uasset files
 //!
 //! # Examples
@@ -35,6 +37,7 @@
 //!
 //! println!("{:#?}", asset);
 //! ```
+
 use std::fmt::{Debug, Formatter};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
