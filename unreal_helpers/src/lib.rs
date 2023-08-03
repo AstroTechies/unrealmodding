@@ -1,7 +1,16 @@
 #![deny(missing_docs)]
 
 //! Various small functions to make working with Unreal data formats easier.
-
+//!
+//! ## Feature flags
+//!
+//! All content in this crate is hidden behind feature flags.
+//!
+//! - `read_write`: Enables extension Traits [`UnrealReadExt`] and [`UnrealWriteExt`]
+//!                 which help with parsing Unreal data formats.
+//! - `bitvec`: Enables extension Trait [`BitVecExt`].
+//! - `path`: Enables [`game_to_absolute`] function.
+//!
 pub mod error;
 
 #[cfg(feature = "bitvec")]

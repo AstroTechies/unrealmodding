@@ -26,3 +26,6 @@ thiserror = "1.0.40"
 bitvec = ["dep:bitvec"]
 read_write = ["dep:byteorder"]
 path = ["dep:lazy_static", "dep:regex"]
+
+[package.metadata.docs.rs]
+all-features = true
