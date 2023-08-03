@@ -11,13 +11,13 @@ use std::{
 pub struct Guid(pub [u8; 16]);
 
 impl Guid {
-    /// Create new instance of Guid struct from a [0u8; 16] byte array
+    /// Create new instance of Guid struct from a [u8; 16] byte array
     #[inline]
     pub const fn new(guid: [u8; 16]) -> Self {
         Self(guid)
     }
 
-    /// Create new instance of Guid struct from a [0u8; 16] byte array
+    /// Create new instance of Guid struct from a [u8; 16] byte array
     #[inline]
     pub const fn from_ints(a: u32, b: u32, c: u32, d: u32) -> Self {
         Self([

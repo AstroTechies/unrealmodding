@@ -38,14 +38,13 @@ impl GuidProperty {
         duplication_index: i32,
     ) -> Result<Self, Error> {
         let property_guid = optional_guid!(asset, include_header);
-        let mut value = [0u8; 16];
-        asset.read_exact(&mut value)?;
+        let value = asset.read_guid()?;
         Ok(GuidProperty {
             name,
             ancestry,
             property_guid,
             duplication_index,
-            value: value.into(),
+            value,
         })
     }
 }

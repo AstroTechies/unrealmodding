@@ -47,9 +47,7 @@ impl AssetPackageData {
         let package_name = asset.read_fname()?;
         let disk_size = asset.read_i64::<LE>()?;
 
-        // TODO change to guid method
-        let mut package_guid = [0u8; 16];
-        asset.read_exact(&mut package_guid)?;
+        let package_guid = asset.read_guid()?;
 
         let mut cooked_hash = None;
         if version >= FAssetRegistryVersionType::AddedCookedMD5Hash {
@@ -82,7 +80,7 @@ impl AssetPackageData {
 
         Ok(Self {
             package_name,
-            package_guid: Guid(package_guid),
+            package_guid,
             cooked_hash,
             imported_classes,
             disk_size,
