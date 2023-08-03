@@ -9,9 +9,14 @@ use crate::error::FStringError;
 
 /// Extension for anything that implements `Read` to more easily read Unreal data formats.
 pub trait UnrealReadExt {
-    /// Read string of format \<length i32\>\<string\>\<null\>
+    /// Read string of format \<length i32\>\<string\>\<null\>.
     fn read_fstring(&mut self) -> Result<Option<String>, FStringError>;
-    /// Read u8 as bool
+
+    /// Read a guid.
+    #[cfg(feature = "guid")]
+    fn read_guid(&mut self) -> io::Result<crate::Guid>;
+
+    /// Read u8 as bool.
     fn read_bool(&mut self) -> io::Result<bool>;
 }
 
@@ -24,6 +29,13 @@ impl<R: Read + Seek> UnrealReadExt for R {
             false => (len, false),
         };
         read_fstring_len(self, len, is_wide)
+    }
+
+    #[cfg(feature = "guid")]
+    fn read_guid(&mut self) -> io::Result<crate::Guid> {
+        let mut buf = [0u8; 16];
+        self.read_exact(&mut buf)?;
+        Ok(crate::Guid(buf))
     }
 
     fn read_bool(&mut self) -> io::Result<bool> {
