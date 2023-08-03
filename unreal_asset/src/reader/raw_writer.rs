@@ -168,12 +168,16 @@ impl<'cursor, W: Write + Seek> ArchiveWriter for RawWriter<'cursor, W> {
         self.cursor.write_f64::<T>(value)
     }
 
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.cursor.write_all(buf)
+    }
+
     fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
         Ok(self.cursor.write_fstring(value)?)
     }
 
-    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.cursor.write_all(buf)
+    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()> {
+        self.cursor.write_guid(guid)
     }
 
     fn write_bool(&mut self, value: bool) -> io::Result<()> {

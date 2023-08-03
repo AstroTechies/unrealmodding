@@ -79,10 +79,7 @@ impl StructProperty {
         if include_header && !asset.has_unversioned_properties() {
             struct_type = Some(asset.read_fname()?);
             if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                // TODO change to guid method
-                let mut guid = [0u8; 16];
-                asset.read_exact(&mut guid)?;
-                struct_guid = Some(Guid(guid));
+                struct_guid = Some(asset.read_guid()?);
             }
             property_guid = asset.read_property_guid()?;
         }
@@ -262,15 +259,9 @@ impl StructProperty {
         if include_header {
             asset.write_fname(struct_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
             if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                // TODO change to guid method
-                asset.write_all(
-                    &self
-                        .struct_guid
-                        .map(|guid| guid.0)
-                        .ok_or_else(PropertyError::headerless)?,
-                )?;
+                asset.write_guid(self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
             }
-            asset.write_property_guid(&self.property_guid)?;
+            asset.write_property_guid(self.property_guid.as_ref())?;
         }
 
         let mut has_custom_serialization = match struct_type {

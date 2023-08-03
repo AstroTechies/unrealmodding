@@ -96,14 +96,12 @@ impl CustomVersion {
 
     /// Read a custom version from an asset
     pub fn read<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        // TODO change to guid method
-        let mut key = [0u8; 16];
-        asset.read_exact(&mut key)?;
+        let guid = asset.read_guid()?;
         let version = asset.read_i32::<LE>()?;
 
-        let version_info = GUID_TO_VERSION_INFO.get(&Guid(key)).map(|e| e.to_owned());
+        let version_info = GUID_TO_VERSION_INFO.get(&guid).map(|e| e.to_owned());
         Ok(Self {
-            guid: Guid(key),
+            guid,
             friendly_name: version_info.as_ref().map(|e| e.0.clone()),
             version,
             version_mappings: version_info.and_then(|e| e.1).unwrap_or_default(),
@@ -112,8 +110,7 @@ impl CustomVersion {
 
     /// Write a custom version to an asset
     pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
-        // TODO change to guid method
-        writer.write_all(&self.guid.0)?;
+        writer.write_guid(self.guid)?;
         writer.write_i32::<LE>(self.version)?;
         Ok(())
     }
@@ -1335,11 +1332,9 @@ const ASSET_REGISTRY_VERSION_GUID: Guid =
 impl FAssetRegistryVersionType {
     /// Read an asset registry version from an asset
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
-        // TODO change to guid method
-        let mut guid = [0u8; 16];
-        asset.read_exact(&mut guid)?;
+        let guid = asset.read_guid()?;
 
-        if Guid(guid) == ASSET_REGISTRY_VERSION_GUID {
+        if guid == ASSET_REGISTRY_VERSION_GUID {
             return Ok(Self::try_from(asset.read_i32::<LE>()?)?);
         }
 
@@ -1348,8 +1343,7 @@ impl FAssetRegistryVersionType {
 
     /// Write an asset registry version to an asset
     pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
-        // TODO change to guid method
-        writer.write_all(&ASSET_REGISTRY_VERSION_GUID.0)?;
+        writer.write_guid(ASSET_REGISTRY_VERSION_GUID)?;
         writer.write_i32::<LE>((*self).into())?;
         Ok(())
     }

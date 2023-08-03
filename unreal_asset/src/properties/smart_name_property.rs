@@ -60,10 +60,7 @@ impl SmartNameProperty {
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
-            // TODO change to guid read method
-            let mut guid = [0u8; 16];
-            asset.read_exact(&mut guid)?;
-            temp_guid = Some(guid.into());
+            temp_guid = Some(asset.read_guid()?);
         }
 
         Ok(SmartNameProperty {
@@ -98,11 +95,8 @@ impl PropertyTrait for SmartNameProperty {
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
-            // TODO change to guid method
-            asset.write_all(
-                &self
-                    .temp_guid
-                    .map(|guid| -> [u8; 16] { guid.into() })
+            asset.write_guid(
+                self.temp_guid
                     .ok_or_else(|| PropertyError::property_field_none("temp_guid", "String"))?,
             )?;
         }

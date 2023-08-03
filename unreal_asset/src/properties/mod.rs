@@ -137,7 +137,7 @@ macro_rules! optional_guid {
 macro_rules! optional_guid_write {
     ($self:ident, $asset:ident, $include_header:ident) => {
         if $include_header {
-            $asset.write_property_guid(&$self.property_guid)?;
+            $asset.write_property_guid($self.property_guid.as_ref())?;
         }
     };
 }

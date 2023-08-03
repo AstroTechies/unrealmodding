@@ -97,7 +97,7 @@ impl PropertyTrait for SetProperty {
 
         if include_header {
             asset.write_fname(array_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
-            asset.write_property_guid(&self.property_guid)?;
+            asset.write_property_guid(self.property_guid.as_ref())?;
         }
 
         let removed_items_len = self.removed_items.write_full(asset, false, false)?;
