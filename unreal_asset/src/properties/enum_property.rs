@@ -162,7 +162,7 @@ impl PropertyTrait for EnumProperty {
                     .as_ref()
                     .ok_or_else(PropertyError::headerless)?,
             )?;
-            asset.write_property_guid(&self.property_guid)?;
+            asset.write_property_guid(self.property_guid.as_ref())?;
         }
         asset.write_fname(self.value.as_ref().unwrap())?;
 

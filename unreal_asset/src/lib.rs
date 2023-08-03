@@ -497,8 +497,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.thumbnail_table_offset = self.read_i32::<LE>()?;
 
         // read guid
-        // TODO change to guid method
-        self.raw_reader.read_exact(&mut self.package_guid.0)?;
+        self.package_guid = self.raw_reader.read_guid()?;
 
         // raed generations
         let generations_count = self.read_i32::<LE>()?;
@@ -879,8 +878,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                 false => {
                     cursor.write_i32::<LE>(self.asset_data.custom_versions.len() as i32)?;
                     for custom_version in &self.asset_data.custom_versions {
-                        // TODO change to guid method
-                        cursor.write_all(&custom_version.guid.0)?;
+                        cursor.write_guid(custom_version.guid)?;
                         cursor.write_i32::<LE>(custom_version.version)?;
                     }
                 }
@@ -920,8 +918,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         cursor.write_i32::<LE>(self.thumbnail_table_offset)?;
-        // TODO change to guid method
-        cursor.write_all(&self.package_guid.0)?;
+        cursor.write_guid(self.package_guid)?;
         cursor.write_i32::<LE>(self.generations.len() as i32)?;
 
         for _ in 0..self.generations.len() {

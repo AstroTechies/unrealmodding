@@ -18,12 +18,11 @@ use crate::unversioned::header::{UnversionedHeader, UnversionedHeaderFragment};
 /// A trait that allows for writing to an archive in an asset-specific way
 pub trait ArchiveWriter: ArchiveTrait {
     /// Write a `Guid` property
-    fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
+    fn write_property_guid(&mut self, guid: Option<&Guid>) -> Result<(), Error> {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.write_bool(guid.is_some())?;
-            // TODO change to guid method
-            if let Some(ref data) = guid {
-                self.write_all(&data.0)?;
+            if let Some(data) = guid {
+                self.write_guid(data.to_owned())?;
             }
         }
 
@@ -220,10 +219,12 @@ pub trait ArchiveWriter: ArchiveTrait {
     fn write_f32<T: ByteOrder>(&mut self, value: f32) -> io::Result<()>;
     /// Write `f64`
     fn write_f64<T: ByteOrder>(&mut self, value: f64) -> io::Result<()>;
-    /// Write an FString
-    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error>;
     /// Write all of the bytes in the slice
     fn write_all(&mut self, buf: &[u8]) -> io::Result<()>;
+    /// Write an FString
+    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error>;
+    /// Write a guid.
+    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()>;
     /// Write `bool`
     fn write_bool(&mut self, value: bool) -> io::Result<()>;
 }
@@ -292,13 +293,18 @@ where
     }
 
     #[inline(always)]
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.get_passthrough().write_all(buf)
+    }
+
+    #[inline(always)]
     fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
         self.get_passthrough().write_fstring(value)
     }
 
     #[inline(always)]
-    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.get_passthrough().write_all(buf)
+    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()> {
+        self.get_passthrough().write_guid(guid)
     }
 
     #[inline(always)]

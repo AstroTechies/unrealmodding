@@ -163,10 +163,7 @@ impl ArrayProperty {
                 struct_length = asset.read_i64::<LE>()?;
                 full_type = asset.read_fname()?;
 
-                // TODO change to guid method
-                let mut guid = [0u8; 16];
-                asset.read_exact(&mut guid)?;
-                struct_guid = Some(Guid(guid));
+                struct_guid = Some(asset.read_guid()?);
                 asset.read_property_guid()?;
             } else if let Some(type_override) = name
                 .get_content(|name| asset.get_array_struct_type_override().get_by_key(name))
@@ -265,7 +262,7 @@ impl ArrayProperty {
 
         if include_header {
             asset.write_fname(array_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
-            asset.write_property_guid(&self.property_guid)?;
+            asset.write_property_guid(self.property_guid.as_ref())?;
         }
 
         let begin = asset.position();
@@ -303,8 +300,7 @@ impl ArrayProperty {
                 )?;
                 if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG
                 {
-                    // TODO change to guid method
-                    asset.write_all(&property.property_guid.unwrap_or_default().0)?;
+                    asset.write_guid(property.property_guid.unwrap_or_default())?;
                 }
                 if asset.get_object_version()
                     >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG

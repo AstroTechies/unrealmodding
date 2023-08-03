@@ -169,6 +169,10 @@ impl<C: Read + Seek> ArchiveReader for RawReader<C> {
         self.cursor.read_f64::<T>()
     }
 
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
+        self.cursor.read_exact(buf)
+    }
+
     fn read_fstring(&mut self) -> Result<Option<String>, Error> {
         Ok(self.cursor.read_fstring()?)
     }
@@ -188,8 +192,8 @@ impl<C: Read + Seek> ArchiveReader for RawReader<C> {
         )?)
     }
 
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
-        self.cursor.read_exact(buf)
+    fn read_guid(&mut self) -> io::Result<Guid> {
+        self.cursor.read_guid()
     }
 
     fn read_bool(&mut self) -> io::Result<bool> {

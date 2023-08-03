@@ -384,7 +384,7 @@ impl PropertyTrait for ByteProperty {
                     .as_ref()
                     .ok_or_else(PropertyError::headerless)?,
             )?;
-            asset.write_property_guid(&self.property_guid)?;
+            asset.write_property_guid(self.property_guid.as_ref())?;
         }
 
         match self.value {

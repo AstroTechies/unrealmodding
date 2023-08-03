@@ -243,7 +243,7 @@ impl PropertyTrait for MapProperty {
                 asset.write_fname(&self.key_type)?;
                 asset.write_fname(&self.value_type)?;
             }
-            asset.write_property_guid(&self.property_guid)?;
+            asset.write_property_guid(self.property_guid.as_ref())?;
         }
 
         let begin = asset.position();

@@ -22,10 +22,7 @@ pub trait ArchiveReader: ArchiveTrait {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             let has_property_guid = self.read_bool()?;
             if has_property_guid {
-                // TODO change to guid method
-                let mut guid = [0u8; 16];
-                self.read_exact(&mut guid)?;
-                return Ok(Some(Guid(guid)));
+                return Ok(Some(self.read_guid()?));
             }
         }
         Ok(None)
@@ -72,13 +69,11 @@ pub trait ArchiveReader: ArchiveTrait {
 
         let num_custom_versions = self.read_i32::<LE>()?;
         for _ in 0..num_custom_versions {
-            // TODO change to guid method
-            let mut custom_version_id = [0u8; 16];
-            self.read_exact(&mut custom_version_id)?;
+            let custom_version_guid = self.read_guid()?;
 
             let version_number = self.read_i32::<LE>()?;
-            new_container.push(CustomVersion::new(Guid(custom_version_id), version_number));
-            existing_versions.insert(Guid(custom_version_id));
+            new_container.push(CustomVersion::new(custom_version_guid, version_number));
+            existing_versions.insert(custom_version_guid);
         }
 
         // todo: move to iterator joining
@@ -239,6 +234,8 @@ pub trait ArchiveReader: ArchiveTrait {
     fn read_f32<T: ByteOrder>(&mut self) -> io::Result<f32>;
     /// Read `f64`
     fn read_f64<T: ByteOrder>(&mut self) -> io::Result<f64>;
+    /// Read an exact amount of bytes into a slice
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()>;
     /// Read an FString
     fn read_fstring(&mut self) -> Result<Option<String>, Error>;
     /// Read an FString with a `SerializedNameHeader`
@@ -246,8 +243,8 @@ pub trait ArchiveReader: ArchiveTrait {
         &mut self,
         serialized_name_header: SerializedNameHeader,
     ) -> Result<Option<String>, Error>;
-    /// Read an exact amount of bytes into a slice
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()>;
+    /// Read a guid.
+    fn read_guid(&mut self) -> io::Result<Guid>;
     /// Read `bool`
     fn read_bool(&mut self) -> io::Result<bool>;
 }
@@ -316,6 +313,11 @@ where
     }
 
     #[inline(always)]
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
+        self.get_passthrough().read_exact(buf)
+    }
+
+    #[inline(always)]
     fn read_fstring(&mut self) -> Result<Option<String>, Error> {
         self.get_passthrough().read_fstring()
     }
@@ -330,8 +332,8 @@ where
     }
 
     #[inline(always)]
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
-        self.get_passthrough().read_exact(buf)
+    fn read_guid(&mut self) -> io::Result<Guid> {
+        self.get_passthrough().read_guid()
     }
 
     #[inline(always)]
