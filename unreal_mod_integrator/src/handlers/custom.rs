@@ -115,7 +115,7 @@ fn create_property(
 
             let property = ObjectProperty {
                 name: FName::from_slice(property_name),
-                property_guid: Some([0u8; 16]),
+                property_guid: Some(Guid::default()),
                 duplication_index: 0,
                 value: blueprint_generated_class_import,
             };
@@ -132,7 +132,7 @@ fn create_property(
 
             let property = IntProperty {
                 name: FName::from_slice(property_name),
-                property_guid: Some([0u8; 16]),
+                property_guid: Some(Guid::default()),
                 duplication_index: 0,
                 value: value as i32,
             };
@@ -149,7 +149,7 @@ fn create_property(
 
             let property = BoolProperty {
                 name: FName::from_slice(property_name),
-                property_guid: Some([0u8; 16]),
+                property_guid: Some(Guid::default()),
                 duplication_index: 0,
                 value,
             };
