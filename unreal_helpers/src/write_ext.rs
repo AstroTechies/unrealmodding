@@ -1,4 +1,4 @@
-//! Extension for anything that implements Write to more easily write Unreal data formats.
+//! Extension for anything that implements `Write` to more easily write Unreal data formats.
 
 use std::io::{self, Write};
 use std::mem::size_of;
@@ -7,7 +7,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 
 use crate::error::FStringError;
 
-/// Extension for anything that implements Write to more easily write Unreal data formats.
+/// Extension for anything that implements `Write` to more easily write Unreal data formats.
 pub trait UnrealWriteExt {
     /// Write string of format \<length i32\>\<string\>\<null\>
     fn write_fstring(&mut self, string: Option<&str>) -> Result<usize, FStringError>;

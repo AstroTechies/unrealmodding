@@ -1,4 +1,4 @@
-//! Extension for anything that implements Read to more easily read Unreal data formats.
+//! Extension for anything that implements `Read` to more easily read Unreal data formats.
 
 use std::io::{self, Read, Seek};
 use std::mem::size_of;
@@ -7,7 +7,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::error::FStringError;
 
-/// Extension for anything that implements Read to more easily read Unreal data formats.
+/// Extension for anything that implements `Read` to more easily read Unreal data formats.
 pub trait UnrealReadExt {
     /// Read string of format \<string\>\<null\>
     fn read_fstring_len(&mut self, len: i32, is_wide: bool)

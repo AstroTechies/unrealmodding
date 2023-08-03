@@ -1,13 +1,16 @@
 //! Error type
 
+#[cfg(feature = "read_write")]
 use std::{
     io,
     string::{FromUtf16Error, FromUtf8Error},
 };
 
+#[cfg(feature = "read_write")]
 use thiserror::Error;
 
 /// Gets thrown when there is an error reading/writing an FString.
+#[cfg(feature = "read_write")]
 #[derive(Error, Debug)]
 pub enum FStringError {
     /// String has invalid size
