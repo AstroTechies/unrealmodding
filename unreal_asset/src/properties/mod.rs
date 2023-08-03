@@ -5,14 +5,13 @@ use std::io::SeekFrom;
 
 use byteorder::LE;
 use enum_dispatch::enum_dispatch;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::error::{Error, PropertyError};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{
-    fname::{FName, ToSerializedName},
-    Guid,
-};
+use crate::types::fname::{FName, ToSerializedName};
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 use crate::unversioned::properties::UsmapPropertyDataTrait;
@@ -178,7 +177,7 @@ macro_rules! impl_property_data_trait {
                 self.duplication_index
             }
 
-            fn get_property_guid(&self) -> Option<$crate::types::Guid> {
+            fn get_property_guid(&self) -> Option<unreal_helpers::Guid> {
                 self.property_guid.clone()
             }
 

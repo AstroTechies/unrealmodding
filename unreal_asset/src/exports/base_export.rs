@@ -4,7 +4,9 @@ use std::io::Cursor;
 
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::error::Error;
 use crate::exports::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
@@ -14,7 +16,7 @@ use crate::reader::archive_reader::ArchiveReader;
 use crate::reader::archive_trait::{ArchiveTrait, ArchiveType};
 use crate::reader::archive_writer::ArchiveWriter;
 use crate::reader::raw_writer::RawWriter;
-use crate::types::{fname::FName, Guid, PackageIndex};
+use crate::types::{fname::FName, PackageIndex};
 
 /// Export filter flags
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
@@ -162,7 +164,10 @@ impl BaseExport {
         export.not_for_server = reader.read_i32::<LE>()? == 1;
 
         if reader.get_object_version_ue5() < ObjectVersionUE5::REMOVE_OBJECT_EXPORT_PACKAGE_GUID {
-            reader.read_exact(&mut export.package_guid)?;
+            // TODO change to guid method
+            let mut guid = [0u8; 16];
+            reader.read_exact(&mut guid)?;
+            export.package_guid = guid.into();
         }
 
         if reader.get_object_version_ue5() >= ObjectVersionUE5::TRACK_OBJECT_EXPORT_IS_INHERITED {
@@ -260,7 +265,8 @@ impl BaseExport {
         })?;
 
         if writer.get_object_version_ue5() < ObjectVersionUE5::REMOVE_OBJECT_EXPORT_PACKAGE_GUID {
-            writer.write_all(&self.package_guid)?;
+            // TODO change to guid method
+            writer.write_all(&self.package_guid.0)?;
         }
 
         if writer.get_object_version_ue5() >= ObjectVersionUE5::TRACK_OBJECT_EXPORT_IS_INHERITED {

@@ -1,6 +1,7 @@
 //! Movie scene evaluation template pointer property
 
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::{
     cast,
@@ -8,7 +9,7 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::{str_property::StrProperty, Property, PropertyDataTrait, PropertyTrait},
     reader::archive_reader::ArchiveReader,
-    types::{fname::FName, Guid},
+    types::fname::FName,
     unversioned::{ancestry::Ancestry, header::UnversionedHeader},
 };
 

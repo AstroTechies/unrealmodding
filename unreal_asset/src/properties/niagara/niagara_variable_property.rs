@@ -1,7 +1,9 @@
 //! Niagara variable property
 
 use byteorder::LE;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::{
     error::Error,
@@ -78,7 +80,7 @@ impl PropertyDataTrait for NiagaraVariableProperty {
         self.struct_property.get_duplication_index()
     }
 
-    fn get_property_guid(&self) -> Option<crate::types::Guid> {
+    fn get_property_guid(&self) -> Option<Guid> {
         self.struct_property.get_property_guid()
     }
 
@@ -171,7 +173,7 @@ impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
         self.niagara_variable.get_duplication_index()
     }
 
-    fn get_property_guid(&self) -> Option<crate::types::Guid> {
+    fn get_property_guid(&self) -> Option<Guid> {
         self.niagara_variable.get_property_guid()
     }
 

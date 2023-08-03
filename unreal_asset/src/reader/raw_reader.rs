@@ -4,7 +4,7 @@ use std::io::{self, Read, Seek};
 
 use byteorder::ReadBytesExt;
 
-use unreal_helpers::{read_ext::read_fstring_len, UnrealReadExt};
+use unreal_helpers::{read_ext::read_fstring_len, Guid, UnrealReadExt};
 
 use crate::asset::name_map::NameMap;
 use crate::containers::chain::Chain;
@@ -68,7 +68,7 @@ impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
     where
         T: CustomVersionTrait + Into<i32>,
     {
-        CustomVersion::new([0u8; 16], 0)
+        CustomVersion::new(Guid::default(), 0)
     }
 
     fn has_unversioned_properties(&self) -> bool {

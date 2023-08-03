@@ -1,7 +1,9 @@
 //! Smart name property
 
 use byteorder::LE;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::custom_version::FAnimPhysObjectVersion;
 use crate::error::PropertyError;
@@ -10,7 +12,7 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, Guid};
+use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
 use crate::Error;
 
@@ -58,9 +60,10 @@ impl SmartNameProperty {
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
+            // TODO change to guid read method
             let mut guid = [0u8; 16];
             asset.read_exact(&mut guid)?;
-            temp_guid = Some(guid);
+            temp_guid = Some(guid.into());
         }
 
         Ok(SmartNameProperty {
@@ -95,9 +98,11 @@ impl PropertyTrait for SmartNameProperty {
         }
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
+            // TODO change to guid method
             asset.write_all(
                 &self
                     .temp_guid
+                    .map(|guid| -> [u8; 16] { guid.into() })
                     .ok_or_else(|| PropertyError::property_field_none("temp_guid", "String"))?,
             )?;
         }

@@ -4,7 +4,7 @@ use std::io::{self, Seek, Write};
 
 use byteorder::WriteBytesExt;
 
-use unreal_helpers::UnrealWriteExt;
+use unreal_helpers::{Guid, UnrealWriteExt};
 
 use crate::asset::name_map::NameMap;
 use crate::containers::indexed_map::IndexedMap;
@@ -67,7 +67,7 @@ impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
     where
         T: CustomVersionTrait + Into<i32>,
     {
-        CustomVersion::new([0u8; 16], 0)
+        CustomVersion::new(Guid::default(), 0)
     }
 
     fn has_unversioned_properties(&self) -> bool {

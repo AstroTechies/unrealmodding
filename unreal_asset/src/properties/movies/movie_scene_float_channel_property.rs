@@ -2,7 +2,9 @@
 
 use byteorder::LE;
 use ordered_float::OrderedFloat;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::{
     error::Error,
@@ -12,7 +14,6 @@ use crate::{
     types::{
         fname::FName,
         movie::{FrameNumber, FrameRate},
-        Guid,
     },
     unversioned::ancestry::Ancestry,
 };

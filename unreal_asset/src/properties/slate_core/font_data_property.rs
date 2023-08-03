@@ -2,7 +2,9 @@
 
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::{
     custom_version::FEditorObjectVersion,
@@ -10,7 +12,7 @@ use crate::{
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{fname::FName, Guid, PackageIndex},
+    types::{fname::FName, PackageIndex},
     unversioned::ancestry::Ancestry,
 };
 

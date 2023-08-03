@@ -2,15 +2,15 @@
 
 use byteorder::LE;
 use ordered_float::OrderedFloat;
-use unreal_asset_proc_macro::FNameContainer;
 
-use crate::{
-    error::Error,
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{fname::FName, Guid},
-    unversioned::ancestry::Ancestry,
-};
+use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
+
+use crate::error::Error;
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::fname::FName;
+use crate::unversioned::ancestry::Ancestry;
+use crate::{impl_property_data_trait, optional_guid, optional_guid_write};
 
 use super::PropertyTrait;
 

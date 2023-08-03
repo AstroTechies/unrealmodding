@@ -4,14 +4,14 @@ use std::mem::size_of;
 
 use byteorder::LE;
 use ordered_float::OrderedFloat;
-use unreal_asset_proc_macro::FNameContainer;
 
-use crate::{
-    error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::fname::FName,
-    unversioned::ancestry::Ancestry,
-};
+use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
+
+use crate::error::Error;
+use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::types::fname::FName;
+use crate::unversioned::ancestry::Ancestry;
 
 use super::{
     struct_property::StructProperty, vector_property::Vector4Property, PropertyDataTrait,
@@ -179,7 +179,7 @@ impl PropertyDataTrait for ClothLodDataProperty {
         self.struct_property.get_duplication_index()
     }
 
-    fn get_property_guid(&self) -> Option<crate::types::Guid> {
+    fn get_property_guid(&self) -> Option<Guid> {
         self.struct_property.get_property_guid()
     }
 

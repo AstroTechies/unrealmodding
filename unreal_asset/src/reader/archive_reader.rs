@@ -5,12 +5,14 @@ use std::io;
 
 use byteorder::{ByteOrder, LE};
 
+use unreal_helpers::Guid;
+
 use crate::custom_version::CustomVersion;
 use crate::enums::ECustomVersionSerializationFormat;
 use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
 use crate::reader::archive_trait::ArchiveTrait;
-use crate::types::{fname::FName, Guid, SerializedNameHeader};
+use crate::types::{fname::FName, SerializedNameHeader};
 use crate::{crc, enums};
 
 /// A trait that allows reading from an archive in an asset-specific way
@@ -20,9 +22,10 @@ pub trait ArchiveReader: ArchiveTrait {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             let has_property_guid = self.read_bool()?;
             if has_property_guid {
+                // TODO change to guid method
                 let mut guid = [0u8; 16];
                 self.read_exact(&mut guid)?;
-                return Ok(Some(guid));
+                return Ok(Some(Guid(guid)));
             }
         }
         Ok(None)
@@ -69,12 +72,13 @@ pub trait ArchiveReader: ArchiveTrait {
 
         let num_custom_versions = self.read_i32::<LE>()?;
         for _ in 0..num_custom_versions {
+            // TODO change to guid method
             let mut custom_version_id = [0u8; 16];
             self.read_exact(&mut custom_version_id)?;
 
             let version_number = self.read_i32::<LE>()?;
-            new_container.push(CustomVersion::new(custom_version_id, version_number));
-            existing_versions.insert(custom_version_id);
+            new_container.push(CustomVersion::new(Guid(custom_version_id), version_number));
+            existing_versions.insert(Guid(custom_version_id));
         }
 
         // todo: move to iterator joining

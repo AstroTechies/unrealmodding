@@ -4,7 +4,9 @@ use std::io::SeekFrom;
 use std::mem::size_of;
 
 use byteorder::LE;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::custom_version::{
     FEditorObjectVersion, FFortniteMainBranchObjectVersion, FSequencerObjectVersion,
@@ -13,7 +15,7 @@ use crate::error::{Error, PropertyError};
 use crate::object_version::ObjectVersion;
 use crate::properties::{Property, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, Guid};
+use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
 use crate::unversioned::header::UnversionedHeader;
 use crate::unversioned::properties::UsmapPropertyData;
@@ -77,9 +79,10 @@ impl StructProperty {
         if include_header && !asset.has_unversioned_properties() {
             struct_type = Some(asset.read_fname()?);
             if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
+                // TODO change to guid method
                 let mut guid = [0u8; 16];
                 asset.read_exact(&mut guid)?;
-                struct_guid = Some(guid);
+                struct_guid = Some(Guid(guid));
             }
             property_guid = asset.read_property_guid()?;
         }
@@ -105,8 +108,8 @@ impl StructProperty {
         length: i64,
         duplication_index: i32,
         mut struct_type: Option<FName>,
-        struct_guid: Option<[u8; 16]>,
-        property_guid: Option<[u8; 16]>,
+        struct_guid: Option<Guid>,
+        property_guid: Option<Guid>,
     ) -> Result<Self, Error> {
         if let Some(struct_mapping) = asset
             .get_mappings()
@@ -259,7 +262,13 @@ impl StructProperty {
         if include_header {
             asset.write_fname(struct_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
             if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                asset.write_all(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
+                // TODO change to guid method
+                asset.write_all(
+                    &self
+                        .struct_guid
+                        .map(|guid| guid.0)
+                        .ok_or_else(PropertyError::headerless)?,
+                )?;
             }
             asset.write_property_guid(&self.property_guid)?;
         }
