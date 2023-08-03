@@ -13,8 +13,31 @@ pub struct Guid(pub [u8; 16]);
 impl Guid {
     /// Create new instance of Guid struct from a [0u8; 16] byte array
     #[inline]
-    pub fn new(guid: [u8; 16]) -> Self {
-        Guid(guid)
+    pub const fn new(guid: [u8; 16]) -> Self {
+        Self(guid)
+    }
+
+    /// Create new instance of Guid struct from a [0u8; 16] byte array
+    #[inline]
+    pub const fn from_ints(a: u32, b: u32, c: u32, d: u32) -> Self {
+        Self([
+            (a & 0xff) as u8,
+            ((a >> 8) & 0xff) as u8,
+            ((a >> 16) & 0xff) as u8,
+            ((a >> 24) & 0xff) as u8,
+            (b & 0xff) as u8,
+            ((b >> 8) & 0xff) as u8,
+            ((b >> 16) & 0xff) as u8,
+            ((b >> 24) & 0xff) as u8,
+            (c & 0xff) as u8,
+            ((c >> 8) & 0xff) as u8,
+            ((c >> 16) & 0xff) as u8,
+            ((c >> 24) & 0xff) as u8,
+            (d & 0xff) as u8,
+            ((d >> 8) & 0xff) as u8,
+            ((d >> 16) & 0xff) as u8,
+            ((d >> 24) & 0xff) as u8,
+        ])
     }
 
     /// Returns true if the guid is zero.
@@ -45,24 +68,7 @@ impl From<(u32, u32, u32, u32)> for Guid {
     #[inline]
     fn from(value: (u32, u32, u32, u32)) -> Self {
         let (a, b, c, d) = value;
-        Guid([
-            (a & 0xff) as u8,
-            ((a >> 8) & 0xff) as u8,
-            ((a >> 16) & 0xff) as u8,
-            ((a >> 24) & 0xff) as u8,
-            (b & 0xff) as u8,
-            ((b >> 8) & 0xff) as u8,
-            ((b >> 16) & 0xff) as u8,
-            ((b >> 24) & 0xff) as u8,
-            (c & 0xff) as u8,
-            ((c >> 8) & 0xff) as u8,
-            ((c >> 16) & 0xff) as u8,
-            ((c >> 24) & 0xff) as u8,
-            (d & 0xff) as u8,
-            ((d >> 8) & 0xff) as u8,
-            ((d >> 16) & 0xff) as u8,
-            ((d >> 24) & 0xff) as u8,
-        ])
+        Self::from_ints(a, b, c, d)
     }
 }
 
