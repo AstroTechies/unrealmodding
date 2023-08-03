@@ -3,7 +3,9 @@
 use std::mem::size_of;
 
 use byteorder::LE;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::error::Error;
 use crate::impl_property_data_trait;
@@ -11,7 +13,7 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, Guid};
+use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
 
 /// Gameplay tag container property

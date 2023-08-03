@@ -2,11 +2,13 @@
 
 use byteorder::LE;
 
+use unreal_helpers::Guid;
+
 use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
 use crate::error::{Error, RegistryError};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::registry::objects::md5_hash::FMD5Hash;
-use crate::types::{fname::FName, Guid};
+use crate::types::fname::FName;
 
 /// Asset package data
 #[derive(Debug)]
@@ -44,6 +46,8 @@ impl AssetPackageData {
     ) -> Result<Self, Error> {
         let package_name = asset.read_fname()?;
         let disk_size = asset.read_i64::<LE>()?;
+
+        // TODO change to guid method
         let mut package_guid = [0u8; 16];
         asset.read_exact(&mut package_guid)?;
 
@@ -78,7 +82,7 @@ impl AssetPackageData {
 
         Ok(Self {
             package_name,
-            package_guid,
+            package_guid: Guid(package_guid),
             cooked_hash,
             imported_classes,
             disk_size,
@@ -96,7 +100,8 @@ impl AssetPackageData {
     pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_fname(&self.package_name)?;
         asset.write_i64::<LE>(self.disk_size)?;
-        asset.write_all(&self.package_guid)?;
+        // TODO change to guid method
+        asset.write_all(&self.package_guid.0)?;
 
         if self.version >= FAssetRegistryVersionType::AddedCookedMD5Hash {
             let cooked_hash = self

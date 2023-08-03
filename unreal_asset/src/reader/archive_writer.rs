@@ -6,11 +6,13 @@ use std::io;
 use bitvec::{order::Lsb0, vec::BitVec};
 use byteorder::{ByteOrder, LE};
 
+use unreal_helpers::Guid;
+
 use crate::error::{Error, FNameError, PropertyError};
 use crate::object_version::ObjectVersion;
 use crate::properties::{Property, PropertyDataTrait};
 use crate::reader::archive_trait::ArchiveTrait;
-use crate::types::{fname::FName, Guid};
+use crate::types::fname::FName;
 use crate::unversioned::header::{UnversionedHeader, UnversionedHeaderFragment};
 
 /// A trait that allows for writing to an archive in an asset-specific way
@@ -19,8 +21,9 @@ pub trait ArchiveWriter: ArchiveTrait {
     fn write_property_guid(&mut self, guid: &Option<Guid>) -> Result<(), Error> {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.write_bool(guid.is_some())?;
+            // TODO change to guid method
             if let Some(ref data) = guid {
-                self.write_all(data)?;
+                self.write_all(&data.0)?;
             }
         }
 

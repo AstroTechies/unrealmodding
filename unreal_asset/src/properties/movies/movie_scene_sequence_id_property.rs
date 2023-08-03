@@ -1,14 +1,16 @@
 //! Movie scene sequence identifier property
 
 use byteorder::LE;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::{
     error::Error,
     impl_property_data_trait, optional_guid, optional_guid_write,
     properties::PropertyTrait,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{fname::FName, Guid},
+    types::fname::FName,
     unversioned::ancestry::Ancestry,
 };
 

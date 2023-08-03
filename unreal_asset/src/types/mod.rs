@@ -4,11 +4,14 @@ pub mod fname;
 pub mod movie;
 pub mod vector;
 
+use std::hash::Hash;
+
+use unreal_helpers::Guid;
+
 use crate::{
     error::Error,
     reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
 };
-use std::hash::Hash;
 
 /// Serialized name header
 /// Used when reading name batches in >=UE5
@@ -101,24 +104,16 @@ impl PackageIndex {
     }
 }
 
-/// Guid
-pub type Guid = [u8; 16];
-
 /// Create a Guid from 4 u32 values
-#[rustfmt::skip]
-pub const fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
-    [
-        (a & 0xff) as u8, ((a >> 8) & 0xff) as u8, ((a >> 16) & 0xff) as u8, ((a >> 24) & 0xff) as u8,
-        (b & 0xff) as u8, ((b >> 8) & 0xff) as u8, ((b >> 16) & 0xff) as u8, ((b >> 24) & 0xff) as u8,
-        (c & 0xff) as u8, ((c >> 8) & 0xff) as u8, ((c >> 16) & 0xff) as u8, ((c >> 24) & 0xff) as u8,
-        (d & 0xff) as u8, ((d >> 8) & 0xff) as u8, ((d >> 16) & 0xff) as u8, ((d >> 24) & 0xff) as u8
-    ]
-}
+// #[rustfmt::skip]
+// pub const fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
+//     Guid
+// }
 
 /// Create a default Guid filled with all zeros
-pub fn default_guid() -> Guid {
-    new_guid(0, 0, 0, 0)
-}
+// pub fn default_guid() -> Guid {
+//     new_guid(0, 0, 0, 0)
+// }
 
 /// Asset generation info
 #[derive(Debug)]

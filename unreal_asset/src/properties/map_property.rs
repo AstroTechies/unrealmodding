@@ -3,16 +3,15 @@
 use std::hash::Hash;
 
 use byteorder::LE;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
 use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{
-    fname::{FName, ToSerializedName},
-    Guid,
-};
+use crate::types::fname::{FName, ToSerializedName};
 use crate::unversioned::{
     ancestry::Ancestry,
     properties::{UsmapPropertyData, UsmapPropertyDataTrait},

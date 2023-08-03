@@ -4,7 +4,9 @@ use std::mem::size_of;
 
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 use crate::custom_version::{CustomVersion, FEditorObjectVersion};
 use crate::error::{Error, PropertyError};
@@ -14,7 +16,7 @@ use crate::optional_guid;
 use crate::optional_guid_write;
 use crate::properties::PropertyTrait;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, Guid};
+use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
 
 /// Text history type

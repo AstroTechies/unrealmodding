@@ -39,10 +39,7 @@ use std::fmt::{Debug, Formatter};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
-use asset::name_map::NameMap;
-use asset::{AssetData, AssetTrait, ExportReaderTrait};
 use byteorder::{BigEndian, LE};
-
 use containers::shared_resource::SharedResource;
 use custom_version::{CustomVersion, CustomVersionTrait};
 use engine_version::EngineVersion;
@@ -52,7 +49,9 @@ use reader::archive_trait::ArchiveType;
 use reader::asset_archive_writer::AssetArchiveWriter;
 use reader::raw_reader::RawReader;
 use reader::raw_writer::RawWriter;
+
 use unreal_asset_proc_macro::FNameContainer;
+use unreal_helpers::Guid;
 
 pub mod ac7;
 pub mod asset;
@@ -74,6 +73,7 @@ pub mod types;
 pub mod unversioned;
 pub mod uproperty;
 
+use asset::{name_map::NameMap, AssetData, AssetTrait, ExportReaderTrait};
 use containers::chain::Chain;
 use containers::indexed_map::IndexedMap;
 use error::Error;
@@ -89,7 +89,7 @@ use reader::{
 };
 use types::{
     fname::{FName, FNameContainer},
-    GenerationInfo, Guid, PackageIndex,
+    GenerationInfo, PackageIndex,
 };
 use unversioned::Usmap;
 
@@ -334,7 +334,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             },
             legacy_file_version: 0,
             generations: Vec::new(),
-            package_guid: [0; 16],
+            package_guid: Guid::default(),
             engine_version_recorded: FEngineVersion::unknown(),
             engine_version_compatible: FEngineVersion::unknown(),
             chunk_ids: Vec::new(),
@@ -494,7 +494,8 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.thumbnail_table_offset = self.read_i32::<LE>()?;
 
         // read guid
-        self.raw_reader.read_exact(&mut self.package_guid)?;
+        // TODO change to guid method
+        self.raw_reader.read_exact(&mut self.package_guid.0)?;
 
         // raed generations
         let generations_count = self.read_i32::<LE>()?;
@@ -875,7 +876,8 @@ impl<'a, C: Read + Seek> Asset<C> {
                 false => {
                     cursor.write_i32::<LE>(self.asset_data.custom_versions.len() as i32)?;
                     for custom_version in &self.asset_data.custom_versions {
-                        cursor.write_all(&custom_version.guid)?;
+                        // TODO change to guid method
+                        cursor.write_all(&custom_version.guid.0)?;
                         cursor.write_i32::<LE>(custom_version.version)?;
                     }
                 }
@@ -915,7 +917,8 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         cursor.write_i32::<LE>(self.thumbnail_table_offset)?;
-        cursor.write_all(&self.package_guid)?;
+        // TODO change to guid method
+        cursor.write_all(&self.package_guid.0)?;
         cursor.write_i32::<LE>(self.generations.len() as i32)?;
 
         for _ in 0..self.generations.len() {
