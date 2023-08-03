@@ -16,6 +16,7 @@ use unreal_asset::{
     types::PackageIndex,
     Asset, Import,
 };
+use unreal_helpers::Guid;
 use unreal_pak::{PakMemory, PakReader};
 
 use crate::helpers::{get_asset, write_asset};
@@ -346,7 +347,7 @@ pub fn handle_persistent_actors(
                     BoolProperty {
                         name: asset.add_fname("bNetAddressable"),
                         ancestry: Ancestry::default(),
-                        property_guid: Some([0u8; 16]),
+                        property_guid: Some(Guid::default()),
                         duplication_index: 0,
                         value: true,
                     }
@@ -355,7 +356,7 @@ pub fn handle_persistent_actors(
                         name: asset.add_fname("CreationMethod"),
                         ancestry: Ancestry::default(),
                         inner_type: None,
-                        property_guid: Some([0u8; 16]),
+                        property_guid: Some(Guid::default()),
                         duplication_index: 0,
                         enum_type: Some(asset.add_fname("EComponentCreationMethod")),
                         value: Some(
@@ -370,7 +371,7 @@ pub fn handle_persistent_actors(
                     let next_property = ObjectProperty {
                         name: asset.add_fname("AttachParent"),
                         ancestry: Ancestry::default(),
-                        property_guid: Some([0u8; 16]),
+                        property_guid: Some(Guid::default()),
                         duplication_index: 0,
                         value: attach_parent,
                     };
@@ -389,7 +390,7 @@ pub fn handle_persistent_actors(
                     ObjectProperty {
                         name: asset.add_fname("BlueprintCreatedComponents"),
                         ancestry: Ancestry::default(),
-                        property_guid: Some([0u8; 16]),
+                        property_guid: Some(Guid::default()),
                         duplication_index: 0,
                         value: PackageIndex::new(asset.asset_data.exports.len() as i32),
                     }
@@ -443,7 +444,7 @@ pub fn handle_persistent_actors(
                 BoolProperty {
                     name: asset.add_fname("bHidden"),
                     ancestry: Ancestry::default(),
-                    property_guid: Some([0u8; 16]),
+                    property_guid: Some(Guid::default()),
                     duplication_index: 0,
                     value: true,
                 }
@@ -463,7 +464,7 @@ pub fn handle_persistent_actors(
                         ObjectProperty {
                             name: asset.add_fname("RootComponent"),
                             ancestry: Ancestry::default(),
-                            property_guid: Some([0u8; 16]),
+                            property_guid: Some(Guid::default()),
                             duplication_index: 0,
                             value: PackageIndex::new(export_index),
                         }
@@ -474,7 +475,7 @@ pub fn handle_persistent_actors(
                     ObjectProperty {
                         name: asset.add_fname(&node_name),
                         ancestry: Ancestry::default(),
-                        property_guid: Some([0u8; 16]),
+                        property_guid: Some(Guid::default()),
                         duplication_index: 0,
                         value: PackageIndex::new(export_index),
                     }
