@@ -4,7 +4,7 @@ use std::io::{self, Read, Seek};
 
 use byteorder::ReadBytesExt;
 
-use unreal_helpers::UnrealReadExt;
+use unreal_helpers::{read_ext::read_fstring_len, UnrealReadExt};
 
 use crate::asset::name_map::NameMap;
 use crate::containers::chain::Chain;
@@ -181,9 +181,11 @@ impl<C: Read + Seek> ArchiveReader for RawReader<C> {
             return Ok(None);
         }
 
-        Ok(self
-            .cursor
-            .read_fstring_len(serialized_name_header.len, serialized_name_header.is_wide)?)
+        Ok(read_fstring_len(
+            &mut self.cursor,
+            serialized_name_header.len,
+            serialized_name_header.is_wide,
+        )?)
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
