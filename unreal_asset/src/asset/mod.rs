@@ -15,7 +15,8 @@ use crate::{
         base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
         enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
         normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
-        string_table_export::StringTableExport, Export, ExportNormalTrait,
+        string_table_export::StringTableExport,
+        user_defined_struct_export::UserDefinedStructExport, Export, ExportNormalTrait,
     },
     flags::EPackageFlags,
     fproperty::FProperty,
@@ -356,6 +357,9 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
         let mut export: Export = export_class_type.get_content(|class| {
             Ok::<Export, Error>(match class {
                 "Level" => LevelExport::from_base(&base_export, self)?.into(),
+                "UserDefinedStruct" => {
+                    UserDefinedStructExport::from_base(&base_export, self)?.into()
+                }
                 "StringTable" => StringTableExport::from_base(&base_export, self)?.into(),
                 "Enum" | "UserDefinedEnum" => EnumExport::from_base(&base_export, self)?.into(),
                 "Function" => FunctionExport::from_base(&base_export, self)?.into(),

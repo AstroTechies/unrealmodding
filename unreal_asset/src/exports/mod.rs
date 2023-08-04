@@ -13,6 +13,7 @@ pub mod property_export;
 pub mod raw_export;
 pub mod string_table_export;
 pub mod struct_export;
+pub mod user_defined_struct_export;
 
 use crate::error::Error;
 use crate::reader::archive_writer::ArchiveWriter;
@@ -24,6 +25,7 @@ use self::{
     enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
     normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
     string_table_export::StringTableExport, struct_export::StructExport,
+    user_defined_struct_export::UserDefinedStructExport,
 };
 
 /// This must be implemented for all Exports
@@ -102,6 +104,8 @@ pub enum Export {
     StringTableExport,
     /// Struct export
     StructExport,
+    /// User defined struct export
+    UserDefinedStructExport,
     /// Function export
     FunctionExport,
     /// Data table export
