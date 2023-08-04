@@ -10,15 +10,21 @@ macro_rules! assets_folder {
     () => {
         concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/tests/assets/general/Pseudoregalia/"
+            "/tests/assets/general/pseudoregalia/"
         )
     };
 }
 
-const TEST_ASSETS: [(&[u8], &[u8]); 1] = [(
-    include_bytes!(concat!(assets_folder!(), "Zone_Library.umap")),
-    include_bytes!(concat!(assets_folder!(), "Zone_Library.uexp")),
-)];
+const TEST_ASSETS: [(&[u8], &[u8]); 2] = [
+    (
+        include_bytes!(concat!(assets_folder!(), "Zone_Library.umap")),
+        include_bytes!(concat!(assets_folder!(), "Zone_Library.uexp")),
+    ),
+    (
+        include_bytes!(concat!(assets_folder!(), "Zone_Caves.umap")),
+        include_bytes!(concat!(assets_folder!(), "Zone_Caves.uexp")),
+    ),
+];
 
 #[test]
 fn pseudoregalia() -> Result<(), Error> {
