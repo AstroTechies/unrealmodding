@@ -78,6 +78,8 @@ impl ExportTrait for UserDefinedStructExport {
         for entry in &self.default_struct_instance {
             Property::write(entry, asset, true)?;
         }
+        let stub = asset.add_fname("None");
+        asset.write_fname(&stub)?;
         Ok(())
     }
 }
