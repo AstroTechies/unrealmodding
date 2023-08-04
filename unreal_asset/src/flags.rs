@@ -390,6 +390,81 @@ bitflags! {
         #[allow(clippy::identity_op)]
         const ALL_MASK = 0x7 | 0x0 | 0x8;
     }
+
+    /// User defined struct flags
+    pub struct EStructFlags: u32{
+        /// No flags
+        const NO_FLAGS = 0x00000000;
+
+        /// This struct will be compared using native code
+        const IDENTICAL_NATIVE = 0x00000002;
+
+        /// This struct has an instanced reference
+        const HAS_INSTANCED_REFERENCE = 0x00000004;
+
+        /// This struct has no export?
+        const NO_EXPORT = 0x00000008;
+
+        /// This struct should always be serialized as a single unit
+        const ATOMIC = 0x00000010;
+
+        /// This struct uses binary serialization; it is unsafe to add/remove members from this struct without incrementing the package version
+        const IMMUTABLE = 0x00000020;
+
+        /// Native code needs to be run to find referenced objects
+        const ADD_STRUCT_REFERENCED_OBJECTS = 0x00000040;
+
+        /// This struct should be exportable/importable at the DLL layer; base structs must also be exportable for this to work.
+        const REQUIRED_API = 0x00000200;
+
+        /// This struct will be serialized using the CPP net serializer
+        const NET_SERIALIZE_NATIVE = 0x00000400;
+
+        /// This struct will be serialized using the CPP serializer
+        const SERIALIZE_NATIVE = 0x00000800;
+
+        /// This struct will be copied using the CPP operator=
+        const COPY_NATIVE = 0x00001000;
+
+        /// This struct will be copied using memcpy
+        const IS_PLAIN_OLD_DATA = 0x00002000;
+
+        /// This struct has no destructor and non will be called. IS_PLAIN_OLD_DATA implies NO_DESTRUCTOR
+        const NO_DESTRUCTOR = 0x00004000;
+
+        /// This struct will not be constructed because it is assumed that memory is zero before construction.
+        const ZERO_CONSTRUCTOR = 0x00008000;
+
+        /// Native code will be used to export text
+        const EXPORT_TEXT_ITEM_NATIVE = 0x00010000;
+
+        /// Native code will be used to export text
+        const IMPORT_TEXT_ITEM_NATIVE = 0x00020000;
+
+        /// This struct will have POST_SERIALIZE called on it after CPP serializer or tagged property serialization is complete
+        const POST_SERIALIZE_NATIVE = 0x00040000;
+
+        /// This struct will have SERIALIZE_FROM_MISMATCHED_TAG called on it if a mismatched tag is encountered.
+        const SERIALIZE_FROM_MISMATCHED_TAG = 0x00080000;
+
+        /// This struct will be serialized using the CPP net delta serializer
+        const NET_DELTA_SERIALIZE_NATIVE = 0x00100000;
+
+        /// This struct will be have POST_SCRIPT_CONSTRUCT called on it after a temporary object is constructed in a running blueprint
+        const POST_SCRIPT_CONSTRUCT = 0x00200000;
+
+        /// This struct can share net serialization state across connections
+        const NET_SHARED_SERIALIZATION = 0x00400000;
+
+        /// This struct has been cleaned and sanitized (trashed) and should not be used
+        const TRASHED = 0x00800000;
+
+        /// Struct flags that are automatically inherited
+        const INHERIT = Self::HAS_INSTANCED_REFERENCE.bits | Self::ATOMIC.bits;
+
+        /// Flags that are always computed; never loaded or done with code generation
+        const COMPUTED_FLAGS = Self::NET_DELTA_SERIALIZE_NATIVE.bits | Self::NET_SERIALIZE_NATIVE.bits | Self::SERIALIZE_NATIVE.bits | Self::POST_SERIALIZE_NATIVE.bits | Self::COPY_NATIVE.bits | Self::IS_PLAIN_OLD_DATA.bits | Self::NO_DESTRUCTOR.bits | Self::ZERO_CONSTRUCTOR.bits | Self::IDENTICAL_NATIVE.bits | Self::ADD_STRUCT_REFERENCED_OBJECTS.bits | Self::EXPORT_TEXT_ITEM_NATIVE.bits | Self::IMPORT_TEXT_ITEM_NATIVE.bits | Self::SERIALIZE_FROM_MISMATCHED_TAG.bits | Self::POST_SCRIPT_CONSTRUCT.bits | Self::NET_SHARED_SERIALIZATION.bits;
+    }
 }
 
 impl Default for EObjectFlags {
