@@ -1,19 +1,8 @@
 //! Movie scene frame range property
 
-use byteorder::LE;
+use crate::properties::property_prelude::*;
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::{
-    error::Error,
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::PropertyTrait,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::fname::FName,
-    types::movie::ERangeBoundTypes,
-    unversioned::ancestry::Ancestry,
-};
+use crate::types::movie::ERangeBoundTypes;
 
 /// Int32 value bound by a range
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]

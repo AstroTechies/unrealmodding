@@ -1,17 +1,8 @@
 //! Niagara variable property
 
-use byteorder::LE;
+use crate::properties::property_prelude::*;
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::{
-    error::Error,
-    properties::{struct_property::StructProperty, Property, PropertyDataTrait, PropertyTrait},
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::fname::FName,
-    unversioned::{ancestry::Ancestry, header::UnversionedHeader},
-};
+use crate::unversioned::header::UnversionedHeader;
 
 /// Niagara variable property
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]

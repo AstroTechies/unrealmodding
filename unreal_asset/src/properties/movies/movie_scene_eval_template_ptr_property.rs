@@ -1,17 +1,8 @@
 //! Movie scene evaluation template pointer property
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+use crate::properties::property_prelude::*;
 
-use crate::{
-    cast,
-    error::Error,
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::{str_property::StrProperty, Property, PropertyDataTrait, PropertyTrait},
-    reader::archive_reader::ArchiveReader,
-    types::fname::FName,
-    unversioned::{ancestry::Ancestry, header::UnversionedHeader},
-};
+use crate::properties::str_property::StrProperty;
 
 /// Movie scene evaluation template pointer property
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

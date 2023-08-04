@@ -1,21 +1,10 @@
 //! Movie scene float channel property
 
-use byteorder::LE;
-use ordered_float::OrderedFloat;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+use crate::properties::property_prelude::*;
 
 use crate::{
-    error::Error,
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::{rich_curve_key_property::RichCurveExtrapolation, PropertyTrait},
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::{
-        fname::FName,
-        movie::{FrameNumber, FrameRate},
-    },
-    unversioned::ancestry::Ancestry,
+    properties::rich_curve_key_property::RichCurveExtrapolation,
+    types::movie::{FrameNumber, FrameRate},
 };
 
 use super::movie_scene_float_value_property::MovieSceneFloatValue;

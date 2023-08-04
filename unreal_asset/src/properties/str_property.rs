@@ -1,23 +1,8 @@
 //! String properties
 
-use std::mem::size_of;
-
-use byteorder::LE;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+use super::property_prelude::*;
 
 use crate::custom_version::{CustomVersion, FEditorObjectVersion};
-use crate::error::{Error, PropertyError};
-use crate::impl_property_data_trait;
-use crate::object_version::ObjectVersion;
-use crate::optional_guid;
-use crate::optional_guid_write;
-use crate::properties::PropertyTrait;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
-use crate::unversioned::ancestry::Ancestry;
 
 /// Text history type
 #[derive(

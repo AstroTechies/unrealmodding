@@ -1,21 +1,8 @@
 //! Object properties
 
-use std::mem::size_of;
+use super::property_prelude::*;
 
-use byteorder::LE;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::error::Error;
-use crate::impl_property_data_trait;
 use crate::object_version::ObjectVersionUE5;
-use crate::optional_guid;
-use crate::optional_guid_write;
-use crate::properties::PropertyTrait;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, PackageIndex};
-use crate::unversioned::ancestry::Ancestry;
 
 /// Object property
 #[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]

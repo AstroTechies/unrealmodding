@@ -1,23 +1,9 @@
 //! Movie scene evaluation key property
 
-use byteorder::LE;
+use crate::properties::property_prelude::*;
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::{
-    error::Error,
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::PropertyTrait,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::fname::FName,
-    unversioned::ancestry::Ancestry,
-};
-
-use super::{
-    movie_scene_sequence_id_property::MovieSceneSequenceId,
-    movie_scene_track_identifier_property::MovieSceneTrackIdentifier,
-};
+use super::movie_scene_sequence_id_property::MovieSceneSequenceId;
+use super::movie_scene_track_identifier_property::MovieSceneTrackIdentifier;
 
 /// Movie scene evaluation key
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

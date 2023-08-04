@@ -2,14 +2,9 @@
 
 use std::{fmt::Debug, hash::Hash};
 
-use byteorder::LE;
-use unreal_asset_proc_macro::FNameContainer;
+use crate::properties::property_prelude::*;
 
-use crate::{
-    error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::movie::FFrameNumberRange,
-};
+use crate::types::movie::FFrameNumberRange;
 
 /// Movie scene evaluation entry
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
