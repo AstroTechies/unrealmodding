@@ -22,7 +22,7 @@ pub trait ArchiveWriter: ArchiveTrait {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
             self.write_bool(guid.is_some())?;
             if let Some(data) = guid {
-                self.write_guid(data.to_owned())?;
+                self.write_guid(data)?;
             }
         }
 
@@ -224,7 +224,7 @@ pub trait ArchiveWriter: ArchiveTrait {
     /// Write an FString
     fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error>;
     /// Write a guid.
-    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()>;
+    fn write_guid(&mut self, guid: &Guid) -> io::Result<()>;
     /// Write `bool`
     fn write_bool(&mut self, value: bool) -> io::Result<()>;
 }
@@ -303,7 +303,7 @@ where
     }
 
     #[inline(always)]
-    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()> {
+    fn write_guid(&mut self, guid: &Guid) -> io::Result<()> {
         self.get_passthrough().write_guid(guid)
     }
 

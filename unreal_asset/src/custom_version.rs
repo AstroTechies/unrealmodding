@@ -110,7 +110,7 @@ impl CustomVersion {
 
     /// Write a custom version to an asset
     pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
-        writer.write_guid(self.guid)?;
+        writer.write_guid(&self.guid)?;
         writer.write_i32::<LE>(self.version)?;
         Ok(())
     }
@@ -1343,7 +1343,7 @@ impl FAssetRegistryVersionType {
 
     /// Write an asset registry version to an asset
     pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
-        writer.write_guid(ASSET_REGISTRY_VERSION_GUID)?;
+        writer.write_guid(&ASSET_REGISTRY_VERSION_GUID)?;
         writer.write_i32::<LE>((*self).into())?;
         Ok(())
     }

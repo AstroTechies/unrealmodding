@@ -300,7 +300,7 @@ impl ArrayProperty {
                 )?;
                 if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG
                 {
-                    asset.write_guid(property.property_guid.unwrap_or_default())?;
+                    asset.write_guid(&property.property_guid.unwrap_or_default())?;
                 }
                 if asset.get_object_version()
                     >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG

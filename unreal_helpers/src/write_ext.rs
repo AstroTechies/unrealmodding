@@ -14,7 +14,7 @@ pub trait UnrealWriteExt {
 
     /// Write a guid.
     #[cfg(feature = "guid")]
-    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()>;
+    fn write_guid(&mut self, guid: &crate::Guid) -> io::Result<()>;
 
     /// Write bool as u8.
     fn write_bool(&mut self, value: bool) -> io::Result<()>;
@@ -52,7 +52,7 @@ impl<W: Write> UnrealWriteExt for W {
     }
 
     #[cfg(feature = "guid")]
-    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()> {
+    fn write_guid(&mut self, guid: &crate::Guid) -> io::Result<()> {
         self.write_all(&guid.0)
     }
 

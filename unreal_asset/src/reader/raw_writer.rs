@@ -176,7 +176,7 @@ impl<'cursor, W: Write + Seek> ArchiveWriter for RawWriter<'cursor, W> {
         Ok(self.cursor.write_fstring(value)?)
     }
 
-    fn write_guid(&mut self, guid: crate::Guid) -> io::Result<()> {
+    fn write_guid(&mut self, guid: &Guid) -> io::Result<()> {
         self.cursor.write_guid(guid)
     }
 
