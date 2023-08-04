@@ -56,7 +56,7 @@ impl PropertyTrait for GuidProperty {
         include_header: bool,
     ) -> Result<usize, Error> {
         optional_guid_write!(self, asset, include_header);
-        asset.write_guid(self.value)?;
+        asset.write_guid(&self.value)?;
         Ok(16)
     }
 }

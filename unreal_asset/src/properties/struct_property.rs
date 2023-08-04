@@ -259,7 +259,7 @@ impl StructProperty {
         if include_header {
             asset.write_fname(struct_type.as_ref().ok_or_else(PropertyError::headerless)?)?;
             if asset.get_object_version() >= ObjectVersion::VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG {
-                asset.write_guid(self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
+                asset.write_guid(&self.struct_guid.ok_or_else(PropertyError::headerless)?)?;
             }
             asset.write_property_guid(self.property_guid.as_ref())?;
         }

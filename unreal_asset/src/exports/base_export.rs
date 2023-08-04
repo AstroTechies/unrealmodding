@@ -262,7 +262,7 @@ impl BaseExport {
         })?;
 
         if writer.get_object_version_ue5() < ObjectVersionUE5::REMOVE_OBJECT_EXPORT_PACKAGE_GUID {
-            writer.write_guid(self.package_guid)?;
+            writer.write_guid(&self.package_guid)?;
         }
 
         if writer.get_object_version_ue5() >= ObjectVersionUE5::TRACK_OBJECT_EXPORT_IS_INHERITED {

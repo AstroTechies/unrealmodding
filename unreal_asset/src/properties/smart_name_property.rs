@@ -96,7 +96,8 @@ impl PropertyTrait for SmartNameProperty {
         if custom_version < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking as i32
         {
             asset.write_guid(
-                self.temp_guid
+                &self
+                    .temp_guid
                     .ok_or_else(|| PropertyError::property_field_none("temp_guid", "String"))?,
             )?;
         }

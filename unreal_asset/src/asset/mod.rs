@@ -357,7 +357,7 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
 
         let mut export: Export = export_class_type.get_content(|class| {
             Ok::<Export, Error>(match class {
-                "Level" => LevelExport::from_base(&base_export, self, next_starting)?.into(),
+                "Level" => LevelExport::from_base(&base_export, self)?.into(),
                 "World" => WorldExport::from_base(&base_export, self)?.into(),
                 "UserDefinedStruct" => {
                     UserDefinedStructExport::from_base(&base_export, self)?.into()
