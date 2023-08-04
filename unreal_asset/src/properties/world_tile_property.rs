@@ -1,20 +1,10 @@
 //! World tile properties
 
-use byteorder::LE;
-use ordered_float::OrderedFloat;
-use unreal_asset_proc_macro::FNameContainer;
+use super::property_prelude::*;
 
 use crate::custom_version::FFortniteMainBranchObjectVersion;
-use crate::error::Error;
-use crate::object_version::ObjectVersion;
-use crate::properties::{
-    vector_property::{BoxProperty, IntPointProperty},
-    PropertyTrait,
-};
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
+use crate::properties::vector_property::{BoxProperty, IntPointProperty};
 use crate::types::vector::Vector;
-use crate::unversioned::ancestry::Ancestry;
 
 //todo: what is this file even doing in properties?
 /// World tile layer

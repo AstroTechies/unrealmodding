@@ -1,18 +1,6 @@
 //! Movie scene event parameters property
-//!
-use byteorder::LE;
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::{
-    error::Error,
-    impl_property_data_trait, optional_guid, optional_guid_write,
-    properties::{object_property::SoftObjectPath, PropertyTrait},
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    types::fname::FName,
-    unversioned::ancestry::Ancestry,
-};
+use crate::properties::property_prelude::*;
 
 /// Movie scene event parameters
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

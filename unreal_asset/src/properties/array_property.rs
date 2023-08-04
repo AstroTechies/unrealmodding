@@ -1,20 +1,6 @@
 //! Array property
 
-use std::io::SeekFrom;
-
-use byteorder::LE;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::error::{Error, PropertyError};
-use crate::object_version::ObjectVersion;
-use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::{FName, ToSerializedName};
-use crate::unversioned::ancestry::Ancestry;
-use crate::unversioned::properties::{UsmapPropertyData, UsmapPropertyDataTrait};
-use crate::{cast, impl_property_data_trait};
+use super::property_prelude::*;
 
 /// Array property
 #[derive(FNameContainer, Debug, Default, Clone, Hash, PartialEq, Eq)]

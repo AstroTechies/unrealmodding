@@ -1,14 +1,8 @@
 //! Set property
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+use super::property_prelude::*;
 
-use crate::error::{Error, PropertyError};
-use crate::impl_property_data_trait;
-use crate::properties::{array_property::ArrayProperty, PropertyTrait};
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::{FName, ToSerializedName};
-use crate::unversioned::ancestry::Ancestry;
+use crate::properties::array_property::ArrayProperty;
 
 /// Set property
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]

@@ -1,17 +1,6 @@
 //! Enum property
 
-use std::mem::size_of;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::error::{Error, PropertyError};
-use crate::properties::PropertyTrait;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
-use crate::unversioned::ancestry::Ancestry;
-use crate::unversioned::properties::{UsmapPropertyData, UsmapPropertyDataTrait};
-use crate::{cast, impl_property_data_trait};
+use super::property_prelude::*;
 
 /// Enum property
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]

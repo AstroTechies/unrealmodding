@@ -2,21 +2,9 @@
 
 use std::hash::Hash;
 
-use byteorder::LE;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+use super::property_prelude::*;
 
 use crate::containers::indexed_map::IndexedMap;
-use crate::error::Error;
-use crate::properties::{struct_property::StructProperty, Property, PropertyTrait};
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::{FName, ToSerializedName};
-use crate::unversioned::{
-    ancestry::Ancestry,
-    properties::{UsmapPropertyData, UsmapPropertyDataTrait},
-};
-use crate::{cast, impl_property_data_trait};
 
 /// Map property
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]

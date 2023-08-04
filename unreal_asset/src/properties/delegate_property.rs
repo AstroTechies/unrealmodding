@@ -1,21 +1,6 @@
 //! Delegate properties
 
-use std::mem::size_of;
-
-use byteorder::LE;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::error::Error;
-use crate::impl_property_data_trait;
-use crate::optional_guid;
-use crate::optional_guid_write;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, PackageIndex};
-use crate::unversioned::ancestry::Ancestry;
-
-use super::PropertyTrait;
+use super::property_prelude::*;
 
 /// Delegate
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]

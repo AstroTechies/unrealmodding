@@ -1,14 +1,6 @@
 //! Empty unversioned property
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::error::Error;
-use crate::reader::archive_writer::ArchiveWriter;
-use crate::types::fname::FName;
-use crate::unversioned::ancestry::Ancestry;
-
-use super::{PropertyDataTrait, PropertyTrait};
+use super::property_prelude::*;
 
 /// Empty unversioned property
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

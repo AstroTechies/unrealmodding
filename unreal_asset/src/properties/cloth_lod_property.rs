@@ -1,22 +1,8 @@
 //! Cloth lod property
 
-use std::mem::size_of;
+use super::property_prelude::*;
 
-use byteorder::LE;
-use ordered_float::OrderedFloat;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::error::Error;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
-use crate::unversioned::ancestry::Ancestry;
-
-use super::{
-    struct_property::StructProperty, vector_property::Vector4Property, PropertyDataTrait,
-    PropertyTrait,
-};
+use super::vector_property::Vector4Property;
 
 /// Mesh to mesh vertex data
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]

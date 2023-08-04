@@ -1,20 +1,8 @@
 //! Smart name property
 
-use byteorder::LE;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+use super::property_prelude::*;
 
 use crate::custom_version::FAnimPhysObjectVersion;
-use crate::error::PropertyError;
-use crate::impl_property_data_trait;
-use crate::optional_guid;
-use crate::optional_guid_write;
-use crate::properties::PropertyTrait;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
-use crate::unversioned::ancestry::Ancestry;
-use crate::Error;
 
 /// Smart name property
 #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]

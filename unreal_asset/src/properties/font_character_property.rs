@@ -1,17 +1,6 @@
 //! Font character property
 
-use byteorder::LE;
-
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
-
-use crate::error::Error;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
-use crate::unversioned::ancestry::Ancestry;
-use crate::{impl_property_data_trait, optional_guid, optional_guid_write};
-
-use super::PropertyTrait;
+use super::property_prelude::*;
 
 /// Font character
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
