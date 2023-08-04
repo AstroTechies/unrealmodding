@@ -21,7 +21,7 @@ use crate::types::{fname::FName, PackageIndex};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SerializedInterfaceReference {
     /// Class
-    pub class: i32,
+    pub class: PackageIndex,
     /// Pointer offset
     pub pointer_offset: i32,
     /// Is implemented by k2
@@ -30,7 +30,7 @@ pub struct SerializedInterfaceReference {
 
 impl SerializedInterfaceReference {
     /// Create a new `SerializedInterfaceReference` instance
-    pub fn new(class: i32, pointer_offset: i32, implemented_by_k2: bool) -> Self {
+    pub fn new(class: PackageIndex, pointer_offset: i32, implemented_by_k2: bool) -> Self {
         SerializedInterfaceReference {
             class,
             pointer_offset,
@@ -121,7 +121,7 @@ impl ClassExport {
         let mut interfaces = Vec::with_capacity(num_interfaces);
         for _i in 0..num_interfaces {
             interfaces.push(SerializedInterfaceReference::new(
-                asset.read_i32::<LE>()?,
+                PackageIndex::new(asset.read_i32::<LE>()?),
                 asset.read_i32::<LE>()?,
                 asset.read_i32::<LE>()? == 1,
             ));
@@ -163,7 +163,7 @@ impl ClassExport {
     fn serialize_interfaces<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
         asset.write_i32::<LE>(self.interfaces.len() as i32)?;
         for interface in &self.interfaces {
-            asset.write_i32::<LE>(interface.class)?;
+            asset.write_i32::<LE>(interface.class.index)?;
             asset.write_i32::<LE>(interface.pointer_offset)?;
             asset.write_i32::<LE>(match interface.implemented_by_k2 {
                 true => 1,
