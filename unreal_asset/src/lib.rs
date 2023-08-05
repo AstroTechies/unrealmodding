@@ -42,19 +42,10 @@ use std::fmt::{Debug, Formatter};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
-use byteorder::{BigEndian, LE};
-use containers::shared_resource::SharedResource;
-use custom_version::{CustomVersion, CustomVersionTrait};
-use engine_version::EngineVersion;
-use enums::ECustomVersionSerializationFormat;
-use reader::archive_reader::PassthroughArchiveReader;
-use reader::archive_trait::ArchiveType;
-use reader::asset_archive_writer::AssetArchiveWriter;
-use reader::raw_reader::RawReader;
-use reader::raw_writer::RawWriter;
+use byteorder::{BE, LE};
 
 use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+pub use unreal_helpers::Guid;
 
 pub mod ac7;
 pub mod asset;
@@ -77,8 +68,10 @@ pub mod unversioned;
 pub mod uproperty;
 
 use asset::{name_map::NameMap, AssetData, AssetTrait, ExportReaderTrait};
-use containers::chain::Chain;
-use containers::indexed_map::IndexedMap;
+use containers::{chain::Chain, indexed_map::IndexedMap, shared_resource::SharedResource};
+use custom_version::{CustomVersion, CustomVersionTrait};
+use engine_version::EngineVersion;
+use enums::ECustomVersionSerializationFormat;
 use error::Error;
 use exports::{
     base_export::BaseExport, class_export::ClassExport, Export, ExportBaseTrait, ExportNormalTrait,
@@ -88,7 +81,12 @@ use flags::EPackageFlags;
 use object_version::{ObjectVersion, ObjectVersionUE5};
 use properties::world_tile_property::FWorldTileInfo;
 use reader::{
-    archive_reader::ArchiveReader, archive_trait::ArchiveTrait, archive_writer::ArchiveWriter,
+    archive_reader::{ArchiveReader, PassthroughArchiveReader},
+    archive_trait::{ArchiveTrait, ArchiveType},
+    archive_writer::ArchiveWriter,
+    asset_archive_writer::AssetArchiveWriter,
+    raw_reader::RawReader,
+    raw_writer::RawWriter,
 };
 use types::{
     fname::{FName, FNameContainer},
@@ -397,7 +395,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.seek(SeekFrom::Start(0))?;
 
         // read and check magic
-        if self.read_u32::<BigEndian>()? != UE4_ASSET_MAGIC {
+        if self.read_u32::<BE>()? != UE4_ASSET_MAGIC {
             return Err(Error::invalid_file(
                 "File is not a valid uasset file".to_string(),
             ));
@@ -849,7 +847,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         cursor: &mut Writer,
         asset_header: &AssetHeader,
     ) -> Result<(), Error> {
-        cursor.write_u32::<BigEndian>(UE4_ASSET_MAGIC)?;
+        cursor.write_u32::<BE>(UE4_ASSET_MAGIC)?;
         cursor.write_i32::<LE>(self.legacy_file_version)?;
 
         if self.legacy_file_version != 4 {

@@ -213,7 +213,7 @@ macro_rules! impl_property_data_trait {
                 self.duplication_index
             }
 
-            fn get_property_guid(&self) -> Option<unreal_helpers::Guid> {
+            fn get_property_guid(&self) -> Option<$crate::Guid> {
                 self.property_guid.clone()
             }
 
