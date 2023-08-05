@@ -228,7 +228,7 @@ macro_rules! impl_property_data_trait {
     };
 }
 
-const CUSTOM_SERIALIZATION: [&str; 56] = [
+const CUSTOM_SERIALIZATION: [&str; 57] = [
     "SkeletalMeshSamplingLODBuiltData",
     "SkeletalMeshAreaWeightedTriangleSampler",
     "SmartName",
@@ -265,6 +265,7 @@ const CUSTOM_SERIALIZATION: [&str; 56] = [
     "FontCharacter",
     "UniqueNetIdRepl",
     "NiagaraVariable",
+    "NiagaraVariableWithOffset",
     "FontData",
     "ClothLODData",
     "FloatRange",
