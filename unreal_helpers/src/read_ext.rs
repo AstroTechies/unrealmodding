@@ -3,26 +3,55 @@
 use std::io::{self, Read, Seek};
 use std::mem::size_of;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 
 use crate::error::FStringError;
 
 /// Extension for anything that implements `Read` to more easily read Unreal data formats.
 pub trait UnrealReadExt {
-    /// Read string of format \<length i32\>\<string\>\<null\>.
-    fn read_fstring(&mut self) -> Result<Option<String>, FStringError>;
+    /// Read u8 as bool.
+    fn read_bool(&mut self) -> io::Result<bool>;
+
+    /// Read a `Vec` of length `len` from the reader.
+    fn read_vec(&mut self, len: usize) -> io::Result<Vec<u8>>;
+
+    /// Read an array of type `T` by consuming bytes of the reader `n` times and
+    /// parsing them into `T` using the provided function where the value of `n`
+    /// is determined by first `i32` aread from the reader.
+    fn read_array<T>(&mut self, f: impl FnMut(&mut Self) -> io::Result<T>) -> io::Result<Vec<T>>;
 
     /// Read a guid.
     #[cfg(feature = "guid")]
     fn read_guid(&mut self) -> io::Result<crate::Guid>;
 
-    /// Read u8 as bool.
-    fn read_bool(&mut self) -> io::Result<bool>;
+    /// Read string of format \<length i32\>\<string\>\<null\>.
+    fn read_fstring(&mut self) -> Result<Option<String>, FStringError>;
 }
 
 impl<R: Read + Seek> UnrealReadExt for R {
+    fn read_bool(&mut self) -> io::Result<bool> {
+        Ok(self.read_u8()? != 0)
+    }
+
+    fn read_vec(&mut self, len: usize) -> io::Result<Vec<u8>> {
+        let mut buf = vec![0; len];
+        self.read_exact(&mut buf)?;
+        Ok(buf)
+    }
+
+    fn read_array<T>(
+        &mut self,
+        mut f: impl FnMut(&mut Self) -> io::Result<T>,
+    ) -> io::Result<Vec<T>> {
+        let mut buf = Vec::with_capacity(self.read_u32::<LE>()? as usize);
+        for _ in 0..buf.capacity() {
+            buf.push(f(self)?);
+        }
+        Ok(buf)
+    }
+
     fn read_fstring(&mut self) -> Result<Option<String>, FStringError> {
-        let len = self.read_i32::<LittleEndian>()?;
+        let len = self.read_i32::<LE>()?;
 
         let (len, is_wide) = match len < 0 {
             true => (-len, true),
@@ -36,10 +65,6 @@ impl<R: Read + Seek> UnrealReadExt for R {
         let mut buf = [0u8; 16];
         self.read_exact(&mut buf)?;
         Ok(crate::Guid(buf))
-    }
-
-    fn read_bool(&mut self) -> io::Result<bool> {
-        Ok(self.read_u8()? != 0)
     }
 }
 
@@ -66,7 +91,7 @@ pub fn read_fstring_len<R: Read + Seek>(
         let mut buf = vec![0u8; len as usize];
         reader.read_exact(&mut buf)?;
 
-        let terminator = reader.read_u16::<LittleEndian>()?;
+        let terminator = reader.read_u16::<LE>()?;
         if terminator != 0 {
             return Err(FStringError::InvalidStringTerminator(
                 terminator,
