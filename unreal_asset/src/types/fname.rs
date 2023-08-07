@@ -26,7 +26,7 @@ pub enum EMappedNameType {
 /// FName is used to store most of the Strings in UE4.
 ///
 /// They are represented by an index+instance number inside a string table inside the asset file.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum FName {
     /// Backed FName that is part of a namemap
     Backed {
@@ -48,6 +48,29 @@ pub enum FName {
         /// FName instance number
         number: i32,
     },
+}
+
+impl std::fmt::Debug for FName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            FName::Backed {
+                index,
+                number,
+                ty,
+                name_map,
+            } => f
+                .debug_struct("Backed")
+                .field("value", &name_map.get_ref().get_name_reference(*index))
+                .field("number", number)
+                .field("ty", ty)
+                .finish(),
+            FName::Dummy { value, number } => f
+                .debug_struct("Dummy")
+                .field("value", value)
+                .field("number", number)
+                .finish(),
+        }
+    }
 }
 
 /// Get implementer serialized name
