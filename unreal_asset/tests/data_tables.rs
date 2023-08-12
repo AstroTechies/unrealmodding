@@ -6,8 +6,8 @@ use unreal_asset::{
     error::Error,
     properties::{Property, PropertyDataTrait},
     Asset,
-    {data_table_export::DataTableExport, Export},
 };
+use unreal_asset_exports::{data_table_export::DataTableExport, Export};
 
 mod shared;
 

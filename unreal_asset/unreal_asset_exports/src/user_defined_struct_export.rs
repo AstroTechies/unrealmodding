@@ -5,9 +5,9 @@ use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::flags::EStructFlags;
-use crate::properties::Property;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::unversioned::{ancestry::Ancestry, header::UnversionedHeader};
+use crate::Property;
 use crate::{
     base_export::BaseExport, normal_export::NormalExport, struct_export::StructExport,
     ExportBaseTrait, ExportNormalTrait, ExportTrait,

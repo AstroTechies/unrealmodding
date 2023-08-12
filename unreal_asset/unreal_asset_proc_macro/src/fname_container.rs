@@ -12,9 +12,9 @@ const IGNORE_ATTRIBUTE: &str = "container_ignore";
 /// This is used to prevent trait bounds resolution cycles
 const NO_BOUNDS: &str = "container_nobounds";
 /// Trait name
-const TRAIT_NAME: &str = "crate::types::fname::FNameContainer";
+const TRAIT_NAME: &str = "unreal_asset_base::types::fname::FNameContainer";
 /// FName path
-const FNAME_PATH: &str = "crate::types::fname::FName";
+const FNAME_PATH: &str = "unreal_asset_base::types::fname::FName";
 
 /// FName Container derive macro
 pub fn derive_fname_container(input: TokenStream) -> TokenStream {

@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
-use unreal_asset::{cast, engine_version::EngineVersion, error::Error, Asset, Export};
+use unreal_asset::{cast, engine_version::EngineVersion, error::Error, Asset};
+use unreal_asset_exports::Export;
 
 mod shared;
 

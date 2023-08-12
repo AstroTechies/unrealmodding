@@ -1,4 +1,6 @@
 #![deny(missing_docs)]
+#![allow(non_upper_case_globals)]
+
 //! unreal_asset crate base members
 
 pub mod compression;
@@ -9,15 +11,13 @@ pub mod engine_version;
 pub mod enums;
 pub mod error;
 pub mod flags;
-pub mod fproperty;
 pub mod object_version;
 pub mod reader;
 pub mod types;
 pub mod unversioned;
-pub mod uproperty;
 
 use types::{fname::FName, PackageIndex};
-use unreal_asset_proc_macro::FNameContainer;
+pub use unreal_asset_proc_macro::FNameContainer;
 pub use unreal_helpers::Guid;
 
 /// Cast a Property/Export to a more specific type
@@ -61,6 +61,11 @@ pub struct Import {
     pub object_name: FName,
     /// Is the import optional
     pub optional: bool,
+}
+
+// silly `FNameContainer` fix
+mod unreal_asset_base {
+    pub use crate::types;
 }
 
 impl Import {

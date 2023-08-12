@@ -15,7 +15,7 @@ unreal_asset_kismet.workspace = true
 unreal_asset_proc_macro.workspace = true
 
 unreal_helpers.workspace = true
-unreal_helpers.features = ["bitvec", "guid", "path", "read_write"]
+unreal_helpers.features = ["guid"]
 
 bitvec.workspace = true
 byteorder.workspace = true

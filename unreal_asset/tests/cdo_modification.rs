@@ -9,8 +9,8 @@ use unreal_asset::{
     types::PackageIndex,
     unversioned::ancestry::Ancestry,
     Asset,
-    {normal_export::NormalExport, Export, ExportBaseTrait},
 };
+use unreal_asset_exports::{normal_export::NormalExport, Export, ExportBaseTrait};
 
 mod shared;
 

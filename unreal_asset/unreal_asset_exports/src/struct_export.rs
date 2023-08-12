@@ -8,12 +8,12 @@ use unreal_asset_proc_macro::FNameContainer;
 use crate::custom_version::FCoreObjectVersion;
 use crate::engine_version::EngineVersion;
 use crate::error::Error;
-use crate::fproperty::FProperty;
 use crate::implement_get;
 use crate::kismet::KismetExpression;
+use crate::properties::fproperty::FProperty;
+use crate::properties::uproperty::UField;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::PackageIndex;
-use crate::uproperty::UField;
 use crate::{
     base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
     ExportTrait,

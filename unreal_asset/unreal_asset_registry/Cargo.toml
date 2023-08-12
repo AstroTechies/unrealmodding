@@ -12,7 +12,9 @@ edition = "2021"
 unreal_asset_base.workspace = true
 unreal_asset_properties.workspace = true
 unreal_asset_exports.workspace = true
+
 unreal_helpers.workspace = true
+unreal_helpers.features = ["bitvec", "guid"]
 
 bitvec.workspace = true
 byteorder.workspace = true

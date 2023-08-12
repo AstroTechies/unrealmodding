@@ -10,8 +10,10 @@ use crate::{
     object_version::{ObjectVersion, ObjectVersionUE5},
     types::{fname::FName, PackageIndex},
     unversioned::Usmap,
-    Export, Import,
+    Import,
 };
+
+use unreal_asset_exports::Export;
 
 use unreal_asset_base::reader::{
     archive_trait::{ArchiveTrait, ArchiveType},
