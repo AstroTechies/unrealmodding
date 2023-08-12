@@ -2,7 +2,7 @@
 name = "unreal_asset_exports"
 version.workspace = true
 authors.workspace = true
-description = "Unreal Engine 4/5 game asset serialization library."
+description = "Exports implementations for unreal_asset"
 license.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/unreal_asset_exports"
