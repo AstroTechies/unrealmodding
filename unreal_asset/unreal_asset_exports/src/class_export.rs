@@ -8,14 +8,14 @@ use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::error::Error;
-use crate::exports::{
-    base_export::BaseExport, struct_export::StructExport, ExportBaseTrait, ExportNormalTrait,
-    ExportTrait,
-};
 use crate::flags::EClassFlags;
 use crate::object_version::ObjectVersion;
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::{fname::FName, PackageIndex};
+use crate::{
+    base_export::BaseExport, struct_export::StructExport, ExportBaseTrait, ExportNormalTrait,
+    ExportTrait,
+};
 
 /// Serialized interface reference
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

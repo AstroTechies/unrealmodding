@@ -6,12 +6,12 @@ use unreal_asset::{
     cast,
     engine_version::EngineVersion,
     error::Error,
-    exports::{normal_export::NormalExport, ExportNormalTrait},
     properties::{
         map_property::MapProperty, struct_property::StructProperty, Property, PropertyDataTrait,
     },
     types::PackageIndex,
     Asset,
+    {normal_export::NormalExport, ExportNormalTrait},
 };
 
 macro_rules! assets_folder {

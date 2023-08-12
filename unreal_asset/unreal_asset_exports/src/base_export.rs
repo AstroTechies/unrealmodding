@@ -9,7 +9,6 @@ use unreal_asset_proc_macro::FNameContainer;
 use unreal_helpers::Guid;
 
 use crate::error::Error;
-use crate::exports::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::flags::EObjectFlags;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::archive_reader::ArchiveReader;
@@ -17,6 +16,7 @@ use crate::reader::archive_trait::{ArchiveTrait, ArchiveType};
 use crate::reader::archive_writer::ArchiveWriter;
 use crate::reader::raw_writer::RawWriter;
 use crate::types::{fname::FName, PackageIndex};
+use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Export filter flags
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
@@ -87,21 +87,25 @@ pub struct BaseExport {
     /// Dependencies that should be serialized before this export is serialized
     #[container_ignore]
     pub serialization_before_serialization_dependencies: Vec<PackageIndex>,
+    /// Binary size of `serialization_before_serialization_dependencies`
     pub serialization_before_serialization_dependencies_size: i32,
 
     /// Dependencies that should be created before this export is serialized
     #[container_ignore]
     pub create_before_serialization_dependencies: Vec<PackageIndex>,
+    /// Binary size of `create_before_serialization_dependencies`
     pub create_before_serialization_dependencies_size: i32,
 
     /// Dependencies that should be serialized before this export is created
     #[container_ignore]
     pub serialization_before_create_dependencies: Vec<PackageIndex>,
+    /// Binary size of `serialization_before_create_dependencies`
     pub serialization_before_create_dependencies_size: i32,
 
     /// Dependencies that should be created before this export is created
     #[container_ignore]
     pub create_before_create_dependencies: Vec<PackageIndex>,
+    /// Binary size of `create_before_create_dependencies`
     pub create_before_create_dependencies_size: i32,
 
     /// Padding

@@ -1,8 +1,8 @@
 use std::{collections::HashMap, io::Cursor};
 
 use unreal_asset::{
-    cast, engine_version::EngineVersion, error::Error, exports::ExportNormalTrait,
-    properties::Property, Asset,
+    cast, engine_version::EngineVersion, error::Error, properties::Property, Asset,
+    ExportNormalTrait,
 };
 
 mod shared;

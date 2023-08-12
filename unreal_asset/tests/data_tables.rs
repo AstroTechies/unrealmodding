@@ -4,9 +4,9 @@ use unreal_asset::{
     cast,
     engine_version::EngineVersion,
     error::Error,
-    exports::{data_table_export::DataTableExport, Export},
     properties::{Property, PropertyDataTrait},
     Asset,
+    {data_table_export::DataTableExport, Export},
 };
 
 mod shared;

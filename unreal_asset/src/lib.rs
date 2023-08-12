@@ -53,11 +53,11 @@ pub use unreal_asset_properties::*;
 pub use unreal_asset_registry::*;
 
 pub mod ac7;
-pub mod archive_reader;
+pub mod asset_archive_writer;
 pub mod asset_data;
 
 use crate::{
-    archive_reader::asset_archive_writer::AssetArchiveWriter,
+    asset_archive_writer::AssetArchiveWriter,
     asset_data::{AssetTrait, ExportReaderTrait},
     containers::{
         chain::Chain, indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource,
@@ -66,7 +66,6 @@ use crate::{
     engine_version::EngineVersion,
     enums::ECustomVersionSerializationFormat,
     error::Error,
-    exports::{base_export::BaseExport, Export, ExportBaseTrait, ExportNormalTrait, ExportTrait},
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
     properties::world_tile_property::FWorldTileInfo,
@@ -83,6 +82,9 @@ use crate::{
     },
     unversioned::Usmap,
 };
+
+// TODO fix
+pub use {base_export::BaseExport, Export, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 use unreal_asset_proc_macro::FNameContainer;
 

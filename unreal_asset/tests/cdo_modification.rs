@@ -4,12 +4,12 @@ use unreal_asset::{
     cast,
     engine_version::EngineVersion,
     error::Error,
-    exports::{normal_export::NormalExport, Export, ExportBaseTrait},
     flags::EObjectFlags,
     properties::{object_property::ObjectProperty, PropertyDataTrait},
     types::PackageIndex,
     unversioned::ancestry::Ancestry,
     Asset,
+    {normal_export::NormalExport, Export, ExportBaseTrait},
 };
 
 mod shared;
