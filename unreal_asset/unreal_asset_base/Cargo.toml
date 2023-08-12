@@ -1,0 +1,40 @@
+[package]
+name = "unreal_asset_base"
+version.workspace = true
+authors.workspace = true
+description = "Unreal Engine 4/5 game asset serialization library."
+license.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/unreal_asset_base"
+edition = "2021"
+
+[dependencies]
+unreal_asset_proc_macro.workspace = true
+
+unreal_helpers.workspace = true
+unreal_helpers.features = ["bitvec", "guid", "path", "read_write"]
+
+# containers/indexed_map
+slab = "0.4.7"
+rustc-hash = "1.1.0"
+
+# compression
+brotli = "3.3.4"
+zstd = "0.12.4"
+flate2 = "1.0.25"
+lz4_flex = { version = "0.11.1", features = [
+    "safe-decode",
+    "safe-encode",
+    "std",
+], default-features = false }
+
+naive-cityhash = "0.2.0"
+ordered-float = "3.4.0"
+
+num_enum.workspace = true
+thiserror.workspace = true
+byteorder.workspace = true
+lazy_static.workspace = true
+bitvec.workspace = true
+bitflags.workspace = true
+enum_dispatch.workspace = true

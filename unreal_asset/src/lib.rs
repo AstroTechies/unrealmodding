@@ -38,123 +38,55 @@
 //! println!("{:#?}", asset);
 //! ```
 
-use std::fmt::{Debug, Formatter};
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::mem::size_of;
+use std::{
+    fmt::{Debug, Formatter},
+    io::{Read, Seek, SeekFrom, Write},
+    mem::size_of,
+};
 
+use asset_data::AssetData;
 use byteorder::{BE, LE};
-
-use unreal_asset_proc_macro::FNameContainer;
-pub use unreal_helpers::Guid;
+pub use unreal_asset_base::*;
+pub use unreal_asset_exports::*;
+pub use unreal_asset_kismet::*;
+pub use unreal_asset_properties::*;
+pub use unreal_asset_registry::*;
 
 pub mod ac7;
-pub mod asset;
-pub mod containers;
-mod crc;
-pub mod custom_version;
-pub mod engine_version;
-pub mod enums;
-pub mod error;
-pub mod exports;
-pub mod flags;
-pub mod fproperty;
-pub mod kismet;
-pub mod object_version;
-pub mod properties;
-pub mod reader;
-pub mod registry;
-pub mod types;
-pub mod unversioned;
-pub mod uproperty;
+pub mod archive_reader;
+pub mod asset_data;
 
-use asset::{name_map::NameMap, AssetData, AssetTrait, ExportReaderTrait};
-use containers::{chain::Chain, indexed_map::IndexedMap, shared_resource::SharedResource};
-use custom_version::{CustomVersion, CustomVersionTrait};
-use engine_version::EngineVersion;
-use enums::ECustomVersionSerializationFormat;
-use error::Error;
-use exports::{
-    base_export::BaseExport, class_export::ClassExport, Export, ExportBaseTrait, ExportNormalTrait,
-    ExportTrait,
+use crate::{
+    archive_reader::asset_archive_writer::AssetArchiveWriter,
+    asset_data::{AssetTrait, ExportReaderTrait},
+    containers::{
+        chain::Chain, indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource,
+    },
+    custom_version::{CustomVersion, CustomVersionTrait},
+    engine_version::EngineVersion,
+    enums::ECustomVersionSerializationFormat,
+    error::Error,
+    exports::{base_export::BaseExport, Export, ExportBaseTrait, ExportNormalTrait, ExportTrait},
+    flags::EPackageFlags,
+    object_version::{ObjectVersion, ObjectVersionUE5},
+    properties::world_tile_property::FWorldTileInfo,
+    reader::{
+        archive_reader::{ArchiveReader, PassthroughArchiveReader},
+        archive_trait::{ArchiveTrait, ArchiveType},
+        archive_writer::ArchiveWriter,
+        raw_reader::RawReader,
+        raw_writer::RawWriter,
+    },
+    types::{
+        fname::{FName, FNameContainer},
+        GenerationInfo, PackageIndex,
+    },
+    unversioned::Usmap,
 };
-use flags::EPackageFlags;
-use object_version::{ObjectVersion, ObjectVersionUE5};
-use properties::world_tile_property::FWorldTileInfo;
-use reader::{
-    archive_reader::{ArchiveReader, PassthroughArchiveReader},
-    archive_trait::{ArchiveTrait, ArchiveType},
-    archive_writer::ArchiveWriter,
-    asset_archive_writer::AssetArchiveWriter,
-    raw_reader::RawReader,
-    raw_writer::RawWriter,
-};
-use types::{
-    fname::{FName, FNameContainer},
-    GenerationInfo, PackageIndex,
-};
-use unversioned::Usmap;
 
-/// Cast a Property/Export to a more specific type
-///
-/// # Examples
-///
-/// ```no_run,ignore
-/// use unreal_asset::{
-///     cast,
-///     properties::{
-///         Property,
-///         int_property::DoubleProperty,
-///     },
-/// };
-/// let a: Property = ...;
-/// let b: &DoubleProperty = cast!(Property, DoubleProperty, &a).unwrap();
-/// ```
-#[macro_export]
-macro_rules! cast {
-    ($namespace:ident, $type:ident, $field:expr) => {
-        match $field {
-            $namespace::$type(e) => Some(e),
-            _ => None,
-        }
-    };
-}
+use unreal_asset_proc_macro::FNameContainer;
 
-/// Import struct for an Asset
-///
-/// This is used for referencing other assets
-#[derive(FNameContainer, Debug, Clone, Eq, PartialEq)]
-pub struct Import {
-    /// Class package
-    pub class_package: FName,
-    /// Class name
-    pub class_name: FName,
-    /// Outer index
-    #[container_ignore]
-    pub outer_index: PackageIndex,
-    /// Object name
-    pub object_name: FName,
-    /// Is the import optional
-    pub optional: bool,
-}
-
-impl Import {
-    /// Create a new `Import` instance
-    pub fn new(
-        class_package: FName,
-        class_name: FName,
-        outer_index: PackageIndex,
-        object_name: FName,
-        optional: bool,
-    ) -> Self {
-        Import {
-            class_package,
-            class_name,
-            object_name,
-            outer_index,
-            optional,
-        }
-    }
-}
+const UE4_ASSET_MAGIC: u32 = u32::from_be_bytes([0xc1, 0x83, 0x2a, 0x9e]);
 
 /// Parent Class Info
 #[derive(FNameContainer, Debug, Clone, Eq, PartialEq)]
@@ -164,8 +96,6 @@ pub struct ParentClassInfo {
     /// Parent class export name
     pub parent_class_export_name: FName,
 }
-
-const UE4_ASSET_MAGIC: u32 = u32::from_be_bytes([0xc1, 0x83, 0x2a, 0x9e]);
 
 /// Asset header
 struct AssetHeader {
@@ -1383,8 +1313,14 @@ impl<C: Read + Seek> ArchiveTrait for Asset<C> {
         self.asset_data.mappings.as_ref()
     }
 
-    fn get_class_export(&self) -> Option<&ClassExport> {
-        self.asset_data.get_class_export()
+    fn get_parent_class_export_name(&self) -> Option<FName> {
+        self.asset_data
+            .exports
+            .iter()
+            .find_map(|e| cast!(Export, ClassExport, e))
+            .and_then(|e| self.get_import(e.struct_export.super_struct))
+            .and_then(|e| self.get_import(e.outer_index))
+            .map(|e| e.object_name)
     }
 
     fn get_import(&self, index: PackageIndex) -> Option<Import> {

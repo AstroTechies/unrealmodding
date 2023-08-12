@@ -3,6 +3,11 @@ members = [
     "dll_injector",
     "github_helpers",
     "unreal_asset",
+    "unreal_asset/unreal_asset_base",
+    "unreal_asset/unreal_asset_properties",
+    "unreal_asset/unreal_asset_kismet",
+    "unreal_asset/unreal_asset_exports",
+    "unreal_asset/unreal_asset_registry",
     "unreal_asset/unreal_asset_proc_macro",
     "unreal_cpp_bootstrapper",
     "unreal_helpers",
@@ -25,6 +30,11 @@ dll_injector = { path = "./dll_injector", version = "0.1.16" }
 github_helpers = { path = "./github_helpers", version = "0.1.16" }
 unreal_asset = { path = "./unreal_asset", version = "0.1.16" }
 unreal_cpp_bootstrapper = { path = "./unreal_cpp_bootstrapper", version = "0.1.16" }
+unreal_asset_base = { path = "./unreal_asset/unreal_asset_base", version = "0.1.16" }
+unreal_asset_properties = { path = "./unreal_asset/unreal_asset_properties", version = "0.1.16" }
+unreal_asset_kismet = { path = "./unreal_asset/unreal_asset_kismet", version = "0.1.16" }
+unreal_asset_exports = { path = "./unreal_asset/unreal_asset_exports", version = "0.1.16" }
+unreal_asset_registry = { path = "./unreal_asset/unreal_asset_registry", version = "0.1.16" }
 unreal_asset_proc_macro = { path = "./unreal_asset/unreal_asset_proc_macro", version = "0.1.16" }
 unreal_helpers = { path = "./unreal_helpers", version = "0.1.16" }
 unreal_mod_integrator = { path = "./unreal_mod_integrator", version = "0.1.16" }
@@ -41,6 +51,10 @@ reqwest = { version = "0.11.15", features = ["blocking", "json"] }
 semver = "1.0.17"
 serde_json = "1.0.94"
 serde = { version = "1.0.158", features = ["derive"] }
+thiserror = "1.0.40"
+enum_dispatch = "0.3.8"
+ordered-float = "3.4.0"
+bitflags = "2.3.3"
 
 [patch.crates-io]
 steamy-vdf = { git = "https://github.com/icewind1991/steamy" }
