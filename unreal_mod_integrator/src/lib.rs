@@ -12,7 +12,6 @@ use unreal_asset::properties::int_property::BytePropertyValue;
 use unreal_asset::types::fname::FName;
 use unreal_asset::unversioned::ancestry::Ancestry;
 use unreal_asset::{
-    exports::{data_table_export::DataTable, Export, ExportBaseTrait},
     properties::{
         int_property::{BoolProperty, ByteProperty},
         str_property::StrProperty,
@@ -20,6 +19,7 @@ use unreal_asset::{
         Property, PropertyDataTrait,
     },
     Asset,
+    {data_table_export::DataTable, Export, ExportBaseTrait},
 };
 use unreal_mod_metadata::{Metadata, SyncMode};
 use unreal_pak::{pakversion::PakVersion, PakMemory, PakReader};

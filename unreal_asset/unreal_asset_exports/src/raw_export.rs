@@ -3,8 +3,8 @@
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
-use crate::exports::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// An export that failed to deserialize is stored as `Vec<u8>`
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

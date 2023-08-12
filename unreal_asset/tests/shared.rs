@@ -1,6 +1,6 @@
 use std::io::{Cursor, Read, Seek};
 
-use unreal_asset::{cast, engine_version::EngineVersion, error::Error, exports::Export, Asset};
+use unreal_asset::{cast, engine_version::EngineVersion, error::Error, Asset, Export};
 
 #[allow(dead_code)]
 pub(crate) fn verify_reparse<C: Read + Seek>(
