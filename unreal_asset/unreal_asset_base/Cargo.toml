@@ -15,21 +15,21 @@ unreal_helpers.workspace = true
 unreal_helpers.features = ["bitvec", "guid", "path", "read_write"]
 
 # containers/indexed_map
-slab = "0.4.7"
 rustc-hash = "1.1.0"
+slab = "0.4.8"
 
 # compression
 brotli = "3.3.4"
-zstd = "0.12.4"
-flate2 = "1.0.25"
+flate2 = "1.0.26"
 lz4_flex = { version = "0.11.1", features = [
     "safe-decode",
     "safe-encode",
     "std",
 ], default-features = false }
+zstd = "0.12.4"
 
 naive-cityhash = "0.2.0"
-ordered-float = "3.4.0"
+ordered-float.workspace = true
 
 num_enum.workspace = true
 thiserror.workspace = true
