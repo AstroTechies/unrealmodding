@@ -25,6 +25,8 @@ pub mod struct_export;
 pub mod user_defined_struct_export;
 pub mod world_export;
 
+pub mod properties;
+
 use crate::error::Error;
 use crate::reader::archive_writer::ArchiveWriter;
 

@@ -5,7 +5,6 @@ use unreal_asset_proc_macro::FNameContainer;
 
 use crate::error::Error;
 use crate::implement_get;
-use crate::properties::{struct_property::StructProperty, Property, PropertyDataTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
@@ -13,6 +12,7 @@ use crate::{
     base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
     ExportTrait,
 };
+use crate::{struct_property::StructProperty, Property, PropertyDataTrait};
 
 /// Data table
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

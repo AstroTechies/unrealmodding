@@ -11,8 +11,8 @@ use unreal_asset::{
     },
     types::PackageIndex,
     Asset,
-    {normal_export::NormalExport, ExportNormalTrait},
 };
+use unreal_asset_exports::{normal_export::NormalExport, ExportNormalTrait};
 
 macro_rules! assets_folder {
     () => {

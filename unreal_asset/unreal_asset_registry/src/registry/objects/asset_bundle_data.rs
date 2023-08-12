@@ -3,10 +3,10 @@
 use byteorder::LE;
 
 use crate::error::Error;
-use crate::properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
 use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
 use crate::types::fname::FName;
 use crate::unversioned::ancestry::Ancestry;
+use unreal_asset_properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
 
 /// Bundle entry
 #[derive(Debug, Clone)]

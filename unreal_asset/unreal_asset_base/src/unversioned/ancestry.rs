@@ -11,6 +11,11 @@ pub struct Ancestry {
     pub ancestry: Vec<FName>,
 }
 
+// silly `FNameContainer` fix
+mod unreal_asset_base {
+    pub use crate::types;
+}
+
 impl Ancestry {
     /// Create a new `Ancestry` instance
     pub fn new(parent: FName) -> Self {

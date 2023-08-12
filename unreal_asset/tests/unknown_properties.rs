@@ -2,8 +2,8 @@ use std::{collections::HashMap, io::Cursor};
 
 use unreal_asset::{
     cast, engine_version::EngineVersion, error::Error, properties::Property, Asset,
-    ExportNormalTrait,
 };
+use unreal_asset_exports::ExportNormalTrait;
 
 mod shared;
 

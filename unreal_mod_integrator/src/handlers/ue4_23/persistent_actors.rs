@@ -8,13 +8,13 @@ use unreal_asset::reader::archive_trait::ArchiveTrait;
 use unreal_asset::unversioned::ancestry::Ancestry;
 use unreal_asset::{
     cast,
+    exports::{normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},
     properties::{
         array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
         object_property::ObjectProperty, Property, PropertyDataTrait,
     },
     types::PackageIndex,
     Asset, Import,
-    {normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},
 };
 use unreal_helpers::Guid;
 use unreal_pak::{PakMemory, PakReader};
