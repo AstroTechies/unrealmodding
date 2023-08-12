@@ -49,6 +49,22 @@ println!("{:#?}", asset);
 The [tests directory](https://github.com/AstroTechies/unrealmodding/tree/main/unreal_asset/tests) contains
 several tests that demonstrate how to use the crate to work with uasset files.
 
+## Project structure
+
+The project is split into multiple different crates for better management and lint performance.
+
+`unreal_asset_base`: Contains most of the base members required for any other part of the lib.
+
+`unreal_asset_properties`: Contains asset properties implementations.
+
+`unreal_asset_kismet`: Contains kismet `(UE Blueprints)` implementations.
+
+`unreal_asset_registry`: Contains asset registry implementations.
+
+`unreal_asset_exports`: Contains asset exports implementations.
+
+`unreal_asset_proc_macro`: Procedural macros for various `unreal_asset` needs.
+
 ## License
 
 This library is distributed under the terms of the MIT license. See the
