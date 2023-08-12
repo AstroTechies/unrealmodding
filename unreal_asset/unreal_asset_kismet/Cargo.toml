@@ -1,0 +1,18 @@
+[package]
+name = "unreal_asset_kismet"
+version.workspace = true
+authors.workspace = true
+description = "Unreal Engine 4/5 game asset serialization library."
+license.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/unreal_asset_kismet"
+edition = "2021"
+
+[dependencies]
+unreal_asset_base.workspace = true
+unreal_asset_proc_macro.workspace = true
+
+byteorder.workspace = true
+enum_dispatch.workspace = true
+num_enum.workspace = true
+ordered-float.workspace = true

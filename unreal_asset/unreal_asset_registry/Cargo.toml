@@ -1,27 +1,20 @@
 [package]
-name = "unreal_asset"
+name = "unreal_asset_registry"
 version.workspace = true
 authors.workspace = true
 description = "Unreal Engine 4/5 game asset serialization library."
 license.workspace = true
 homepage.workspace = true
-documentation = "https://docs.rs/unreal_asset"
+documentation = "https://docs.rs/unreal_asset_registry"
 edition = "2021"
-exclude = ["tests/*"]
 
 [dependencies]
 unreal_asset_base.workspace = true
 unreal_asset_properties.workspace = true
-unreal_asset_kismet.workspace = true
 unreal_asset_exports.workspace = true
-unreal_asset_registry.workspace = true
-unreal_asset_proc_macro.workspace = true
-
 unreal_helpers.workspace = true
-unreal_helpers.features = ["bitvec", "guid", "path", "read_write"]
 
 byteorder.workspace = true
-
-[features]
-oodle = []
-threading = []
+num_enum.workspace = true
+bitvec.workspace = true
+lazy_static.workspace = true
