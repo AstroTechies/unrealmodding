@@ -1,14 +1,14 @@
 //! Normal export
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_asset_properties::generate_unversioned_header;
+use unreal_asset_base::{
+    reader::{ArchiveReader, ArchiveWriter},
+    unversioned::{header::UnversionedHeader, Ancestry},
+    Error, FNameContainer,
+};
+use unreal_asset_properties::{generate_unversioned_header, Property};
 
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::unversioned::header::UnversionedHeader;
-use crate::unversioned::Ancestry;
-use crate::Error;
-use crate::Property;
-use crate::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
+use crate::BaseExport;
+use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Normal export
 ///

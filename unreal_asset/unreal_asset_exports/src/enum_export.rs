@@ -4,18 +4,18 @@ use std::collections::HashMap;
 
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use unreal_asset_proc_macro::FNameContainer;
 
-use crate::custom_version::FCoreObjectVersion;
-use crate::implement_get;
-use crate::object_version::ObjectVersion;
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::types::FName;
-use crate::Error;
-use crate::{
-    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
-    ExportTrait,
+use unreal_asset_base::{
+    custom_version::FCoreObjectVersion,
+    object_version::ObjectVersion,
+    reader::{ArchiveReader, ArchiveWriter},
+    types::FName,
+    Error, FNameContainer,
 };
+
+use crate::implement_get;
+use crate::ExportTrait;
+use crate::{BaseExport, NormalExport};
 
 /// Enum cpp form
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]

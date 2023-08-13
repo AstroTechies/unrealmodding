@@ -1,18 +1,19 @@
 //! Data table export
 
 use byteorder::LE;
-use unreal_asset_proc_macro::FNameContainer;
+
+use unreal_asset_base::{
+    reader::{ArchiveReader, ArchiveWriter},
+    types::FName,
+    unversioned::Ancestry,
+    Error, FNameContainer,
+};
+use unreal_asset_properties::{struct_property::StructProperty, Property, PropertyDataTrait};
 
 use crate::implement_get;
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::types::FName;
-use crate::unversioned::Ancestry;
-use crate::Error;
-use crate::{
-    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
-    ExportTrait,
-};
-use crate::{struct_property::StructProperty, Property, PropertyDataTrait};
+use crate::ExportTrait;
+
+use crate::{BaseExport, NormalExport};
 
 /// Data table
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

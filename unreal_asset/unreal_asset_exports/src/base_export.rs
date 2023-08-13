@@ -5,17 +5,14 @@ use std::io::Cursor;
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use unreal_asset_proc_macro::FNameContainer;
-use unreal_helpers::Guid;
+use unreal_asset_base::{
+    flags::EObjectFlags,
+    object_version::{ObjectVersion, ObjectVersionUE5},
+    reader::{archive_trait::ArchiveType, ArchiveReader, ArchiveTrait, ArchiveWriter, RawWriter},
+    types::{FName, PackageIndex},
+    Error, FNameContainer, Guid,
+};
 
-use crate::flags::EObjectFlags;
-use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::archive_trait::{ArchiveTrait, ArchiveType};
-use crate::reader::ArchiveReader;
-use crate::reader::ArchiveWriter;
-use crate::reader::RawWriter;
-use crate::types::{FName, PackageIndex};
-use crate::Error;
 use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Export filter flags

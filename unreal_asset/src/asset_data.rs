@@ -3,7 +3,7 @@
 
 use std::io::SeekFrom;
 
-use unreal_asset_proc_macro::FNameContainer;
+use unreal_asset_base::FNameContainer;
 
 use unreal_asset_base::cast;
 

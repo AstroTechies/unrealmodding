@@ -1,17 +1,17 @@
 //! User defined struct export
 
 use byteorder::LE;
-use unreal_asset_proc_macro::FNameContainer;
 
-use crate::flags::EStructFlags;
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::unversioned::{header::UnversionedHeader, Ancestry};
-use crate::Error;
-use crate::Property;
-use crate::{
-    base_export::BaseExport, normal_export::NormalExport, struct_export::StructExport,
-    ExportBaseTrait, ExportNormalTrait, ExportTrait,
+use unreal_asset_base::{
+    flags::EStructFlags,
+    reader::{ArchiveReader, ArchiveWriter},
+    unversioned::{header::UnversionedHeader, Ancestry},
+    Error, FNameContainer,
 };
+use unreal_asset_properties::Property;
+
+use crate::{BaseExport, NormalExport, StructExport};
+use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Struct export
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

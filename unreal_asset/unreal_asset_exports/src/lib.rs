@@ -3,12 +3,13 @@
 
 //! Unreal asset exports
 
+use std::fmt::Debug;
+
 use enum_dispatch::enum_dispatch;
 
-use unreal_asset_base::*;
-use unreal_asset_properties::*;
+use unreal_asset_base::{reader::ArchiveWriter, Error, FNameContainer};
 
-use unreal_asset_proc_macro::FNameContainer;
+pub mod properties;
 
 pub mod base_export;
 pub mod class_export;
@@ -24,14 +25,7 @@ pub mod struct_export;
 pub mod user_defined_struct_export;
 pub mod world_export;
 
-pub mod properties;
-
-use crate::reader::ArchiveWriter;
-use crate::Error;
-
-use std::fmt::Debug;
-
-use self::{
+pub use self::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
     enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
     normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
@@ -63,7 +57,7 @@ pub trait ExportBaseTrait {
 #[macro_export]
 macro_rules! implement_get {
     ($name:ident) => {
-        impl ExportNormalTrait for $name {
+        impl $crate::ExportNormalTrait for $name {
             fn get_normal_export(&self) -> Option<&NormalExport> {
                 Some(&self.normal_export)
             }
@@ -73,7 +67,7 @@ macro_rules! implement_get {
             }
         }
 
-        impl ExportBaseTrait for $name {
+        impl $crate::ExportBaseTrait for $name {
             fn get_base_export(&self) -> &BaseExport {
                 &self.normal_export.base_export
             }
@@ -124,7 +118,5 @@ pub enum Export {
     /// World export
     WorldExport,
 }
-
-impl Export {}
 
 // todo: impl hash for export

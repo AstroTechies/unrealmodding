@@ -5,8 +5,6 @@ use std::io;
 
 use byteorder::{ByteOrder, LE};
 
-use unreal_helpers::Guid;
-
 use crate::crc;
 use crate::custom_version::CustomVersion;
 use crate::enums;
@@ -15,6 +13,7 @@ use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
 use crate::reader::ArchiveTrait;
 use crate::types::{FName, SerializedNameHeader};
+use crate::Guid;
 
 /// A trait that allows reading from an archive in an asset-specific way
 pub trait ArchiveReader: ArchiveTrait {

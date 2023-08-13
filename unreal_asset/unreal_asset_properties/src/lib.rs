@@ -15,7 +15,7 @@ use enum_dispatch::enum_dispatch;
 // macro reexports
 pub use unreal_asset_base::types::FName;
 pub use unreal_asset_base::unversioned::Ancestry;
-pub use unreal_helpers::Guid;
+pub use unreal_asset_base::Guid;
 
 use unreal_asset_base::error::{Error, PropertyError};
 use unreal_asset_base::reader::{ArchiveReader, ArchiveWriter};
@@ -24,7 +24,7 @@ use unreal_asset_base::unversioned::header::UnversionedHeaderFragment;
 use unreal_asset_base::unversioned::{
     header::UnversionedHeader, properties::UsmapPropertyDataTrait,
 };
-use unreal_asset_proc_macro::FNameContainer;
+use unreal_asset_base::FNameContainer;
 
 pub mod array_property;
 pub mod cloth_lod_property;
@@ -117,17 +117,16 @@ use self::sampler_property::{
 use self::set_property::SetProperty;
 use self::slate_core::font_data_property::FontDataProperty;
 use self::smart_name_property::SmartNameProperty;
-use self::soft_path_property::StringAssetReferenceProperty;
 use self::soft_path_property::{
     SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty,
+    StringAssetReferenceProperty,
 };
 use self::str_property::{NameProperty, StrProperty, TextProperty};
 use self::struct_property::StructProperty;
 use self::unknown_property::UnknownProperty;
-use self::vector_property::{Box2DProperty, PlaneProperty};
 use self::vector_property::{
-    BoxProperty, IntPointProperty, QuatProperty, RotatorProperty, Vector2DProperty,
-    Vector4Property, VectorProperty,
+    Box2DProperty, BoxProperty, IntPointProperty, PlaneProperty, QuatProperty, RotatorProperty,
+    Vector2DProperty, Vector4Property, VectorProperty,
 };
 use self::view_target_blend_property::ViewTargetBlendParamsProperty;
 
@@ -139,14 +138,14 @@ mod property_prelude {
     pub use num_enum::{IntoPrimitive, TryFromPrimitive};
     pub use ordered_float::OrderedFloat;
 
-    pub use unreal_helpers::Guid;
+    pub use unreal_asset_base::Guid;
 
     pub use unreal_asset_base::cast;
     pub use unreal_asset_base::custom_version::{
         CustomVersion, FEditorObjectVersion, FFortniteMainBranchObjectVersion,
         FSequencerObjectVersion,
     };
-    pub use unreal_asset_base::error::{Error, PropertyError};
+    pub use unreal_asset_base::error::PropertyError;
     pub use unreal_asset_base::object_version::{ObjectVersion, ObjectVersionUE5};
     pub use unreal_asset_base::reader::{ArchiveReader, ArchiveWriter};
     pub use unreal_asset_base::types::{
@@ -158,6 +157,7 @@ mod property_prelude {
         properties::{UsmapPropertyData, UsmapPropertyDataTrait},
         Ancestry,
     };
+    pub use unreal_asset_base::Error;
     pub use unreal_asset_base::FNameContainer;
 
     pub use super::generate_unversioned_header;
@@ -166,6 +166,7 @@ mod property_prelude {
     pub use super::optional_guid;
     pub use super::optional_guid_write;
     pub use super::simple_property_write;
+    pub use super::str_property::StrProperty;
     pub use super::struct_property::StructProperty;
     pub use super::Property;
     pub use super::PropertyDataTrait;

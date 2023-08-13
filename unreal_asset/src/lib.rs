@@ -57,6 +57,7 @@ pub use base::types;
 pub use base::unversioned;
 
 pub use base::cast;
+pub use base::Guid;
 pub use error::Error;
 pub use import::Import;
 

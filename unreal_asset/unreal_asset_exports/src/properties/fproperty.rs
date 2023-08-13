@@ -5,16 +5,14 @@ use std::hash::Hash;
 
 use byteorder::LE;
 use enum_dispatch::enum_dispatch;
-use unreal_asset_proc_macro::FNameContainer;
 
-use crate::enums::{EArrayDim, ELifetimeCondition};
-use crate::flags::{EObjectFlags, EPropertyFlags};
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::types::{
-    fname::{FName, ToSerializedName},
-    PackageIndex,
+use unreal_asset_base::{
+    enums::{EArrayDim, ELifetimeCondition},
+    flags::{EObjectFlags, EPropertyFlags},
+    reader::{ArchiveReader, ArchiveWriter},
+    types::{fname::ToSerializedName, FName, PackageIndex},
+    Error, FNameContainer,
 };
-use crate::Error;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {

@@ -4,18 +4,18 @@ use std::io::SeekFrom;
 use std::mem::size_of;
 
 use byteorder::LE;
-use unreal_asset_proc_macro::FNameContainer;
 
-use crate::containers::indexed_map::IndexedMap;
-use crate::flags::EClassFlags;
-use crate::object_version::ObjectVersion;
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::types::{FName, PackageIndex};
-use crate::Error;
-use crate::{
-    base_export::BaseExport, struct_export::StructExport, ExportBaseTrait, ExportNormalTrait,
-    ExportTrait,
+use unreal_asset_base::{
+    containers::IndexedMap,
+    flags::EClassFlags,
+    object_version::ObjectVersion,
+    reader::{ArchiveReader, ArchiveWriter},
+    types::{FName, PackageIndex},
+    Error, FNameContainer,
 };
+
+use crate::{BaseExport, StructExport};
+use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Serialized interface reference
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

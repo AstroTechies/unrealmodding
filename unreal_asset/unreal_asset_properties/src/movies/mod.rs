@@ -1,8 +1,7 @@
 //! Unreal movies
 
 use crate::property_prelude::*;
-
-use super::rich_curve_key_property::RichCurveTangentWeightMode;
+use crate::rich_curve_key_property::RichCurveTangentWeightMode;
 
 pub mod enums;
 pub mod movie_scene_eval_template_ptr_property;

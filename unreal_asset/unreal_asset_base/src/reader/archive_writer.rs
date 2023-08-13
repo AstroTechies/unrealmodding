@@ -4,12 +4,11 @@ use std::io;
 
 use byteorder::{ByteOrder, LE};
 
-use unreal_helpers::Guid;
-
 use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
 use crate::reader::ArchiveTrait;
 use crate::types::FName;
+use crate::Guid;
 
 /// A trait that allows for writing to an archive in an asset-specific way
 pub trait ArchiveWriter: ArchiveTrait {

@@ -12,7 +12,7 @@ use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 
-use unreal_asset_proc_macro::FNameContainer;
+use unreal_asset_base::FNameContainer;
 
 use unreal_asset_base::{
     error::KismetError,
