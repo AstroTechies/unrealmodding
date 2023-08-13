@@ -1,18 +1,17 @@
-mod shared;
-
 use std::io::Cursor;
 
 use unreal_asset::{
     cast,
     engine_version::EngineVersion,
-    error::Error,
     properties::{
         map_property::MapProperty, struct_property::StructProperty, Property, PropertyDataTrait,
     },
     types::PackageIndex,
-    Asset,
+    Asset, Error,
 };
 use unreal_asset_exports::{normal_export::NormalExport, ExportNormalTrait};
+
+mod shared;
 
 macro_rules! assets_folder {
     () => {

@@ -1,6 +1,7 @@
-use std::{collections::HashMap, io::Cursor};
+use std::collections::HashMap;
+use std::io::Cursor;
 
-use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
+use unreal_asset::{engine_version::EngineVersion, Asset, Error};
 
 mod shared;
 

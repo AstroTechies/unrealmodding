@@ -2,13 +2,11 @@
 //!
 //! They are represented by an index+instance number inside a string table inside the asset file.
 
+use std::hash::Hash;
+
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::containers::{
-    indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource,
-};
-
-use std::hash::Hash;
+use crate::containers::{IndexedMap, NameMap, SharedResource};
 
 /// FName name type
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]

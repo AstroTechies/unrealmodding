@@ -2,7 +2,7 @@
 
 use unreal_asset_proc_macro::FNameContainer;
 
-use crate::types::fname::FName;
+use crate::types::FName;
 
 /// Unversioned properties ancestry
 #[derive(FNameContainer, Default, Debug, Clone, PartialEq, Eq, Hash)]

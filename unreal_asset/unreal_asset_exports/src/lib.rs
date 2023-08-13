@@ -27,8 +27,8 @@ pub mod world_export;
 
 pub mod properties;
 
-use crate::error::Error;
-use crate::reader::archive_writer::ArchiveWriter;
+use crate::reader::ArchiveWriter;
+use crate::Error;
 
 use std::fmt::Debug;
 

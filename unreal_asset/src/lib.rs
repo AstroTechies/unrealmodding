@@ -50,16 +50,21 @@ pub use base::engine_version;
 pub use base::enums;
 pub use base::error;
 pub use base::flags;
+pub use base::import;
 pub use base::object_version;
 pub use base::reader;
 pub use base::types;
 pub use base::unversioned;
 
+pub use base::cast;
+pub use error::Error;
+pub use import::Import;
+
 // properties
 pub use unreal_asset_properties as properties;
 
 // kismet
-pub use unreal_asset_kismet::*;
+pub use unreal_asset_kismet as kismet;
 
 // exports
 pub use unreal_asset_exports as exports;
@@ -67,8 +72,10 @@ pub use unreal_asset_exports as exports;
 pub use exports::properties::fproperty;
 pub use exports::properties::uproperty;
 
+pub use exports::Export;
+
 // registry
-pub use unreal_asset_registry::*;
+pub use unreal_asset_registry as registry;
 
 // modules
 pub mod ac7;

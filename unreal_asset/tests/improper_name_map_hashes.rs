@@ -1,8 +1,9 @@
+use std::collections::HashMap;
+use std::io::Cursor;
+
+use unreal_asset::{engine_version::EngineVersion, Asset, Error};
+
 mod shared;
-
-use std::{collections::HashMap, io::Cursor};
-
-use unreal_asset::{engine_version::EngineVersion, error::Error, Asset};
 
 macro_rules! assets_folder {
     () => {

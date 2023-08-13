@@ -1,4 +1,5 @@
-use std::{fmt::Debug, hash::Hash};
+use std::fmt::Debug;
+use std::hash::Hash;
 
 use super::IndexedMap;
 

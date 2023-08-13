@@ -4,7 +4,7 @@ use std::io::Read;
 
 use flate2::bufread::{GzDecoder, ZlibDecoder};
 
-use crate::error::Error;
+use crate::Error;
 
 /// Compression method
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]

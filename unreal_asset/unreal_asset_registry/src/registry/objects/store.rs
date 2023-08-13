@@ -5,9 +5,9 @@ use std::io::SeekFrom;
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::error::Error;
-use crate::reader::archive_reader::ArchiveReader;
-use crate::types::fname::FName;
+use crate::reader::ArchiveReader;
+use crate::types::FName;
+use crate::Error;
 
 /// Value type
 #[repr(u32)]

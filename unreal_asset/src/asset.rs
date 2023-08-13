@@ -6,11 +6,13 @@ use std::mem::size_of;
 
 use byteorder::{BE, LE};
 
+use unreal_asset_base::{cast, Import};
+use unreal_helpers::Guid;
+
 use crate::asset_data::AssetData;
 use crate::{
     asset_archive_writer::AssetArchiveWriter,
     asset_data::{AssetTrait, ExportReaderTrait},
-    cast,
     containers::{
         chain::Chain, indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource,
     },
@@ -26,16 +28,14 @@ use crate::{
     reader::{
         archive_reader::{ArchiveReader, PassthroughArchiveReader},
         archive_trait::{ArchiveTrait, ArchiveType},
-        archive_writer::ArchiveWriter,
-        raw_reader::RawReader,
-        raw_writer::RawWriter,
+        ArchiveWriter, RawReader, RawWriter,
     },
     types::{
         fname::{FName, FNameContainer},
         GenerationInfo, PackageIndex,
     },
     unversioned::Usmap,
-    Guid, Import, UE4_ASSET_MAGIC,
+    UE4_ASSET_MAGIC,
 };
 
 // TODO fix

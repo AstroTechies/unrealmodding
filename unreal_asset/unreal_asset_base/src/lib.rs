@@ -10,13 +10,15 @@ pub mod custom_version;
 pub mod engine_version;
 pub mod enums;
 pub mod error;
+pub use error::Error;
 pub mod flags;
+pub mod import;
+pub use import::Import;
 pub mod object_version;
 pub mod reader;
 pub mod types;
 pub mod unversioned;
 
-use types::{fname::FName, PackageIndex};
 pub use unreal_asset_proc_macro::FNameContainer;
 pub use unreal_helpers::Guid;
 
@@ -43,46 +45,4 @@ macro_rules! cast {
             _ => None,
         }
     };
-}
-
-/// Import struct for an Asset
-///
-/// This is used for referencing other assets
-#[derive(FNameContainer, Debug, Clone, Eq, PartialEq)]
-pub struct Import {
-    /// Class package
-    pub class_package: FName,
-    /// Class name
-    pub class_name: FName,
-    /// Outer index
-    #[container_ignore]
-    pub outer_index: PackageIndex,
-    /// Object name
-    pub object_name: FName,
-    /// Is the import optional
-    pub optional: bool,
-}
-
-// silly `FNameContainer` fix
-mod unreal_asset_base {
-    pub use crate::types;
-}
-
-impl Import {
-    /// Create a new `Import` instance
-    pub fn new(
-        class_package: FName,
-        class_name: FName,
-        outer_index: PackageIndex,
-        object_name: FName,
-        optional: bool,
-    ) -> Self {
-        Import {
-            class_package,
-            class_name,
-            object_name,
-            outer_index,
-            optional,
-        }
-    }
 }

@@ -6,7 +6,7 @@ use byteorder::LE;
 
 use crate::{
     error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    reader::{ArchiveReader, ArchiveWriter},
 };
 
 /// EngineVersion for an Asset

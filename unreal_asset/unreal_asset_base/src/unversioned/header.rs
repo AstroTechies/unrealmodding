@@ -3,10 +3,8 @@
 use bitvec::prelude::*;
 use byteorder::LE;
 
-use crate::{
-    error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::Error;
 
 /// Unversioned header fragment
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]

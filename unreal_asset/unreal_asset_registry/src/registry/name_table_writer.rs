@@ -9,8 +9,8 @@ use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::archive_trait::ArchiveType;
 use crate::reader::archive_writer::PassthroughArchiveWriter;
-use crate::reader::{archive_trait::ArchiveTrait, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, PackageIndex};
+use crate::reader::{ArchiveTrait, ArchiveWriter};
+use crate::types::{FName, PackageIndex};
 use crate::unversioned::Usmap;
 use crate::Import;
 

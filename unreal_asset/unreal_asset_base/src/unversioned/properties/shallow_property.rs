@@ -1,8 +1,8 @@
 //! Shallow property
 
-use crate::{
-    error::Error, reader::archive_writer::ArchiveWriter, unversioned::usmap_writer::UsmapWriter,
-};
+use crate::reader::ArchiveWriter;
+use crate::unversioned::usmap_writer::UsmapWriter;
+use crate::Error;
 
 use super::{EPropertyType, UsmapPropertyDataTrait};
 

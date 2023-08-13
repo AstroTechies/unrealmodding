@@ -1,22 +1,15 @@
 //! Usmap properties
 
+use std::fmt::Debug;
+use std::hash::Hash;
+
 use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::{fmt::Debug, hash::Hash};
 
-use crate::{
-    error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-};
-
-use self::{
-    array_property::UsmapArrayPropertyData, enum_property::UsmapEnumPropertyData,
-    map_property::UsmapMapPropertyData, set_property::UsmapSetPropertyData,
-    shallow_property::UsmapShallowPropertyData, struct_property::UsmapStructPropertyData,
-};
-
-use super::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter};
+use crate::Error;
 
 pub mod array_property;
 pub mod enum_property;
@@ -24,6 +17,12 @@ pub mod map_property;
 pub mod set_property;
 pub mod shallow_property;
 pub mod struct_property;
+
+use self::{
+    array_property::UsmapArrayPropertyData, enum_property::UsmapEnumPropertyData,
+    map_property::UsmapMapPropertyData, set_property::UsmapSetPropertyData,
+    shallow_property::UsmapShallowPropertyData, struct_property::UsmapStructPropertyData,
+};
 
 /// Usmap property type
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]

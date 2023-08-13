@@ -4,11 +4,11 @@ use byteorder::LE;
 
 use crate::containers::indexed_map::IndexedMap;
 use crate::custom_version::FAssetRegistryVersionType;
-use crate::error::Error;
 use crate::flags::EPackageFlags;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::reader::{ArchiveReader, ArchiveWriter};
 use crate::registry::objects::asset_bundle_data::AssetBundleData;
-use crate::types::fname::FName;
+use crate::types::FName;
+use crate::Error;
 
 /// Top level asset path
 #[derive(Clone, Debug)]

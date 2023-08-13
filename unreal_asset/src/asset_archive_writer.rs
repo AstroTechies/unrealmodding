@@ -1,16 +1,16 @@
 //! Archive that can be used to write an asset
 
+use unreal_asset_base::{cast, Import};
+
 use crate::{
     asset_data::AssetData,
-    cast,
     containers::{indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::EngineVersion,
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    types::{fname::FName, PackageIndex},
+    types::{FName, PackageIndex},
     unversioned::Usmap,
-    Import,
 };
 
 use unreal_asset_exports::Export;

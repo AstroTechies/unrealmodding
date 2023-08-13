@@ -4,8 +4,8 @@ use std::io::{self, Cursor, ErrorKind};
 use std::path::Path;
 
 use unreal_asset::engine_version::EngineVersion;
-use unreal_asset::reader::archive_trait::ArchiveTrait;
-use unreal_asset::unversioned::ancestry::Ancestry;
+use unreal_asset::reader::ArchiveTrait;
+use unreal_asset::unversioned::Ancestry;
 use unreal_asset::{
     cast,
     exports::{normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},

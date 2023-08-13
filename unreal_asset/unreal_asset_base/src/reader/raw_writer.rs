@@ -6,20 +6,18 @@ use byteorder::WriteBytesExt;
 
 use unreal_helpers::{Guid, UnrealWriteExt};
 
-use crate::containers::indexed_map::IndexedMap;
-use crate::containers::name_map::NameMap;
-use crate::containers::shared_resource::SharedResource;
+use crate::containers::{IndexedMap, NameMap, SharedResource};
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
-use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::{archive_trait::ArchiveTrait, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
-use crate::types::PackageIndex;
+use crate::reader::{
+    archive_trait::{ArchiveTrait, ArchiveType},
+    ArchiveWriter,
+};
+use crate::types::{FName, PackageIndex};
 use crate::unversioned::Usmap;
+use crate::Error;
 use crate::Import;
-
-use super::archive_trait::ArchiveType;
 
 /// A binary writer
 pub struct RawWriter<'cursor, W: Write + Seek> {

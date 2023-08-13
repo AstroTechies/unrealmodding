@@ -1,11 +1,11 @@
-use std::{collections::HashMap, io::Cursor};
+use std::collections::HashMap;
+use std::io::Cursor;
 
 use unreal_asset::{
     cast,
     engine_version::EngineVersion,
-    error::Error,
     properties::{Property, PropertyDataTrait},
-    Asset,
+    Asset, Error,
 };
 use unreal_asset_exports::{data_table_export::DataTableExport, Export};
 

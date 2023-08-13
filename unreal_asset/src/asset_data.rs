@@ -5,8 +5,9 @@ use std::io::SeekFrom;
 
 use unreal_asset_proc_macro::FNameContainer;
 
+use unreal_asset_base::cast;
+
 use crate::{
-    cast,
     containers::{indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::{get_object_versions, EngineVersion},
@@ -15,7 +16,7 @@ use crate::{
     fproperty::FProperty,
     object_version::{ObjectVersion, ObjectVersionUE5},
     properties::world_tile_property::FWorldTileInfo,
-    types::{fname::FName, PackageIndex},
+    types::{FName, PackageIndex},
     unversioned::Usmap,
 };
 
@@ -27,7 +28,7 @@ use unreal_asset_exports::{
     world_export::WorldExport, Export, ExportNormalTrait,
 };
 
-use unreal_asset_base::reader::archive_reader::ArchiveReader;
+use unreal_asset_base::reader::ArchiveReader;
 
 /// Unreal asset data, this is relevant for all assets
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]

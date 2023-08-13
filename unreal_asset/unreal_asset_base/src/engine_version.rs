@@ -3,10 +3,8 @@
 use lazy_static::lazy_static;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::{
-    custom_version::CustomVersion,
-    object_version::{ObjectVersion, ObjectVersionUE5},
-};
+use crate::custom_version::CustomVersion;
+use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 
 /// An enum used to represent all retail versions of the Unreal Engine. Each version entry both a particular ['ObjectVersion'] and the default set of all applicable ['CustomVersion'] enum values.
 ///

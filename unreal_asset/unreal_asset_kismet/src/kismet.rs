@@ -9,12 +9,12 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;
 use unreal_asset_proc_macro::FNameContainer;
 
-use crate::error::Error;
 use crate::error::KismetError;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::reader::{ArchiveReader, ArchiveWriter};
 use crate::types::vector::{Transform, Vector, Vector4};
-use crate::types::{fname::FName, PackageIndex};
+use crate::types::{FName, PackageIndex};
+use crate::Error;
 
 /// Kismet expression token
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]

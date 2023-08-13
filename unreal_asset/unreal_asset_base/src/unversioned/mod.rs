@@ -7,20 +7,13 @@ use bitflags::bitflags;
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::containers::chain::Chain;
-use crate::containers::indexed_map::IndexedMap;
-use crate::containers::name_map::NameMap;
+use crate::containers::{Chain, IndexedMap, NameMap};
 use crate::custom_version::CustomVersion;
 use crate::error::{Error, UsmapError};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::archive_reader::ArchiveReader;
-use crate::reader::archive_trait::ArchiveTrait;
-use crate::reader::raw_reader::RawReader;
-use crate::types::fname::FName;
+use crate::reader::{ArchiveReader, ArchiveTrait, RawReader};
 
-use self::ancestry::Ancestry;
-use self::properties::UsmapProperty;
-use self::usmap_reader::UsmapReader;
+use crate::types::FName;
 
 pub mod ancestry;
 pub mod header;
@@ -29,6 +22,10 @@ pub(crate) mod oodle;
 pub mod properties;
 pub mod usmap_reader;
 pub mod usmap_writer;
+
+pub use self::ancestry::Ancestry;
+use self::properties::UsmapProperty;
+use self::usmap_reader::UsmapReader;
 
 /// Usmap file version
 #[derive(

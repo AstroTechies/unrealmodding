@@ -13,7 +13,7 @@ use crate::{
         archive_reader::{ArchiveReader, PassthroughArchiveReader},
         archive_trait::{ArchiveTrait, ArchiveType},
     },
-    types::{fname::FName, PackageIndex},
+    types::{FName, PackageIndex},
     Import,
 };
 

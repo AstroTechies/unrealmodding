@@ -6,21 +6,18 @@ use byteorder::ReadBytesExt;
 
 use unreal_helpers::{read_ext::read_fstring_len, Guid, UnrealReadExt};
 
-use crate::containers::chain::Chain;
-use crate::containers::indexed_map::IndexedMap;
-use crate::containers::name_map::NameMap;
-use crate::containers::shared_resource::SharedResource;
+use crate::containers::{Chain, IndexedMap, NameMap, SharedResource};
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::{guess_engine_version, EngineVersion};
-use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::{archive_reader::ArchiveReader, archive_trait::ArchiveTrait};
-use crate::types::fname::FName;
-use crate::types::{PackageIndex, SerializedNameHeader};
+use crate::reader::{
+    archive_trait::{ArchiveTrait, ArchiveType},
+    ArchiveReader,
+};
+use crate::types::{FName, PackageIndex, SerializedNameHeader};
 use crate::unversioned::Usmap;
+use crate::Error;
 use crate::Import;
-
-use super::archive_trait::ArchiveType;
 
 /// A binary reader
 pub struct RawReader<C: Read + Seek> {

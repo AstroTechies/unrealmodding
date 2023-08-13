@@ -8,13 +8,13 @@ use crate::containers::name_map::NameMap;
 use crate::containers::shared_resource::SharedResource;
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
-use crate::error::Error;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::archive_reader::PassthroughArchiveReader;
 use crate::reader::archive_trait::ArchiveType;
-use crate::reader::{archive_reader::ArchiveReader, archive_trait::ArchiveTrait};
-use crate::types::{fname::FName, PackageIndex};
+use crate::reader::{ArchiveReader, ArchiveTrait};
+use crate::types::{FName, PackageIndex};
 use crate::unversioned::Usmap;
+use crate::Error;
 use crate::Import;
 
 /// Used for reading NameTable entries by modifying the behavior
