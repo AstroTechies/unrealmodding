@@ -2,7 +2,7 @@
 
 use byteorder::LE;
 
-use unreal_helpers::Guid;
+use unreal_asset_base::Guid;
 
 use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
 use crate::error::{Error, RegistryError};

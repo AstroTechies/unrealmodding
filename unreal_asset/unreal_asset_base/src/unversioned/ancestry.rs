@@ -1,6 +1,6 @@
 //! Unversioned properties ancestry
 
-use unreal_asset_proc_macro::FNameContainer;
+use crate::FNameContainer;
 
 use crate::types::FName;
 

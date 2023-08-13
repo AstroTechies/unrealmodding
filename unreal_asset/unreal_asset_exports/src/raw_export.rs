@@ -1,10 +1,12 @@
 //! Raw export
 
-use unreal_asset_proc_macro::FNameContainer;
+use unreal_asset_base::{
+    reader::{ArchiveReader, ArchiveWriter},
+    Error, FNameContainer,
+};
 
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::Error;
-use crate::{base_export::BaseExport, ExportBaseTrait, ExportNormalTrait, ExportTrait};
+use crate::BaseExport;
+use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// An export that failed to deserialize is stored as `Vec<u8>`
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

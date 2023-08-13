@@ -1,17 +1,19 @@
 //! All of Unreal Engine UProperties
 
-use byteorder::LE;
-use enum_dispatch::enum_dispatch;
 use std::fmt::Debug;
 use std::hash::Hash;
-use unreal_asset_proc_macro::FNameContainer;
 
-use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
-use crate::enums::{EArrayDim, ELifetimeCondition};
-use crate::flags::EPropertyFlags;
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::types::{FName, PackageIndex};
-use crate::Error;
+use byteorder::LE;
+use enum_dispatch::enum_dispatch;
+
+use unreal_asset_base::{
+    custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion},
+    enums::{EArrayDim, ELifetimeCondition},
+    flags::EPropertyFlags,
+    reader::{ArchiveReader, ArchiveWriter},
+    types::{FName, PackageIndex},
+    Error, FNameContainer,
+};
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {

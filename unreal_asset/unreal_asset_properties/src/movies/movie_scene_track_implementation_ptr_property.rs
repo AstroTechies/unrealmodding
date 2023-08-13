@@ -1,7 +1,6 @@
 //! Movie scene track implementation pointer property
 
 use crate::property_prelude::*;
-use crate::str_property::StrProperty;
 
 /// Movie scene track implementation pointer property
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]

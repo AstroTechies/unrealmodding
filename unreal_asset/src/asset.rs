@@ -6,8 +6,8 @@ use std::mem::size_of;
 
 use byteorder::{BE, LE};
 
+use unreal_asset_base::Guid;
 use unreal_asset_base::{cast, Import};
-use unreal_helpers::Guid;
 
 use crate::asset_data::AssetData;
 use crate::{
@@ -43,7 +43,7 @@ pub use unreal_asset_exports::{
     base_export::BaseExport, Export, ExportBaseTrait, ExportNormalTrait, ExportTrait,
 };
 
-use unreal_asset_proc_macro::FNameContainer;
+use unreal_asset_base::FNameContainer;
 
 /// Parent Class Info
 #[derive(FNameContainer, Debug, Clone, Eq, PartialEq)]

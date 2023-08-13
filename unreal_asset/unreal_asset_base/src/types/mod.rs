@@ -8,10 +8,9 @@ pub mod vector;
 
 use std::hash::Hash;
 
-use unreal_helpers::Guid;
-
 use crate::reader::{ArchiveReader, ArchiveWriter};
 use crate::Error;
+use crate::Guid;
 
 /// Serialized name header
 /// Used when reading name batches in >=UE5

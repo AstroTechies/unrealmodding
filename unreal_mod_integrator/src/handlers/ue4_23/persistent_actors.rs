@@ -6,6 +6,7 @@ use std::path::Path;
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::reader::ArchiveTrait;
 use unreal_asset::unversioned::Ancestry;
+use unreal_asset::Guid;
 use unreal_asset::{
     cast,
     exports::{normal_export::NormalExport, Export, ExportBaseTrait, ExportNormalTrait},
@@ -16,7 +17,6 @@ use unreal_asset::{
     types::PackageIndex,
     Asset, Import,
 };
-use unreal_helpers::Guid;
 use unreal_pak::{PakMemory, PakReader};
 
 use crate::helpers::{get_asset, write_asset};

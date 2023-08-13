@@ -1,16 +1,16 @@
 //! Property export
 
 use byteorder::LE;
-use unreal_asset_proc_macro::FNameContainer;
+
+use unreal_asset_base::{
+    reader::{ArchiveReader, ArchiveWriter},
+    Error, FNameContainer,
+};
 
 use crate::implement_get;
 use crate::properties::uproperty::{UProperty, UPropertyTrait};
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::Error;
-use crate::{
-    base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
-    ExportTrait,
-};
+use crate::ExportTrait;
+use crate::{BaseExport, NormalExport};
 
 /// Property export
 ///

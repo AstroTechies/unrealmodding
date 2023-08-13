@@ -7,11 +7,10 @@ use byteorder::LE;
 use lazy_static::lazy_static;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use unreal_helpers::Guid;
-
 use crate::engine_version::EngineVersion;
 use crate::reader::{ArchiveReader, ArchiveWriter};
 use crate::Error;
+use crate::Guid;
 
 /// CustomVersions are engine "sub-versions"
 /// They are used to parse some propeties differently
