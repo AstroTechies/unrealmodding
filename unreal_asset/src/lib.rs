@@ -66,6 +66,8 @@ pub use unreal_asset_properties as properties;
 // kismet
 pub use unreal_asset_kismet as kismet;
 
+pub use kismet::KismetExpression;
+
 // exports
 pub use unreal_asset_exports as exports;
 
