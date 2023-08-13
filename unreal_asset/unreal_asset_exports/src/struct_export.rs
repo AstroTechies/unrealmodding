@@ -3,12 +3,13 @@
 use std::io::SeekFrom;
 
 use byteorder::LE;
+
+use unreal_asset_kismet::KismetExpression;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::FCoreObjectVersion;
 use crate::engine_version::EngineVersion;
 use crate::implement_get;
-use crate::kismet::KismetExpression;
 use crate::properties::fproperty::FProperty;
 use crate::properties::uproperty::UField;
 use crate::reader::{ArchiveReader, ArchiveWriter};

@@ -6,7 +6,6 @@
 use enum_dispatch::enum_dispatch;
 
 use unreal_asset_base::*;
-use unreal_asset_kismet::*;
 use unreal_asset_properties::*;
 
 use unreal_asset_proc_macro::FNameContainer;
