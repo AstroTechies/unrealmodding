@@ -4,10 +4,10 @@ use std::io::Cursor;
 use unreal_asset::{
     cast,
     engine_version::EngineVersion,
+    exports::{data_table_export::DataTableExport, Export},
     properties::{Property, PropertyDataTrait},
     Asset, Error,
 };
-use unreal_asset_exports::{data_table_export::DataTableExport, Export};
 
 mod shared;
 
