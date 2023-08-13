@@ -8,7 +8,7 @@ use thiserror::Error;
 use unreal_helpers::error::FStringError;
 
 use crate::custom_version::FAssetRegistryVersionType;
-use crate::reader::archive_trait::ArchiveType;
+use crate::reader::ArchiveType;
 use crate::unversioned::Ancestry;
 
 /// Thrown when kismet bytecode failed to deserialize

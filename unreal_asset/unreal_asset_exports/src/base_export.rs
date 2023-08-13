@@ -8,7 +8,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use unreal_asset_base::{
     flags::EObjectFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    reader::{archive_trait::ArchiveType, ArchiveReader, ArchiveTrait, ArchiveWriter, RawWriter},
+    reader::{ArchiveReader, ArchiveTrait, ArchiveType, ArchiveWriter, RawWriter},
     types::{FName, PackageIndex},
     Error, FNameContainer, Guid,
 };

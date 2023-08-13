@@ -2,13 +2,16 @@
 
 use byteorder::LE;
 
-use crate::containers::indexed_map::IndexedMap;
-use crate::custom_version::FAssetRegistryVersionType;
-use crate::flags::EPackageFlags;
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::registry::objects::asset_bundle_data::AssetBundleData;
-use crate::types::FName;
-use crate::Error;
+use unreal_asset_base::{
+    containers::IndexedMap,
+    custom_version::FAssetRegistryVersionType,
+    flags::EPackageFlags,
+    reader::{ArchiveReader, ArchiveWriter},
+    types::FName,
+    Error,
+};
+
+use crate::objects::asset_bundle_data::AssetBundleData;
 
 /// Top level asset path
 #[derive(Clone, Debug)]

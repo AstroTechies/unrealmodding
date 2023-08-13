@@ -6,44 +6,31 @@ use std::mem::size_of;
 
 use byteorder::{BE, LE};
 
-use unreal_asset_base::Guid;
-use unreal_asset_base::{cast, Import};
-
-use crate::asset_data::AssetData;
-use crate::{
-    asset_archive_writer::AssetArchiveWriter,
-    asset_data::{AssetTrait, ExportReaderTrait},
-    containers::{
-        chain::Chain, indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource,
-    },
+use unreal_asset_base::{
+    cast,
+    containers::{Chain, IndexedMap, NameMap, SharedResource},
     crc,
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::EngineVersion,
     enums::ECustomVersionSerializationFormat,
     error::Error,
-    fengineversion::FEngineVersion,
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    properties::world_tile_property::FWorldTileInfo,
     reader::{
-        archive_reader::{ArchiveReader, PassthroughArchiveReader},
-        archive_trait::{ArchiveTrait, ArchiveType},
-        ArchiveWriter, RawReader, RawWriter,
+        ArchiveReader, ArchiveTrait, ArchiveType, ArchiveWriter, PassthroughArchiveReader,
+        RawReader, RawWriter,
     },
-    types::{
-        fname::{FName, FNameContainer},
-        GenerationInfo, PackageIndex,
-    },
+    types::{fname::FNameContainer, FName, GenerationInfo, PackageIndex},
     unversioned::Usmap,
-    UE4_ASSET_MAGIC,
+    FNameContainer, Guid, Import,
 };
+use unreal_asset_exports::{BaseExport, Export, ExportBaseTrait, ExportNormalTrait, ExportTrait};
+use unreal_asset_properties::world_tile_property::FWorldTileInfo;
 
-// TODO fix
-pub use unreal_asset_exports::{
-    base_export::BaseExport, Export, ExportBaseTrait, ExportNormalTrait, ExportTrait,
-};
-
-use unreal_asset_base::FNameContainer;
+use crate::asset_archive_writer::AssetArchiveWriter;
+use crate::asset_data::{AssetData, AssetTrait, ExportReaderTrait};
+use crate::fengineversion::FEngineVersion;
+use crate::UE4_ASSET_MAGIC;
 
 /// Parent Class Info
 #[derive(FNameContainer, Debug, Clone, Eq, PartialEq)]

@@ -1,18 +1,16 @@
 //! Asset registry NameTableWriter
 use std::io::{self, SeekFrom};
 
-use crate::containers::indexed_map::IndexedMap;
-use crate::containers::name_map::NameMap;
-use crate::containers::shared_resource::SharedResource;
-use crate::custom_version::{CustomVersion, CustomVersionTrait};
-use crate::engine_version::EngineVersion;
-use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::archive_trait::ArchiveType;
-use crate::reader::archive_writer::PassthroughArchiveWriter;
-use crate::reader::{ArchiveTrait, ArchiveWriter};
-use crate::types::{FName, PackageIndex};
-use crate::unversioned::Usmap;
-use crate::Import;
+use unreal_asset_base::{
+    containers::{IndexedMap, NameMap, SharedResource},
+    custom_version::{CustomVersion, CustomVersionTrait},
+    engine_version::EngineVersion,
+    object_version::{ObjectVersion, ObjectVersionUE5},
+    reader::{ArchiveTrait, ArchiveType, ArchiveWriter, PassthroughArchiveWriter},
+    types::{FName, PackageIndex},
+    unversioned::Usmap,
+    Import,
+};
 
 /// Used to write NameTable entries by modifying the behavior
 /// of some of the value write methods.
