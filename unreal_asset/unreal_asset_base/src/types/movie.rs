@@ -5,7 +5,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
+    reader::{ArchiveReader, ArchiveWriter},
 };
 
 /// Frame number

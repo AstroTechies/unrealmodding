@@ -7,11 +7,11 @@ use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::containers::indexed_map::IndexedMap;
-use crate::error::Error;
 use crate::flags::EClassFlags;
 use crate::object_version::ObjectVersion;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, PackageIndex};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::types::{FName, PackageIndex};
+use crate::Error;
 use crate::{
     base_export::BaseExport, struct_export::StructExport, ExportBaseTrait, ExportNormalTrait,
     ExportTrait,

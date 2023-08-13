@@ -3,8 +3,7 @@ use std::io::Cursor;
 use unreal_asset::{
     ac7::{self, AC7XorKey},
     engine_version::EngineVersion,
-    error::Error,
-    Asset,
+    Asset, Error,
 };
 
 mod shared;

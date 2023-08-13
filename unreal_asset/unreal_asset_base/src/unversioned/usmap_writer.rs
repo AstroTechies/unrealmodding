@@ -10,7 +10,7 @@ use crate::{
         archive_trait::{ArchiveTrait, ArchiveType},
         archive_writer::{ArchiveWriter, PassthroughArchiveWriter},
     },
-    types::{fname::FName, PackageIndex},
+    types::{FName, PackageIndex},
     Import,
 };
 

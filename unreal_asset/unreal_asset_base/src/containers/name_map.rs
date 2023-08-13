@@ -1,17 +1,13 @@
 //! Asset name map
 
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
-use crate::{
-    containers::{
-        indexed_map::IndexedMap,
-        shared_resource::{CyclicSharedResource, SharedResource, SharedResourceWeakRef},
-    },
-    types::fname::{EMappedNameType, FName},
+use crate::containers::{
+    indexed_map::IndexedMap,
+    shared_resource::{CyclicSharedResource, SharedResource, SharedResourceWeakRef},
 };
+use crate::types::fname::{EMappedNameType, FName};
 
 /// Asset name map
 #[derive(Debug, Clone)]

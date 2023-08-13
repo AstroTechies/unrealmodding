@@ -9,8 +9,8 @@ use serde_json::Value;
 
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::properties::int_property::BytePropertyValue;
-use unreal_asset::types::fname::FName;
-use unreal_asset::unversioned::ancestry::Ancestry;
+use unreal_asset::types::FName;
+use unreal_asset::unversioned::Ancestry;
 use unreal_asset::{
     exports::{data_table_export::DataTable, Export, ExportBaseTrait},
     properties::{

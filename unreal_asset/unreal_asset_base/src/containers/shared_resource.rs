@@ -4,8 +4,8 @@
 //!
 //! The implementation depends on the `threading` feature being enabled
 
-use core::ops::Deref;
 use std::fmt;
+use std::ops::Deref;
 
 /// Trait that should be implemented for cyclic shared resources
 pub trait CyclicSharedResource<T: Clone> {

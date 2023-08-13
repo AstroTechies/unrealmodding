@@ -1,12 +1,15 @@
 #![allow(missing_docs)] // this will be replaced by index_map crate
 
-use std::{
-    borrow::Borrow, collections::BTreeMap, fmt::Debug, hash::Hash, iter::FusedIterator, rc::Rc,
-};
-
-use self::entry::{Entry, OccupiedEntry, VacantEntry};
+use std::borrow::Borrow;
+use std::collections::BTreeMap;
+use std::fmt::Debug;
+use std::hash::Hash;
+use std::iter::FusedIterator;
+use std::rc::Rc;
 
 pub mod entry;
+
+use entry::{Entry, OccupiedEntry, VacantEntry};
 
 // todo: more docs
 

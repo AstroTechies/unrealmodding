@@ -8,10 +8,10 @@ use unreal_asset_proc_macro::FNameContainer;
 
 use crate::custom_version::{FFrameworkObjectVersion, FReleaseObjectVersion};
 use crate::enums::{EArrayDim, ELifetimeCondition};
-use crate::error::Error;
 use crate::flags::EPropertyFlags;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::{fname::FName, PackageIndex};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::types::{FName, PackageIndex};
+use crate::Error;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {

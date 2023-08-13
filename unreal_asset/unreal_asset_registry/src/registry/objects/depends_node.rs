@@ -9,8 +9,8 @@ use unreal_helpers::BitVecExt;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::flags::EDependencyProperty;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
-use crate::types::fname::FName;
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::types::FName;
 
 /// Asset identifier
 #[derive(Debug, Clone, Default)]

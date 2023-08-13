@@ -3,13 +3,11 @@
 use std::fmt::Display;
 use std::io::{self, SeekFrom};
 
-use crate::containers::indexed_map::IndexedMap;
-use crate::containers::name_map::NameMap;
-use crate::containers::shared_resource::SharedResource;
+use crate::containers::{IndexedMap, NameMap, SharedResource};
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::types::{fname::FName, PackageIndex};
+use crate::types::{FName, PackageIndex};
 use crate::unversioned::Usmap;
 use crate::Import;
 

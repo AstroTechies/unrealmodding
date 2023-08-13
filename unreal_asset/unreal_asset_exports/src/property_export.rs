@@ -3,10 +3,10 @@
 use byteorder::LE;
 use unreal_asset_proc_macro::FNameContainer;
 
-use crate::error::Error;
 use crate::implement_get;
 use crate::properties::uproperty::{UProperty, UPropertyTrait};
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::Error;
 use crate::{
     base_export::BaseExport, normal_export::NormalExport, ExportBaseTrait, ExportNormalTrait,
     ExportTrait,

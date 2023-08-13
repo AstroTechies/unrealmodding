@@ -8,8 +8,8 @@ use unreal_helpers::Guid;
 
 use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
-use crate::reader::archive_trait::ArchiveTrait;
-use crate::types::fname::FName;
+use crate::reader::ArchiveTrait;
+use crate::types::FName;
 
 /// A trait that allows for writing to an archive in an asset-specific way
 pub trait ArchiveWriter: ArchiveTrait {

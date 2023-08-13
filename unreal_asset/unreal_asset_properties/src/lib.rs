@@ -13,12 +13,12 @@ use byteorder::LE;
 use enum_dispatch::enum_dispatch;
 
 // macro reexports
-pub use unreal_asset_base::types::fname::FName;
-pub use unreal_asset_base::unversioned::ancestry::Ancestry;
+pub use unreal_asset_base::types::FName;
+pub use unreal_asset_base::unversioned::Ancestry;
 pub use unreal_helpers::Guid;
 
 use unreal_asset_base::error::{Error, PropertyError};
-use unreal_asset_base::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use unreal_asset_base::reader::{ArchiveReader, ArchiveWriter};
 use unreal_asset_base::types::fname::ToSerializedName;
 use unreal_asset_base::unversioned::header::UnversionedHeaderFragment;
 use unreal_asset_base::unversioned::{
@@ -148,17 +148,15 @@ mod property_prelude {
     };
     pub use unreal_asset_base::error::{Error, PropertyError};
     pub use unreal_asset_base::object_version::{ObjectVersion, ObjectVersionUE5};
-    pub use unreal_asset_base::reader::{
-        archive_reader::ArchiveReader, archive_writer::ArchiveWriter,
-    };
+    pub use unreal_asset_base::reader::{ArchiveReader, ArchiveWriter};
     pub use unreal_asset_base::types::{
         fname::{FName, ToSerializedName},
         PackageIndex,
     };
     pub use unreal_asset_base::unversioned::{
-        ancestry::Ancestry,
         header::UnversionedHeader,
         properties::{UsmapPropertyData, UsmapPropertyDataTrait},
+        Ancestry,
     };
     pub use unreal_asset_base::FNameContainer;
 

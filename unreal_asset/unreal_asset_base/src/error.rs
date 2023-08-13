@@ -9,7 +9,7 @@ use unreal_helpers::error::FStringError;
 
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::reader::archive_trait::ArchiveType;
-use crate::unversioned::ancestry::Ancestry;
+use crate::unversioned::Ancestry;
 
 /// Thrown when kismet bytecode failed to deserialize
 #[derive(Error, Debug)]

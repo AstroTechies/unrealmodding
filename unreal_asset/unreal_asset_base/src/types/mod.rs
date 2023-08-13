@@ -1,6 +1,8 @@
 //! Unreal types
 
 pub mod fname;
+pub use fname::FName;
+
 pub mod movie;
 pub mod vector;
 
@@ -8,10 +10,8 @@ use std::hash::Hash;
 
 use unreal_helpers::Guid;
 
-use crate::{
-    error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::Error;
 
 /// Serialized name header
 /// Used when reading name batches in >=UE5

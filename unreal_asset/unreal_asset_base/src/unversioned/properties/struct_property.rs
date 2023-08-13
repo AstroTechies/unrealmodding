@@ -2,11 +2,9 @@
 
 use std::mem::size_of;
 
-use crate::{
-    error::Error,
-    reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter},
-    unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter},
-};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter};
+use crate::Error;
 
 use super::{EPropertyType, UsmapPropertyDataTrait};
 

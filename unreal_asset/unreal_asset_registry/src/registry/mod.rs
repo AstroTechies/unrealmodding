@@ -13,10 +13,7 @@ use crate::crc;
 use crate::custom_version::FAssetRegistryVersionType;
 use crate::error::{Error, RegistryError};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::{
-    archive_reader::ArchiveReader, archive_trait::ArchiveTrait, archive_writer::ArchiveWriter,
-    raw_writer::RawWriter,
-};
+use crate::reader::{ArchiveReader, ArchiveTrait, ArchiveWriter, RawWriter};
 use crate::registry::{
     name_table_reader::NameTableReader,
     name_table_writer::NameTableWriter,
@@ -160,7 +157,7 @@ impl AssetRegistryState {
     /// use unreal_asset::{
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
-    ///     reader::raw_reader::RawReader,
+    ///     reader::RawReader,
     ///     containers::{name_map::NameMap, chain::Chain}
     /// };
     ///
@@ -246,7 +243,7 @@ impl AssetRegistryState {
     /// use unreal_asset::{
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
-    ///     reader::raw_reader::RawReader,
+    ///     reader::RawReader,
     ///     containers::{name_map::NameMap, chain::Chain}
     /// };
     ///

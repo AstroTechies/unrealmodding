@@ -16,8 +16,8 @@ use unreal_asset::{
 };
 use unreal_pak::PakFile;
 
-use crate::error::Error;
 use crate::write_asset;
+use crate::Error;
 
 pub(crate) struct GameInfo {
     pub(crate) game_name: String,

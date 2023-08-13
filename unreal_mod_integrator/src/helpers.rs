@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
 
-use unreal_asset::{engine_version::EngineVersion, reader::archive_trait::ArchiveTrait, Asset};
+use unreal_asset::{engine_version::EngineVersion, reader::ArchiveTrait, Asset};
 use unreal_pak::{PakMemory, PakReader};
 
 use crate::{error::IntegrationError, Error};

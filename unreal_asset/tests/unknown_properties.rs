@@ -1,9 +1,10 @@
-use std::{collections::HashMap, io::Cursor};
+use std::collections::HashMap;
+use std::io::Cursor;
 
 use unreal_asset::{
-    cast, engine_version::EngineVersion, error::Error, properties::Property, Asset,
+    cast, engine_version::EngineVersion, exports::ExportNormalTrait, properties::Property, Asset,
+    Error,
 };
-use unreal_asset_exports::ExportNormalTrait;
 
 mod shared;
 

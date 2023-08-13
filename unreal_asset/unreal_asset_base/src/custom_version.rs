@@ -10,8 +10,8 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use unreal_helpers::Guid;
 
 use crate::engine_version::EngineVersion;
-use crate::error::Error;
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::Error;
 
 /// CustomVersions are engine "sub-versions"
 /// They are used to parse some propeties differently

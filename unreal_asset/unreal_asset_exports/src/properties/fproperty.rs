@@ -8,13 +8,13 @@ use enum_dispatch::enum_dispatch;
 use unreal_asset_proc_macro::FNameContainer;
 
 use crate::enums::{EArrayDim, ELifetimeCondition};
-use crate::error::Error;
 use crate::flags::{EObjectFlags, EPropertyFlags};
-use crate::reader::{archive_reader::ArchiveReader, archive_writer::ArchiveWriter};
+use crate::reader::{ArchiveReader, ArchiveWriter};
 use crate::types::{
     fname::{FName, ToSerializedName},
     PackageIndex,
 };
+use crate::Error;
 
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
