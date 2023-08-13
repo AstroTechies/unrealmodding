@@ -5,9 +5,7 @@ use std::io::SeekFrom;
 use byteorder::LE;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::reader::ArchiveReader;
-use crate::types::FName;
-use crate::Error;
+use unreal_asset_base::{reader::ArchiveReader, types::FName, Error};
 
 /// Value type
 #[repr(u32)]

@@ -2,10 +2,12 @@
 
 use byteorder::LE;
 
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::types::FName;
-use crate::unversioned::Ancestry;
-use crate::Error;
+use unreal_asset_base::{
+    reader::{ArchiveReader, ArchiveWriter},
+    types::FName,
+    unversioned::Ancestry,
+    Error,
+};
 use unreal_asset_properties::{soft_path_property::SoftObjectPathProperty, PropertyTrait};
 
 /// Bundle entry

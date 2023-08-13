@@ -59,76 +59,76 @@ pub mod vector_property;
 pub mod view_target_blend_property;
 pub mod world_tile_property;
 
-use self::array_property::ArrayProperty;
-use self::cloth_lod_property::ClothLodDataProperty;
-use self::color_property::{ColorProperty, LinearColorProperty};
-use self::date_property::{DateTimeProperty, TimeSpanProperty};
-use self::delegate_property::{
+use array_property::ArrayProperty;
+use cloth_lod_property::ClothLodDataProperty;
+use color_property::{ColorProperty, LinearColorProperty};
+use date_property::{DateTimeProperty, TimeSpanProperty};
+use delegate_property::{
     DelegateProperty, MulticastDelegateProperty, MulticastInlineDelegateProperty,
     MulticastSparseDelegateProperty,
 };
-use self::empty_property::EmptyProperty;
-use self::enum_property::EnumProperty;
-use self::float_range_property::FloatRangeProperty;
-use self::font_character_property::FontCharacterProperty;
-use self::game_framework::unique_net_id_property::UniqueNetIdProperty;
-use self::gameplay_tag_container_property::GameplayTagContainerProperty;
-use self::guid_property::GuidProperty;
-use self::int_property::{
+use empty_property::EmptyProperty;
+use enum_property::EnumProperty;
+use float_range_property::FloatRangeProperty;
+use font_character_property::FontCharacterProperty;
+use game_framework::unique_net_id_property::UniqueNetIdProperty;
+use gameplay_tag_container_property::GameplayTagContainerProperty;
+use guid_property::GuidProperty;
+use int_property::{
     BoolProperty, ByteProperty, DoubleProperty, FloatProperty, Int16Property, Int64Property,
     Int8Property, IntProperty, UInt16Property, UInt32Property, UInt64Property,
 };
-use self::map_property::MapProperty;
-use self::material_input_property::{
+use map_property::MapProperty;
+use material_input_property::{
     ColorMaterialInputProperty, ExpressionInputProperty, MaterialAttributesInputProperty,
     ScalarMaterialInputProperty, ShadingModelMaterialInputProperty, Vector2MaterialInputProperty,
     VectorMaterialInputProperty,
 };
-use self::movies::movie_scene_eval_template_ptr_property::MovieSceneEvalTemplatePtrProperty;
-use self::movies::movie_scene_evaluation_field_entity_tree_property::MovieSceneEvaluationFieldEntityTreeProperty;
-use self::movies::movie_scene_evaluation_key_property::MovieSceneEvaluationKeyProperty;
-use self::movies::movie_scene_event_parameters_property::MovieSceneEventParametersProperty;
-use self::movies::movie_scene_float_channel_property::MovieSceneFloatChannelProperty;
-use self::movies::movie_scene_float_value_property::MovieSceneFloatValueProperty;
-use self::movies::movie_scene_frame_range_property::MovieSceneFrameRangeProperty;
-use self::movies::movie_scene_segment_property::{
+use movies::movie_scene_eval_template_ptr_property::MovieSceneEvalTemplatePtrProperty;
+use movies::movie_scene_evaluation_field_entity_tree_property::MovieSceneEvaluationFieldEntityTreeProperty;
+use movies::movie_scene_evaluation_key_property::MovieSceneEvaluationKeyProperty;
+use movies::movie_scene_event_parameters_property::MovieSceneEventParametersProperty;
+use movies::movie_scene_float_channel_property::MovieSceneFloatChannelProperty;
+use movies::movie_scene_float_value_property::MovieSceneFloatValueProperty;
+use movies::movie_scene_frame_range_property::MovieSceneFrameRangeProperty;
+use movies::movie_scene_segment_property::{
     MovieSceneSegmentIdentifierProperty, MovieSceneSegmentProperty,
 };
-use self::movies::movie_scene_sequence_id_property::MovieSceneSequenceIdProperty;
-use self::movies::movie_scene_sequence_instance_data_ptr_property::MovieSceneSequenceInstanceDataPtrProperty;
-use self::movies::movie_scene_sub_sequence_tree_property::MovieSceneSubSequenceTreeProperty;
-use self::movies::movie_scene_track_field_data_property::MovieSceneTrackFieldDataProperty;
-use self::movies::movie_scene_track_identifier_property::MovieSceneTrackIdentifierProperty;
-use self::movies::movie_scene_track_implementation_ptr_property::MovieSceneTrackImplementationPtrProperty;
-use self::movies::section_evaluation_data_tree_property::SectionEvaluationDataTreeProperty;
-use self::niagara::niagara_variable_property::{
+use movies::movie_scene_sequence_id_property::MovieSceneSequenceIdProperty;
+use movies::movie_scene_sequence_instance_data_ptr_property::MovieSceneSequenceInstanceDataPtrProperty;
+use movies::movie_scene_sub_sequence_tree_property::MovieSceneSubSequenceTreeProperty;
+use movies::movie_scene_track_field_data_property::MovieSceneTrackFieldDataProperty;
+use movies::movie_scene_track_identifier_property::MovieSceneTrackIdentifierProperty;
+use movies::movie_scene_track_implementation_ptr_property::MovieSceneTrackImplementationPtrProperty;
+use movies::section_evaluation_data_tree_property::SectionEvaluationDataTreeProperty;
+use niagara::niagara_variable_property::{
     NiagaraVariableProperty, NiagaraVariableWithOffsetProperty,
 };
-use self::object_property::{AssetObjectProperty, ObjectProperty, SoftObjectProperty};
-use self::per_platform_property::{
+use object_property::{AssetObjectProperty, ObjectProperty, SoftObjectProperty};
+use per_platform_property::{
     PerPlatformBoolProperty, PerPlatformFloatProperty, PerPlatformIntProperty,
 };
-use self::raw_struct_property::RawStructProperty;
-use self::rich_curve_key_property::RichCurveKeyProperty;
-use self::sampler_property::{
+use raw_struct_property::RawStructProperty;
+use rich_curve_key_property::RichCurveKeyProperty;
+use sampler_property::{
     SkeletalMeshAreaWeightedTriangleSampler, SkeletalMeshSamplingLODBuiltDataProperty,
     WeightedRandomSamplerProperty,
 };
-use self::set_property::SetProperty;
-use self::slate_core::font_data_property::FontDataProperty;
-use self::smart_name_property::SmartNameProperty;
-use self::soft_path_property::{
+use set_property::SetProperty;
+use slate_core::font_data_property::FontDataProperty;
+use smart_name_property::SmartNameProperty;
+use soft_path_property::{
     SoftAssetPathProperty, SoftClassPathProperty, SoftObjectPathProperty,
     StringAssetReferenceProperty,
 };
-use self::str_property::{NameProperty, StrProperty, TextProperty};
-use self::struct_property::StructProperty;
-use self::unknown_property::UnknownProperty;
-use self::vector_property::{
+use str_property::{NameProperty, StrProperty, TextProperty};
+use struct_property::StructProperty;
+use unknown_property::UnknownProperty;
+use vector_property::{
     Box2DProperty, BoxProperty, IntPointProperty, PlaneProperty, QuatProperty, RotatorProperty,
     Vector2DProperty, Vector4Property, VectorProperty,
 };
-use self::view_target_blend_property::ViewTargetBlendParamsProperty;
+use view_target_blend_property::ViewTargetBlendParamsProperty;
 
 mod property_prelude {
     pub use std::io::SeekFrom;

@@ -1,24 +1,20 @@
 //! Archive that can be used to write an asset
 
-use unreal_asset_base::{cast, Import};
-
-use crate::{
-    asset_data::AssetData,
-    containers::{indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource},
+use unreal_asset_base::{
+    cast,
+    containers::{IndexedMap, NameMap, SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::EngineVersion,
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
+    reader::{ArchiveTrait, ArchiveType, ArchiveWriter, PassthroughArchiveWriter},
     types::{FName, PackageIndex},
     unversioned::Usmap,
+    Import,
 };
-
 use unreal_asset_exports::Export;
 
-use unreal_asset_base::reader::{
-    archive_trait::{ArchiveTrait, ArchiveType},
-    archive_writer::{ArchiveWriter, PassthroughArchiveWriter},
-};
+use crate::asset_data::AssetData;
 
 /// Archive that can be used to write an asset
 pub struct AssetArchiveWriter<'parent_writer, 'asset, ParentWriter: ArchiveWriter> {

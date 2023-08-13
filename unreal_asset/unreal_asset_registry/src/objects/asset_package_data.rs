@@ -4,11 +4,15 @@ use byteorder::LE;
 
 use unreal_asset_base::Guid;
 
-use crate::custom_version::{CustomVersion, FAssetRegistryVersionType};
-use crate::error::{Error, RegistryError};
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::registry::objects::md5_hash::FMD5Hash;
-use crate::types::FName;
+use unreal_asset_base::{
+    custom_version::{CustomVersion, FAssetRegistryVersionType},
+    error::RegistryError,
+    reader::{ArchiveReader, ArchiveWriter},
+    types::FName,
+    Error,
+};
+
+use crate::objects::md5_hash::FMD5Hash;
 
 /// Asset package data
 #[derive(Debug)]

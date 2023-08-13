@@ -2,8 +2,10 @@
 //!
 use byteorder::LE;
 
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::Error;
+use unreal_asset_base::{
+    reader::{ArchiveReader, ArchiveWriter},
+    Error,
+};
 
 /// Unreal MD5 hash
 #[derive(Debug)]

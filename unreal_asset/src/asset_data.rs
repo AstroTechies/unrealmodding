@@ -3,32 +3,28 @@
 
 use std::io::SeekFrom;
 
-use unreal_asset_base::FNameContainer;
-
-use unreal_asset_base::cast;
-
-use crate::{
+use unreal_asset_base::{
+    cast,
     containers::{indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::{get_object_versions, EngineVersion},
     error::Error,
     flags::EPackageFlags,
-    fproperty::FProperty,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    properties::world_tile_property::FWorldTileInfo,
+    reader::ArchiveReader,
     types::{FName, PackageIndex},
     unversioned::Usmap,
+    FNameContainer,
 };
-
 use unreal_asset_exports::{
     base_export::BaseExport, class_export::ClassExport, data_table_export::DataTableExport,
     enum_export::EnumExport, function_export::FunctionExport, level_export::LevelExport,
-    normal_export::NormalExport, property_export::PropertyExport, raw_export::RawExport,
-    string_table_export::StringTableExport, user_defined_struct_export::UserDefinedStructExport,
-    world_export::WorldExport, Export, ExportNormalTrait,
+    normal_export::NormalExport, properties::fproperty::FProperty, property_export::PropertyExport,
+    raw_export::RawExport, string_table_export::StringTableExport,
+    user_defined_struct_export::UserDefinedStructExport, world_export::WorldExport, Export,
+    ExportNormalTrait,
 };
-
-use unreal_asset_base::reader::ArchiveReader;
+use unreal_asset_properties::world_tile_property::FWorldTileInfo;
 
 /// Unreal asset data, this is relevant for all assets
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]

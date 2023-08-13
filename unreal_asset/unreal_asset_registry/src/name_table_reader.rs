@@ -3,19 +3,16 @@ use std::io::{self, SeekFrom};
 
 use byteorder::LE;
 
-use crate::containers::indexed_map::IndexedMap;
-use crate::containers::name_map::NameMap;
-use crate::containers::shared_resource::SharedResource;
-use crate::custom_version::{CustomVersion, CustomVersionTrait};
-use crate::engine_version::EngineVersion;
-use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::reader::archive_reader::PassthroughArchiveReader;
-use crate::reader::archive_trait::ArchiveType;
-use crate::reader::{ArchiveReader, ArchiveTrait};
-use crate::types::{FName, PackageIndex};
-use crate::unversioned::Usmap;
-use crate::Error;
-use crate::Import;
+use unreal_asset_base::{
+    containers::{IndexedMap, NameMap, SharedResource},
+    custom_version::{CustomVersion, CustomVersionTrait},
+    engine_version::EngineVersion,
+    object_version::{ObjectVersion, ObjectVersionUE5},
+    reader::{ArchiveReader, ArchiveTrait, ArchiveType, PassthroughArchiveReader},
+    types::{FName, PackageIndex},
+    unversioned::Usmap,
+    Error, Import,
+};
 
 /// Used for reading NameTable entries by modifying the behavior
 /// of some of the value read methods.

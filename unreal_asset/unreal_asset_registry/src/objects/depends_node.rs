@@ -6,11 +6,14 @@ use lazy_static::lazy_static;
 
 use unreal_helpers::BitVecExt;
 
-use crate::custom_version::FAssetRegistryVersionType;
-use crate::error::{Error, RegistryError};
-use crate::flags::EDependencyProperty;
-use crate::reader::{ArchiveReader, ArchiveWriter};
-use crate::types::FName;
+use unreal_asset_base::{
+    custom_version::FAssetRegistryVersionType,
+    error::RegistryError,
+    flags::EDependencyProperty,
+    reader::{ArchiveReader, ArchiveWriter},
+    types::FName,
+    Error,
+};
 
 /// Asset identifier
 #[derive(Debug, Clone, Default)]

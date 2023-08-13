@@ -4,9 +4,9 @@ use std::fmt::Debug;
 
 use byteorder::LE;
 
-use crate::{
-    error::Error,
+use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},
+    Error,
 };
 
 /// EngineVersion for an Asset
