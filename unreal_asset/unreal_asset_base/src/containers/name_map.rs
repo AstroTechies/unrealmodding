@@ -66,7 +66,7 @@ impl NameMap {
         self.name_map_index_list.push(name.clone());
         self.name_map_lookup
             .insert(hash, (self.name_map_index_list.len() - 1) as i32);
-        (self.name_map_lookup.len() - 1) as i32
+        (self.name_map_index_list.len() - 1) as i32
     }
 
     /// Get all FNames
