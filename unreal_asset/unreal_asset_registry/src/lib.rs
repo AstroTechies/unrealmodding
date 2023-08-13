@@ -31,6 +31,13 @@ use objects::{
     asset_data::AssetData, asset_package_data::AssetPackageData, depends_node::DependsNode,
 };
 
+// reexports for tests
+#[doc(hidden)]
+pub mod unreal_asset {
+    pub use crate as registry;
+    pub use unreal_asset_base::*;
+}
+
 /// Asset registry state
 #[derive(Debug)]
 pub struct AssetRegistryState {
@@ -158,12 +165,12 @@ impl AssetRegistryState {
     ///     path::Path,
     /// };
     ///
-    /// # use unreal_asset_registry as unreal_asset;
+    /// # use unreal_asset_registry::unreal_asset;
     /// use unreal_asset::{
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
     ///     reader::RawReader,
-    ///     containers::{name_map::NameMap, chain::Chain}
+    ///     containers::{NameMap, Chain}
     /// };
     ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();
@@ -244,12 +251,12 @@ impl AssetRegistryState {
     ///     path::Path,
     /// };
     ///
-    /// # use unreal_asset_registry as unreal_asset;
+    /// # use unreal_asset_registry::unreal_asset;
     /// use unreal_asset::{
     ///     engine_version::{self, EngineVersion},
     ///     registry::AssetRegistryState,
     ///     reader::RawReader,
-    ///     containers::{name_map::NameMap, chain::Chain}
+    ///     containers::{NameMap, Chain}
     /// };
     ///
     /// let mut file = File::open("AssetRegistry.bin").unwrap();

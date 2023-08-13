@@ -3,13 +3,13 @@ use std::io::Cursor;
 use unreal_asset::{
     cast,
     engine_version::EngineVersion,
+    exports::{Export, ExportBaseTrait, NormalExport},
     flags::EObjectFlags,
     properties::{object_property::ObjectProperty, PropertyDataTrait},
     types::PackageIndex,
     unversioned::Ancestry,
     Asset, Error,
 };
-use unreal_asset_exports::{normal_export::NormalExport, Export, ExportBaseTrait};
 
 mod shared;
 
