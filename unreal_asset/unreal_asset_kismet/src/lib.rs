@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::mem::size_of;
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::OrderedFloat;

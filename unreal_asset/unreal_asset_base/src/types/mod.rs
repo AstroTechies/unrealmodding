@@ -1,6 +1,7 @@
 //! Unreal types
 
 pub mod fname;
+use byteorder::{ReadBytesExt, WriteBytesExt};
 pub use fname::FName;
 
 pub mod movie;

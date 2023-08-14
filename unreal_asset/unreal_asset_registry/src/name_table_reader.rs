@@ -1,7 +1,7 @@
 //! Asset registry NameTableReader
-use std::io::{self, SeekFrom};
+use std::io::{self, Read, Seek, SeekFrom};
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, LE};
 
 use unreal_asset_base::{
     containers::{IndexedMap, NameMap, SharedResource},
@@ -86,10 +86,6 @@ impl<'reader, Reader: ArchiveReader> ArchiveTrait for NameTableReader<'reader, R
         self.reader.set_position(pos)
     }
 
-    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
-        self.reader.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.name_map.clone()
     }
@@ -137,5 +133,17 @@ impl<'reader, Reader: ArchiveReader> PassthroughArchiveReader for NameTableReade
     #[inline(always)]
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
         self.reader
+    }
+}
+
+impl<'reader, Reader: ArchiveReader> Read for NameTableReader<'reader, Reader> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.reader.read(buf)
+    }
+}
+
+impl<'reader, Reader: ArchiveReader> Seek for NameTableReader<'reader, Reader> {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        self.reader.seek(pos)
     }
 }

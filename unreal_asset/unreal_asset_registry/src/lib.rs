@@ -7,9 +7,9 @@
 //! The information from Asset Registry is primarily used in Content Browser,
 //! but some games might require modifying it before your assets will get loaded
 
-use std::io::{Cursor, SeekFrom};
+use std::io::{Cursor, Seek, SeekFrom};
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     containers::{NameMap, SharedResource},

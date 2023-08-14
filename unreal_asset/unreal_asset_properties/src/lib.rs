@@ -9,7 +9,7 @@ use std::hash::Hash;
 use std::io::SeekFrom;
 
 use bitvec::{order::Lsb0, vec::BitVec};
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use enum_dispatch::enum_dispatch;
 
 // macro reexports
@@ -134,7 +134,7 @@ mod property_prelude {
     pub use std::io::SeekFrom;
     pub use std::mem::size_of;
 
-    pub use byteorder::LE;
+    pub use byteorder::{ReadBytesExt, WriteBytesExt, LE};
     pub use num_enum::{IntoPrimitive, TryFromPrimitive};
     pub use ordered_float::OrderedFloat;
 

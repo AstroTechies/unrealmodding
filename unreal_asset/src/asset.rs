@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 
-use byteorder::{BE, LE};
+use byteorder::{ReadBytesExt, WriteBytesExt, BE, LE};
 
 use unreal_asset_base::{
     cast,
@@ -1221,10 +1221,6 @@ impl<C: Read + Seek> ArchiveTrait for Asset<C> {
         self.raw_reader.position()
     }
 
-    fn seek(&mut self, style: SeekFrom) -> std::io::Result<u64> {
-        self.raw_reader.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.name_map.clone()
     }
@@ -1286,6 +1282,18 @@ impl<C: Read + Seek> PassthroughArchiveReader for Asset<C> {
 
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
         &mut self.raw_reader
+    }
+}
+
+impl<C: Read + Seek> Read for Asset<C> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.raw_reader.read(buf)
+    }
+}
+
+impl<C: Read + Seek> Seek for Asset<C> {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.raw_reader.seek(pos)
     }
 }
 

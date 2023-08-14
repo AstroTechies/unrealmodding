@@ -1,6 +1,6 @@
 //! Asset bundle asset package data
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::Guid;
 

@@ -3,7 +3,7 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, LE};
 use enum_dispatch::enum_dispatch;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
