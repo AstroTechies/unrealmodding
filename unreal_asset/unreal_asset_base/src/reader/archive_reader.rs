@@ -1,9 +1,9 @@
 //! Archive reader
 
 use std::collections::HashSet;
-use std::io;
+use std::io::{self, Read};
 
-use byteorder::{ByteOrder, LE};
+use byteorder::{ReadBytesExt, LE};
 
 use crate::crc;
 use crate::custom_version::CustomVersion;
@@ -16,7 +16,7 @@ use crate::types::{FName, SerializedNameHeader};
 use crate::Guid;
 
 /// A trait that allows reading from an archive in an asset-specific way
-pub trait ArchiveReader: ArchiveTrait {
+pub trait ArchiveReader: ArchiveTrait + Read {
     /// Read a `Guid` property
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
@@ -214,28 +214,6 @@ pub trait ArchiveReader: ArchiveTrait {
         self.read_array_with_length(length, getter)
     }
 
-    /// Read `u8`
-    fn read_u8(&mut self) -> io::Result<u8>;
-    /// Read `i8`
-    fn read_i8(&mut self) -> io::Result<i8>;
-    /// Read `u16`
-    fn read_u16<T: ByteOrder>(&mut self) -> io::Result<u16>;
-    /// Read `i16`
-    fn read_i16<T: ByteOrder>(&mut self) -> io::Result<i16>;
-    /// Read `u32`
-    fn read_u32<T: ByteOrder>(&mut self) -> io::Result<u32>;
-    /// Read `i32`
-    fn read_i32<T: ByteOrder>(&mut self) -> io::Result<i32>;
-    /// Read `u64`
-    fn read_u64<T: ByteOrder>(&mut self) -> io::Result<u64>;
-    /// Read `i64`
-    fn read_i64<T: ByteOrder>(&mut self) -> io::Result<i64>;
-    /// Read `f32`
-    fn read_f32<T: ByteOrder>(&mut self) -> io::Result<f32>;
-    /// Read `f64`
-    fn read_f64<T: ByteOrder>(&mut self) -> io::Result<f64>;
-    /// Read an exact amount of bytes into a slice
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()>;
     /// Read an FString
     fn read_fstring(&mut self) -> Result<Option<String>, Error>;
     /// Read an FString with a `SerializedNameHeader`
@@ -250,7 +228,7 @@ pub trait ArchiveReader: ArchiveTrait {
 }
 
 /// A trait that allows for quick implementation of [`ArchiveReader`] as a passthrough trait for the underlying archive
-pub trait PassthroughArchiveReader: ArchiveTrait {
+pub trait PassthroughArchiveReader: ArchiveTrait + Read {
     /// Passthrough archive reader type
     type Passthrough: ArchiveReader;
     /// Get the passthrough archive reader
@@ -262,61 +240,6 @@ where
     Reader: ArchiveReader,
     Passthrough: PassthroughArchiveReader<Passthrough = Reader>,
 {
-    #[inline(always)]
-    fn read_u8(&mut self) -> io::Result<u8> {
-        self.get_passthrough().read_u8()
-    }
-
-    #[inline(always)]
-    fn read_i8(&mut self) -> io::Result<i8> {
-        self.get_passthrough().read_i8()
-    }
-
-    #[inline(always)]
-    fn read_u16<T: ByteOrder>(&mut self) -> io::Result<u16> {
-        self.get_passthrough().read_u16::<T>()
-    }
-
-    #[inline(always)]
-    fn read_i16<T: ByteOrder>(&mut self) -> io::Result<i16> {
-        self.get_passthrough().read_i16::<T>()
-    }
-
-    #[inline(always)]
-    fn read_u32<T: ByteOrder>(&mut self) -> io::Result<u32> {
-        self.get_passthrough().read_u32::<T>()
-    }
-
-    #[inline(always)]
-    fn read_i32<T: ByteOrder>(&mut self) -> io::Result<i32> {
-        self.get_passthrough().read_i32::<T>()
-    }
-
-    #[inline(always)]
-    fn read_u64<T: ByteOrder>(&mut self) -> io::Result<u64> {
-        self.get_passthrough().read_u64::<T>()
-    }
-
-    #[inline(always)]
-    fn read_i64<T: ByteOrder>(&mut self) -> io::Result<i64> {
-        self.get_passthrough().read_i64::<T>()
-    }
-
-    #[inline(always)]
-    fn read_f32<T: ByteOrder>(&mut self) -> io::Result<f32> {
-        self.get_passthrough().read_f32::<T>()
-    }
-
-    #[inline(always)]
-    fn read_f64<T: ByteOrder>(&mut self) -> io::Result<f64> {
-        self.get_passthrough().read_f64::<T>()
-    }
-
-    #[inline(always)]
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
-        self.get_passthrough().read_exact(buf)
-    }
-
     #[inline(always)]
     fn read_fstring(&mut self) -> Result<Option<String>, Error> {
         self.get_passthrough().read_fstring()

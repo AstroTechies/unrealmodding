@@ -1,6 +1,6 @@
 //! Structs related to movies
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{

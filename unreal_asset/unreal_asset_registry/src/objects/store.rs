@@ -2,7 +2,7 @@
 
 use std::io::SeekFrom;
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, LE};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use unreal_asset_base::{reader::ArchiveReader, types::FName, Error};

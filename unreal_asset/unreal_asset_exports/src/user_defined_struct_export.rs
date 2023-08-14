@@ -1,6 +1,6 @@
 //! User defined struct export
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     flags::EStructFlags,

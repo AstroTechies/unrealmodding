@@ -1,5 +1,5 @@
 //! Asset registry NameTableWriter
-use std::io::{self, SeekFrom};
+use std::io::{self, Seek, SeekFrom, Write};
 
 use unreal_asset_base::{
     containers::{IndexedMap, NameMap, SharedResource},
@@ -57,10 +57,6 @@ impl<'writer, Writer: ArchiveWriter> ArchiveTrait for NameTableWriter<'writer, W
         self.writer.set_position(pos)
     }
 
-    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
-        self.writer.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.name_map.clone()
     }
@@ -106,5 +102,21 @@ impl<'writer, Writer: ArchiveWriter> PassthroughArchiveWriter for NameTableWrite
     type Passthrough = Writer;
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
         self.writer
+    }
+}
+
+impl<'writer, Writer: ArchiveWriter> Write for NameTableWriter<'writer, Writer> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.writer.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
+    }
+}
+
+impl<'writer, Writer: ArchiveWriter> Seek for NameTableWriter<'writer, Writer> {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        self.writer.seek(pos)
     }
 }

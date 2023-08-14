@@ -2,7 +2,7 @@
 
 use std::io::Cursor;
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use unreal_asset_base::{

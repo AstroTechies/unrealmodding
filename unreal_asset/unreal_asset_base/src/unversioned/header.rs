@@ -1,7 +1,7 @@
 //! Unversioned .usmap header
 
 use bitvec::prelude::*;
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use crate::reader::{ArchiveReader, ArchiveWriter};
 use crate::Error;

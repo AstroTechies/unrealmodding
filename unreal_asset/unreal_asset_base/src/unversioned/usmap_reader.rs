@@ -1,6 +1,8 @@
 //! Usmap file reader
 
-use byteorder::LE;
+use std::io::{Read, Seek};
+
+use byteorder::{ReadBytesExt, LE};
 
 use crate::{
     containers::name_map::NameMap,
@@ -85,10 +87,6 @@ impl<'parent_reader, 'asset, R: ArchiveReader> ArchiveTrait
         self.parent_reader.position()
     }
 
-    fn seek(&mut self, style: std::io::SeekFrom) -> std::io::Result<u64> {
-        self.parent_reader.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.parent_reader.get_name_map()
     }
@@ -137,5 +135,17 @@ impl<'parent_reader, 'asset, R: ArchiveReader> PassthroughArchiveReader
 
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
         self.parent_reader
+    }
+}
+
+impl<'parent_reader, 'asset, R: ArchiveReader> Read for UsmapReader<'parent_reader, 'asset, R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.parent_reader.read(buf)
+    }
+}
+
+impl<'parent_reader, 'asset, R: ArchiveReader> Seek for UsmapReader<'parent_reader, 'asset, R> {
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        self.parent_reader.seek(pos)
     }
 }

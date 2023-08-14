@@ -1,5 +1,7 @@
 //! Shallow property
 
+use byteorder::WriteBytesExt;
+
 use crate::reader::ArchiveWriter;
 use crate::unversioned::usmap_writer::UsmapWriter;
 use crate::Error;

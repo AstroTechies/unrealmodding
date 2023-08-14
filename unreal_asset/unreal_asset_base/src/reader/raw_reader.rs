@@ -2,8 +2,6 @@
 
 use std::io::{self, Read, Seek};
 
-use byteorder::ReadBytesExt;
-
 use unreal_helpers::{read_ext::read_fstring_len, Guid, UnrealReadExt};
 
 use crate::containers::{Chain, IndexedMap, NameMap, SharedResource};
@@ -80,10 +78,6 @@ impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
         self.cursor.stream_position().unwrap_or_default()
     }
 
-    fn seek(&mut self, style: io::SeekFrom) -> io::Result<u64> {
-        self.cursor.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.name_map.clone()
     }
@@ -126,50 +120,6 @@ impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
 }
 
 impl<C: Read + Seek> ArchiveReader for RawReader<C> {
-    fn read_u8(&mut self) -> io::Result<u8> {
-        self.cursor.read_u8()
-    }
-
-    fn read_i8(&mut self) -> io::Result<i8> {
-        self.cursor.read_i8()
-    }
-
-    fn read_u16<T: byteorder::ByteOrder>(&mut self) -> io::Result<u16> {
-        self.cursor.read_u16::<T>()
-    }
-
-    fn read_i16<T: byteorder::ByteOrder>(&mut self) -> io::Result<i16> {
-        self.cursor.read_i16::<T>()
-    }
-
-    fn read_u32<T: byteorder::ByteOrder>(&mut self) -> io::Result<u32> {
-        self.cursor.read_u32::<T>()
-    }
-
-    fn read_i32<T: byteorder::ByteOrder>(&mut self) -> io::Result<i32> {
-        self.cursor.read_i32::<T>()
-    }
-
-    fn read_u64<T: byteorder::ByteOrder>(&mut self) -> io::Result<u64> {
-        self.cursor.read_u64::<T>()
-    }
-
-    fn read_i64<T: byteorder::ByteOrder>(&mut self) -> io::Result<i64> {
-        self.cursor.read_i64::<T>()
-    }
-
-    fn read_f32<T: byteorder::ByteOrder>(&mut self) -> io::Result<f32> {
-        self.cursor.read_f32::<T>()
-    }
-
-    fn read_f64<T: byteorder::ByteOrder>(&mut self) -> io::Result<f64> {
-        self.cursor.read_f64::<T>()
-    }
-
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
-        self.cursor.read_exact(buf)
-    }
-
     fn read_fstring(&mut self) -> Result<Option<String>, Error> {
         Ok(self.cursor.read_fstring()?)
     }
@@ -195,5 +145,19 @@ impl<C: Read + Seek> ArchiveReader for RawReader<C> {
 
     fn read_bool(&mut self) -> io::Result<bool> {
         self.cursor.read_bool()
+    }
+}
+
+impl<C: Read + Seek> Read for RawReader<C> {
+    #[inline(always)]
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.cursor.read(buf)
+    }
+}
+
+impl<C: Read + Seek> Seek for RawReader<C> {
+    #[inline(always)]
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.cursor.seek(pos)
     }
 }

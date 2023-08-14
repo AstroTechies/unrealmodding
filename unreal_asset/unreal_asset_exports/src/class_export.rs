@@ -3,7 +3,7 @@
 use std::io::SeekFrom;
 use std::mem::size_of;
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     containers::IndexedMap,

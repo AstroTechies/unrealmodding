@@ -2,8 +2,6 @@
 
 use std::io::{self, Seek, Write};
 
-use byteorder::WriteBytesExt;
-
 use unreal_helpers::{Guid, UnrealWriteExt};
 
 use crate::containers::{IndexedMap, NameMap, SharedResource};
@@ -80,10 +78,6 @@ impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
         self.cursor.stream_position().unwrap_or_default()
     }
 
-    fn seek(&mut self, style: io::SeekFrom) -> io::Result<u64> {
-        self.cursor.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.name_map.clone()
     }
@@ -126,50 +120,6 @@ impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
 }
 
 impl<'cursor, W: Write + Seek> ArchiveWriter for RawWriter<'cursor, W> {
-    fn write_u8(&mut self, value: u8) -> io::Result<()> {
-        self.cursor.write_u8(value)
-    }
-
-    fn write_i8(&mut self, value: i8) -> io::Result<()> {
-        self.cursor.write_i8(value)
-    }
-
-    fn write_u16<T: byteorder::ByteOrder>(&mut self, value: u16) -> io::Result<()> {
-        self.cursor.write_u16::<T>(value)
-    }
-
-    fn write_i16<T: byteorder::ByteOrder>(&mut self, value: i16) -> io::Result<()> {
-        self.cursor.write_i16::<T>(value)
-    }
-
-    fn write_u32<T: byteorder::ByteOrder>(&mut self, value: u32) -> io::Result<()> {
-        self.cursor.write_u32::<T>(value)
-    }
-
-    fn write_i32<T: byteorder::ByteOrder>(&mut self, value: i32) -> io::Result<()> {
-        self.cursor.write_i32::<T>(value)
-    }
-
-    fn write_u64<T: byteorder::ByteOrder>(&mut self, value: u64) -> io::Result<()> {
-        self.cursor.write_u64::<T>(value)
-    }
-
-    fn write_i64<T: byteorder::ByteOrder>(&mut self, value: i64) -> io::Result<()> {
-        self.cursor.write_i64::<T>(value)
-    }
-
-    fn write_f32<T: byteorder::ByteOrder>(&mut self, value: f32) -> io::Result<()> {
-        self.cursor.write_f32::<T>(value)
-    }
-
-    fn write_f64<T: byteorder::ByteOrder>(&mut self, value: f64) -> io::Result<()> {
-        self.cursor.write_f64::<T>(value)
-    }
-
-    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.cursor.write_all(buf)
-    }
-
     fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
         Ok(self.cursor.write_fstring(value)?)
     }
@@ -180,5 +130,21 @@ impl<'cursor, W: Write + Seek> ArchiveWriter for RawWriter<'cursor, W> {
 
     fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.cursor.write_bool(value)
+    }
+}
+
+impl<'cursor, W: Write + Seek> Write for RawWriter<'cursor, W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.cursor.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.cursor.flush()
+    }
+}
+
+impl<'cursor, W: Write + Seek> Seek for RawWriter<'cursor, W> {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.cursor.seek(pos)
     }
 }

@@ -2,7 +2,7 @@
 
 use std::io::SeekFrom;
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     custom_version::FCoreObjectVersion,

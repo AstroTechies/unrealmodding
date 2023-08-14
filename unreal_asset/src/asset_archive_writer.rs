@@ -1,5 +1,7 @@
 //! Archive that can be used to write an asset
 
+use std::io::{Seek, Write};
+
 use unreal_asset_base::{
     cast,
     containers::{IndexedMap, NameMap, SharedResource},
@@ -80,10 +82,6 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
         self.writer.set_position(pos)
     }
 
-    fn seek(&mut self, style: std::io::SeekFrom) -> std::io::Result<u64> {
-        self.writer.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.name_map.clone()
     }
@@ -148,5 +146,25 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> PassthroughArchiveWrit
     #[inline(always)]
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
         self.writer
+    }
+}
+
+impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> Write
+    for AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
+{
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.writer.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.writer.flush()
+    }
+}
+
+impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> Seek
+    for AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
+{
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        self.writer.seek(pos)
     }
 }

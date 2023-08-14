@@ -1,7 +1,7 @@
 //! Asset bundle depends node
 
 use bitvec::{order::Lsb0, prelude::BitVec};
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use lazy_static::lazy_static;
 
 use unreal_helpers::BitVecExt;

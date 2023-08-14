@@ -1,7 +1,7 @@
 //! Archive property trait
 
 use std::fmt::Display;
-use std::io::{self, SeekFrom};
+use std::io::{self, Seek, SeekFrom};
 
 use crate::containers::{IndexedMap, NameMap, SharedResource};
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
@@ -36,7 +36,7 @@ impl Display for ArchiveType {
 }
 
 /// A trait that allows accessing data about the archive that is currently being read
-pub trait ArchiveTrait {
+pub trait ArchiveTrait: Seek {
     /// Get archive type
     fn get_archive_type(&self) -> ArchiveType;
 
@@ -77,8 +77,6 @@ pub trait ArchiveTrait {
         self.seek(SeekFrom::Start(pos))?;
         Ok(())
     }
-    /// Seek
-    fn seek(&mut self, style: SeekFrom) -> io::Result<u64>;
 
     /// Add a string slice to this archive as an `FName`, `FName` number will be 0
     #[inline(always)]

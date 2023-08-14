@@ -1,6 +1,6 @@
 //! Asset registry bundle d ata
 
-use byteorder::LE;
+use byteorder::{WriteBytesExt, LE};
 
 use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},

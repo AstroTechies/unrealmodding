@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use byteorder::LE;
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use lazy_static::lazy_static;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 

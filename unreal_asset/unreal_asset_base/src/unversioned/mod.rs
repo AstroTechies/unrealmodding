@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::io::{Cursor, Read, Seek};
 
 use bitflags::bitflags;
-use byteorder::LE;
+use byteorder::{ReadBytesExt, LE};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::containers::{Chain, IndexedMap, NameMap};

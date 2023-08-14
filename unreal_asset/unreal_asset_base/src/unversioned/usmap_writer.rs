@@ -1,5 +1,7 @@
 //! Usmap file writer
 
+use std::io::{Seek, Write};
+
 use crate::{
     containers::{indexed_map::IndexedMap, name_map::NameMap, shared_resource::SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
@@ -63,10 +65,6 @@ impl<'parent_writer, 'asset, W: ArchiveWriter> ArchiveTrait
         self.parent_writer.position()
     }
 
-    fn seek(&mut self, style: std::io::SeekFrom) -> std::io::Result<u64> {
-        self.parent_writer.seek(style)
-    }
-
     fn get_name_map(&self) -> SharedResource<NameMap> {
         self.parent_writer.get_name_map()
     }
@@ -115,5 +113,21 @@ impl<'parent_writer, 'asset, W: ArchiveWriter> PassthroughArchiveWriter
 
     fn get_passthrough(&mut self) -> &mut Self::Passthrough {
         self.parent_writer
+    }
+}
+
+impl<'parent_writer, 'asset, W: ArchiveWriter> Write for UsmapWriter<'parent_writer, 'asset, W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.parent_writer.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.parent_writer.flush()
+    }
+}
+
+impl<'parent_writer, 'asset, W: ArchiveWriter> Seek for UsmapWriter<'parent_writer, 'asset, W> {
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        self.parent_writer.seek(pos)
     }
 }
