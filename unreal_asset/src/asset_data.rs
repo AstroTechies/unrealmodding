@@ -158,17 +158,7 @@ impl<Index: PackageIndexTrait> AssetData<Index> {
     where
         T: CustomVersionTrait + Into<i32>,
     {
-        self.summary
-            .custom_versions
-            .iter()
-            .find(|e| {
-                e.friendly_name
-                    .as_ref()
-                    .map(|name| name == T::FRIENDLY_NAME)
-                    .unwrap_or(false)
-            })
-            .cloned()
-            .unwrap_or_else(|| CustomVersion::new(T::GUID, 0))
+        self.summary.get_custom_version::<T>()
     }
 
     /// Get engine version

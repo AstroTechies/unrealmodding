@@ -261,6 +261,9 @@ pub enum IoStoreError {
     /// Tried to get a non-existent file from an `IoStoreFileProvider`
     #[error("Tried to get a non-existent file {0}")]
     NoFile(Box<str>),
+    /// Tried to get a non-existent IoStore chunk
+    #[error("Chunk with name {0} doesn't exist")]
+    NoChunk(Box<str>),
 
     /// No encryption key was provided for an encrypted file
     #[error("No encryption key was provided for an encrypted file")]
@@ -284,6 +287,11 @@ impl IoStoreError {
     /// Create a new `InvalidTocHeaderSize` error
     pub fn invalid_toc_header_size(expected: u32, got: u32) -> Self {
         IoStoreError::InvalidTocHeaderSize(expected, got)
+    }
+
+    /// Create a new `NoChunk` error
+    pub fn no_chunk(name: &str) -> Self {
+        IoStoreError::NoChunk(name.to_string().into_boxed_str())
     }
 }
 

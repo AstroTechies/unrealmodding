@@ -1599,6 +1599,7 @@ impl<C: Read + Seek> Debug for Asset<C> {
             .field("engine_version", &self.asset_data.get_engine_version())
             .field("engine_version_recorded", &self.engine_version_recorded)
             .field("engine_version_compatible", &self.engine_version_compatible)
+            .field("asset_data", &self.asset_data)
             .field("chunk_ids", &self.chunk_ids)
             .field("asset_data", &self.asset_data)
             .field("package_source", &self.package_source)

@@ -188,6 +188,16 @@ pub fn cityhash64_to_lower(string: &str) -> u64 {
     cityhash64(aligned)
 }
 
+/// Generates a case preserving hash for a string
+pub fn case_preserving_hash(string: &str) -> u16 {
+    (generate_crc32(string, 0) & 0xffff) as u16
+}
+
+/// Generates a non case preserving hash for a string
+pub fn non_case_preserving_hash(string: &str) -> u16 {
+    (generate_hash_deprecated(string) & 0xffff) as u16
+}
+
 fn to_upper(character: u16) -> u16 {
     if character.saturating_sub('a' as u16) < 26u16 {
         (character as u8 as char).to_uppercase().next().unwrap() as u16

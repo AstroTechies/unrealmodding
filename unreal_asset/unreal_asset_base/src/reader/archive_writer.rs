@@ -4,6 +4,8 @@ use std::io::{self, Write};
 
 use byteorder::{WriteBytesExt, LE};
 
+use crate::custom_version::CustomVersion;
+use crate::enums::ECustomVersionSerializationFormat;
 use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
 use crate::reader::ArchiveTrait;
@@ -40,6 +42,34 @@ pub trait ArchiveWriter<Index: PackageIndexTrait>: ArchiveTrait<Index> + Write {
                 Err(FNameError::dummy_serialize(value, *number).into())
             }
         }
+    }
+
+    /// Write custom version container
+    fn write_custom_version_container(
+        &mut self,
+        format: ECustomVersionSerializationFormat,
+        container: &[CustomVersion],
+    ) -> Result<(), Error> {
+        match format {
+            ECustomVersionSerializationFormat::Unknown => {
+                return Err(Error::invalid_file(String::from(
+                    "Cannot read a custom version container with an unknown serialization format",
+                )))
+            }
+            ECustomVersionSerializationFormat::Enums => {
+                return Err(Error::unimplemented(String::from(
+                    "Custom version container with Enums serialization format is unimplemented",
+                )))
+            }
+            _ => {}
+        }
+
+        for version in container {
+            self.write_guid(&version.guid)?;
+            self.write_i32::<LE>(version.version)?;
+        }
+
+        Ok(())
     }
 
     /// Write an FString

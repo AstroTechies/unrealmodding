@@ -221,6 +221,9 @@ pub trait ArchiveReader<Index: PackageIndexTrait>: ArchiveTrait<Index> + Read {
         &mut self,
         serialized_name_header: SerializedNameHeader,
     ) -> Result<Option<String>, Error>;
+    /// Read an FString with the specified length and without a null terminator
+    fn read_fstring_len_noterm(&mut self, len: i32, is_wide: bool)
+        -> Result<Option<String>, Error>;
     /// Read a guid.
     fn read_guid(&mut self) -> io::Result<Guid>;
     /// Read `bool`
@@ -248,6 +251,15 @@ macro_rules! passthrough_archive_reader {
         #[inline(always)]
         fn read_guid(&mut self) -> std::io::Result<unreal_helpers::Guid> {
             self.$passthrough.read_guid()
+        }
+
+        #[inline(always)]
+        fn read_fstring_len_noterm(
+            &mut self,
+            len: i32,
+            is_wide: bool,
+        ) -> Result<Option<String>, Error> {
+            self.$passthrough.read_fstring_len_noterm(len, is_wide)
         }
 
         #[inline(always)]

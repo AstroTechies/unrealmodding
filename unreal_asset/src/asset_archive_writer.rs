@@ -7,7 +7,6 @@ use unreal_asset_base::{
     containers::{IndexedMap, NameMap, SharedResource},
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::EngineVersion,
-    flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
     passthrough_archive_writer,
     reader::{ArchiveTrait, ArchiveType, ArchiveWriter},
@@ -80,10 +79,7 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>> ArchiveT
     }
 
     fn has_unversioned_properties(&self) -> bool {
-        self.asset_data
-            .summary
-            .package_flags
-            .contains(EPackageFlags::PKG_UNVERSIONED_PROPERTIES)
+        self.asset_data.has_unversioned_properties()
     }
 
     fn use_event_driven_loader(&self) -> bool {

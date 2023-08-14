@@ -3,6 +3,7 @@
 use std::io::{self, Read, Seek};
 use std::marker::PhantomData;
 
+use unreal_helpers::read_ext::read_fstring_len_noterm;
 use unreal_helpers::{read_ext::read_fstring_len, Guid, UnrealReadExt};
 
 use crate::containers::{Chain, IndexedMap, NameMap, SharedResource};
@@ -146,6 +147,14 @@ impl<Index: PackageIndexTrait, C: Read + Seek> ArchiveReader<Index> for RawReade
             serialized_name_header.len,
             serialized_name_header.is_wide,
         )?)
+    }
+
+    fn read_fstring_len_noterm(
+        &mut self,
+        len: i32,
+        is_wide: bool,
+    ) -> Result<Option<String>, Error> {
+        Ok(read_fstring_len_noterm(&mut self.cursor, len, is_wide)?)
     }
 
     fn read_guid(&mut self) -> io::Result<Guid> {
