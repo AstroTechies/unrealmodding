@@ -16,8 +16,6 @@ pub struct MeshToMeshVertData {
     pub source_mesh_vert_indices: Vec<u16>,
     /// Weight
     pub weight: OrderedFloat<f32>,
-    /// Dummy for alignment
-    pub padding: u32,
 }
 
 impl MeshToMeshVertData {
@@ -62,7 +60,7 @@ impl MeshToMeshVertData {
         }
 
         let weight = asset.read_f32::<LE>()?;
-        let padding = asset.read_u32::<LE>()?;
+        asset.read_u32::<LE>()?;
 
         Ok(MeshToMeshVertData {
             position_bary_coords_and_dist,
@@ -70,7 +68,6 @@ impl MeshToMeshVertData {
             tangent_bary_coords_and_dist,
             source_mesh_vert_indices,
             weight: OrderedFloat(weight),
-            padding,
         })
     }
 
@@ -90,7 +87,7 @@ impl MeshToMeshVertData {
 
             asset.write_f32::<LE>(self.weight.0)?;
             size += size_of::<f32>();
-            asset.write_u32::<LE>(self.padding)?;
+            asset.write_u32::<LE>(0)?;
             size += size_of::<u32>();
         }
 

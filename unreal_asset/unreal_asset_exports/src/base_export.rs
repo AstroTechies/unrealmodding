@@ -96,10 +96,6 @@ pub struct BaseExport {
     /// Dependencies that should be created before this export is created
     #[container_ignore]
     pub create_before_create_dependencies: Vec<PackageIndex>,
-
-    /// Padding
-    #[container_ignore]
-    pub padding: [u8; 3],
 }
 
 impl BaseExport {
