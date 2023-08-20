@@ -129,7 +129,6 @@ where
 ///
 /// Insertion time is O(1)
 /// Deletion time is O(n) worst-case
-#[derive(Default)]
 pub struct IndexedMap<K, V>
 where
     K: Eq + Hash,
@@ -138,6 +137,12 @@ where
     pub key_map: rustc_hash::FxHashMap<KeyItem<K>, usize>,
     pub index_map: BTreeMap<usize, usize>,
     pub index_iter_map: Vec<usize>,
+}
+
+impl<K: Eq + Hash, V> Default for IndexedMap<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct IndexedMapIndexIterator<'map, K, V>

@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Empty unversioned property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct EmptyProperty {
     /// Property type name
     pub type_name: FName,

@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Rich curve extrapolation
-#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, IntoPrimitive, TryFromPrimitive, Hash)]
 #[repr(u8)]
 pub enum RichCurveExtrapolation {
     /// Cycle
@@ -17,13 +17,14 @@ pub enum RichCurveExtrapolation {
     /// Constant
     Constant = 4,
     /// None
+    #[default]
     None = 5,
     /// Max
     MAX = 6,
 }
 
 /// Rich curve interpolation mode
-#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, IntoPrimitive, TryFromPrimitive, Hash)]
 #[repr(i8)]
 pub enum RichCurveInterpMode {
     /// Linear
@@ -33,11 +34,12 @@ pub enum RichCurveInterpMode {
     /// Cubic
     Cubic,
     /// None
+    #[default]
     None,
 }
 
 /// Rich curve tangent mode
-#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, IntoPrimitive, TryFromPrimitive, Hash)]
 #[repr(i8)]
 pub enum RichCurveTangentMode {
     /// Auto
@@ -47,14 +49,16 @@ pub enum RichCurveTangentMode {
     /// Break
     Break,
     /// None
+    #[default]
     None,
 }
 
 /// Rich curve tangent weight mode
-#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, IntoPrimitive, TryFromPrimitive, Hash)]
 #[repr(i8)]
 pub enum RichCurveTangentWeightMode {
     /// None
+    #[default]
     WeightedNone,
     /// Arrive
     WeightedArrive,
@@ -65,7 +69,7 @@ pub enum RichCurveTangentWeightMode {
 }
 
 /// Rich curve key property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct RichCurveKeyProperty {
     /// Name
     pub name: FName,

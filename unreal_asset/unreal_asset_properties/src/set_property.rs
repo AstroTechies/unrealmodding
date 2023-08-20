@@ -4,7 +4,7 @@ use crate::array_property::ArrayProperty;
 use crate::property_prelude::*;
 
 /// Set property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct SetProperty {
     /// Name
     pub name: FName,

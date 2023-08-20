@@ -6,7 +6,7 @@ use super::movie_scene_sequence_id_property::MovieSceneSequenceId;
 use super::movie_scene_track_identifier_property::MovieSceneTrackIdentifier;
 
 /// Movie scene evaluation key
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationKey {
     /// Movie sequence id
     pub sequence_id: MovieSceneSequenceId,
@@ -41,7 +41,7 @@ impl MovieSceneEvaluationKey {
 }
 
 /// Movie scene evaluation key property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationKeyProperty {
     /// Name
     pub name: FName,

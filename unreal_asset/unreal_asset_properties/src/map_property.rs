@@ -7,7 +7,7 @@ use unreal_asset_base::containers::indexed_map::IndexedMap;
 use crate::property_prelude::*;
 
 /// Map property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq)]
 pub struct MapProperty {
     /// Name
     pub name: FName,

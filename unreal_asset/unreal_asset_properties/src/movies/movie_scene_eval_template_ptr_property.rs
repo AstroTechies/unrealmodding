@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Movie scene evaluation template pointer property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvalTemplatePtrProperty {
     /// Name
     pub name: FName,

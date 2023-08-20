@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Time span property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct TimeSpanProperty {
     /// Name
     pub name: FName,
@@ -19,7 +19,7 @@ pub struct TimeSpanProperty {
 impl_property_data_trait!(TimeSpanProperty);
 
 /// Date time property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct DateTimeProperty {
     /// Name
     pub name: FName,

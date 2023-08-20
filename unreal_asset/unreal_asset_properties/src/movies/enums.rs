@@ -192,9 +192,10 @@ pub enum EMovieSceneCompletionMode {
 /// Enum MovieScene.ESectionEvaluationFlags
 #[repr(u8)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 pub enum ESectionEvaluationFlags {
     /// None
+    #[default]
     None = 0,
     /// Pre-roll
     PreRoll = 1,

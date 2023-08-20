@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Movie scene event parameters
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParameters {
     /// Struct type
     pub struct_type: SoftObjectPath,
@@ -38,7 +38,7 @@ impl MovieSceneEventParameters {
 }
 
 /// Movie scene event parameters property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEventParametersProperty {
     /// Name
     pub name: FName,

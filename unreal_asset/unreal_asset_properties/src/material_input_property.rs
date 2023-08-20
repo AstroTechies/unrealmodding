@@ -5,7 +5,7 @@ use crate::property_prelude::*;
 use crate::vector_property::{Vector2DProperty, VectorProperty};
 
 /// Material expression
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MaterialExpression {
     /// Name
     pub name: FName,
@@ -20,7 +20,7 @@ pub struct MaterialExpression {
 }
 
 /// Color material input property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ColorMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -38,7 +38,7 @@ pub struct ColorMaterialInputProperty {
 impl_property_data_trait!(ColorMaterialInputProperty);
 
 /// Scalar material input property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ScalarMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -56,7 +56,7 @@ pub struct ScalarMaterialInputProperty {
 impl_property_data_trait!(ScalarMaterialInputProperty);
 
 /// Shading model material input property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ShadingModelMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -74,7 +74,7 @@ pub struct ShadingModelMaterialInputProperty {
 impl_property_data_trait!(ShadingModelMaterialInputProperty);
 
 /// Vector material input property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct VectorMaterialInputProperty {
     /// Name
     pub name: FName,
@@ -92,7 +92,7 @@ pub struct VectorMaterialInputProperty {
 impl_property_data_trait!(VectorMaterialInputProperty);
 
 /// Vector2 material input property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Vector2MaterialInputProperty {
     /// Name
     pub name: FName,
@@ -110,7 +110,7 @@ pub struct Vector2MaterialInputProperty {
 impl_property_data_trait!(Vector2MaterialInputProperty);
 
 /// Expression input property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ExpressionInputProperty {
     /// Name
     pub name: FName,
@@ -126,7 +126,7 @@ pub struct ExpressionInputProperty {
 impl_property_data_trait!(ExpressionInputProperty);
 
 /// Material attributes input property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MaterialAttributesInputProperty {
     /// Name
     pub name: FName,

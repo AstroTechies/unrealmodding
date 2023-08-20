@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Niagara variable property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct NiagaraVariableProperty {
     /// Base struct property
     pub struct_property: StructProperty,
@@ -122,7 +122,7 @@ impl PropertyTrait for NiagaraVariableProperty {
 }
 
 /// Niagara variable with offset property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct NiagaraVariableWithOffsetProperty {
     /// Variable
     pub niagara_variable: NiagaraVariableProperty,

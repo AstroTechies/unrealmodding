@@ -5,7 +5,7 @@ use unreal_asset_base::types::vector::{Plane, Vector, Vector2, Vector4};
 use crate::property_prelude::*;
 
 /// Vector property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct VectorProperty {
     /// Name
     pub name: FName,
@@ -22,7 +22,7 @@ pub struct VectorProperty {
 impl_property_data_trait!(VectorProperty);
 
 /// Int point property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct IntPointProperty {
     /// Name
     pub name: FName,
@@ -39,7 +39,7 @@ pub struct IntPointProperty {
 impl_property_data_trait!(IntPointProperty);
 
 /// Vector4 property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Vector4Property {
     /// Name
     pub name: FName,
@@ -56,7 +56,7 @@ pub struct Vector4Property {
 impl_property_data_trait!(Vector4Property);
 
 /// Vector2D property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Vector2DProperty {
     /// Name
     pub name: FName,
@@ -73,7 +73,7 @@ pub struct Vector2DProperty {
 impl_property_data_trait!(Vector2DProperty);
 
 /// Quaternion property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct QuatProperty {
     /// Name
     pub name: FName,
@@ -90,7 +90,7 @@ pub struct QuatProperty {
 impl_property_data_trait!(QuatProperty);
 
 /// Rotator property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct RotatorProperty {
     /// Name
     pub name: FName,
@@ -107,7 +107,7 @@ pub struct RotatorProperty {
 impl_property_data_trait!(RotatorProperty);
 
 /// Box property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct BoxProperty {
     /// Name
     pub name: FName,
@@ -127,7 +127,7 @@ pub struct BoxProperty {
 impl_property_data_trait!(BoxProperty);
 
 /// Box2D property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Box2DProperty {
     /// Name
     pub name: FName,
@@ -147,7 +147,7 @@ pub struct Box2DProperty {
 impl_property_data_trait!(Box2DProperty);
 
 /// Plane property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct PlaneProperty {
     /// Name
     pub name: FName,

@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Movie scene sequence identifier
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSequenceId {
     /// Value
     pub value: u32,
@@ -25,7 +25,7 @@ impl MovieSceneSequenceId {
 }
 
 /// Movie scene sequence identifier property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSequenceIdProperty {
     /// Name
     pub name: FName,

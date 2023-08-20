@@ -5,7 +5,7 @@ use unreal_asset_base::types::movie::FFrameNumberRange;
 use crate::property_prelude::*;
 
 /// Movie scene segment identifier
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentIdentifier {
     /// Identifier index
     pub identifier_index: i32,
@@ -27,7 +27,7 @@ impl MovieSceneSegmentIdentifier {
 }
 
 /// Movie scene segment
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegment {
     /// Name
     pub name: FName,
@@ -116,7 +116,7 @@ impl MovieSceneSegment {
 }
 
 /// Movie scene segment property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentProperty {
     /// Name
     pub name: FName,
@@ -172,7 +172,7 @@ impl PropertyTrait for MovieSceneSegmentProperty {
 }
 
 /// Movie scene segment identifier property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSegmentIdentifierProperty {
     /// Name
     pub name: FName,

@@ -5,7 +5,7 @@ use crate::property_prelude::*;
 use super::movie_scene_evaluation::TMovieSceneEvaluationTree;
 
 /// Section evaluation tree
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct SectionEvaluationTree {
     /// Evaluation tree
     pub tree: TMovieSceneEvaluationTree<Vec<Property>>,
@@ -66,7 +66,7 @@ impl SectionEvaluationTree {
 }
 
 /// Section evaluation data tree property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct SectionEvaluationDataTreeProperty {
     /// Name
     pub name: FName,

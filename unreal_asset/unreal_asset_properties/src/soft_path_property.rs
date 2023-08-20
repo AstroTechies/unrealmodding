@@ -11,6 +11,12 @@ pub enum SoftObjectPathPropertyValue {
     New(SoftObjectPath),
 }
 
+impl Default for SoftObjectPathPropertyValue {
+    fn default() -> Self {
+        Self::New(SoftObjectPath::default())
+    }
+}
+
 impl SoftObjectPathPropertyValue {
     /// Create a new  `SoftObjectPathPropertyValue` instance
     pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
@@ -36,7 +42,7 @@ impl SoftObjectPathPropertyValue {
 }
 
 /// Soft asset path property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct SoftAssetPathProperty {
     /// Name
     pub name: FName,

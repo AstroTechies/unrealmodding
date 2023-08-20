@@ -4,7 +4,7 @@ use crate::property_prelude::*;
 use crate::vector_property::Vector4Property;
 
 /// Mesh to mesh vertex data
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MeshToMeshVertData {
     /// Position barycentric coords and distance
     pub position_bary_coords_and_dist: Vector4Property,
@@ -96,7 +96,7 @@ impl MeshToMeshVertData {
 }
 
 /// Cloth lod data property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ClothLodDataProperty {
     /// Base struct property
     pub struct_property: StructProperty,

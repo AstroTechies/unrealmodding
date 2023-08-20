@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Movie scene track implementation pointer property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackImplementationPtrProperty {
     /// Name
     pub name: FName,

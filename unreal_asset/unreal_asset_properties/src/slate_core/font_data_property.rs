@@ -5,10 +5,11 @@ use unreal_asset_base::custom_version::FEditorObjectVersion;
 use crate::property_prelude::*;
 
 /// Font hinting
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, IntoPrimitive, TryFromPrimitive, Hash)]
 #[repr(u8)]
 pub enum EFontHinting {
     /// Use the default hinting specified in the font.
+    #[default]
     Default,
     /// Force the use of an automatic hinting algorithm.
     Auto,
@@ -21,7 +22,7 @@ pub enum EFontHinting {
 }
 
 /// Font loading policy
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, IntoPrimitive, TryFromPrimitive, Hash)]
 #[repr(u8)]
 pub enum EFontLoadingPolicy {
     /// Lazy load the entire font into memory. This will consume more memory than Streaming, however there will be zero file-IO when rendering glyphs within the font, although the initial load may cause a hitch.
@@ -29,11 +30,12 @@ pub enum EFontLoadingPolicy {
     /// Stream the font from disk. This will consume less memory than LazyLoad or Inline, however there will be file-IO when rendering glyphs, which may cause hitches under certain circumstances or on certain platforms.
     Stream,
     /// Embed the font data within the asset. This will consume more memory than Streaming, however it is guaranteed to be hitch free (only valid for font data within a Font Face asset).
+    #[default]
     Inline,
 }
 
 /// Font data
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FontData {
     /// UObject
     #[container_ignore]
@@ -122,7 +124,7 @@ impl FontData {
 }
 
 /// Font data property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FontDataProperty {
     /// Name
     pub name: FName,

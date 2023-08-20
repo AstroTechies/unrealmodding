@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Delegate
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Delegate {
     /// Delegate object
     #[container_ignore]
@@ -20,7 +20,7 @@ impl Delegate {
 }
 
 /// Delegate property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct DelegateProperty {
     /// Name
     pub name: FName,
@@ -79,7 +79,7 @@ impl PropertyTrait for DelegateProperty {
 macro_rules! impl_multicast {
     ($property_name:ident) => {
         /// $property_name
-        #[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+        #[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
         pub struct $property_name {
             /// Name
             pub name: FName,

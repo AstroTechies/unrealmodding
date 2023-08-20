@@ -3,10 +3,11 @@
 use crate::property_prelude::*;
 
 /// View target blend function
-#[derive(Debug, IntoPrimitive, TryFromPrimitive, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ViewTargetBlendFunction {
     /// Camera does a simple linear interpolation.
+    #[default]
     VtBlendLinear,
     /// Camera has a slight ease in and ease out, but amount of ease cannot be tweaked.
     VtBlendCubic,
@@ -21,7 +22,7 @@ pub enum ViewTargetBlendFunction {
 }
 
 /// View target blend params property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct ViewTargetBlendParamsProperty {
     /// Name
     pub name: FName,

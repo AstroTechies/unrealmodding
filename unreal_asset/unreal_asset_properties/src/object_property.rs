@@ -5,7 +5,7 @@ use unreal_asset_base::object_version::ObjectVersionUE5;
 use crate::property_prelude::*;
 
 /// Object property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct ObjectProperty {
     /// Name
     pub name: FName,
@@ -22,7 +22,7 @@ pub struct ObjectProperty {
 impl_property_data_trait!(ObjectProperty);
 
 /// Asset object property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct AssetObjectProperty {
     /// Name
     pub name: FName,
@@ -38,7 +38,7 @@ pub struct AssetObjectProperty {
 impl_property_data_trait!(AssetObjectProperty);
 
 /// Top level asset path
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct TopLevelAssetPath {
     /// Package name that contains the asset e.g. /Some/Path/Package
     /// Only present in 5.1 and higher
@@ -92,7 +92,7 @@ impl TopLevelAssetPath {
 }
 
 /// Soft object path
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct SoftObjectPath {
     /// Asset path
     pub asset_path: TopLevelAssetPath,
@@ -122,7 +122,7 @@ impl SoftObjectPath {
 }
 
 /// Soft object property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct SoftObjectProperty {
     /// Name
     pub name: FName,

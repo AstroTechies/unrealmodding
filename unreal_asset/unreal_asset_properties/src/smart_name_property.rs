@@ -5,7 +5,7 @@ use unreal_asset_base::custom_version::FAnimPhysObjectVersion;
 use crate::property_prelude::*;
 
 /// Smart name property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct SmartNameProperty {
     /// Name
     pub name: FName,

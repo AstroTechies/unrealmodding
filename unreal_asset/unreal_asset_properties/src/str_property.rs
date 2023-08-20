@@ -4,11 +4,21 @@ use crate::property_prelude::*;
 
 /// Text history type
 #[derive(
-    FNameContainer, Debug, Hash, Copy, Clone, PartialEq, Eq, IntoPrimitive, TryFromPrimitive,
+    FNameContainer,
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    IntoPrimitive,
+    TryFromPrimitive,
+    Hash,
 )]
 #[repr(i8)]
 pub enum TextHistoryType {
     /// None
+    #[default]
     None = -1,
     /// Base
     Base = 0,
@@ -40,14 +50,8 @@ pub enum TextHistoryType {
     RawText,
 }
 
-impl Default for TextHistoryType {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
 /// String property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct StrProperty {
     /// Name
     pub name: FName,
@@ -63,7 +67,7 @@ pub struct StrProperty {
 impl_property_data_trait!(StrProperty);
 
 /// Text property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TextProperty {
     /// Name
     pub name: FName,
@@ -89,7 +93,7 @@ pub struct TextProperty {
 impl_property_data_trait!(TextProperty);
 
 /// Name property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NameProperty {
     /// Name
     pub name: FName,

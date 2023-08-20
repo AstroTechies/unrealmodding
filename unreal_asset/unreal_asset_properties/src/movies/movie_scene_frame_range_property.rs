@@ -5,7 +5,7 @@ use unreal_asset_base::types::movie::ERangeBoundTypes;
 use crate::property_prelude::*;
 
 /// Int32 value bound by a range
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Int32RangeBound {
     /// Type
     pub ty: ERangeBoundTypes,
@@ -32,7 +32,7 @@ impl Int32RangeBound {
 }
 
 /// Movie scene frame range property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneFrameRangeProperty {
     /// Name
     pub name: FName,

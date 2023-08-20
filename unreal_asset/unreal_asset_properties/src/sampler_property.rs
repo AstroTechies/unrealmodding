@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Weighted random sampler property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct WeightedRandomSamplerProperty {
     /// Name
     pub name: FName,
@@ -23,7 +23,7 @@ pub struct WeightedRandomSamplerProperty {
 impl_property_data_trait!(WeightedRandomSamplerProperty);
 
 /// Skeletal mesh area weighted triangle sampler
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct SkeletalMeshAreaWeightedTriangleSampler {
     /// Name
     pub name: FName,
@@ -43,7 +43,7 @@ pub struct SkeletalMeshAreaWeightedTriangleSampler {
 impl_property_data_trait!(SkeletalMeshAreaWeightedTriangleSampler);
 
 /// Skeleetal mesh sampling lod built data property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct SkeletalMeshSamplingLODBuiltDataProperty {
     /// Name
     pub name: FName,
