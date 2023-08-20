@@ -84,26 +84,18 @@ pub struct BaseExport {
     /// Dependencies that should be serialized before this export is serialized
     #[container_ignore]
     pub serialization_before_serialization_dependencies: Vec<PackageIndex>,
-    /// Binary size of `serialization_before_serialization_dependencies`
-    pub serialization_before_serialization_dependencies_size: i32,
 
     /// Dependencies that should be created before this export is serialized
     #[container_ignore]
     pub create_before_serialization_dependencies: Vec<PackageIndex>,
-    /// Binary size of `create_before_serialization_dependencies`
-    pub create_before_serialization_dependencies_size: i32,
 
     /// Dependencies that should be serialized before this export is created
     #[container_ignore]
     pub serialization_before_create_dependencies: Vec<PackageIndex>,
-    /// Binary size of `serialization_before_create_dependencies`
-    pub serialization_before_create_dependencies_size: i32,
 
     /// Dependencies that should be created before this export is created
     #[container_ignore]
     pub create_before_create_dependencies: Vec<PackageIndex>,
-    /// Binary size of `create_before_create_dependencies`
-    pub create_before_create_dependencies_size: i32,
 
     /// Padding
     #[container_ignore]
@@ -190,11 +182,14 @@ impl BaseExport {
             >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
         {
             export.first_export_dependency_offset = reader.read_i32::<LE>()?;
-            export.serialization_before_serialization_dependencies_size =
-                reader.read_i32::<LE>()?;
-            export.create_before_serialization_dependencies_size = reader.read_i32::<LE>()?;
-            export.serialization_before_create_dependencies_size = reader.read_i32::<LE>()?;
-            export.create_before_create_dependencies_size = reader.read_i32::<LE>()?;
+            export.serialization_before_serialization_dependencies =
+                Vec::with_capacity(reader.read_i32::<LE>()? as usize);
+            export.create_before_serialization_dependencies =
+                Vec::with_capacity(reader.read_i32::<LE>()? as usize);
+            export.serialization_before_create_dependencies =
+                Vec::with_capacity(reader.read_i32::<LE>()? as usize);
+            export.create_before_create_dependencies =
+                Vec::with_capacity(reader.read_i32::<LE>()? as usize);
         }
 
         Ok(export)

@@ -675,29 +675,16 @@ impl<'a, C: Read + Seek> Asset<C> {
                     unk_export.first_export_dependency_offset as i64 * size_of::<i32>() as i64,
                 ))?;
 
-                unk_export.serialization_before_serialization_dependencies =
-                    self.raw_reader.read_array_with_length(
-                        unk_export.serialization_before_serialization_dependencies_size,
-                        |reader| Ok(PackageIndex::new(reader.read_i32::<LE>()?)),
-                    )?;
-
-                unk_export.create_before_serialization_dependencies =
-                    self.raw_reader.read_array_with_length(
-                        unk_export.create_before_serialization_dependencies_size,
-                        |reader| Ok(PackageIndex::new(reader.read_i32::<LE>()?)),
-                    )?;
-
-                unk_export.serialization_before_create_dependencies =
-                    self.raw_reader.read_array_with_length(
-                        unk_export.serialization_before_create_dependencies_size,
-                        |reader| Ok(PackageIndex::new(reader.read_i32::<LE>()?)),
-                    )?;
-
-                unk_export.create_before_create_dependencies =
-                    self.raw_reader.read_array_with_length(
-                        unk_export.create_before_create_dependencies_size,
-                        |reader| Ok(PackageIndex::new(reader.read_i32::<LE>()?)),
-                    )?;
+                let mut read_deps = |list: &mut Vec<PackageIndex>| -> Result<(), Error> {
+                    for _ in 0..list.capacity() {
+                        list.push(PackageIndex::new(self.raw_reader.read_i32::<LE>()?))
+                    }
+                    Ok(())
+                };
+                read_deps(&mut unk_export.serialization_before_serialization_dependencies)?;
+                read_deps(&mut unk_export.create_before_serialization_dependencies)?;
+                read_deps(&mut unk_export.serialization_before_create_dependencies)?;
+                read_deps(&mut unk_export.create_before_create_dependencies)?;
             }
             self.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
         }
