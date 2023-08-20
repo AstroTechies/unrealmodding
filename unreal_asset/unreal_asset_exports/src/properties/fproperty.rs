@@ -285,32 +285,32 @@ pub struct FGenericProperty {
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FEnumProperty {
     /// Generic property
-    generic_property: FGenericProperty,
+    pub generic_property: FGenericProperty,
     /// Enum value
     #[container_ignore]
-    enum_value: PackageIndex,
+    pub enum_value: PackageIndex,
     /// Underlying property
-    underlying_prop: Box<FProperty>,
+    pub underlying_prop: Box<FProperty>,
 }
 
 /// Boolean FProperty
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FBoolProperty {
     /// Generic property
-    generic_property: FGenericProperty,
+    pub generic_property: FGenericProperty,
 
     /// Field size
-    field_size: u8,
+    pub field_size: u8,
     /// Byte offset
-    byte_offset: u8,
+    pub byte_offset: u8,
     /// Byte mask
-    byte_mask: u8,
+    pub byte_mask: u8,
     /// Field mask
-    field_mask: u8,
+    pub field_mask: u8,
     /// Is native boolean
-    native_bool: bool,
+    pub native_bool: bool,
     /// Value
-    value: bool,
+    pub value: bool,
 }
 
 impl FGenericProperty {

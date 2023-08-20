@@ -18,7 +18,7 @@ pub struct ArrayProperty {
     /// Array values
     pub value: Vec<Property>,
     /// Dummy property
-    dummy_property: Option<StructProperty>,
+    pub dummy_property: Option<StructProperty>,
 }
 impl_property_data_trait!(ArrayProperty);
 
