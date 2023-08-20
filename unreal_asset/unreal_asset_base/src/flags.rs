@@ -476,6 +476,30 @@ bitflags! {
 
 impl Default for EObjectFlags {
     fn default() -> Self {
-        EObjectFlags::RF_NO_FLAGS
+        Self::RF_NO_FLAGS
+    }
+}
+
+impl Default for EPropertyFlags {
+    fn default() -> Self {
+        Self::CPF_NONE
+    }
+}
+
+impl Default for EClassFlags {
+    fn default() -> Self {
+        Self::CLASS_NONE
+    }
+}
+
+impl Default for EFunctionFlags {
+    fn default() -> Self {
+        Self::FUNC_NONE
+    }
+}
+
+impl Default for EStructFlags {
+    fn default() -> Self {
+        Self::NO_FLAGS
     }
 }

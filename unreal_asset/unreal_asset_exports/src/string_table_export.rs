@@ -13,7 +13,7 @@ use crate::ExportTrait;
 use crate::{BaseExport, NormalExport};
 
 /// String table export
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq)]
 pub struct StringTableExport {
     /// Base normal export
     pub normal_export: NormalExport,

@@ -13,7 +13,7 @@ use crate::ExportTrait;
 use crate::{BaseExport, NormalExport};
 
 /// Level URL info
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct URL {
     /// Level protocol like "unreal" or "http"
     pub protocol: Option<String>,
@@ -32,7 +32,7 @@ pub struct URL {
 }
 
 /// Level export
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct LevelExport {
     /// Base normal export
     pub normal_export: NormalExport,

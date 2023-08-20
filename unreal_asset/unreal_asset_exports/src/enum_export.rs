@@ -18,10 +18,11 @@ use crate::ExportTrait;
 use crate::{BaseExport, NormalExport};
 
 /// Enum cpp form
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ECppForm {
     /// Regular
+    #[default]
     Regular,
     /// Namespaced
     Namespaced,
@@ -30,7 +31,7 @@ pub enum ECppForm {
 }
 
 /// Enum
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UEnum {
     /// Enum names
     pub names: Vec<(FName, i64)>,

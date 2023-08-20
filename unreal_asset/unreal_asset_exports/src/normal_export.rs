@@ -13,7 +13,7 @@ use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 /// Normal export
 ///
 /// This export is usually the base export for all other exports
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct NormalExport {
     /// Base export
     pub base_export: BaseExport,
