@@ -17,7 +17,7 @@ use unreal_asset_base::{
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
         /// $prop_name
-        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
@@ -50,7 +50,7 @@ macro_rules! parse_simple_property_index {
         ),*
     ) => {
         /// $prop_name
-        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: FGenericProperty,
@@ -255,7 +255,7 @@ impl ToSerializedName for FProperty {
 }
 
 /// Generic FProperty
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FGenericProperty {
     /// Property name
     pub name: FName,
@@ -294,7 +294,7 @@ pub struct FEnumProperty {
 }
 
 /// Boolean FProperty
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FBoolProperty {
     /// Generic property
     pub generic_property: FGenericProperty,

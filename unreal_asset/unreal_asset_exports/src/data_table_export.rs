@@ -16,7 +16,7 @@ use crate::ExportTrait;
 use crate::{BaseExport, NormalExport};
 
 /// Data table
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct DataTable {
     /// Data
     pub data: Vec<StructProperty>,

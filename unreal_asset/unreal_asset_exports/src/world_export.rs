@@ -15,7 +15,7 @@ use crate::{BaseExport, NormalExport};
 /// World export
 ///
 /// This is a `World` export
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct WorldExport {
     /// Base normal export
     pub normal_export: NormalExport,

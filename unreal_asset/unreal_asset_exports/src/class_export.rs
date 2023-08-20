@@ -18,7 +18,7 @@ use crate::{BaseExport, StructExport};
 use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Serialized interface reference
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct SerializedInterfaceReference {
     /// Class
     pub class: PackageIndex,
@@ -40,7 +40,7 @@ impl SerializedInterfaceReference {
 }
 
 /// Class export
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ClassExport {
     /// Base struct export
     pub struct_export: StructExport,

@@ -9,7 +9,7 @@ use crate::BaseExport;
 use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// An export that failed to deserialize is stored as `Vec<u8>`
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct RawExport {
     /// Base export
     pub base_export: BaseExport,

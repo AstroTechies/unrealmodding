@@ -6,10 +6,11 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 pub const HASH_VERSION_CITYHASH64: u64 = 0x00000000C1640000;
 
 /// Array dimension
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum EArrayDim {
     /// Not an array
+    #[default]
     NotAnArray = 0,
     /// Generic array
     TArray = 1,
@@ -18,10 +19,11 @@ pub enum EArrayDim {
 }
 
 /// Property lifetime conditions
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ELifetimeCondition {
     /// This property has no condition, and will send anytime it changes
+    #[default]
     CondNone = 0,
     /// This property will only attempt to send on the initial bunch
     CondInitialOnly = 1,
@@ -56,7 +58,7 @@ pub enum ELifetimeCondition {
 }
 
 /// Custom version serialization format
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub enum ECustomVersionSerializationFormat {
     /// Unknown
     Unknown,
@@ -65,5 +67,6 @@ pub enum ECustomVersionSerializationFormat {
     /// Enums
     Enums,
     /// Optimized
+    #[default]
     Optimized,
 }

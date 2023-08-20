@@ -28,7 +28,7 @@ pub enum EExportFilterFlags {
 }
 
 /// Minimal information about an export
-#[derive(FNameContainer, Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct BaseExport {
     /// Class index
     #[container_ignore]

@@ -12,7 +12,7 @@ use crate::{BaseExport, StructExport};
 use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Function export
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FunctionExport {
     /// Base struct export
     pub struct_export: StructExport,

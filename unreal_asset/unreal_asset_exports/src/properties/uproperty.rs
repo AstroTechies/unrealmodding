@@ -18,7 +18,7 @@ use unreal_asset_base::{
 macro_rules! parse_simple_property {
     ($prop_name:ident) => {
         /// $prop_name
-        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: UGenericProperty
@@ -50,7 +50,7 @@ macro_rules! parse_simple_property {
         ),*
     ) => {
         /// $prop_name
-        #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
         pub struct $prop_name {
             /// Generic property
             pub generic_property: UGenericProperty,
@@ -202,14 +202,14 @@ impl UProperty {
 }
 
 /// UField
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UField {
     /// Next field package index
     pub next: Option<PackageIndex>,
 }
 
 /// Generic UProperty
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UGenericProperty {
     /// UField
     #[container_ignore]
@@ -228,7 +228,7 @@ pub struct UGenericProperty {
 }
 
 /// Boolean UProperty
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UBoolProperty {
     /// Generic property
     pub generic_property: UGenericProperty,

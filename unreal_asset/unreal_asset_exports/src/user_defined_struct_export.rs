@@ -14,7 +14,7 @@ use crate::{BaseExport, NormalExport, StructExport};
 use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Struct export
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UserDefinedStructExport {
     /// Base struct export
     pub struct_export: StructExport,
