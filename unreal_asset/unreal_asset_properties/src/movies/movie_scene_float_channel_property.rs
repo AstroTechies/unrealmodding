@@ -8,7 +8,7 @@ use crate::rich_curve_key_property::RichCurveExtrapolation;
 use super::movie_scene_float_value_property::MovieSceneFloatValue;
 
 /// Movie scene float channel
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatChannel {
     /// Pre infinity extrapolation
     pub pre_infinity_extrap: RichCurveExtrapolation,
@@ -109,7 +109,7 @@ impl MovieSceneFloatChannel {
 }
 
 /// Movie scene float channel property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatChannelProperty {
     /// Name
     pub name: FName,

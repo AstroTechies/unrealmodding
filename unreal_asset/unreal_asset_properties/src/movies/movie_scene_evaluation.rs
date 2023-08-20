@@ -8,7 +8,7 @@ use unreal_asset_base::types::movie::FFrameNumberRange;
 use crate::property_prelude::*;
 
 /// Movie scene evaluation entry
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FEntry {
     /// Start index
     pub start_index: i32,
@@ -42,7 +42,7 @@ impl FEntry {
 }
 
 /// Evaluation tree entry handle
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct EvaluationTreeEntryHandle {
     /// Entry index
     pub entry_index: i32,
@@ -64,7 +64,7 @@ impl EvaluationTreeEntryHandle {
 }
 
 /// Movie scene evaluation tree node handle
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationTreeNodeHandle {
     /// Children handle
     pub children_handle: EvaluationTreeEntryHandle,
@@ -94,7 +94,7 @@ impl MovieSceneEvaluationTreeNodeHandle {
 }
 
 /// Generic evaluation tree entry container
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct TEvaluationTreeEntryContainer<T>
 where
     T: Debug + Clone + PartialEq + Eq + Hash,
@@ -158,7 +158,7 @@ where
 }
 
 /// Generic movie scene evaluation tree
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct TMovieSceneEvaluationTree<T>
 where
     T: Debug + Clone + PartialEq + Eq + Hash,
@@ -229,7 +229,7 @@ where
 }
 
 /// Movie scene evaluation tree node
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationTreeNode {
     /// Frame number range
     pub range: FFrameNumberRange,
@@ -269,7 +269,7 @@ impl MovieSceneEvaluationTreeNode {
 }
 
 /// Movie entity and metadata index
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FEntityAndMetaDataIndex {
     /// Entity index
     pub entity_index: i32,
@@ -299,7 +299,7 @@ impl FEntityAndMetaDataIndex {
 }
 
 /// Movie scene evaluation field entity tree
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationFieldEntityTree {
     /// Serialized data
     pub serialized_data: TMovieSceneEvaluationTree<FEntityAndMetaDataIndex>,

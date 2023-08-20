@@ -5,7 +5,7 @@ use crate::property_prelude::*;
 /// Unknown property
 ///
 /// This gets created when an unknown property was encountered while deserializing
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct UnknownProperty {
     /// Name
     pub name: FName,

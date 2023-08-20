@@ -8,7 +8,7 @@ use super::{
 };
 
 /// Movie scene track field data
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackFieldData {
     /// Data tree
     pub field: TMovieSceneEvaluationTree<MovieSceneTrackIdentifier>,
@@ -36,7 +36,7 @@ impl MovieSceneTrackFieldData {
 }
 
 /// Movie scene track field data property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneTrackFieldDataProperty {
     /// Name
     pub name: FName,

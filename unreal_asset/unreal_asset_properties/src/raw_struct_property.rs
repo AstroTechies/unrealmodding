@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Raw struct property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct RawStructProperty {
     /// Name
     pub name: FName,

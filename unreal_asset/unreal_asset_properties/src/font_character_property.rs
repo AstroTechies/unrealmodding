@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Font character
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FontCharacter {
     /// Start U coordinate
     pub start_u: i32,

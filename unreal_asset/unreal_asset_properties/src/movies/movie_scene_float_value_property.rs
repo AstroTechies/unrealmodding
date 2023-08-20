@@ -6,7 +6,7 @@ use crate::rich_curve_key_property::{RichCurveInterpMode, RichCurveTangentMode};
 use super::MovieSceneTangentData;
 
 /// Movie scene float value
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatValue {
     /// Value
     pub value: OrderedFloat<f32>,
@@ -48,7 +48,7 @@ impl MovieSceneFloatValue {
 }
 
 /// Movie scene float value property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneFloatValueProperty {
     /// Name
     pub name: FName,

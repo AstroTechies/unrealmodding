@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Float range property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FloatRangeProperty {
     /// Name
     pub name: FName,

@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Frame number
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FrameNumber {
     /// Value
     pub value: i32,
@@ -23,7 +23,7 @@ impl FrameNumber {
 }
 
 /// Frame rate
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FrameRate {
     /// Numerator
     pub numerator: i32,
@@ -51,10 +51,11 @@ impl FrameRate {
 }
 
 /// Enum CoreUObject.ERangeBoundTypes
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(i8)]
 pub enum ERangeBoundTypes {
     /// Exclusive range
+    #[default]
     Exclusive = 0,
     /// Inclusive range
     Inclusive = 1,
@@ -65,7 +66,7 @@ pub enum ERangeBoundTypes {
 }
 
 /// Frame number bound by range
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FFrameNumberRangeBound {
     /// Binding range
     pub ty: ERangeBoundTypes,
@@ -91,7 +92,7 @@ impl FFrameNumberRangeBound {
 }
 
 /// Frame number range
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FFrameNumberRange {
     /// Lower bound
     pub lower_bound: FFrameNumberRangeBound,

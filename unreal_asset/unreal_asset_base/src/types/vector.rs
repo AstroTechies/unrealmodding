@@ -2,7 +2,7 @@
 //!
 
 /// Vector
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Vector<T> {
     /// X component
     pub x: T,
@@ -20,7 +20,7 @@ impl<T> Vector<T> {
 }
 
 /// Vector2
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Vector2<T> {
     /// X component
     pub x: T,
@@ -36,7 +36,7 @@ impl<T> Vector2<T> {
 }
 
 /// Vector4
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Vector4<T> {
     /// X component
     pub x: T,
@@ -56,7 +56,7 @@ impl<T> Vector4<T> {
 }
 
 /// RGBA Color
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Color<T> {
     /// Red
     pub r: T,
@@ -93,7 +93,7 @@ impl Color<u8> {
 }
 
 /// Transform
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Transform<T> {
     /// Rotation
     pub rotation: Vector4<T>,
@@ -115,7 +115,7 @@ impl<T> Transform<T> {
 }
 
 /// Plane
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Plane<T> {
     /// X component
     pub x: T,

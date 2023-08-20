@@ -8,7 +8,7 @@ use super::{
 };
 
 /// Movie scene sub sequence tree entry
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSubSequenceTreeEntry {
     /// Sequence id
     pub sequence_id: MovieSceneSequenceId,
@@ -35,7 +35,7 @@ impl MovieSceneSubSequenceTreeEntry {
 }
 
 /// Movie scene sub sequence tree
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSubSequenceTree {
     /// Tree data
     pub data: TMovieSceneEvaluationTree<MovieSceneSubSequenceTreeEntry>,
@@ -63,7 +63,7 @@ impl MovieSceneSubSequenceTree {
 }
 
 /// Movie scene sub sequence tree property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneSubSequenceTreeProperty {
     /// Name
     pub name: FName,

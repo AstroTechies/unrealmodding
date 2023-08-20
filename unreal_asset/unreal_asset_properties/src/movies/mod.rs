@@ -22,7 +22,7 @@ pub mod movie_scene_track_implementation_ptr_property;
 pub mod section_evaluation_data_tree_property;
 
 /// Movie scene tangent data
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneTangentData {
     /// Arrive tangent
     pub arrive_tangent: OrderedFloat<f32>,

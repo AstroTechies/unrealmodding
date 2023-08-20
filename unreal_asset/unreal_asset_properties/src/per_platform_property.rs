@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Per platform bool property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct PerPlatformBoolProperty {
     /// Name
     pub name: FName,
@@ -19,7 +19,7 @@ pub struct PerPlatformBoolProperty {
 impl_property_data_trait!(PerPlatformBoolProperty);
 
 /// Per platform int property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct PerPlatformIntProperty {
     /// Name
     pub name: FName,
@@ -35,7 +35,7 @@ pub struct PerPlatformIntProperty {
 impl_property_data_trait!(PerPlatformIntProperty);
 
 /// Per platform float property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Hash, Clone, Default, PartialEq, Eq)]
 pub struct PerPlatformFloatProperty {
     /// Name
     pub name: FName,

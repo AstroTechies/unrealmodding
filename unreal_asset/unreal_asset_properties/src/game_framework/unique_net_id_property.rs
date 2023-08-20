@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Unique network id
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UniqueNetId {
     /// Type
     pub ty: FName,
@@ -12,7 +12,7 @@ pub struct UniqueNetId {
 }
 
 /// Unique network id property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UniqueNetIdProperty {
     /// Name
     pub name: FName,

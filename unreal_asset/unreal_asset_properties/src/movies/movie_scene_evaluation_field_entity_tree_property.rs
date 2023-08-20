@@ -5,7 +5,7 @@ use crate::property_prelude::*;
 use super::movie_scene_evaluation::MovieSceneEvaluationFieldEntityTree;
 
 /// Movie scene evaluation field entity tree property
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct MovieSceneEvaluationFieldEntityTreeProperty {
     /// Name
     pub name: FName,

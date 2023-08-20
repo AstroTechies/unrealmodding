@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Guid property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct GuidProperty {
     /// Name
     pub name: FName,

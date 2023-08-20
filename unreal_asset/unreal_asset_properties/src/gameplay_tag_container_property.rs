@@ -3,7 +3,7 @@
 use crate::property_prelude::*;
 
 /// Gameplay tag container property
-#[derive(FNameContainer, Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct GameplayTagContainerProperty {
     /// Name
     pub name: FName,

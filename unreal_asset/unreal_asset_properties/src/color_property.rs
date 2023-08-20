@@ -5,7 +5,7 @@ use unreal_asset_base::types::vector::Color;
 use crate::property_prelude::*;
 
 /// Color property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ColorProperty {
     /// Name
     pub name: FName,
@@ -22,7 +22,7 @@ pub struct ColorProperty {
 impl_property_data_trait!(ColorProperty);
 
 /// Linear color property
-#[derive(FNameContainer, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct LinearColorProperty {
     /// Name
     pub name: FName,

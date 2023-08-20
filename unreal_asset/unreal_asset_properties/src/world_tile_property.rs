@@ -7,7 +7,7 @@ use crate::vector_property::{BoxProperty, IntPointProperty};
 
 //todo: what is this file even doing in properties?
 /// World tile layer
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FWorldTileLayer {
     /// Name
     pub name: Option<String>,
@@ -85,7 +85,7 @@ impl FWorldTileLayer {
 }
 
 /// World tile lod info
-#[derive(FNameContainer, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FWorldTileLODInfo {
     /// Relative streaming distance
     pub relative_streaming_distance: i32,
@@ -123,7 +123,7 @@ impl FWorldTileLODInfo {
 }
 
 /// World tile ifno
-#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FWorldTileInfo {
     /// Position
     #[container_ignore]
