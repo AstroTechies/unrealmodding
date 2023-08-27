@@ -398,8 +398,8 @@ pub fn integrate_mods<
 
     let mod_files = mods
         .iter()
-        .chain(core_mods.into_iter())
-        .chain(enabled_baked_mods.into_iter())
+        .chain(core_mods)
+        .chain(enabled_baked_mods)
         .filter_map(|e| match e {
             IntegratorMod::File(file_mod) => File::open(&file_mod.path).ok(),
             IntegratorMod::Baked(baked_mod) => baked_mod.write(paks_path).ok(),
