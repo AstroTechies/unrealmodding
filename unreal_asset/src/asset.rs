@@ -266,7 +266,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         // reuseable buffers for reading
 
         // seek to start
-        self.seek(SeekFrom::Start(0))?;
+        self.rewind()?;
 
         // read and check magic
         if self.read_u32::<BE>()? != UE4_ASSET_MAGIC {
@@ -1101,8 +1101,10 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         let bulk_data_start_offset = match self.asset_data.use_event_driven_loader {
             true => final_cursor_pos as i64 + bulk_serializer.position() as i64,
-            false => serializer.position() as i64,
+            false => bulk_serializer.position() as i64,
         } - 4;
+
+        bulk_serializer.rewind()?;
 
         if !self.asset_data.exports.is_empty() {
             serializer.seek(SeekFrom::Start(export_offset as u64))?;
@@ -1130,7 +1132,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             }
         }
 
-        serializer.seek(SeekFrom::Start(0))?;
+        serializer.rewind()?;
 
         let header = AssetHeader {
             name_offset,
@@ -1147,7 +1149,8 @@ impl<'a, C: Read + Seek> Asset<C> {
         };
         self.write_header(&mut serializer, &header)?;
 
-        serializer.seek(SeekFrom::Start(0))?;
+        serializer.rewind()?;
+
         Ok(())
     }
 }
