@@ -121,6 +121,8 @@ pub enum EExprToken {
     ExInt64Const = 0x35,
     /// 64-bit unsigned integer constant.
     ExUInt64Const = 0x36,
+    /// Double constant.
+    ExDoubleConst = 0x37,
     /// A casting operator for primitives which reads the type as the subsequent byte
     ExPrimitiveCast = 0x38,
     /// Set the value of an arbitrary set
@@ -882,6 +884,8 @@ pub enum KismetExpression {
     ExInt64Const,
     /// 64-bit unsigned integer constant.
     ExUInt64Const,
+    /// Double constant.
+    ExDoubleConst,
     /// A casting operator for primitives which reads the type as the subsequent byte
     ExPrimitiveCast,
     /// Set the value of an arbitrary set
@@ -1031,6 +1035,7 @@ impl KismetExpression {
             EExprToken::ExUnicodeStringConst => Ok(ExUnicodeStringConst::new(asset)?.into()),
             EExprToken::ExInt64Const => Ok(ExInt64Const::new(asset)?.into()),
             EExprToken::ExUInt64Const => Ok(ExUInt64Const::new(asset)?.into()),
+            EExprToken::ExDoubleConst => Ok(ExDoubleConst::new(asset)?.into()),
             EExprToken::ExPrimitiveCast => Ok(ExPrimitiveCast::new(asset)?.into()),
             EExprToken::ExSetSet => Ok(ExSetSet::new(asset)?.into()),
             EExprToken::ExEndSet => Ok(ExEndSet::new(asset)?.into()),
@@ -2875,6 +2880,28 @@ impl KismetExpressionTrait for ExInstrumentationEvent {
         }
 
         Ok(1)
+    }
+}
+
+declare_expression!(
+    ExDoubleConst,
+    /// Value
+    #[container_ignore]
+    value: OrderedFloat<f64>
+);
+impl ExDoubleConst {
+    /// Read a `ExDoubleConst` from an asset
+    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+        Ok(ExDoubleConst {
+            token: EExprToken::ExDoubleConst,
+            value: OrderedFloat(asset.read_f64::<LE>()?),
+        })
+    }
+}
+impl KismetExpressionTrait for ExDoubleConst {
+    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+        asset.write_f64::<LE>(self.value.0)?;
+        Ok(size_of::<f64>())
     }
 }
 
