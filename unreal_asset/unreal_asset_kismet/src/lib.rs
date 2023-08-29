@@ -1106,12 +1106,12 @@ impl KismetExpression {
         end_token: EExprToken,
     ) -> Result<Vec<Self>, Error> {
         let mut data = Vec::new();
-        let mut current_expr: Option<KismetExpression> = None;
-        while current_expr.is_none() || !current_expr.as_ref().unwrap().enum_eq(&end_token) {
-            if let Some(expr) = current_expr {
-                data.push(expr);
+        loop {
+            let expr = KismetExpression::new(asset)?;
+            if expr.enum_eq(&end_token) {
+                break;
             }
-            current_expr = KismetExpression::new(asset).ok();
+            data.push(expr);
         }
         Ok(data)
     }
