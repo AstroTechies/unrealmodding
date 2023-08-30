@@ -1,7 +1,7 @@
 //! PakFile data structure for reading large pak files
 
 use std::collections::BTreeMap;
-use std::io::{BufReader, Read, Seek};
+use std::io::{Read, Seek};
 
 use crate::compression::CompressionMethods;
 use crate::entry::read_entry;
@@ -12,9 +12,9 @@ use crate::pakversion::PakVersion;
 
 /// An Unreal pak file reader with it's data kept on disk and only read on demand.
 #[derive(Debug)]
-pub struct PakReader<'data, R>
+pub struct PakReader<R>
 where
-    &'data R: Read + Seek,
+    R: Read + Seek,
 {
     /// version of the pak file format this one is using
     pak_version: PakVersion,
@@ -22,21 +22,23 @@ where
     pub mount_point: String,
     compression: CompressionMethods,
     entries: BTreeMap<String, Header>,
-    reader: BufReader<&'data R>,
+    reader: R,
 }
 
-impl<'data, R> PakReader<'data, R>
+impl<R> PakReader<R>
 where
-    &'data R: Read + Seek,
+    R: Read + Seek,
 {
-    /// Creates a new `PakFile` configured to read files.
-    pub fn new(reader: &'data R) -> Self {
+    /// Creates a new `PakReader` that reads from the provided reader.
+    /// When using a reader that uses syscalls like a `File` it is recommended to wrap it in a
+    /// [`std::io::BufReader`] to avoid unnecessary syscalls.
+    pub fn new(reader: R) -> Self {
         Self {
             pak_version: PakVersion::Invalid,
             mount_point: "".to_owned(),
             compression: Default::default(),
             entries: BTreeMap::new(),
-            reader: BufReader::new(reader),
+            reader,
         }
     }
 
@@ -84,7 +86,7 @@ where
     }
 
     /// Iterate over the entries in the PakReader
-    pub fn iter<'a: 'data>(&'a mut self) -> PakReaderIter<'a, 'data, R> {
+    pub fn iter(&mut self) -> PakReaderIter<R> {
         PakReaderIter {
             reader: &mut self.reader,
             pak_version: self.pak_version,
@@ -92,22 +94,28 @@ where
             iter: self.entries.iter(),
         }
     }
+
+    /// Consumes the `PakReader`, returning the wrapped reader.
+    /// There are no guarantees for what state the reader might be in.
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
 }
 
 /// An iterator over the entries of a PakReader
-pub struct PakReaderIter<'a, 'data, R>
+pub struct PakReaderIter<'a, R>
 where
-    &'data R: Read + Seek,
+    R: Read + Seek,
 {
-    reader: &'data mut BufReader<&'data R>,
+    reader: &'a mut R,
     pak_version: PakVersion,
     compression: CompressionMethods,
     iter: std::collections::btree_map::Iter<'a, String, Header>,
 }
 
-impl<'a, 'data, R> Iterator for PakReaderIter<'a, 'data, R>
+impl<'a, R> Iterator for PakReaderIter<'a, R>
 where
-    &'data R: Read + Seek,
+    R: Read + Seek,
 {
     type Item = (&'a String, Result<Vec<u8>, PakError>);
 
@@ -126,13 +134,13 @@ where
     }
 }
 
-impl<'a: 'data, 'data, R> IntoIterator for &'a mut PakReader<'data, R>
+impl<'a, R> IntoIterator for &'a mut PakReader<R>
 where
-    &'data R: Read + Seek,
+    R: Read + Seek,
 {
     type Item = (&'a String, Result<Vec<u8>, PakError>);
 
-    type IntoIter = PakReaderIter<'a, 'data, R>;
+    type IntoIter = PakReaderIter<'a, R>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::Write;
+use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::time::SystemTime;
@@ -62,24 +62,18 @@ fn main() {
     match args.commands {
         Commands::CheckHeader { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = PakReader::new(&file);
+            let mut pak = PakReader::new(file);
             check_header(&mut pak);
         }
         Commands::Check { pakfile } => {
             let file = open_file(Path::new(&pakfile));
-            let mut pak = PakReader::new(&file);
+            let mut pak = PakReader::new(file);
             check_header(&mut pak);
 
-            // TODO: get rid of this clone
-            let names = pak
-                .get_entry_names()
-                .into_iter()
-                .cloned()
-                .collect::<Vec<_>>();
-            for (i, file_name) in names.iter().enumerate() {
+            for (i, (file_name, data)) in pak.iter().enumerate() {
                 println!("Record {i}: {file_name:?}");
 
-                match pak.read_entry(file_name) {
+                match data {
                     Ok(_) => (),
                     Err(e) => {
                         eprintln!("Error reading record {i}: {file_name:?}! Error: {e}");
@@ -91,7 +85,7 @@ fn main() {
         Commands::Extract { pakfile, outdir } => {
             let path = Path::new(&pakfile);
             let file = open_file(path);
-            let mut pak = PakReader::new(&file);
+            let mut pak = PakReader::new(file);
             check_header(&mut pak);
 
             // temp values required to extend lifetimes outside of match scope
@@ -185,7 +179,10 @@ fn main() {
 
             let file = OpenOptions::new().append(true).open(&pakfile).unwrap();
 
-            let mut pak = PakWriter::new(&file, PakVersion::FnameBasedCompressionMethod);
+            let mut pak = PakWriter::new(
+                BufWriter::new(file),
+                PakVersion::FnameBasedCompressionMethod,
+            );
 
             // Get all files and write them to the .pak file
             let files = WalkDir::new(&indir)
@@ -242,9 +239,9 @@ fn main() {
     )
 }
 
-fn open_file(path: &Path) -> File {
+fn open_file(path: &Path) -> BufReader<File> {
     match OpenOptions::new().read(true).open(path) {
-        Ok(file) => file,
+        Ok(file) => BufReader::new(file),
         Err(err) => {
             eprintln!("Could not find/open file! Error: {err}");
             exit(1);
@@ -252,7 +249,7 @@ fn open_file(path: &Path) -> File {
     }
 }
 
-fn check_header(pak: &mut PakReader<File>) {
+fn check_header(pak: &mut PakReader<BufReader<File>>) {
     match pak.load_index() {
         Ok(_) => println!("Header is ok"),
         Err(err) => {

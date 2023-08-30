@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, Cursor, ErrorKind};
+use std::io::{self, BufReader, Cursor, ErrorKind};
 use std::path::Path;
 
 use unreal_asset::engine_version::EngineVersion;
@@ -37,8 +37,8 @@ pub fn handle_persistent_actors(
     game_name: &'static str,
     map_paths: &[&str],
     integrated_pak: &mut PakMemory,
-    game_paks: &mut Vec<PakReader<File>>,
-    mod_paks: &mut Vec<PakReader<File>>,
+    game_paks: &mut Vec<PakReader<BufReader<File>>>,
+    mod_paks: &mut Vec<PakReader<BufReader<File>>>,
     persistent_actor_arrays: &Vec<serde_json::Value>,
 ) -> Result<(), Error> {
     let level_asset = Asset::new(
