@@ -1,7 +1,7 @@
 //! PakFile data structure for writing large pak files
 
 use std::collections::BTreeMap;
-use std::io::{BufWriter, Seek, Write};
+use std::io::{Seek, Write};
 
 use crate::compression::CompressionMethods;
 use crate::entry::write_entry;
@@ -14,9 +14,9 @@ use crate::pakversion::PakVersion;
 /// Good for working with very large files, but it has restrictions when it
 /// comes to writing files. For a more flexible alternative see \<insert doc link\> PakMemory
 #[derive(Debug)]
-pub struct PakWriter<'data, W>
+pub struct PakWriter<W>
 where
-    &'data W: Write + Seek,
+    W: Write + Seek,
 {
     /// version of the pak file format this one is using
     pub pak_version: PakVersion,
@@ -27,22 +27,24 @@ where
     /// the compression block size
     pub block_size: u32,
     entries: BTreeMap<String, Header>,
-    writer: BufWriter<&'data W>,
+    writer: W,
 }
 
-impl<'data, W> PakWriter<'data, W>
+impl<W> PakWriter<W>
 where
-    &'data W: Write + Seek,
+    W: Write + Seek,
 {
-    /// Creates a new `PakFile` configured to write files.
-    pub fn new(writer: &'data W, pak_version: PakVersion) -> Self {
+    /// Creates a new `PakWriter` that writes to the provided writer.
+    /// When using a writer that uses syscalls like a `File` it is recommended to wrap it in a
+    /// [`std::io::BufWriter`] to avoid unnecessary syscalls.
+    pub fn new(writer: W, pak_version: PakVersion) -> Self {
         Self {
             pak_version,
             mount_point: "../../../".to_owned(),
             compression: CompressionMethods::zlib(),
             block_size: 0x010000,
             entries: BTreeMap::new(),
-            writer: BufWriter::new(writer),
+            writer,
         }
     }
 

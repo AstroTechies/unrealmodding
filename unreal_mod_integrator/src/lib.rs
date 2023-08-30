@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
-use std::io::{Cursor, Write};
+use std::io::{BufReader, BufWriter, Cursor, Write};
 use std::path::{Path, PathBuf};
 
 use error::IntegrationError;
@@ -149,16 +149,16 @@ pub trait DynamicMod<E: std::error::Error>: IntegratorModInfo {
     fn integrate(
         &self,
         integrated_pak: &mut PakMemory,
-        game_paks: &mut Vec<PakReader<File>>,
-        mod_paks: &mut Vec<PakReader<File>>,
+        game_paks: &mut Vec<PakReader<BufReader<File>>>,
+        mod_paks: &mut Vec<PakReader<BufReader<File>>>,
     ) -> Result<(), E>;
 }
 
 pub type HandlerFn<D, E> = dyn FnMut(
     &D,
     &mut PakMemory,
-    &mut Vec<PakReader<File>>,
-    &mut Vec<PakReader<File>>,
+    &mut Vec<PakReader<BufReader<File>>>,
+    &mut Vec<PakReader<BufReader<File>>>,
     &Vec<Value>,
 ) -> Result<(), E>;
 
@@ -411,8 +411,8 @@ pub fn integrate_mods<
     let mut read_mods = Vec::new();
     let mut optional_mods_data = HashMap::new();
 
-    for mod_file in &mod_files {
-        let mut pak = PakReader::new(mod_file);
+    for mod_file in mod_files {
+        let mut pak = PakReader::new(BufReader::new(mod_file));
         pak.load_index()?;
 
         let record = pak.read_entry(&String::from("metadata.json"))?;
@@ -488,8 +488,8 @@ pub fn integrate_mods<
         }
 
         let mut game_paks = Vec::new();
-        for game_file in &game_files {
-            let mut pak = PakReader::new(game_file);
+        for game_file in game_files {
+            let mut pak = PakReader::new(BufReader::new(game_file));
             pak.load_index()?;
             game_paks.push(pak);
         }
@@ -539,14 +539,14 @@ pub fn integrate_mods<
         }
 
         let path = Path::new(paks_path).join(INTEGRATOR_PAK_FILE_NAME);
-        let mut file = OpenOptions::new()
+        let file = OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .open(path)?;
 
-        generated_pak.write(&mut file)?;
-        file.sync_data()?;
+        let mut writer = BufWriter::new(file);
+        generated_pak.write(&mut writer)?;
     }
 
     Ok(())

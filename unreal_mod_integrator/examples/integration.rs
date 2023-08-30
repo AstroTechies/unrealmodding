@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use std::io;
+use std::io::{self, BufReader};
 use std::path::PathBuf;
 
 use unreal_asset::engine_version::EngineVersion;
@@ -14,8 +14,8 @@ pub struct Config;
 fn handle_linked_actor_components(
     _data: &(),
     _integrated_pak: &mut PakMemory,
-    _game_paks: &mut Vec<PakReader<File>>,
-    _mod_paks: &mut Vec<PakReader<File>>,
+    _game_paks: &mut Vec<PakReader<BufReader<File>>>,
+    _mod_paks: &mut Vec<PakReader<BufReader<File>>>,
     actors: &Vec<serde_json::Value>,
 ) -> Result<(), io::Error> {
     println!("Example linked actors: {actors:?}");

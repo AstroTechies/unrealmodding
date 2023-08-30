@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::Cursor;
+use std::io::{BufReader, Cursor};
 use std::path::Path;
 
 use unreal_asset::{engine_version::EngineVersion, reader::ArchiveTrait, Asset};
@@ -9,8 +9,8 @@ use crate::{error::IntegrationError, Error};
 
 pub fn get_asset(
     integrated_pak: &mut PakMemory,
-    game_paks: &mut [PakReader<File>],
-    mod_paks: &mut [PakReader<File>],
+    game_paks: &mut [PakReader<BufReader<File>>],
+    mod_paks: &mut [PakReader<BufReader<File>>],
     name: &String,
     version: EngineVersion,
 ) -> Result<Asset<Cursor<Vec<u8>>>, Error> {
@@ -62,7 +62,7 @@ pub fn get_asset(
     )
 }
 
-pub fn find_asset(paks: &mut [PakReader<File>], name: &String) -> Option<usize> {
+pub fn find_asset(paks: &mut [PakReader<BufReader<File>>], name: &String) -> Option<usize> {
     for (i, pak) in paks.iter().enumerate() {
         if pak.contains_entry(name) {
             return Some(i);
