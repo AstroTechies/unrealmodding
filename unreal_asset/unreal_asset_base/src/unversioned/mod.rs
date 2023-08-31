@@ -262,7 +262,7 @@ impl Usmap {
         if has_versioning {
             self.object_version = ObjectVersion::try_from(reader.read_i32::<LE>()?)?;
             self.object_version_ue5 = ObjectVersionUE5::try_from(reader.read_i32::<LE>()?)?;
-            self.custom_versions = reader.read_array(|e| CustomVersion::read(e))?;
+            self.custom_versions = reader.read_array(CustomVersion::read)?;
             self.net_cl = reader.read_u32::<LE>()?;
         }
 

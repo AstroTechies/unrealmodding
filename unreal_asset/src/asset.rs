@@ -776,7 +776,6 @@ impl<'a, C: Read + Seek> Asset<C> {
     /// Add an `Import`
     pub fn add_import(&mut self, import: Import) -> PackageIndex {
         let index = -(self.imports.len() as i32) - 1;
-        let import = import;
         self.imports.push(import);
         PackageIndex::new(index)
     }

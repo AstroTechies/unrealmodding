@@ -5,8 +5,6 @@
 
 use std::fmt::Debug;
 
-
-
 use unreal_asset_base::{reader::ArchiveWriter, types::PackageIndexTrait, Error, FNameContainer};
 
 pub mod properties;
@@ -169,9 +167,9 @@ macro_rules! manual_dispatch {
         }
 
         $(
-            impl<Index: PackageIndexTrait> Into<Export<Index>> for $variant<Index> {
-                fn into(self) -> Export<Index> {
-                    Export::$variant(self)
+            impl<Index: PackageIndexTrait> From<$variant<Index>> for Export<Index> {
+                fn from(e: $variant<Index>) -> Export<Index> {
+                    Export::$variant(e)
                 }
             }
         )*

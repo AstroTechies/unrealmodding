@@ -1471,7 +1471,7 @@ property_inner_serialized_name! {
 
 /// Generate property unversioned header
 pub fn generate_unversioned_header<W: ArchiveWriter<impl PackageIndexTrait>>(
-    archive: &mut W,
+    archive: &W,
     properties: &[Property],
     parent_name: &FName,
 ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
