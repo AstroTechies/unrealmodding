@@ -2,7 +2,7 @@
 
 use std::hash::Hash;
 
-use unreal_asset_base::containers::indexed_map::IndexedMap;
+use unreal_asset_base::{containers::indexed_map::IndexedMap, types::PackageIndexTrait};
 
 use crate::property_prelude::*;
 
@@ -41,7 +41,7 @@ impl Hash for MapProperty {
 
 impl MapProperty {
     /// Map type_name to a `Property` and read it from an asset
-    fn map_type_to_class<Reader: ArchiveReader>(
+    fn map_type_to_class<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         type_name: FName,
         name: FName,
@@ -117,7 +117,7 @@ impl MapProperty {
     }
 
     /// Read a `MapProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -208,7 +208,7 @@ impl MapProperty {
 }
 
 impl PropertyTrait for MapProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

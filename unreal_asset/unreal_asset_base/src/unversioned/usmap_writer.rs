@@ -8,18 +8,18 @@ use crate::{
     engine_version::EngineVersion,
     error::Error,
     object_version::{ObjectVersion, ObjectVersionUE5},
+    passthrough_archive_writer,
     reader::{
         archive_trait::{ArchiveTrait, ArchiveType},
-        archive_writer::{ArchiveWriter, PassthroughArchiveWriter},
+        archive_writer::ArchiveWriter,
     },
     types::{FName, PackageIndex},
-    Import,
 };
 
 use super::Usmap;
 
 /// Usmap file writer
-pub struct UsmapWriter<'parent_writer, 'asset, W: ArchiveWriter> {
+pub struct UsmapWriter<'parent_writer, 'asset, W: ArchiveWriter<PackageIndex>> {
     /// Parent writer
     parent_writer: &'parent_writer mut W,
     /// Name map
@@ -28,14 +28,16 @@ pub struct UsmapWriter<'parent_writer, 'asset, W: ArchiveWriter> {
     custom_versions: &'asset [CustomVersion],
 }
 
-impl<'parent_writer, 'asset, W: ArchiveWriter> UsmapWriter<'parent_writer, 'asset, W> {
+impl<'parent_writer, 'asset, W: ArchiveWriter<PackageIndex>>
+    UsmapWriter<'parent_writer, 'asset, W>
+{
     /// Write a name to this archive
     pub fn write_name(&mut self, _: &str) -> Result<usize, Error> {
         todo!()
     }
 }
 
-impl<'parent_writer, 'asset, W: ArchiveWriter> ArchiveTrait
+impl<'parent_writer, 'asset, W: ArchiveWriter<PackageIndex>> ArchiveTrait<PackageIndex>
     for UsmapWriter<'parent_writer, 'asset, W>
 {
     fn get_archive_type(&self) -> ArchiveType {
@@ -101,22 +103,24 @@ impl<'parent_writer, 'asset, W: ArchiveWriter> ArchiveTrait
         self.parent_writer.get_parent_class_export_name()
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<Import> {
-        self.parent_writer.get_import(index)
+    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+        self.parent_writer.get_object_name(index)
+    }
+
+    fn get_object_name_packageindex(&self, index: PackageIndex) -> Option<FName> {
+        self.parent_writer.get_object_name_packageindex(index)
     }
 }
 
-impl<'parent_writer, 'asset, W: ArchiveWriter> PassthroughArchiveWriter
+impl<'parent_writer, 'asset, W: ArchiveWriter<PackageIndex>> ArchiveWriter<PackageIndex>
     for UsmapWriter<'parent_writer, 'asset, W>
 {
-    type Passthrough = W;
-
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        self.parent_writer
-    }
+    passthrough_archive_writer!(parent_writer);
 }
 
-impl<'parent_writer, 'asset, W: ArchiveWriter> Write for UsmapWriter<'parent_writer, 'asset, W> {
+impl<'parent_writer, 'asset, W: ArchiveWriter<PackageIndex>> Write
+    for UsmapWriter<'parent_writer, 'asset, W>
+{
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.parent_writer.write(buf)
     }
@@ -126,7 +130,9 @@ impl<'parent_writer, 'asset, W: ArchiveWriter> Write for UsmapWriter<'parent_wri
     }
 }
 
-impl<'parent_writer, 'asset, W: ArchiveWriter> Seek for UsmapWriter<'parent_writer, 'asset, W> {
+impl<'parent_writer, 'asset, W: ArchiveWriter<PackageIndex>> Seek
+    for UsmapWriter<'parent_writer, 'asset, W>
+{
     fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
         self.parent_writer.seek(pos)
     }

@@ -1,5 +1,7 @@
 //! Empty unversioned property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Empty unversioned property
@@ -51,7 +53,7 @@ impl PropertyDataTrait for EmptyProperty {
 }
 
 impl PropertyTrait for EmptyProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         _asset: &mut Writer,
         _include_header: bool,

@@ -12,7 +12,7 @@ use unreal_asset_base::{
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
     reader::ArchiveReader,
-    types::{FName, PackageIndex},
+    types::{FName, PackageIndex, PackageIndexTrait},
     unversioned::Usmap,
     FNameContainer,
 };
@@ -30,7 +30,7 @@ use crate::package_file_summary::PackageFileSummary;
 
 /// Unreal asset data, this is relevant for all assets
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
-pub struct AssetData {
+pub struct AssetData<Index: PackageIndexTrait> {
     /// Does asset use the event driven loader
     pub use_event_driven_loader: bool,
     /// Package file summary
@@ -52,7 +52,7 @@ pub struct AssetData {
     pub mappings: Option<Usmap>,
 
     /// Object exports
-    pub exports: Vec<Export>,
+    pub exports: Vec<Export<Index>>,
 
     /// World tile information used by WorldComposition
     /// Degines propertiesn ecessary for tile positioning in the world
@@ -79,17 +79,17 @@ pub struct AssetData {
 ///
 /// This is needed because export reading may want to modify [`AssetData`] which upsets the borrow checker
 #[derive(Debug, Clone)]
-pub struct ReadExport {
-    export: Export,
+pub struct ReadExport<Index: PackageIndexTrait> {
+    export: Export<Index>,
     new_map_key_overrides: IndexedMap<String, String>,
     new_map_value_overrides: IndexedMap<String, String>,
     new_array_overrides: IndexedMap<String, String>,
 }
 
-impl ReadExport {
+impl<Index: PackageIndexTrait> ReadExport<Index> {
     /// Create a new `ReadExport` instance
     pub fn new(
-        export: Export,
+        export: Export<Index>,
         new_map_key_overrides: IndexedMap<String, String>,
         new_map_value_overrides: IndexedMap<String, String>,
         new_array_overrides: IndexedMap<String, String>,
@@ -103,7 +103,7 @@ impl ReadExport {
     }
 
     /// Reduce `ReadExport` to an [`Export`]
-    pub fn reduce(self, asset_data: &mut AssetData) -> Export {
+    pub fn reduce(self, asset_data: &mut AssetData<Index>) -> Export<Index> {
         asset_data.map_key_override.extend(
             self.new_map_key_overrides
                 .into_iter()
@@ -121,9 +121,9 @@ impl ReadExport {
     }
 }
 
-impl AssetData {
+impl<Index: PackageIndexTrait> AssetData<Index> {
     /// Creates a new `AssetData` instance
-    pub fn new() -> AssetData {
+    pub fn new() -> AssetData<Index> {
         AssetData::default()
     }
 
@@ -177,7 +177,7 @@ impl AssetData {
     }
 
     /// Get an export
-    pub fn get_export(&self, index: PackageIndex) -> Option<&Export> {
+    pub fn get_export(&self, index: PackageIndex) -> Option<&Export<Index>> {
         if !index.is_export() {
             return None;
         }
@@ -192,7 +192,7 @@ impl AssetData {
     }
 
     /// Get a mutable export reference
-    pub fn get_export_mut(&mut self, index: PackageIndex) -> Option<&mut Export> {
+    pub fn get_export_mut(&mut self, index: PackageIndex) -> Option<&mut Export<Index>> {
         if !index.is_export() {
             return None;
         }
@@ -207,7 +207,7 @@ impl AssetData {
     }
 
     /// Searches for an returns this asset's ClassExport, if one exists
-    pub fn get_class_export(&self) -> Option<&ClassExport> {
+    pub fn get_class_export(&self) -> Option<&ClassExport<Index>> {
         self.exports
             .iter()
             .find_map(|e| cast!(Export, ClassExport, e))
@@ -221,7 +221,7 @@ impl AssetData {
     }
 }
 
-impl Default for AssetData {
+impl<Index: PackageIndexTrait> Default for AssetData<Index> {
     fn default() -> Self {
         Self {
             use_event_driven_loader: false,
@@ -286,11 +286,11 @@ impl Default for AssetData {
 }
 
 /// Unreal asset trait, must be implemented for all assets
-pub trait AssetTrait {
+pub trait AssetTrait<Index: PackageIndexTrait> {
     /// Gets a reference to the asset data
-    fn get_asset_data(&self) -> &AssetData;
+    fn get_asset_data(&self) -> &AssetData<Index>;
     /// Gets a mutable reference to the asset data
-    fn get_asset_data_mut(&mut self) -> &mut AssetData;
+    fn get_asset_data_mut(&mut self) -> &mut AssetData<Index>;
 
     /// Gets the name map
     fn get_name_map(&self) -> SharedResource<NameMap>;
@@ -310,7 +310,9 @@ pub trait AssetTrait {
 }
 
 /// Export reader trait, used to read exports from an asset, implemented for all assets that implemented [`ArchiveReader`]+[`AssetTrait`]
-pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
+pub trait ExportReaderTrait<Index: PackageIndexTrait>:
+    ArchiveReader<Index> + AssetTrait<Index> + Sized
+{
     /// Read an export from this asset
     ///
     /// This function doesn't automatically create a raw export if an error occurs
@@ -323,9 +325,9 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
     /// * `i` - export index
     fn read_export_no_raw(
         &mut self,
-        base_export: BaseExport,
+        base_export: BaseExport<Index>,
         next_starting: u64,
-    ) -> Result<ReadExport, Error> {
+    ) -> Result<ReadExport<Index>, Error> {
         self.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
 
         //todo: manual skips
@@ -337,8 +339,8 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
         let mut new_map_value_overrides = IndexedMap::new();
         let new_array_overrides = IndexedMap::new();
 
-        let mut export: Export = export_class_type.get_content(|class| {
-            Ok::<Export, Error>(match class {
+        let mut export: Export<Index> = export_class_type.get_content(|class| {
+            Ok::<Export<Index>, Error>(match class {
                 "Level" => LevelExport::from_base(&base_export, self)?.into(),
                 "World" => WorldExport::from_base(&base_export, self)?.into(),
                 "UserDefinedStruct" => {
@@ -361,8 +363,10 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
                                     FProperty::FStructProperty(struct_property) => {
                                         match struct_property.struct_value.is_import() {
                                             true => self
-                                                .get_import(struct_property.struct_value)
-                                                .map(|e| e.object_name.get_owned_content()),
+                                                .get_object_name_packageindex(
+                                                    struct_property.struct_value,
+                                                )
+                                                .map(|e| e.get_owned_content()),
                                             false => None,
                                         }
                                     }
@@ -377,8 +381,10 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
                                     FProperty::FStructProperty(struct_property) => {
                                         match struct_property.struct_value.is_import() {
                                             true => self
-                                                .get_import(struct_property.struct_value)
-                                                .map(|e| e.object_name.get_owned_content()),
+                                                .get_object_name_packageindex(
+                                                    struct_property.struct_value,
+                                                )
+                                                .map(|e| e.get_owned_content()),
                                             false => None,
                                         }
                                     }
@@ -408,7 +414,8 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
             // todo: warning?
 
             self.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
-            let export: Export = RawExport::from_base(base_export, self)?.into();
+
+            let export: Export<Index> = RawExport::from_base(base_export, self)?.into();
             return Ok(ReadExport::new(
                 export,
                 new_map_key_overrides,
@@ -440,9 +447,9 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
     /// * `i` - export index
     fn read_export(
         &mut self,
-        base_export: BaseExport,
+        base_export: BaseExport<Index>,
         next_starting: u64,
-    ) -> Result<Export, Error> {
+    ) -> Result<Export<Index>, Error> {
         let serial_offset = base_export.serial_offset as u64;
 
         match self.read_export_no_raw(base_export.clone(), next_starting) {
@@ -461,4 +468,7 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
     }
 }
 
-impl<R: ArchiveReader + AssetTrait + Sized> ExportReaderTrait for R {}
+impl<Index: PackageIndexTrait, R: ArchiveReader<Index> + AssetTrait<Index> + Sized>
+    ExportReaderTrait<Index> for R
+{
+}

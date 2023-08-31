@@ -23,7 +23,9 @@ pub struct FWorldTileLayer {
 
 impl FWorldTileLayer {
     /// Read an `FWorldTileLayer` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let object_version = asset.get_object_version();
 
         let new_ancestry = Ancestry::new(asset.get_parent_class_export_name().unwrap_or_default());
@@ -53,7 +55,10 @@ impl FWorldTileLayer {
     }
 
     /// Write an `FWorldTileLayer` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         let object_version = asset.get_object_version();
 
         asset.write_fstring(self.name.as_deref())?;
@@ -101,7 +106,9 @@ pub struct FWorldTileLODInfo {
 
 impl FWorldTileLODInfo {
     /// Read `FWorldTileLODInfo` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         Ok(FWorldTileLODInfo {
             relative_streaming_distance: asset.read_i32::<LE>()?,
             reserved_0: OrderedFloat(asset.read_f32::<LE>()?),
@@ -112,7 +119,10 @@ impl FWorldTileLODInfo {
     }
 
     /// Write `FWorldTileLODInfo` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_i32::<LE>(self.relative_streaming_distance)?;
         asset.write_f32::<LE>(self.reserved_0.0)?;
         asset.write_f32::<LE>(self.reserved_1.0)?;
@@ -145,7 +155,9 @@ pub struct FWorldTileInfo {
 
 impl FWorldTileInfo {
     /// Read `FWorldTileInfo` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let version = asset.get_custom_version::<FFortniteMainBranchObjectVersion>();
         let object_version = asset.get_object_version();
 
@@ -198,7 +210,10 @@ impl FWorldTileInfo {
     }
 
     /// Write `FWorldTileInfo` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         let object_version = asset.get_object_version();
 
         if asset

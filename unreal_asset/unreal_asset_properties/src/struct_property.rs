@@ -45,7 +45,7 @@ impl StructProperty {
     }
 
     /// Read a `StructProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -79,7 +79,7 @@ impl StructProperty {
 
     /// Read a `StructProperty` with custom header values set
     #[allow(clippy::too_many_arguments)]
-    pub fn custom_header<Reader: ArchiveReader>(
+    pub fn custom_header<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -231,7 +231,7 @@ impl StructProperty {
     }
 
     /// Write a `StructProperty` overriding struct type
-    pub fn write_with_type<Writer: ArchiveWriter>(
+    pub fn write_with_type<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -327,7 +327,7 @@ impl StructProperty {
 }
 
 impl PropertyTrait for StructProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

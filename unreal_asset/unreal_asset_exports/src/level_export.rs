@@ -4,7 +4,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},
-    types::PackageIndex,
+    types::{PackageIndex, PackageIndexTrait},
     Error, FNameContainer,
 };
 
@@ -32,10 +32,10 @@ pub struct URL {
 }
 
 /// Level export
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct LevelExport {
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LevelExport<Index: PackageIndexTrait> {
     /// Base normal export
-    pub normal_export: NormalExport,
+    pub normal_export: NormalExport<Index>,
 
     /// Level URL info
     pub url: URL,
@@ -61,10 +61,10 @@ pub struct LevelExport {
 
 implement_get!(LevelExport);
 
-impl LevelExport {
+impl<Index: PackageIndexTrait> LevelExport<Index> {
     /// Read a `LevelExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        unk: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        unk: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(unk, asset)?;
@@ -92,8 +92,8 @@ impl LevelExport {
     }
 }
 
-impl ExportTrait for LevelExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for LevelExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
 
         asset.write_i32::<LE>(0)?;

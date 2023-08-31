@@ -5,6 +5,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use unreal_asset_base::{
     flags::EStructFlags,
     reader::{ArchiveReader, ArchiveWriter},
+    types::PackageIndexTrait,
     unversioned::{header::UnversionedHeader, Ancestry},
     Error, FNameContainer,
 };
@@ -14,10 +15,10 @@ use crate::{BaseExport, NormalExport, StructExport};
 use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 
 /// Struct export
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct UserDefinedStructExport {
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UserDefinedStructExport<Index: PackageIndexTrait> {
     /// Base struct export
-    pub struct_export: StructExport,
+    pub struct_export: StructExport<Index>,
     /// Struct flags
     #[container_ignore]
     pub flags: EStructFlags,
@@ -25,10 +26,10 @@ pub struct UserDefinedStructExport {
     pub default_struct_instance: Vec<Property>,
 }
 
-impl UserDefinedStructExport {
+impl<Index: PackageIndexTrait> UserDefinedStructExport<Index> {
     /// Read a `UserDefinedStructExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let struct_export = StructExport::from_base(base, asset)?;
@@ -51,28 +52,28 @@ impl UserDefinedStructExport {
     }
 }
 
-impl ExportNormalTrait for UserDefinedStructExport {
-    fn get_normal_export(&'_ self) -> Option<&'_ NormalExport> {
+impl<Index: PackageIndexTrait> ExportNormalTrait<Index> for UserDefinedStructExport<Index> {
+    fn get_normal_export(&'_ self) -> Option<&'_ NormalExport<Index>> {
         Some(&self.struct_export.normal_export)
     }
 
-    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport> {
+    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport<Index>> {
         Some(&mut self.struct_export.normal_export)
     }
 }
 
-impl ExportBaseTrait for UserDefinedStructExport {
-    fn get_base_export(&'_ self) -> &'_ BaseExport {
+impl<Index: PackageIndexTrait> ExportBaseTrait<Index> for UserDefinedStructExport<Index> {
+    fn get_base_export(&'_ self) -> &'_ BaseExport<Index> {
         &self.struct_export.normal_export.base_export
     }
 
-    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport<Index> {
         &mut self.struct_export.normal_export.base_export
     }
 }
 
-impl ExportTrait for UserDefinedStructExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for UserDefinedStructExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_export.write(asset)?;
         asset.write_u32::<LE>(self.flags.bits())?;
         for entry in &self.default_struct_instance {

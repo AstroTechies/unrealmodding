@@ -2,7 +2,6 @@
 
 pub mod archive_reader;
 pub use archive_reader::ArchiveReader;
-pub use archive_reader::PassthroughArchiveReader;
 
 pub mod archive_trait;
 pub use archive_trait::ArchiveTrait;
@@ -10,7 +9,6 @@ pub use archive_trait::ArchiveType;
 
 pub mod archive_writer;
 pub use archive_writer::ArchiveWriter;
-pub use archive_writer::PassthroughArchiveWriter;
 
 pub mod raw_reader;
 pub use raw_reader::RawReader;

@@ -25,7 +25,7 @@ pub struct SerializedNameHeader {
 
 impl SerializedNameHeader {
     /// Read a `SerializedNameHeader` from an archive
-    pub fn read<Reader: ArchiveReader + ?Sized>(
+    pub fn read<Reader: ArchiveReader<impl PackageIndexTrait> + ?Sized>(
         reader: &mut Reader,
     ) -> Result<SerializedNameHeader, Error> {
         let (first_byte, second_byte) = (reader.read_u8()?, reader.read_u8()?);
@@ -37,7 +37,10 @@ impl SerializedNameHeader {
     }
 
     /// Write a `SerializedNameHeader` to an archive
-    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         let is_wide = match self.is_wide {
             true => 1u8,
             false => 0u8,
@@ -50,6 +53,15 @@ impl SerializedNameHeader {
 
         Ok(())
     }
+}
+
+/// PackageIndexTrait is used to group PackageIndex and PackageObjectIndex together
+/// This is useful for exports to share code between UAsset/IoStore implementations
+pub trait PackageIndexTrait: std::fmt::Debug + Copy + Clone + PartialEq + Eq + ToString {
+    /// Check if this index is an import
+    fn is_import(&self) -> bool;
+    /// Check if this index is an export
+    fn is_export(&self) -> bool;
 }
 
 /// PackageIndex is one of the most important structs in UE4
@@ -73,16 +85,6 @@ impl PackageIndex {
         PackageIndex { index }
     }
 
-    /// Check if this index is an import
-    pub fn is_import(&self) -> bool {
-        self.index < 0
-    }
-
-    /// Check if this index is an export
-    pub fn is_export(&self) -> bool {
-        self.index > 0
-    }
-
     /// Create a `PackageIndex` from an import index
     pub fn from_import(import_index: i32) -> Result<Self, Error> {
         match import_index < 0 {
@@ -101,6 +103,22 @@ impl PackageIndex {
             )),
             false => Ok(PackageIndex::new(export_index + 1)),
         }
+    }
+}
+
+impl PackageIndexTrait for PackageIndex {
+    fn is_import(&self) -> bool {
+        self.index < 0
+    }
+
+    fn is_export(&self) -> bool {
+        self.index > 0
+    }
+}
+
+impl ToString for PackageIndex {
+    fn to_string(&self) -> String {
+        self.index.to_string()
     }
 }
 

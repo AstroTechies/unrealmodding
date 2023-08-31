@@ -18,6 +18,7 @@ use unreal_asset_base::{
     error::RegistryError,
     object_version::{ObjectVersion, ObjectVersionUE5},
     reader::{ArchiveReader, ArchiveTrait, ArchiveWriter, RawWriter},
+    types::{PackageIndex, PackageIndexTrait},
     Error,
 };
 
@@ -60,7 +61,7 @@ pub struct AssetRegistryState {
 
 impl AssetRegistryState {
     /// Read an `AssetRegistryState` from an asset
-    fn load<Reader: ArchiveReader>(
+    fn load<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
         assets_data: &mut Vec<AssetData>,
@@ -110,7 +111,10 @@ impl AssetRegistryState {
     }
 
     /// Write an `AssetRegistryState` to an asset
-    fn write_data<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    fn write_data<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         writer.write_i32::<LE>(self.assets_data.len() as i32)?;
         for asset_data in &self.assets_data {
             asset_data.write(writer)?;
@@ -184,7 +188,7 @@ impl AssetRegistryState {
     ///
     /// println!("{:#?}", asset_registry);
     /// ```
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<PackageIndex>>(asset: &mut Reader) -> Result<Self, Error> {
         let version = FAssetRegistryVersionType::new(asset)?;
         let mut assets_data = Vec::new();
         let mut depends_nodes = Vec::new();

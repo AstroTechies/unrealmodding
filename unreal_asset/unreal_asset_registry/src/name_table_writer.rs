@@ -6,29 +6,32 @@ use unreal_asset_base::{
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::EngineVersion,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    reader::{ArchiveTrait, ArchiveType, ArchiveWriter, PassthroughArchiveWriter},
+    passthrough_archive_writer,
+    reader::{ArchiveTrait, ArchiveType, ArchiveWriter},
     types::{FName, PackageIndex},
     unversioned::Usmap,
-    Import,
+    Error,
 };
 
 /// Used to write NameTable entries by modifying the behavior
 /// of some of the value write methods.
-pub struct NameTableWriter<'writer, Writer: ArchiveWriter> {
+pub struct NameTableWriter<'writer, Writer: ArchiveWriter<PackageIndex>> {
     /// Writer
     writer: &'writer mut Writer,
     /// Name map
     name_map: SharedResource<NameMap>,
 }
 
-impl<'writer, Writer: ArchiveWriter> NameTableWriter<'writer, Writer> {
+impl<'writer, Writer: ArchiveWriter<PackageIndex>> NameTableWriter<'writer, Writer> {
     /// Create a new `NameTableWriter` instance from another `Writer` and a name map
     pub fn new(writer: &'writer mut Writer, name_map: SharedResource<NameMap>) -> Self {
         NameTableWriter { writer, name_map }
     }
 }
 
-impl<'writer, Writer: ArchiveWriter> ArchiveTrait for NameTableWriter<'writer, Writer> {
+impl<'writer, Writer: ArchiveWriter<PackageIndex>> ArchiveTrait<PackageIndex>
+    for NameTableWriter<'writer, Writer>
+{
     #[inline(always)]
     fn get_archive_type(&self) -> ArchiveType {
         self.writer.get_archive_type()
@@ -93,19 +96,22 @@ impl<'writer, Writer: ArchiveWriter> ArchiveTrait for NameTableWriter<'writer, W
         self.writer.get_parent_class_export_name()
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<Import> {
-        self.writer.get_import(index)
+    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+        self.writer.get_object_name(index)
+    }
+
+    fn get_object_name_packageindex(&self, index: PackageIndex) -> Option<FName> {
+        self.writer.get_object_name_packageindex(index)
     }
 }
 
-impl<'writer, Writer: ArchiveWriter> PassthroughArchiveWriter for NameTableWriter<'writer, Writer> {
-    type Passthrough = Writer;
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        self.writer
-    }
+impl<'writer, Writer: ArchiveWriter<PackageIndex>> ArchiveWriter<PackageIndex>
+    for NameTableWriter<'writer, Writer>
+{
+    passthrough_archive_writer!(writer);
 }
 
-impl<'writer, Writer: ArchiveWriter> Write for NameTableWriter<'writer, Writer> {
+impl<'writer, Writer: ArchiveWriter<PackageIndex>> Write for NameTableWriter<'writer, Writer> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.writer.write(buf)
     }
@@ -115,7 +121,7 @@ impl<'writer, Writer: ArchiveWriter> Write for NameTableWriter<'writer, Writer> 
     }
 }
 
-impl<'writer, Writer: ArchiveWriter> Seek for NameTableWriter<'writer, Writer> {
+impl<'writer, Writer: ArchiveWriter<PackageIndex>> Seek for NameTableWriter<'writer, Writer> {
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
         self.writer.seek(pos)
     }

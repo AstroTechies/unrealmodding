@@ -2,6 +2,7 @@
 
 use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},
+    types::PackageIndexTrait,
     unversioned::{header::UnversionedHeader, Ancestry},
     Error, FNameContainer,
 };
@@ -13,40 +14,40 @@ use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
 /// Normal export
 ///
 /// This export is usually the base export for all other exports
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct NormalExport {
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NormalExport<Index: PackageIndexTrait> {
     /// Base export
-    pub base_export: BaseExport,
+    pub base_export: BaseExport<Index>,
     /// Extra data
     pub extras: Vec<u8>,
     /// Properties
     pub properties: Vec<Property>,
 }
 
-impl ExportNormalTrait for NormalExport {
-    fn get_normal_export(&'_ self) -> Option<&'_ NormalExport> {
+impl<Index: PackageIndexTrait> ExportNormalTrait<Index> for NormalExport<Index> {
+    fn get_normal_export(&'_ self) -> Option<&'_ NormalExport<Index>> {
         Some(self)
     }
 
-    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport> {
+    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut NormalExport<Index>> {
         Some(self)
     }
 }
 
-impl ExportBaseTrait for NormalExport {
-    fn get_base_export(&'_ self) -> &'_ BaseExport {
+impl<Index: PackageIndexTrait> ExportBaseTrait<Index> for NormalExport<Index> {
+    fn get_base_export(&'_ self) -> &'_ BaseExport<Index> {
         &self.base_export
     }
 
-    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport<Index> {
         &mut self.base_export
     }
 }
 
-impl NormalExport {
+impl<Index: PackageIndexTrait> NormalExport<Index> {
     /// Read a `NormalExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let mut properties = Vec::new();
@@ -68,8 +69,8 @@ impl NormalExport {
     }
 }
 
-impl ExportTrait for NormalExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for NormalExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         let (unversioned_header, sorted_properties) = match generate_unversioned_header(
             asset,
             &self.properties,

@@ -60,7 +60,7 @@ impl_property_data_trait!(SkeletalMeshSamplingLODBuiltDataProperty);
 
 impl WeightedRandomSamplerProperty {
     /// Read a `WeightedRandomSamplerProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -97,7 +97,7 @@ impl WeightedRandomSamplerProperty {
 }
 
 impl PropertyTrait for WeightedRandomSamplerProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -124,7 +124,7 @@ impl PropertyTrait for WeightedRandomSamplerProperty {
 
 impl SkeletalMeshAreaWeightedTriangleSampler {
     /// Read a `SkeletalMeshAreaWeightedTriangleSampler` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -161,7 +161,7 @@ impl SkeletalMeshAreaWeightedTriangleSampler {
 }
 
 impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -188,7 +188,7 @@ impl PropertyTrait for SkeletalMeshAreaWeightedTriangleSampler {
 
 impl SkeletalMeshSamplingLODBuiltDataProperty {
     /// Read a `SkeletalMeshSamplingLODBuiltDataProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -217,7 +217,7 @@ impl SkeletalMeshSamplingLODBuiltDataProperty {
 }
 
 impl PropertyTrait for SkeletalMeshSamplingLODBuiltDataProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

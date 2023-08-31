@@ -7,9 +7,9 @@ use crate::containers::{IndexedMap, NameMap, SharedResource};
 use crate::custom_version::{CustomVersion, CustomVersionTrait};
 use crate::engine_version::EngineVersion;
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
-use crate::types::{FName, PackageIndex};
+use crate::types::{FName, PackageIndex, PackageIndexTrait};
 use crate::unversioned::Usmap;
-use crate::Import;
+
 
 /// An enum to help identify current archive type
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -36,7 +36,7 @@ impl Display for ArchiveType {
 }
 
 /// A trait that allows accessing data about the archive that is currently being read
-pub trait ArchiveTrait: Seek {
+pub trait ArchiveTrait<Index: PackageIndexTrait>: Seek {
     /// Get archive type
     fn get_archive_type(&self) -> ArchiveType;
 
@@ -122,13 +122,15 @@ pub trait ArchiveTrait: Seek {
     /// Get parent class export name
     fn get_parent_class_export_name(&self) -> Option<FName>;
 
-    /// Get an import by a `PackageIndex`
-    fn get_import(&self, index: PackageIndex) -> Option<Import>;
-    /// Get export class type by a `PackageIndex`
-    fn get_export_class_type(&self, index: PackageIndex) -> Option<FName> {
+    /// Get object name by an `Index`
+    fn get_object_name(&self, index: Index) -> Option<FName>;
+    /// Get object name by a `PackageIndex`
+    fn get_object_name_packageindex(&self, index: PackageIndex) -> Option<FName>;
+    /// Get export class type by an `Index`
+    fn get_export_class_type(&self, index: Index) -> Option<FName> {
         match index.is_import() {
-            true => self.get_import(index).map(|e| e.object_name),
-            false => Some(FName::new_dummy(index.index.to_string(), 0)),
+            true => self.get_object_name(index),
+            false => Some(FName::new_dummy(index.to_string(), 0)),
         }
     }
 }

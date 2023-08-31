@@ -9,6 +9,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::engine_version::EngineVersion;
 use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::types::PackageIndexTrait;
 use crate::Error;
 use crate::Guid;
 
@@ -94,7 +95,9 @@ impl CustomVersion {
     }
 
     /// Read a custom version from an asset
-    pub fn read<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn read<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let guid = asset.read_guid()?;
         let version = asset.read_i32::<LE>()?;
 
@@ -108,7 +111,10 @@ impl CustomVersion {
     }
 
     /// Write a custom version to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         writer.write_guid(&self.guid)?;
         writer.write_i32::<LE>(self.version)?;
         Ok(())
@@ -1330,7 +1336,9 @@ const ASSET_REGISTRY_VERSION_GUID: Guid =
 
 impl FAssetRegistryVersionType {
     /// Read an asset registry version from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let guid = asset.read_guid()?;
 
         if guid == ASSET_REGISTRY_VERSION_GUID {
@@ -1341,7 +1349,10 @@ impl FAssetRegistryVersionType {
     }
 
     /// Write an asset registry version to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         writer.write_guid(&ASSET_REGISTRY_VERSION_GUID)?;
         writer.write_i32::<LE>((*self).into())?;
         Ok(())

@@ -1,5 +1,7 @@
 //! Gameplay tag container property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Gameplay tag container property
@@ -20,7 +22,7 @@ impl_property_data_trait!(GameplayTagContainerProperty);
 
 impl GameplayTagContainerProperty {
     /// Read a `GameplayTagContainerProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -47,7 +49,7 @@ impl GameplayTagContainerProperty {
 }
 
 impl PropertyTrait for GameplayTagContainerProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

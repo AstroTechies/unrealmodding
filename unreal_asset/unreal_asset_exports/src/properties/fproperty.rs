@@ -10,7 +10,7 @@ use unreal_asset_base::{
     enums::{EArrayDim, ELifetimeCondition},
     flags::{EObjectFlags, EPropertyFlags},
     reader::{ArchiveReader, ArchiveWriter},
-    types::{fname::ToSerializedName, FName, PackageIndex},
+    types::{fname::ToSerializedName, FName, PackageIndex, PackageIndexTrait},
     Error, FNameContainer,
 };
 
@@ -25,7 +25,9 @@ macro_rules! parse_simple_property {
 
         impl $prop_name {
             /// Read an `$prop_name` from an asset
-            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+                asset: &mut Reader,
+            ) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                 })
@@ -33,7 +35,10 @@ macro_rules! parse_simple_property {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+                &self,
+                asset: &mut Writer,
+            ) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 Ok(())
             }
@@ -63,7 +68,7 @@ macro_rules! parse_simple_property_index {
 
         impl $prop_name {
             /// Read an `$prop_name` from an asset
-            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                     $(
@@ -74,7 +79,7 @@ macro_rules! parse_simple_property_index {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 $(
                     asset.write_i32::<LE>(self.$index_name.index)?;
@@ -106,7 +111,7 @@ macro_rules! parse_simple_property_prop {
 
         impl $prop_name {
             /// Read an `$prop_name` from an asset
-            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: FGenericProperty::new(asset)?,
                     $(
@@ -117,7 +122,7 @@ macro_rules! parse_simple_property_prop {
         }
 
         impl FPropertyTrait for $prop_name {
-            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 $(
                     FProperty::write(self.$prop.as_ref(), asset)?;
@@ -132,7 +137,10 @@ macro_rules! parse_simple_property_prop {
 #[enum_dispatch]
 pub trait FPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
     /// Write `FProperty` to an asset
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error>;
 }
 
 /// FProperty
@@ -180,7 +188,9 @@ impl Eq for FProperty {}
 
 impl FProperty {
     /// Read an `FProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let serialized_type = asset.read_fname()?;
         serialized_type.get_content(|ty| {
             Ok::<FProperty, Error>(match ty {
@@ -209,7 +219,7 @@ impl FProperty {
     }
 
     /// Write an `FProperty` to an asset
-    pub fn write<Writer: ArchiveWriter>(
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         property: &FProperty,
         asset: &mut Writer,
     ) -> Result<(), Error> {
@@ -315,7 +325,7 @@ pub struct FBoolProperty {
 
 impl FGenericProperty {
     /// Read an `FGenericProperty` from an asset with a serialized type
-    pub fn with_serialized_type<Reader: ArchiveReader>(
+    pub fn with_serialized_type<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         serialized_type: Option<FName>,
     ) -> Result<Self, Error> {
@@ -344,13 +354,18 @@ impl FGenericProperty {
     }
 
     /// Read an `FGenericProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         FGenericProperty::with_serialized_type(asset, None)
     }
 }
 
 impl FPropertyTrait for FGenericProperty {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_fname(&self.name)?;
         asset.write_u32::<LE>(self.flags.bits())?;
         asset.write_i32::<LE>(self.array_dim.into())?;
@@ -365,7 +380,9 @@ impl FPropertyTrait for FGenericProperty {
 
 impl FEnumProperty {
     /// Read an `FEnumProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
         let enum_value = PackageIndex::new(asset.read_i32::<LE>()?);
         let underlying_prop = FProperty::new(asset)?;
@@ -379,7 +396,10 @@ impl FEnumProperty {
 }
 
 impl FPropertyTrait for FEnumProperty {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.generic_property.write(asset)?;
         asset.write_i32::<LE>(self.enum_value.index)?;
         FProperty::write(self.underlying_prop.as_ref(), asset)?;
@@ -389,7 +409,9 @@ impl FPropertyTrait for FEnumProperty {
 
 impl FBoolProperty {
     /// Read an `FBoolProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let generic_property = FGenericProperty::new(asset)?;
         let field_size = asset.read_u8()?;
         let byte_offset = asset.read_u8()?;
@@ -411,7 +433,10 @@ impl FBoolProperty {
 }
 
 impl FPropertyTrait for FBoolProperty {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.generic_property.write(asset)?;
         asset.write_u8(self.field_size)?;
         asset.write_u8(self.byte_offset)?;

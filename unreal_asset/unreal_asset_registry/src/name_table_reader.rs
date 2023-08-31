@@ -8,22 +8,23 @@ use unreal_asset_base::{
     custom_version::{CustomVersion, CustomVersionTrait},
     engine_version::EngineVersion,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    reader::{ArchiveReader, ArchiveTrait, ArchiveType, PassthroughArchiveReader},
+    passthrough_archive_reader,
+    reader::{ArchiveReader, ArchiveTrait, ArchiveType},
     types::{FName, PackageIndex},
     unversioned::Usmap,
-    Error, Import,
+    Error,
 };
 
 /// Used for reading NameTable entries by modifying the behavior
 /// of some of the value read methods.
-pub struct NameTableReader<'reader, Reader: ArchiveReader> {
+pub struct NameTableReader<'reader, Reader: ArchiveReader<PackageIndex>> {
     /// Reader
     reader: &'reader mut Reader,
     /// Name map
     pub(crate) name_map: SharedResource<NameMap>,
 }
 
-impl<'reader, Reader: ArchiveReader> NameTableReader<'reader, Reader> {
+impl<'reader, Reader: ArchiveReader<PackageIndex>> NameTableReader<'reader, Reader> {
     /// Create a new `NameTableReader` from another `Reader`
     pub(crate) fn new(reader: &'reader mut Reader) -> Result<Self, Error> {
         let name_offset = reader.read_i64::<LE>()?;
@@ -57,7 +58,9 @@ impl<'reader, Reader: ArchiveReader> NameTableReader<'reader, Reader> {
     }
 }
 
-impl<'reader, Reader: ArchiveReader> ArchiveTrait for NameTableReader<'reader, Reader> {
+impl<'reader, Reader: ArchiveReader<PackageIndex>> ArchiveTrait<PackageIndex>
+    for NameTableReader<'reader, Reader>
+{
     #[inline(always)]
     fn get_archive_type(&self) -> ArchiveType {
         self.reader.get_archive_type()
@@ -122,27 +125,28 @@ impl<'reader, Reader: ArchiveReader> ArchiveTrait for NameTableReader<'reader, R
         self.reader.get_parent_class_export_name()
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<Import> {
-        self.reader.get_import(index)
+    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+        self.reader.get_object_name(index)
+    }
+
+    fn get_object_name_packageindex(&self, index: PackageIndex) -> Option<FName> {
+        self.reader.get_object_name_packageindex(index)
     }
 }
 
-impl<'reader, Reader: ArchiveReader> PassthroughArchiveReader for NameTableReader<'reader, Reader> {
-    type Passthrough = Reader;
-
-    #[inline(always)]
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        self.reader
-    }
+impl<'reader, Reader: ArchiveReader<PackageIndex>> ArchiveReader<PackageIndex>
+    for NameTableReader<'reader, Reader>
+{
+    passthrough_archive_reader!(reader);
 }
 
-impl<'reader, Reader: ArchiveReader> Read for NameTableReader<'reader, Reader> {
+impl<'reader, Reader: ArchiveReader<PackageIndex>> Read for NameTableReader<'reader, Reader> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.reader.read(buf)
     }
 }
 
-impl<'reader, Reader: ArchiveReader> Seek for NameTableReader<'reader, Reader> {
+impl<'reader, Reader: ArchiveReader<PackageIndex>> Seek for NameTableReader<'reader, Reader> {
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
         self.reader.seek(pos)
     }

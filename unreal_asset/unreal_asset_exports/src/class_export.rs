@@ -10,7 +10,7 @@ use unreal_asset_base::{
     flags::EClassFlags,
     object_version::ObjectVersion,
     reader::{ArchiveReader, ArchiveWriter},
-    types::{FName, PackageIndex},
+    types::{FName, PackageIndex, PackageIndexTrait},
     Error, FNameContainer,
 };
 
@@ -40,10 +40,10 @@ impl SerializedInterfaceReference {
 }
 
 /// Class export
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq)]
-pub struct ClassExport {
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
+pub struct ClassExport<Index: PackageIndexTrait> {
     /// Base struct export
-    pub struct_export: StructExport,
+    pub struct_export: StructExport<Index>,
 
     /// Function map
     pub func_map: IndexedMap<FName, PackageIndex>,
@@ -70,10 +70,10 @@ pub struct ClassExport {
     pub class_default_object: PackageIndex,
 }
 
-impl ClassExport {
+impl<Index: PackageIndexTrait> ClassExport<Index> {
     /// Read a `ClassExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let struct_export = StructExport::from_base(base, asset)?;
@@ -160,7 +160,10 @@ impl ClassExport {
     }
 
     /// Serialize a `ClassExport` interface
-    fn serialize_interfaces<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn serialize_interfaces<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_i32::<LE>(self.interfaces.len() as i32)?;
         for interface in &self.interfaces {
             asset.write_i32::<LE>(interface.class.index)?;
@@ -174,28 +177,30 @@ impl ClassExport {
     }
 }
 
-impl ExportNormalTrait for ClassExport {
-    fn get_normal_export(&'_ self) -> Option<&'_ super::normal_export::NormalExport> {
+impl<Index: PackageIndexTrait> ExportNormalTrait<Index> for ClassExport<Index> {
+    fn get_normal_export(&'_ self) -> Option<&'_ super::normal_export::NormalExport<Index>> {
         Some(&self.struct_export.normal_export)
     }
 
-    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut super::normal_export::NormalExport> {
+    fn get_normal_export_mut(
+        &'_ mut self,
+    ) -> Option<&'_ mut super::normal_export::NormalExport<Index>> {
         Some(&mut self.struct_export.normal_export)
     }
 }
 
-impl ExportBaseTrait for ClassExport {
-    fn get_base_export(&'_ self) -> &'_ BaseExport {
+impl<Index: PackageIndexTrait> ExportBaseTrait<Index> for ClassExport<Index> {
+    fn get_base_export(&'_ self) -> &'_ BaseExport<Index> {
         &self.struct_export.normal_export.base_export
     }
 
-    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport<Index> {
         &mut self.struct_export.normal_export.base_export
     }
 }
 
-impl ExportTrait for ClassExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for ClassExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.struct_export.write(asset)?;
 
         asset.write_i32::<LE>(self.func_map.len() as i32)?;

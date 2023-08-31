@@ -13,7 +13,7 @@ use crate::error::{Error, UsmapError};
 use crate::object_version::{ObjectVersion, ObjectVersionUE5};
 use crate::reader::{ArchiveReader, ArchiveTrait, RawReader};
 
-use crate::types::FName;
+use crate::types::{FName, PackageIndex};
 
 pub mod ancestry;
 pub mod header;
@@ -92,7 +92,7 @@ pub struct UsmapSchema {
 
 impl UsmapSchema {
     /// Read a `UsmapSchema` from an archive
-    pub fn read<R: ArchiveReader>(
+    pub fn read<R: ArchiveReader<PackageIndex>>(
         reader: &mut UsmapReader<'_, '_, R>,
     ) -> Result<UsmapSchema, Error> {
         let name = reader.read_name()?;
@@ -237,7 +237,7 @@ impl Usmap {
 
     /// Parse usmap file
     pub fn parse_data<C: Read + Seek>(&mut self, cursor: C) -> Result<(), Error> {
-        let mut reader = RawReader::new(
+        let mut reader = RawReader::<PackageIndex, C>::new(
             Chain::new(cursor, None),
             ObjectVersion::UNKNOWN,
             ObjectVersionUE5::UNKNOWN,

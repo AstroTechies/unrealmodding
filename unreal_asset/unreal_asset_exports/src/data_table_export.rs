@@ -4,7 +4,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},
-    types::FName,
+    types::{FName, PackageIndexTrait},
     unversioned::Ancestry,
     Error, FNameContainer,
 };
@@ -31,19 +31,19 @@ impl DataTable {
 
 /// Data table export
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct DataTableExport {
+pub struct DataTableExport<Index: PackageIndexTrait> {
     /// Base normal export
-    pub normal_export: NormalExport,
+    pub normal_export: NormalExport<Index>,
     /// Data table
     pub table: DataTable,
 }
 
 implement_get!(DataTableExport);
 
-impl DataTableExport {
+impl<Index: PackageIndexTrait> DataTableExport<Index> {
     /// Read a `DataTableExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
@@ -52,8 +52,8 @@ impl DataTableExport {
         for data in &normal_export.properties {
             if let Property::ObjectProperty(property) = data {
                 if property.name == "RowStruct" && property.value.is_import() {
-                    if let Some(import) = asset.get_import(property.value) {
-                        decided_struct_type = import.object_name.clone();
+                    if let Some(object_name) = asset.get_object_name_packageindex(property.value) {
+                        decided_struct_type = object_name;
                     }
                 }
             }
@@ -91,16 +91,16 @@ impl DataTableExport {
     }
 }
 
-impl ExportTrait for DataTableExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for DataTableExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
 
         let mut decided_struct_type = FName::from_slice("Generic");
         for data in &self.normal_export.properties {
             if data.get_name() == "RowStruct" {
                 if let Property::ObjectProperty(prop) = data {
-                    if let Some(import) = asset.get_import(prop.value) {
-                        decided_struct_type = import.object_name;
+                    if let Some(object_name) = asset.get_object_name_packageindex(prop.value) {
+                        decided_struct_type = object_name;
                         break;
                     }
                 }

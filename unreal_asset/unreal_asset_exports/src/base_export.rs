@@ -1,11 +1,14 @@
 //! Base uasset export
 
+
+
+
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use unreal_asset_base::{
     flags::EObjectFlags,
     reader::{ArchiveTrait, ArchiveWriter},
-    types::{FName, PackageIndex},
+    types::{FName, PackageIndex, PackageIndexTrait},
     Error, FNameContainer, Guid,
 };
 
@@ -24,28 +27,20 @@ pub enum EExportFilterFlags {
 }
 
 /// Minimal information about an export
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct BaseExport {
+#[derive(FNameContainer, Debug, Default, Clone, PartialEq, Eq, Hash)]
+pub struct BaseExport<Index: PackageIndexTrait> {
     /// Class index
     #[container_ignore]
-    pub class_index: PackageIndex,
-    /// Zen class index
-
+    pub class_index: Index,
     /// Super index
     #[container_ignore]
-    pub super_index: PackageIndex,
-    /// Zen super index
-
+    pub super_index: Index,
     /// Template index
     #[container_ignore]
-    pub template_index: PackageIndex,
-    /// Zen template index
-
+    pub template_index: Index,
     /// Outer index
     #[container_ignore]
-    pub outer_index: PackageIndex,
-    /// Zen outer index
-
+    pub outer_index: Index,
     /// Object name
     pub object_name: FName,
     /// Object flags
@@ -94,39 +89,41 @@ pub struct BaseExport {
     pub create_before_create_dependencies: Vec<PackageIndex>,
 }
 
-impl BaseExport {
+impl<Index: PackageIndexTrait> BaseExport<Index> {
     /// Gets class type for first ancestry parent
-    pub fn get_class_type_for_ancestry<Asset: ArchiveTrait>(&self, asset: &Asset) -> FName {
+    pub fn get_class_type_for_ancestry<Asset: ArchiveTrait<Index>>(&self, asset: &Asset) -> FName {
         match self.class_index.is_import() {
-            true => asset.get_import(self.class_index).map(|e| e.object_name),
+            true => asset.get_object_name(self.class_index),
             false => asset.get_parent_class_export_name(),
         }
         .unwrap_or_default()
     }
 }
 
-impl ExportNormalTrait for BaseExport {
-    fn get_normal_export(&'_ self) -> Option<&'_ super::normal_export::NormalExport> {
+impl<Index: PackageIndexTrait> ExportNormalTrait<Index> for BaseExport<Index> {
+    fn get_normal_export(&'_ self) -> Option<&'_ super::normal_export::NormalExport<Index>> {
         None
     }
 
-    fn get_normal_export_mut(&'_ mut self) -> Option<&'_ mut super::normal_export::NormalExport> {
+    fn get_normal_export_mut(
+        &'_ mut self,
+    ) -> Option<&'_ mut super::normal_export::NormalExport<Index>> {
         None
     }
 }
 
-impl ExportBaseTrait for BaseExport {
-    fn get_base_export(&'_ self) -> &'_ BaseExport {
+impl<Index: PackageIndexTrait> ExportBaseTrait<Index> for BaseExport<Index> {
+    fn get_base_export(&'_ self) -> &'_ BaseExport<Index> {
         self
     }
 
-    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport {
+    fn get_base_export_mut(&'_ mut self) -> &'_ mut BaseExport<Index> {
         self
     }
 }
 
-impl ExportTrait for BaseExport {
-    fn write<Writer: ArchiveWriter>(&self, _asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for BaseExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, _asset: &mut Writer) -> Result<(), Error> {
         Ok(())
     }
 }

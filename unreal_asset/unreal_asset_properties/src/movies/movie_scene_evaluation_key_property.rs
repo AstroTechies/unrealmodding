@@ -1,5 +1,7 @@
 //! Movie scene evaluation key property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 use super::movie_scene_sequence_id_property::MovieSceneSequenceId;
@@ -18,7 +20,9 @@ pub struct MovieSceneEvaluationKey {
 
 impl MovieSceneEvaluationKey {
     /// Read a `MovieSceneEvaluationKey` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let sequence_id = MovieSceneSequenceId::new(asset)?;
         let track_identifier = MovieSceneTrackIdentifier::new(asset)?;
         let section_index = asset.read_u32::<LE>()?;
@@ -31,7 +35,10 @@ impl MovieSceneEvaluationKey {
     }
 
     /// Write a `MovieSceneEvaluationKey` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.sequence_id.write(asset)?;
         self.track_identifier.write(asset)?;
         asset.write_u32::<LE>(self.section_index)?;
@@ -59,7 +66,7 @@ impl_property_data_trait!(MovieSceneEvaluationKeyProperty);
 
 impl MovieSceneEvaluationKeyProperty {
     /// Read a `MovieSceneEvaluationKeyProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -81,7 +88,7 @@ impl MovieSceneEvaluationKeyProperty {
 }
 
 impl PropertyTrait for MovieSceneEvaluationKeyProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

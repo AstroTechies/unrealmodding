@@ -1,5 +1,7 @@
 //! Material input property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::color_property::ColorProperty;
 use crate::property_prelude::*;
 use crate::vector_property::{Vector2DProperty, VectorProperty};
@@ -143,7 +145,7 @@ impl_property_data_trait!(MaterialAttributesInputProperty);
 
 impl MaterialExpression {
     /// Read a `MaterialExpression` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         _include_header: bool,
@@ -164,7 +166,7 @@ impl MaterialExpression {
     }
 
     /// Write a `MaterialExpression` to an asset
-    pub fn write<Writer: ArchiveWriter>(
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         _include_header: bool,
@@ -179,7 +181,7 @@ impl MaterialExpression {
 
 impl ColorMaterialInputProperty {
     /// Read a `ColorMaterialInputProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -210,7 +212,7 @@ impl ColorMaterialInputProperty {
 }
 
 impl PropertyTrait for ColorMaterialInputProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -225,7 +227,7 @@ impl PropertyTrait for ColorMaterialInputProperty {
 
 impl ScalarMaterialInputProperty {
     /// Read a `ScalarMaterialInputProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -250,7 +252,7 @@ impl ScalarMaterialInputProperty {
 }
 
 impl PropertyTrait for ScalarMaterialInputProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -265,7 +267,7 @@ impl PropertyTrait for ScalarMaterialInputProperty {
 
 impl ShadingModelMaterialInputProperty {
     /// Read a `ShadingModelMaterialInputProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -289,7 +291,7 @@ impl ShadingModelMaterialInputProperty {
 }
 
 impl PropertyTrait for ShadingModelMaterialInputProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -304,7 +306,7 @@ impl PropertyTrait for ShadingModelMaterialInputProperty {
 
 impl VectorMaterialInputProperty {
     /// Read a `VectorMaterialInputProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -334,7 +336,7 @@ impl VectorMaterialInputProperty {
 }
 
 impl PropertyTrait for VectorMaterialInputProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -349,7 +351,7 @@ impl PropertyTrait for VectorMaterialInputProperty {
 
 impl Vector2MaterialInputProperty {
     /// Read a `Vector2MaterialInputProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -379,7 +381,7 @@ impl Vector2MaterialInputProperty {
 }
 
 impl PropertyTrait for Vector2MaterialInputProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -394,7 +396,7 @@ impl PropertyTrait for Vector2MaterialInputProperty {
 
 impl ExpressionInputProperty {
     /// Read a `ExpressionInputProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -415,7 +417,7 @@ impl ExpressionInputProperty {
 }
 
 impl PropertyTrait for ExpressionInputProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -427,7 +429,7 @@ impl PropertyTrait for ExpressionInputProperty {
 
 impl MaterialAttributesInputProperty {
     /// Read a `MaterialAttributesInputProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -448,7 +450,7 @@ impl MaterialAttributesInputProperty {
 }
 
 impl PropertyTrait for MaterialAttributesInputProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

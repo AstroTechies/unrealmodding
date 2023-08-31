@@ -15,7 +15,7 @@ pub struct NiagaraVariableProperty {
 
 impl NiagaraVariableProperty {
     /// Read a `NiagaraVariableProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -83,7 +83,7 @@ impl PropertyDataTrait for NiagaraVariableProperty {
 }
 
 impl PropertyTrait for NiagaraVariableProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         _include_header: bool,
@@ -130,7 +130,7 @@ pub struct NiagaraVariableWithOffsetProperty {
 
 impl NiagaraVariableWithOffsetProperty {
     /// Read a `NiagaraVariableWithOffsetProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -178,7 +178,7 @@ impl PropertyDataTrait for NiagaraVariableWithOffsetProperty {
 }
 
 impl PropertyTrait for NiagaraVariableWithOffsetProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

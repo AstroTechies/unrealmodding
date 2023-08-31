@@ -8,7 +8,7 @@ use unreal_asset_base::{
     custom_version::FCoreObjectVersion,
     engine_version::EngineVersion,
     reader::{ArchiveReader, ArchiveWriter},
-    types::PackageIndex,
+    types::{PackageIndex, PackageIndexTrait},
     Error, FNameContainer,
 };
 use unreal_asset_kismet::KismetExpression;
@@ -19,10 +19,10 @@ use crate::ExportTrait;
 use crate::{BaseExport, NormalExport};
 
 /// Struct export
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct StructExport {
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct StructExport<Index: PackageIndexTrait> {
     /// Base normal export
-    pub normal_export: NormalExport,
+    pub normal_export: NormalExport<Index>,
     /// Field
     #[container_ignore]
     pub field: UField,
@@ -44,10 +44,10 @@ pub struct StructExport {
 
 implement_get!(StructExport);
 
-impl StructExport {
+impl<Index: PackageIndexTrait> StructExport<Index> {
     /// Read a `StructExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
@@ -82,7 +82,7 @@ impl StructExport {
         let mut script_bytecode = None;
         if asset.get_engine_version() >= EngineVersion::VER_UE4_16 {
             script_bytecode =
-                StructExport::read_bytecode(asset, start_offset, script_storage_size).ok();
+                StructExport::<Index>::read_bytecode(asset, start_offset, script_storage_size).ok();
         }
 
         let script_bytecode_raw = match &script_bytecode {
@@ -109,7 +109,7 @@ impl StructExport {
     }
 
     /// Read kismet bytecode
-    fn read_bytecode<Reader: ArchiveReader>(
+    fn read_bytecode<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         start_offset: u64,
         storage_size: i32,
@@ -122,8 +122,8 @@ impl StructExport {
     }
 }
 
-impl ExportTrait for StructExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for StructExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
         asset.write_i32::<LE>(0)?;
         self.field.write(asset)?;

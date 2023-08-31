@@ -37,7 +37,7 @@ fn cdo_modification() -> Result<(), Error> {
 
     let new_name = asset.get_name_map().get_mut().add_fname("PickupActor");
 
-    let cdo_export: &mut NormalExport = asset
+    let cdo_export: &mut NormalExport<_> = asset
         .asset_data
         .exports
         .iter_mut()

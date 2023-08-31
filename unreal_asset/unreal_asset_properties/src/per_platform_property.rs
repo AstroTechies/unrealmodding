@@ -52,7 +52,7 @@ impl_property_data_trait!(PerPlatformFloatProperty);
 
 impl PerPlatformBoolProperty {
     /// Read a `PerPlatformBoolProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -80,7 +80,7 @@ impl PerPlatformBoolProperty {
 }
 
 impl PropertyTrait for PerPlatformBoolProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -96,7 +96,7 @@ impl PropertyTrait for PerPlatformBoolProperty {
 
 impl PerPlatformIntProperty {
     /// Read a `PerPlatformIntProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -124,7 +124,7 @@ impl PerPlatformIntProperty {
 }
 
 impl PropertyTrait for PerPlatformIntProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -140,7 +140,7 @@ impl PropertyTrait for PerPlatformIntProperty {
 
 impl PerPlatformFloatProperty {
     /// Read a `PerPlatformFloatProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -168,7 +168,7 @@ impl PerPlatformFloatProperty {
 }
 
 impl PropertyTrait for PerPlatformFloatProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

@@ -1,5 +1,7 @@
 //! Guid property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Guid property
@@ -20,7 +22,7 @@ impl_property_data_trait!(GuidProperty);
 
 impl GuidProperty {
     /// Read a `GuidProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -40,7 +42,7 @@ impl GuidProperty {
 }
 
 impl PropertyTrait for GuidProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

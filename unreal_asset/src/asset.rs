@@ -7,6 +7,8 @@ use std::mem::size_of;
 use byteorder::{ReadBytesExt, WriteBytesExt, BE, LE};
 
 use unreal_asset_base::flags::EObjectFlags;
+use unreal_asset_base::passthrough_archive_reader;
+use unreal_asset_base::types::PackageIndexTrait;
 use unreal_asset_base::{
     cast,
     containers::{Chain, IndexedMap, NameMap, SharedResource},
@@ -17,10 +19,7 @@ use unreal_asset_base::{
     error::Error,
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    reader::{
-        ArchiveReader, ArchiveTrait, ArchiveType, ArchiveWriter, PassthroughArchiveReader,
-        RawReader, RawWriter,
-    },
+    reader::{ArchiveReader, ArchiveTrait, ArchiveType, ArchiveWriter, RawReader, RawWriter},
     types::{fname::FNameContainer, FName, GenerationInfo, PackageIndex},
     unversioned::Usmap,
     FNameContainer, Guid, Import,
@@ -96,7 +95,7 @@ pub struct UAssetExportMapEntry {
 
 impl UAssetExportMapEntry {
     /// Read `UAssetExportMapEntry` from an archive
-    pub fn read<R: ArchiveReader>(archive: &mut R) -> Result<Self, Error> {
+    pub fn read<R: ArchiveReader<PackageIndex>>(archive: &mut R) -> Result<Self, Error> {
         let mut entry = UAssetExportMapEntry {
             class_index: PackageIndex::new(archive.read_i32::<LE>()?),
             super_index: PackageIndex::new(archive.read_i32::<LE>()?),
@@ -164,7 +163,7 @@ impl UAssetExportMapEntry {
     }
 
     /// Write `UAssetExportMapEntry` to an archive
-    pub fn write<W: ArchiveWriter>(
+    pub fn write<W: ArchiveWriter<PackageIndex>>(
         &self,
         archive: &mut W,
         serial_size: i64,
@@ -252,7 +251,7 @@ impl UAssetExportMapEntry {
     }
 
     /// Convert `UAssetExportMapEntry` to [`BaseExport`]
-    pub fn to_base_export(self) -> BaseExport {
+    pub fn to_base_export(self) -> BaseExport<PackageIndex> {
         BaseExport {
             class_index: self.class_index,
             super_index: self.super_index,
@@ -282,7 +281,7 @@ impl UAssetExportMapEntry {
     }
 
     /// Convert [`BaseExport`] to `UAssetExportMapEntry`
-    pub fn from_base_export(b: &BaseExport) -> Self {
+    pub fn from_base_export(b: &BaseExport<PackageIndex>) -> Self {
         UAssetExportMapEntry {
             class_index: b.class_index,
             super_index: b.super_index,
@@ -349,12 +348,12 @@ struct AssetHeader {
 pub struct Asset<C: Read + Seek> {
     /// Raw reader
     #[container_ignore]
-    pub raw_reader: RawReader<C>,
+    pub raw_reader: RawReader<PackageIndex, C>,
     // parsed data
     /// Asset info
     pub info: String,
     /// Asset data
-    pub asset_data: AssetData,
+    pub asset_data: AssetData<PackageIndex>,
     /// Legacy file version
     pub legacy_file_version: i32,
 
@@ -822,13 +821,30 @@ impl<'a, C: Read + Seek> Asset<C> {
         None
     }
 
+    /// Get an import by [`PackageIndex`]
+    pub fn get_import(&self, index: PackageIndex) -> Option<Import> {
+        if !index.is_import() {
+            return None;
+        }
+
+        let index = -index.index - 1;
+        if index < 0 || index > self.imports.len() as i32 {
+            return None;
+        }
+
+        Some(self.imports[index as usize].clone())
+    }
+
     /// Get an export
-    pub fn get_export(&'a self, index: PackageIndex) -> Option<&'a Export> {
+    pub fn get_export(&'a self, index: PackageIndex) -> Option<&'a Export<PackageIndex>> {
         self.asset_data.get_export(index)
     }
 
     /// Get a mutable export reference
-    pub fn get_export_mut(&'a mut self, index: PackageIndex) -> Option<&'a mut Export> {
+    pub fn get_export_mut(
+        &'a mut self,
+        index: PackageIndex,
+    ) -> Option<&'a mut Export<PackageIndex>> {
         self.asset_data.get_export_mut(index)
     }
 
@@ -983,7 +999,7 @@ impl<'a, C: Read + Seek> Asset<C> {
     }
 
     /// Write asset header
-    fn write_header<Writer: ArchiveWriter>(
+    fn write_header<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         cursor: &mut Writer,
         asset_header: &AssetHeader,
@@ -1243,7 +1259,7 @@ impl<'a, C: Read + Seek> Asset<C> {
         };
 
         for export in &self.asset_data.exports {
-            let unk: &BaseExport = export.get_base_export();
+            let unk: &BaseExport<PackageIndex> = export.get_base_export();
             UAssetExportMapEntry::from_base_export(unk).write(
                 &mut serializer,
                 unk.serial_size,
@@ -1442,12 +1458,12 @@ impl<'a, C: Read + Seek> Asset<C> {
     }
 }
 
-impl<C: Read + Seek> AssetTrait for Asset<C> {
-    fn get_asset_data(&self) -> &AssetData {
+impl<C: Read + Seek> AssetTrait<PackageIndex> for Asset<C> {
+    fn get_asset_data(&self) -> &AssetData<PackageIndex> {
         &self.asset_data
     }
 
-    fn get_asset_data_mut(&mut self) -> &mut AssetData {
+    fn get_asset_data_mut(&mut self) -> &mut AssetData<PackageIndex> {
         &mut self.asset_data
     }
 
@@ -1474,7 +1490,7 @@ impl<C: Read + Seek> AssetTrait for Asset<C> {
     }
 }
 
-impl<C: Read + Seek> ArchiveTrait for Asset<C> {
+impl<C: Read + Seek> ArchiveTrait<PackageIndex> for Asset<C> {
     fn get_archive_type(&self) -> ArchiveType {
         ArchiveType::UAsset
     }
@@ -1540,26 +1556,17 @@ impl<C: Read + Seek> ArchiveTrait for Asset<C> {
             .map(|e| e.object_name)
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<Import> {
-        if !index.is_import() {
-            return None;
-        }
+    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+        self.get_object_name_packageindex(index)
+    }
 
-        let index = -index.index - 1;
-        if index < 0 || index > self.imports.len() as i32 {
-            return None;
-        }
-
-        Some(self.imports[index as usize].clone())
+    fn get_object_name_packageindex(&self, index: PackageIndex) -> Option<FName> {
+        self.get_import(index).map(|e| e.object_name)
     }
 }
 
-impl<C: Read + Seek> PassthroughArchiveReader for Asset<C> {
-    type Passthrough = RawReader<C>;
-
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        &mut self.raw_reader
-    }
+impl<C: Read + Seek> ArchiveReader<PackageIndex> for Asset<C> {
+    passthrough_archive_reader!(raw_reader);
 }
 
 impl<C: Read + Seek> Read for Asset<C> {

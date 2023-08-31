@@ -9,7 +9,7 @@ use unreal_asset_base::{
     custom_version::FCoreObjectVersion,
     object_version::ObjectVersion,
     reader::{ArchiveReader, ArchiveWriter},
-    types::FName,
+    types::{FName, PackageIndexTrait},
     Error, FNameContainer,
 };
 
@@ -42,7 +42,9 @@ pub struct UEnum {
 
 impl UEnum {
     /// Read a `UEnum` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let mut names = Vec::new();
 
         if asset.get_object_version() < ObjectVersion::VER_UE4_TIGHTLY_PACKED_ENUMS {
@@ -86,7 +88,10 @@ impl UEnum {
     }
 
     /// Write a `UEnum` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_i32::<LE>(self.names.len() as i32)?;
         if asset.get_object_version() < ObjectVersion::VER_UE4_TIGHTLY_PACKED_ENUMS {
             // todo: a better algorithm?
@@ -127,19 +132,19 @@ impl UEnum {
 
 /// Enum export
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct EnumExport {
+pub struct EnumExport<Index: PackageIndexTrait> {
     /// Base normal export
-    pub normal_export: NormalExport,
+    pub normal_export: NormalExport<Index>,
     /// Enum value
     pub value: UEnum,
 }
 
 implement_get!(EnumExport);
 
-impl EnumExport {
+impl<Index: PackageIndexTrait> EnumExport<Index> {
     /// Read an `EnumExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
@@ -153,8 +158,8 @@ impl EnumExport {
     }
 }
 
-impl ExportTrait for EnumExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for EnumExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
         asset.write_i32::<LE>(0)?;
         self.value.write(asset)?;

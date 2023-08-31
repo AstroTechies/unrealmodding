@@ -7,11 +7,11 @@ use byteorder::{WriteBytesExt, LE};
 use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
 use crate::reader::ArchiveTrait;
-use crate::types::FName;
+use crate::types::{FName, PackageIndexTrait};
 use crate::Guid;
 
 /// A trait that allows for writing to an archive in an asset-specific way
-pub trait ArchiveWriter: ArchiveTrait + Write {
+pub trait ArchiveWriter<Index: PackageIndexTrait>: ArchiveTrait<Index> + Write {
     /// Write a `Guid` property
     fn write_property_guid(&mut self, guid: Option<&Guid>) -> Result<(), Error> {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
@@ -50,31 +50,23 @@ pub trait ArchiveWriter: ArchiveTrait + Write {
     fn write_bool(&mut self, value: bool) -> io::Result<()>;
 }
 
-/// A trait that allows for quick implementation of [`ArchiveWriter`] as a passthrough trait for the underlying archive
-pub trait PassthroughArchiveWriter: ArchiveTrait + Write {
-    /// Passthrough archive writer type
-    type Passthrough: ArchiveWriter;
-    /// Get the passthrough archive writer
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough;
-}
+/// A macro that allows for quick implementation of [`ArchiveWriter`] as a passthrough for the underlying archive
+#[macro_export]
+macro_rules! passthrough_archive_writer {
+    ($passthrough:ident) => {
+        #[inline(always)]
+        fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
+            self.$passthrough.write_fstring(value)
+        }
 
-impl<Writer, Passthrough> ArchiveWriter for Passthrough
-where
-    Writer: ArchiveWriter,
-    Passthrough: PassthroughArchiveWriter<Passthrough = Writer>,
-{
-    #[inline(always)]
-    fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
-        self.get_passthrough().write_fstring(value)
-    }
+        #[inline(always)]
+        fn write_guid(&mut self, guid: &unreal_helpers::Guid) -> std::io::Result<()> {
+            self.$passthrough.write_guid(guid)
+        }
 
-    #[inline(always)]
-    fn write_guid(&mut self, guid: &Guid) -> io::Result<()> {
-        self.get_passthrough().write_guid(guid)
-    }
-
-    #[inline(always)]
-    fn write_bool(&mut self, value: bool) -> io::Result<()> {
-        self.get_passthrough().write_bool(value)
-    }
+        #[inline(always)]
+        fn write_bool(&mut self, value: bool) -> std::io::Result<()> {
+            self.$passthrough.write_bool(value)
+        }
+    };
 }

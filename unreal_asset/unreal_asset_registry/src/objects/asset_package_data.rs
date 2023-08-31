@@ -4,6 +4,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::Guid;
 
+use unreal_asset_base::types::PackageIndexTrait;
 use unreal_asset_base::{
     custom_version::{CustomVersion, FAssetRegistryVersionType},
     error::RegistryError,
@@ -44,7 +45,7 @@ pub struct AssetPackageData {
 
 impl AssetPackageData {
     /// Read `AssetPackageData` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
     ) -> Result<Self, Error> {
@@ -99,7 +100,10 @@ impl AssetPackageData {
     }
 
     /// Write `AssetPackageData` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_fname(&self.package_name)?;
         asset.write_i64::<LE>(self.disk_size)?;
         // TODO change to guid method

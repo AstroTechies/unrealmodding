@@ -4,7 +4,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},
-    types::PackageIndex,
+    types::{PackageIndex, PackageIndexTrait},
     Error, FNameContainer,
 };
 
@@ -15,10 +15,10 @@ use crate::{BaseExport, NormalExport};
 /// World export
 ///
 /// This is a `World` export
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct WorldExport {
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WorldExport<Index: PackageIndexTrait> {
     /// Base normal export
-    pub normal_export: NormalExport,
+    pub normal_export: NormalExport<Index>,
     /// Persistent level - a LevelExport
     #[container_ignore]
     pub persistent_level: PackageIndex,
@@ -32,10 +32,10 @@ pub struct WorldExport {
 
 implement_get!(WorldExport);
 
-impl WorldExport {
+impl<Index: PackageIndexTrait> WorldExport<Index> {
     /// Read a `WorldExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
@@ -51,8 +51,8 @@ impl WorldExport {
     }
 }
 
-impl ExportTrait for WorldExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for WorldExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
 
         asset.write_i32::<LE>(0)?;
