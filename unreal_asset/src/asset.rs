@@ -150,18 +150,14 @@ impl UAssetExportMapEntry {
             >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
         {
             entry.first_export_dependency_offset = archive.read_i32::<LE>()?;
-            entry
-                .serialization_before_serialization_dependencies
-                .reserve(archive.read_i32::<LE>()? as usize);
-            entry
-                .create_before_serialization_dependencies
-                .reserve(archive.read_i32::<LE>()? as usize);
-            entry
-                .serialization_before_create_dependencies
-                .reserve(archive.read_i32::<LE>()? as usize);
-            entry
-                .create_before_create_dependencies
-                .reserve(archive.read_i32::<LE>()? as usize);
+            entry.serialization_before_serialization_dependencies =
+                Vec::with_capacity(archive.read_i32::<LE>()? as usize);
+            entry.create_before_serialization_dependencies =
+                Vec::with_capacity(archive.read_i32::<LE>()? as usize);
+            entry.serialization_before_create_dependencies =
+                Vec::with_capacity(archive.read_i32::<LE>()? as usize);
+            entry.create_before_create_dependencies =
+                Vec::with_capacity(archive.read_i32::<LE>()? as usize);
         }
 
         Ok(entry)

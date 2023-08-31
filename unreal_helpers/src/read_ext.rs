@@ -75,22 +75,13 @@ pub fn read_fstring_len<R: Read + Seek>(
     len: i32,
     is_wide: bool,
 ) -> Result<Option<String>, FStringError> {
-    if !(-131072..=131072).contains(&len) {
-        return Err(FStringError::InvalidStringSize(
-            len,
-            reader.stream_position()?,
-        ));
-    }
-
     if len == 0 {
         return Ok(None);
     }
 
-    if is_wide {
-        let len = len * size_of::<u16>() as i32 - 2;
-        let mut buf = vec![0u8; len as usize];
-        reader.read_exact(&mut buf)?;
+    let result = read_fstring_len_noterm(reader, len.saturating_sub(1), is_wide)?;
 
+    if is_wide {
         let terminator = reader.read_u16::<LE>()?;
         if terminator != 0 {
             return Err(FStringError::InvalidStringTerminator(
@@ -98,6 +89,37 @@ pub fn read_fstring_len<R: Read + Seek>(
                 reader.stream_position()?,
             ));
         }
+    } else {
+        let terminator = reader.read_u8()?;
+        if terminator != 0 {
+            return Err(FStringError::InvalidStringTerminator(
+                terminator as u16,
+                reader.stream_position()?,
+            ));
+        }
+    }
+
+    Ok(result)
+}
+
+/// Read string of format \<string\> when length and encoding is already known.
+#[inline(always)]
+pub fn read_fstring_len_noterm<R: Read + Seek>(
+    reader: &mut R,
+    len: i32,
+    is_wide: bool,
+) -> Result<Option<String>, FStringError> {
+    if !(-131072..=131072).contains(&len) {
+        return Err(FStringError::InvalidStringSize(
+            len,
+            reader.stream_position()?,
+        ));
+    }
+
+    if is_wide {
+        let len = len * size_of::<u16>() as i32;
+        let mut buf = vec![0u8; len as usize];
+        reader.read_exact(&mut buf)?;
 
         String::from_utf16(
             &buf.chunks(2)
@@ -107,16 +129,8 @@ pub fn read_fstring_len<R: Read + Seek>(
         .map(Some)
         .map_err(|e| e.into())
     } else {
-        let mut buf = vec![0u8; len as usize - 1];
+        let mut buf = vec![0u8; len as usize];
         reader.read_exact(&mut buf)?;
-
-        let terminator = reader.read_u8()?;
-        if terminator != 0 {
-            return Err(FStringError::InvalidStringTerminator(
-                terminator as u16,
-                reader.stream_position()?,
-            ));
-        }
 
         String::from_utf8(buf).map(Some).map_err(|e| e.into())
     }
