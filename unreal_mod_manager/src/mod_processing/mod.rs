@@ -45,7 +45,7 @@ pub(crate) fn process_modfiles(
     // fetch index files
 
     // gather index files from all the mods
-    let index_files_info = gather_index_files(&mut data_guard, &filter);
+    let index_files_info = gather_index_files(&data_guard, &filter);
 
     // drop guard to allow UI to render while index files are being downloaded
     drop(data_guard);

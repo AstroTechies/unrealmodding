@@ -115,7 +115,7 @@ pub(crate) fn load_config(data: &mut ModLoaderAppData) {
     debug!("Loaded config");
 }
 
-pub(crate) fn write_config(data: &mut ModLoaderAppData) {
+pub(crate) fn write_config(data: &ModLoaderAppData) {
     let config_path = data.mods_path.as_ref().unwrap().join("modconfig.json");
     let mut config = ModConfig {
         selected_game_platform: data.selected_game_platform.clone(),
