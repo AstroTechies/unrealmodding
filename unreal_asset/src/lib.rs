@@ -86,6 +86,7 @@ pub mod asset;
 pub mod asset_archive_writer;
 pub mod asset_data;
 pub mod fengineversion;
+pub mod package_file_summary;
 
 pub use asset::Asset;
 

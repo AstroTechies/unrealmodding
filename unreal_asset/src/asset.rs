@@ -6,6 +6,7 @@ use std::mem::size_of;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, BE, LE};
 
+use unreal_asset_base::flags::EObjectFlags;
 use unreal_asset_base::{
     cast,
     containers::{Chain, IndexedMap, NameMap, SharedResource},
@@ -39,6 +40,285 @@ pub struct ParentClassInfo {
     pub parent_class_path: FName,
     /// Parent class export name
     pub parent_class_export_name: FName,
+}
+
+/// UAsset export map entry
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UAssetExportMapEntry {
+    /// Class index
+    pub class_index: PackageIndex,
+    /// Super index
+    pub super_index: PackageIndex,
+    /// Template index
+    pub template_index: PackageIndex,
+    /// Outer index
+    pub outer_index: PackageIndex,
+    /// Object name
+    pub object_name: FName,
+    /// Object flags
+    pub object_flags: EObjectFlags,
+    /// Serialized size
+    pub serial_size: i64,
+    /// Serialized offset
+    pub serial_offset: i64,
+    /// Is forced export
+    pub forced_export: bool,
+    /// Is not for client
+    pub not_for_client: bool,
+    /// Is not for server
+    pub not_for_server: bool,
+    /// Package guid
+    pub package_guid: Guid,
+    /// Is inherited instance
+    pub is_inherited_instance: bool,
+    /// Package flags
+    pub package_flags: u32,
+    /// Is not always loaded for editor game
+    pub not_always_loaded_for_editor_game: bool,
+    /// Is an asset
+    pub is_asset: bool,
+    /// Generate public hash
+    pub generate_public_hash: bool,
+    /// Public export hash. Interpreted as a global import PackageObjectIndex in UE4 assets
+    pub public_export_hash: u64,
+    /// First dependency serialized offset
+    pub first_export_dependency_offset: i32,
+
+    /// Dependencies that should be serialized before this export is serialized
+    pub serialization_before_serialization_dependencies: Vec<PackageIndex>,
+    /// Dependencies that should be created before this export is serialized
+    pub create_before_serialization_dependencies: Vec<PackageIndex>,
+    /// Dependencies that should be serialized before this export is created
+    pub serialization_before_create_dependencies: Vec<PackageIndex>,
+    /// Dependencies that should be created before this export is created
+    pub create_before_create_dependencies: Vec<PackageIndex>,
+}
+
+impl UAssetExportMapEntry {
+    /// Read `UAssetExportMapEntry` from an archive
+    pub fn read<R: ArchiveReader>(archive: &mut R) -> Result<Self, Error> {
+        let mut entry = UAssetExportMapEntry {
+            class_index: PackageIndex::new(archive.read_i32::<LE>()?),
+            super_index: PackageIndex::new(archive.read_i32::<LE>()?),
+            ..Default::default()
+        };
+
+        if archive.get_object_version() >= ObjectVersion::VER_UE4_TemplateIndex_IN_COOKED_EXPORTS {
+            entry.template_index = PackageIndex::new(archive.read_i32::<LE>()?);
+        }
+
+        entry.outer_index = PackageIndex::new(archive.read_i32::<LE>()?);
+        entry.object_name = archive.read_fname()?;
+        entry.object_flags = EObjectFlags::from_bits(archive.read_u32::<LE>()?)
+            .ok_or_else(|| Error::invalid_file("Invalid property flags".to_string()))?;
+
+        if archive.get_object_version() < ObjectVersion::VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
+            entry.serial_size = archive.read_i32::<LE>()? as i64;
+            entry.serial_offset = archive.read_i32::<LE>()? as i64;
+        } else {
+            entry.serial_size = archive.read_i64::<LE>()?;
+            entry.serial_offset = archive.read_i64::<LE>()?;
+        }
+
+        entry.forced_export = archive.read_i32::<LE>()? == 1;
+        entry.not_for_client = archive.read_i32::<LE>()? == 1;
+        entry.not_for_server = archive.read_i32::<LE>()? == 1;
+
+        if archive.get_object_version_ue5() < ObjectVersionUE5::REMOVE_OBJECT_EXPORT_PACKAGE_GUID {
+            entry.package_guid = archive.read_guid()?;
+        }
+
+        if archive.get_object_version_ue5() >= ObjectVersionUE5::TRACK_OBJECT_EXPORT_IS_INHERITED {
+            entry.is_inherited_instance = archive.read_i32::<LE>()? == 1;
+        }
+
+        entry.package_flags = archive.read_u32::<LE>()?;
+
+        if archive.get_object_version() >= ObjectVersion::VER_UE4_LOAD_FOR_EDITOR_GAME {
+            entry.not_always_loaded_for_editor_game = archive.read_i32::<LE>()? == 1;
+        }
+
+        if archive.get_object_version() >= ObjectVersion::VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
+            entry.is_asset = archive.read_i32::<LE>()? == 1;
+        }
+
+        if archive.get_object_version_ue5() >= ObjectVersionUE5::OPTIONAL_RESOURCES {
+            entry.generate_public_hash = archive.read_i32::<LE>()? == 1;
+        }
+
+        if archive.get_object_version()
+            >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
+        {
+            entry.first_export_dependency_offset = archive.read_i32::<LE>()?;
+            entry
+                .serialization_before_serialization_dependencies
+                .reserve(archive.read_i32::<LE>()? as usize);
+            entry
+                .create_before_serialization_dependencies
+                .reserve(archive.read_i32::<LE>()? as usize);
+            entry
+                .serialization_before_create_dependencies
+                .reserve(archive.read_i32::<LE>()? as usize);
+            entry
+                .create_before_create_dependencies
+                .reserve(archive.read_i32::<LE>()? as usize);
+        }
+
+        Ok(entry)
+    }
+
+    /// Write `UAssetExportMapEntry` to an archive
+    pub fn write<W: ArchiveWriter>(
+        &self,
+        archive: &mut W,
+        serial_size: i64,
+        serial_offset: i64,
+        first_export_dependency_offset: i32,
+    ) -> Result<(), Error> {
+        archive.write_i32::<LE>(self.class_index.index)?;
+        archive.write_i32::<LE>(self.super_index.index)?;
+
+        if archive.get_object_version() >= ObjectVersion::VER_UE4_TemplateIndex_IN_COOKED_EXPORTS {
+            archive.write_i32::<LE>(self.template_index.index)?;
+        }
+
+        archive.write_i32::<LE>(self.outer_index.index)?;
+        archive.write_fname(&self.object_name)?;
+        archive.write_u32::<LE>(self.object_flags.bits())?;
+
+        if archive.get_object_version() < ObjectVersion::VER_UE4_64BIT_EXPORTMAP_SERIALSIZES {
+            archive.write_i32::<LE>(serial_size as i32)?;
+            archive.write_i32::<LE>(serial_offset as i32)?;
+        } else {
+            archive.write_i64::<LE>(serial_size)?;
+            archive.write_i64::<LE>(serial_offset)?;
+        }
+
+        archive.write_i32::<LE>(match self.forced_export {
+            true => 1,
+            false => 0,
+        })?;
+        archive.write_i32::<LE>(match self.not_for_client {
+            true => 1,
+            false => 0,
+        })?;
+        archive.write_i32::<LE>(match self.not_for_server {
+            true => 1,
+            false => 0,
+        })?;
+
+        if archive.get_object_version_ue5() < ObjectVersionUE5::REMOVE_OBJECT_EXPORT_PACKAGE_GUID {
+            archive.write_guid(&self.package_guid)?;
+        }
+
+        if archive.get_object_version_ue5() >= ObjectVersionUE5::TRACK_OBJECT_EXPORT_IS_INHERITED {
+            archive.write_i32::<LE>(match self.is_inherited_instance {
+                true => 1,
+                false => 0,
+            })?;
+        }
+
+        archive.write_u32::<LE>(self.package_flags)?;
+
+        if archive.get_object_version() >= ObjectVersion::VER_UE4_LOAD_FOR_EDITOR_GAME {
+            archive.write_i32::<LE>(match self.not_always_loaded_for_editor_game {
+                true => 1,
+                false => 0,
+            })?;
+        }
+
+        if archive.get_object_version() >= ObjectVersion::VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT {
+            archive.write_i32::<LE>(match self.is_asset {
+                true => 1,
+                false => 0,
+            })?;
+        }
+
+        if archive.get_object_version_ue5() >= ObjectVersionUE5::OPTIONAL_RESOURCES {
+            archive.write_i32::<LE>(match self.generate_public_hash {
+                true => 1,
+                false => 0,
+            })?;
+        }
+
+        if archive.get_object_version()
+            >= ObjectVersion::VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS
+        {
+            archive.write_i32::<LE>(first_export_dependency_offset)?;
+            archive.write_i32::<LE>(
+                self.serialization_before_serialization_dependencies.len() as i32
+            )?;
+            archive.write_i32::<LE>(self.create_before_serialization_dependencies.len() as i32)?;
+            archive.write_i32::<LE>(self.serialization_before_create_dependencies.len() as i32)?;
+            archive.write_i32::<LE>(self.create_before_create_dependencies.len() as i32)?;
+        }
+        Ok(())
+    }
+
+    /// Convert `UAssetExportMapEntry` to [`BaseExport`]
+    pub fn to_base_export(self) -> BaseExport {
+        BaseExport {
+            class_index: self.class_index,
+            super_index: self.super_index,
+            template_index: self.template_index,
+            outer_index: self.outer_index,
+            object_name: self.object_name,
+            object_flags: self.object_flags,
+            serial_size: self.serial_size,
+            serial_offset: self.serial_offset,
+            forced_export: self.forced_export,
+            not_for_client: self.not_for_client,
+            not_for_server: self.not_for_server,
+            package_guid: self.package_guid,
+            is_inherited_instance: self.is_inherited_instance,
+            package_flags: self.package_flags,
+            not_always_loaded_for_editor_game: self.not_always_loaded_for_editor_game,
+            is_asset: self.is_asset,
+            generate_public_hash: self.generate_public_hash,
+            public_export_hash: self.public_export_hash,
+            first_export_dependency_offset: self.first_export_dependency_offset,
+            serialization_before_serialization_dependencies: self
+                .serialization_before_serialization_dependencies,
+            create_before_serialization_dependencies: self.create_before_serialization_dependencies,
+            serialization_before_create_dependencies: self.serialization_before_create_dependencies,
+            create_before_create_dependencies: self.create_before_create_dependencies,
+        }
+    }
+
+    /// Convert [`BaseExport`] to `UAssetExportMapEntry`
+    pub fn from_base_export(b: &BaseExport) -> Self {
+        UAssetExportMapEntry {
+            class_index: b.class_index,
+            super_index: b.super_index,
+            template_index: b.template_index,
+            outer_index: b.outer_index,
+            object_name: b.object_name.clone(),
+            object_flags: b.object_flags,
+            serial_size: b.serial_size,
+            serial_offset: b.serial_offset,
+            forced_export: b.forced_export,
+            not_for_client: b.not_for_client,
+            not_for_server: b.not_for_server,
+            package_guid: b.package_guid,
+            is_inherited_instance: b.is_inherited_instance,
+            package_flags: b.package_flags,
+            not_always_loaded_for_editor_game: b.not_always_loaded_for_editor_game,
+            is_asset: b.is_asset,
+            generate_public_hash: b.generate_public_hash,
+            public_export_hash: b.public_export_hash,
+            first_export_dependency_offset: b.first_export_dependency_offset,
+            serialization_before_serialization_dependencies: b
+                .serialization_before_serialization_dependencies
+                .clone(),
+            create_before_serialization_dependencies: b
+                .create_before_serialization_dependencies
+                .clone(),
+            serialization_before_create_dependencies: b
+                .serialization_before_create_dependencies
+                .clone(),
+            create_before_create_dependencies: b.create_before_create_dependencies.clone(),
+        }
+    }
 }
 
 /// Asset header
@@ -124,12 +404,8 @@ pub struct Asset<C: Read + Seek> {
     gatherable_text_data_count: i32,
     /// Gatherable text data offset
     gatherable_text_data_offset: i32,
-    /// Export count
-    export_count: i32,
     /// Exports offset
     export_offset: i32,
-    /// Import count
-    import_count: i32,
     /// Imports offset
     import_offset: i32,
     /// Depends offset
@@ -222,9 +498,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             soft_object_paths_offset: 0,
             gatherable_text_data_count: 0,
             gatherable_text_data_offset: 0,
-            export_count: 0,
             export_offset: 0,
-            import_count: 0,
             import_offset: 0,
             depends_offset: 0,
             soft_package_reference_count: 0,
@@ -285,9 +559,9 @@ impl<'a, C: Read + Seek> Asset<C> {
         // read unreal version
         let file_version = self.read_i32::<LE>()?.try_into()?;
 
-        self.asset_data.unversioned = file_version == ObjectVersion::UNKNOWN;
+        self.asset_data.summary.unversioned = file_version == ObjectVersion::UNKNOWN;
 
-        if self.asset_data.unversioned {
+        if self.asset_data.summary.unversioned {
             if self.asset_data.object_version == ObjectVersion::UNKNOWN {
                 return Err(Error::invalid_file("Cannot begin serialization of an unversioned asset before an engine version is manually specified".to_string()));
             }
@@ -313,13 +587,13 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         // read file license version
-        self.asset_data.file_license_version = self.read_i32::<LE>()?;
+        self.asset_data.summary.file_licensee_version = self.read_i32::<LE>()?;
 
         // read custom versions container
         if self.legacy_file_version <= -2 {
             // TODO: support for enum-based custom versions
-            let old_container = self.asset_data.custom_versions.clone();
-            self.asset_data.custom_versions = self.read_custom_version_container(
+            let old_container = self.asset_data.summary.custom_versions.clone();
+            self.asset_data.summary.custom_versions = self.read_custom_version_container(
                 self.get_custom_version_serialization_format(),
                 Some(&old_container),
             )?;
@@ -334,7 +608,7 @@ impl<'a, C: Read + Seek> Asset<C> {
             .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
-        self.asset_data.package_flags = EPackageFlags::from_bits(self.read_u32::<LE>()?)
+        self.asset_data.summary.package_flags = EPackageFlags::from_bits(self.read_u32::<LE>()?)
             .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
         // read name count and offset
@@ -353,9 +627,9 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         // read count and offset for exports, imports, depends, soft package references, searchable names, thumbnail table
-        self.export_count = self.read_i32::<LE>()?;
+        self.asset_data.summary.export_count = self.read_i32::<LE>()?;
         self.export_offset = self.read_i32::<LE>()?;
-        self.import_count = self.read_i32::<LE>()?;
+        self.asset_data.summary.import_count = self.read_i32::<LE>()?;
         self.import_offset = self.read_i32::<LE>()?;
         self.depends_offset = self.read_i32::<LE>()?;
         if self.asset_data.object_version >= ObjectVersion::VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP
@@ -590,7 +864,7 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         if self.import_offset > 0 {
             self.seek(SeekFrom::Start(self.import_offset as u64))?;
-            for _i in 0..self.import_count {
+            for _i in 0..self.asset_data.summary.import_count {
                 let class_package = self.read_fname()?;
                 let class_name = self.read_fname()?;
                 let outer_index = PackageIndex::new(self.read_i32::<LE>()?);
@@ -612,11 +886,11 @@ impl<'a, C: Read + Seek> Asset<C> {
             }
         }
 
+        let mut export_map = Vec::with_capacity(self.asset_data.summary.export_count as usize);
         if self.export_offset > 0 {
             self.seek(SeekFrom::Start(self.export_offset as u64))?;
-            for _i in 0..self.export_count {
-                let export = BaseExport::read_export_map_entry(self)?;
-                self.asset_data.exports.push(export.into());
+            for _i in 0..self.asset_data.summary.export_count {
+                export_map.push(UAssetExportMapEntry::read(self)?);
             }
         }
 
@@ -626,14 +900,14 @@ impl<'a, C: Read + Seek> Asset<C> {
         if self.depends_offset > 0
             || depends_offset_zero_version_range.contains(&self.get_object_version())
         {
-            let mut depends_map = Vec::with_capacity(self.export_count as usize);
+            let mut depends_map = Vec::with_capacity(self.asset_data.summary.export_count as usize);
 
             // 4.14-4.15 the depends offset wasnt updated so always serialized as 0
             if self.depends_offset > 0 {
                 self.seek(SeekFrom::Start(self.depends_offset as u64))?;
             }
 
-            for _i in 0..self.export_count as usize {
+            for _i in 0..self.asset_data.summary.export_count as usize {
                 let size = self.read_i32::<LE>()?;
                 let mut data: Vec<i32> = Vec::new();
                 for _j in 0..size {
@@ -666,13 +940,11 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         if self.asset_data.use_event_driven_loader {
-            for export in &mut self.asset_data.exports {
-                let unk_export = export.get_base_export_mut();
-
+            for entry in &mut export_map {
                 self.raw_reader
                     .seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
                 self.raw_reader.seek(SeekFrom::Current(
-                    unk_export.first_export_dependency_offset as i64 * size_of::<i32>() as i64,
+                    entry.first_export_dependency_offset as i64 * size_of::<i32>() as i64,
                 ))?;
 
                 let mut read_deps = |list: &mut Vec<PackageIndex>| -> Result<(), Error> {
@@ -681,22 +953,34 @@ impl<'a, C: Read + Seek> Asset<C> {
                     }
                     Ok(())
                 };
-                read_deps(&mut unk_export.serialization_before_serialization_dependencies)?;
-                read_deps(&mut unk_export.create_before_serialization_dependencies)?;
-                read_deps(&mut unk_export.serialization_before_create_dependencies)?;
-                read_deps(&mut unk_export.create_before_create_dependencies)?;
+                read_deps(&mut entry.serialization_before_serialization_dependencies)?;
+                read_deps(&mut entry.create_before_serialization_dependencies)?;
+                read_deps(&mut entry.serialization_before_create_dependencies)?;
+                read_deps(&mut entry.create_before_create_dependencies)?;
             }
             self.seek(SeekFrom::Start(self.preload_dependency_offset as u64))?;
         }
 
-        if self.header_offset > 0 && !self.asset_data.exports.is_empty() {
-            let mut new_exports = Vec::with_capacity(self.asset_data.exports.len());
-            for i in 0..self.asset_data.exports.len() {
-                let export = self.read_export(i)?;
-                new_exports.push(export);
-            }
+        if self.header_offset > 0 && !export_map.is_empty() {
+            let map_len = export_map.len();
+            self.asset_data.exports.reserve(map_len);
 
-            self.asset_data.exports = new_exports;
+            let serial_offsets = export_map
+                .iter()
+                .map(|e| e.serial_offset as u64)
+                .collect::<Vec<_>>();
+
+            for (i, entry) in export_map.into_iter().enumerate() {
+                let base_export = entry.to_base_export();
+
+                let next_starting = match i < (map_len - 1) {
+                    true => serial_offsets[i + 1],
+                    false => self.data_length()? - 4,
+                };
+
+                let export = self.read_export(base_export, next_starting)?;
+                self.asset_data.exports.push(export);
+            }
         }
 
         Ok(())
@@ -712,31 +996,31 @@ impl<'a, C: Read + Seek> Asset<C> {
         cursor.write_i32::<LE>(self.legacy_file_version)?;
 
         if self.legacy_file_version != 4 {
-            match self.asset_data.unversioned {
+            match self.asset_data.summary.unversioned {
                 true => cursor.write_i32::<LE>(0)?,
                 false => cursor.write_i32::<LE>(864)?,
             };
         }
 
-        match self.asset_data.unversioned {
+        match self.asset_data.summary.unversioned {
             true => cursor.write_i32::<LE>(0)?,
             false => cursor.write_i32::<LE>(self.asset_data.object_version as i32)?,
         };
 
         if self.legacy_file_version <= -8 {
-            match self.asset_data.unversioned {
+            match self.asset_data.summary.unversioned {
                 true => cursor.write_i32::<LE>(0)?,
                 false => cursor.write_i32::<LE>(self.get_object_version_ue5() as i32)?,
             };
         }
 
-        cursor.write_i32::<LE>(self.asset_data.file_license_version)?;
+        cursor.write_i32::<LE>(self.asset_data.summary.file_licensee_version)?;
         if self.legacy_file_version <= -2 {
-            match self.asset_data.unversioned {
+            match self.asset_data.summary.unversioned {
                 true => cursor.write_i32::<LE>(0)?,
                 false => {
-                    cursor.write_i32::<LE>(self.asset_data.custom_versions.len() as i32)?;
-                    for custom_version in &self.asset_data.custom_versions {
+                    cursor.write_i32::<LE>(self.asset_data.summary.custom_versions.len() as i32)?;
+                    for custom_version in &self.asset_data.summary.custom_versions {
                         cursor.write_guid(&custom_version.guid)?;
                         cursor.write_i32::<LE>(custom_version.version)?;
                     }
@@ -746,7 +1030,7 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         cursor.write_i32::<LE>(asset_header.header_offset)?;
         cursor.write_fstring(Some(&self.folder_name))?;
-        cursor.write_u32::<LE>(self.asset_data.package_flags.bits())?;
+        cursor.write_u32::<LE>(self.asset_data.summary.package_flags.bits())?;
         cursor.write_i32::<LE>(self.name_map.get_ref().get_name_map_index_list().len() as i32)?;
         cursor.write_i32::<LE>(asset_header.name_offset)?;
 
@@ -857,7 +1141,10 @@ impl<'a, C: Read + Seek> Asset<C> {
         let mut current_name_map = self.name_map.clone();
         self.traverse_fnames(&mut |mut name| {
             let content = name.get_owned_content();
-            let FName::Backed { index, name_map, .. } = &mut name else {
+            let FName::Backed {
+                index, name_map, ..
+            } = &mut name
+            else {
                 return;
             };
 
@@ -961,7 +1248,7 @@ impl<'a, C: Read + Seek> Asset<C> {
 
         for export in &self.asset_data.exports {
             let unk: &BaseExport = export.get_base_export();
-            unk.write_export_map_entry(
+            UAssetExportMapEntry::from_base_export(unk).write(
                 &mut serializer,
                 unk.serial_size,
                 unk.serial_offset,
@@ -1092,7 +1379,9 @@ impl<'a, C: Read + Seek> Asset<C> {
                 true => bulk_serializer.position() + final_cursor_pos,
                 false => bulk_serializer.position(),
             });
+
             export.write(bulk_serializer)?;
+
             if let Some(normal_export) = export.get_normal_export() {
                 bulk_serializer.write_all(&normal_export.extras)?;
             }
@@ -1115,7 +1404,8 @@ impl<'a, C: Read + Seek> Asset<C> {
                     true => category_starts[i + 1] as i64,
                     false => bulk_data_start_offset,
                 };
-                unk.write_export_map_entry(
+
+                UAssetExportMapEntry::from_base_export(unk).write(
                     &mut serializer,
                     next_loc - category_starts[i] as i64,
                     category_starts[i] as i64,
@@ -1124,6 +1414,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                         false => -1,
                     },
                 )?;
+
                 first_export_dependency_offset +=
                     (unk.serialization_before_serialization_dependencies.len()
                         + unk.create_before_serialization_dependencies.len()
@@ -1307,7 +1598,7 @@ impl<C: Read + Seek> Debug for Asset<C> {
             .field("engine_version_recorded", &self.engine_version_recorded)
             .field("engine_version_compatible", &self.engine_version_compatible)
             .field("chunk_ids", &self.chunk_ids)
-            .field("package_flags", &self.asset_data.package_flags)
+            .field("asset_data", &self.asset_data)
             .field("package_source", &self.package_source)
             .field("folder_name", &self.folder_name)
             // map struct type override
@@ -1323,9 +1614,7 @@ impl<C: Read + Seek> Debug for Asset<C> {
                 "gatherable_text_data_offset",
                 &self.gatherable_text_data_offset,
             )
-            .field("export_count", &self.export_count)
             .field("export_offset", &self.export_offset)
-            .field("import_count", &self.import_count)
             .field("import_offset", &self.import_offset)
             .field("depends_offset", &self.depends_offset)
             .field(

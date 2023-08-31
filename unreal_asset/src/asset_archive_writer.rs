@@ -66,6 +66,7 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
 
     fn has_unversioned_properties(&self) -> bool {
         self.asset_data
+            .summary
             .package_flags
             .contains(EPackageFlags::PKG_UNVERSIONED_PROPERTIES)
     }

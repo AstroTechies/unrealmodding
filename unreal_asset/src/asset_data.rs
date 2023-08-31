@@ -26,19 +26,16 @@ use unreal_asset_exports::{
 };
 use unreal_asset_properties::world_tile_property::FWorldTileInfo;
 
+use crate::package_file_summary::PackageFileSummary;
+
 /// Unreal asset data, this is relevant for all assets
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
 pub struct AssetData {
     /// Does asset use the event driven loader
     pub use_event_driven_loader: bool,
-    /// Is asset unversioned
-    pub unversioned: bool,
-    /// Asset flags
+    /// Package file summary
     #[container_ignore]
-    pub package_flags: EPackageFlags,
-
-    /// File licensee version, used by some games for their own engine versioning.
-    pub file_license_version: i32,
+    pub summary: PackageFileSummary,
 
     /// Object version
     #[container_ignore]
@@ -49,10 +46,6 @@ pub struct AssetData {
     /// UE5 object version
     #[container_ignore]
     pub object_version_ue5: ObjectVersionUE5,
-
-    /// Custom versions
-    #[container_ignore]
-    pub custom_versions: Vec<CustomVersion>,
 
     /// .usmap mappings
     #[container_ignore]
@@ -145,7 +138,8 @@ impl AssetData {
         self.engine_version = engine_version;
         self.object_version = object_version;
         self.object_version_ue5 = object_version_ue5;
-        self.custom_versions = CustomVersion::get_default_custom_version_container(engine_version);
+        self.summary.custom_versions =
+            CustomVersion::get_default_custom_version_container(engine_version);
     }
 
     /// Get a custom version from this AssetData
@@ -164,7 +158,8 @@ impl AssetData {
     where
         T: CustomVersionTrait + Into<i32>,
     {
-        self.custom_versions
+        self.summary
+            .custom_versions
             .iter()
             .find(|e| {
                 e.friendly_name
@@ -220,7 +215,8 @@ impl AssetData {
 
     /// Get if the asset has unversioned properties
     pub fn has_unversioned_properties(&self) -> bool {
-        self.package_flags
+        self.summary
+            .package_flags
             .contains(EPackageFlags::PKG_UNVERSIONED_PROPERTIES)
     }
 }
@@ -229,13 +225,13 @@ impl Default for AssetData {
     fn default() -> Self {
         Self {
             use_event_driven_loader: false,
-            unversioned: true,
-            package_flags: EPackageFlags::PKG_NONE,
-            file_license_version: 0,
+            summary: PackageFileSummary {
+                unversioned: true,
+                ..Default::default()
+            },
             engine_version: EngineVersion::UNKNOWN,
             object_version: ObjectVersion::UNKNOWN,
             object_version_ue5: ObjectVersionUE5::UNKNOWN,
-            custom_versions: Vec::new(),
             mappings: None,
             exports: Vec::new(),
             world_tile_info: None,
@@ -328,17 +324,8 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
     fn read_export_no_raw(
         &mut self,
         base_export: BaseExport,
-        i: usize,
+        next_starting: u64,
     ) -> Result<ReadExport, Error> {
-        let asset_data = self.get_asset_data();
-        let next_starting = match i < (asset_data.exports.len() - 1) {
-            true => match &asset_data.exports[i + 1] {
-                Export::BaseExport(next_export) => next_export.serial_offset as u64,
-                _ => self.data_length()? - 4,
-            },
-            false => self.data_length()? - 4,
-        };
-
         self.seek(SeekFrom::Start(base_export.serial_offset as u64))?;
 
         //todo: manual skips
@@ -451,16 +438,14 @@ pub trait ExportReaderTrait: ArchiveReader + AssetTrait + Sized {
     /// # Arguments
     ///
     /// * `i` - export index
-    fn read_export(&mut self, i: usize) -> Result<Export, Error> {
-        let asset_data = self.get_asset_data();
-        let base_export =
-            cast!(Export, BaseExport, asset_data.exports[i].clone()).ok_or_else(|| {
-                Error::invalid_file("Couldn't cast to BaseExport when reading exports".to_string())
-            })?;
-
+    fn read_export(
+        &mut self,
+        base_export: BaseExport,
+        next_starting: u64,
+    ) -> Result<Export, Error> {
         let serial_offset = base_export.serial_offset as u64;
 
-        match self.read_export_no_raw(base_export.clone(), i) {
+        match self.read_export_no_raw(base_export.clone(), next_starting) {
             Ok(e) => {
                 let asset_data_mut = self.get_asset_data_mut();
                 let reduced = e.reduce(asset_data_mut);
