@@ -4,7 +4,6 @@ use std::io::{self, BufReader, Cursor, ErrorKind};
 use std::path::Path;
 
 use unreal_asset::engine_version::EngineVersion;
-use unreal_asset::reader::ArchiveTrait;
 use unreal_asset::unversioned::Ancestry;
 use unreal_asset::Guid;
 use unreal_asset::{
@@ -14,7 +13,7 @@ use unreal_asset::{
         array_property::ArrayProperty, enum_property::EnumProperty, int_property::BoolProperty,
         object_property::ObjectProperty, Property, PropertyDataTrait,
     },
-    types::PackageIndex,
+    types::{PackageIndex, PackageIndexTrait},
     Asset, Import,
 };
 use unreal_pak::{PakMemory, PakReader};
@@ -175,7 +174,7 @@ pub fn handle_persistent_actors(
             let mut created_components = Vec::new();
             if let Some(scs_location) = scs_location {
                 let mut known_node_categories = Vec::new();
-                let scs_export: &NormalExport = actor_asset.asset_data.exports[scs_location]
+                let scs_export: &NormalExport<_> = actor_asset.asset_data.exports[scs_location]
                     .get_normal_export()
                     .expect("Corrupted memory");
                 for i in 0..scs_export.properties.len() {
@@ -203,7 +202,7 @@ pub fn handle_persistent_actors(
 
                 let mut known_parents = HashMap::new();
                 for known_node_category in known_node_categories {
-                    let known_category: &NormalExport = actor_asset.asset_data.exports
+                    let known_category: &NormalExport<_> = actor_asset.asset_data.exports
                         [known_node_category as usize - 1]
                         .get_normal_export()
                         .ok_or_else(|| io::Error::new(ErrorKind::Other, "Invalid export"))?;
@@ -423,7 +422,7 @@ pub fn handle_persistent_actors(
             }
 
             for (export_index, correction_queue) in attach_parent_correcting {
-                let export: &mut NormalExport = asset.asset_data.exports[export_index]
+                let export: &mut NormalExport<_> = asset.asset_data.exports[export_index]
                     .get_normal_export_mut()
                     .expect("Corrupted memory");
                 for correction in correction_queue {

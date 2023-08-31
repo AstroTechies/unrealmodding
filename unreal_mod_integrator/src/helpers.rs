@@ -8,7 +8,7 @@ use unreal_pak::{PakMemory, PakReader};
 use crate::{error::IntegrationError, Error};
 
 pub fn get_asset(
-    integrated_pak: &mut PakMemory,
+    integrated_pak: &PakMemory,
     game_paks: &mut [PakReader<BufReader<File>>],
     mod_paks: &mut [PakReader<BufReader<File>>],
     name: &String,
@@ -62,7 +62,7 @@ pub fn get_asset(
     )
 }
 
-pub fn find_asset(paks: &mut [PakReader<BufReader<File>>], name: &String) -> Option<usize> {
+pub fn find_asset(paks: &[PakReader<BufReader<File>>], name: &String) -> Option<usize> {
     for (i, pak) in paks.iter().enumerate() {
         if pak.contains_entry(name) {
             return Some(i);
