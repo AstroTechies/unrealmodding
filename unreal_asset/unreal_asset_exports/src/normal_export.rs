@@ -71,14 +71,12 @@ impl<Index: PackageIndexTrait> NormalExport<Index> {
 
 impl<Index: PackageIndexTrait> ExportTrait<Index> for NormalExport<Index> {
     fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
-        let (unversioned_header, sorted_properties) = match generate_unversioned_header(
-            asset,
-            &self.properties,
-            &self.base_export.get_class_type_for_ancestry(asset),
-        )? {
-            Some((a, b)) => (Some(a), Some(b)),
-            None => (None, None),
-        };
+        let class_type = self.base_export.get_class_type_for_ancestry(asset);
+        let (unversioned_header, sorted_properties) =
+            match generate_unversioned_header(asset, &self.properties, &class_type)? {
+                Some((a, b)) => (Some(a), Some(b)),
+                None => (None, None),
+            };
 
         if let Some(unversioned_header) = unversioned_header {
             unversioned_header.write(asset)?;

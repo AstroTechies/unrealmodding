@@ -2,6 +2,7 @@
 //! Supports reading and writing.
 
 use std::{
+    fmt::Debug,
     io::{Read, Seek, SeekFrom},
     mem::size_of,
 };
@@ -18,6 +19,7 @@ use unreal_asset_base::{
     engine_version::{get_object_versions, EngineVersion},
     enums,
     error::Error,
+    flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
     passthrough_archive_reader,
     reader::{
@@ -30,203 +32,38 @@ use unreal_asset_base::{
     unversioned::Usmap,
     Import,
 };
-use unreal_asset_exports::Export;
+use unreal_asset_exports::{BaseExport, Export};
 use unreal_asset_proc_macro::FNameContainer;
 
-use crate::asset_data::{AssetData, AssetTrait};
+use crate::asset_data::{AssetData, AssetTrait, ExportReaderTrait};
 use crate::package_file_summary::PackageFileSummary;
 
 use self::{
-    exports::ExportMapEntry,
+    container_header::IoContainerHeader,
+    exports::{EExportCommandType, ExportBundleEntry, ExportBundleHeader, IoStoreExportMapEntry},
+    flags::EExportFilterFlags,
     global::IoGlobalData,
+    name::{EMappedNameType, FMappedName, FNameEntrySerialized},
+    package_id::PackageId,
     zen::{ZenPackageSummary, ZenPackageVersioningInfo},
 };
 
 pub mod align;
 pub mod cas;
+pub mod container_header;
 pub mod encryption;
 pub mod exports;
 pub mod flags;
 pub mod global;
+pub mod name;
+pub mod package_id;
+pub mod package_store_entry;
 pub mod providers;
 pub mod toc;
 pub mod zen;
 
-/// IoStore mapped name type
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum EMappedNameType {
-    /// Package-level name table
-    Package,
-    /// Container-level name table
-    Container,
-    /// Global name table
-    Global,
-}
-
-/// IoStore mapped name
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FMappedName {
-    /// Name index
-    pub index: u32,
-    /// Name number
-    pub number: u32,
-    /// Name type
-    pub ty: EMappedNameType,
-}
-
-impl FMappedName {
-    /// FMappedName index bits
-    pub const INDEX_BITS: u32 = 30;
-    /// FMappedName index mask
-    pub const INDEX_MASK: u32 = (1u32 << Self::INDEX_BITS).overflowing_sub(1).0;
-    /// FMappedName type mask
-    pub const TYPE_MASK: u32 = !Self::INDEX_MASK;
-    /// FMappedName type shift
-    pub const TYPE_SHIFT: u32 = Self::INDEX_BITS;
-
-    /// Create a new `FMappedName` instance
-    pub fn new(index: u32, number: u32, ty: EMappedNameType) -> Self {
-        FMappedName { index, number, ty }
-    }
-
-    /// Read `FMappedName` from an archive
-    pub fn read<R: ArchiveReader<impl PackageIndexTrait>>(archive: &mut R) -> Result<Self, Error> {
-        let index = archive.read_u32::<LE>()?;
-        let number = archive.read_u32::<LE>()?;
-
-        let ty = EMappedNameType::try_from(((index & Self::TYPE_MASK) >> Self::TYPE_SHIFT) as u8)?;
-
-        Ok(FMappedName {
-            index: index & Self::INDEX_MASK,
-            number,
-            ty,
-        })
-    }
-
-    /// Write `FMappedName` to an archive
-    pub fn write<W: ArchiveWriter<impl PackageIndexTrait>>(
-        &self,
-        archive: &mut W,
-    ) -> Result<(), Error> {
-        let index = self.index & Self::INDEX_MASK | (self.ty as u32) << Self::TYPE_SHIFT;
-
-        archive.write_u32::<LE>(index)?;
-        archive.write_u32::<LE>(self.number)?;
-
-        Ok(())
-    }
-}
-
-/// IoStore serialized fname entry
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct FNameEntrySerialized {
-    /// Name
-    pub name: Option<String>,
-}
-
-impl FNameEntrySerialized {
-    /// Create a new `FNameEntrySerialized` instance
-    pub fn new(name: Option<String>) -> Self {
-        FNameEntrySerialized { name }
-    }
-
-    /// Read `FNameEntrySerialized` from an archive
-    pub fn read<R: ArchiveReader<impl PackageIndexTrait>>(archive: &mut R) -> Result<Self, Error> {
-        let name = archive.read_fstring()?;
-
-        if archive.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
-            let _non_case_preserving_hash = archive.read_u16::<LE>()?;
-            let _case_preserving_hash = archive.read_u16::<LE>()?;
-        }
-
-        Ok(FNameEntrySerialized { name })
-    }
-
-    /// Write `FNameEntrySerialized` to an archive
-    pub fn write<W: ArchiveWriter<impl PackageIndexTrait>>(
-        &self,
-        archive: &mut W,
-    ) -> Result<(), Error> {
-        archive.write_fstring(self.name.as_deref())?;
-
-        if archive.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
-            let non_case_preserving_hash = self
-                .name
-                .as_ref()
-                .map(|e| crc::non_case_preserving_hash(e.as_str()))
-                .unwrap_or(0);
-            let case_preserving_hash = self
-                .name
-                .as_ref()
-                .map(|e| crc::case_preserving_hash(e.as_str()))
-                .unwrap_or(0);
-
-            archive.write_u16::<LE>(non_case_preserving_hash)?;
-            archive.write_u16::<LE>(case_preserving_hash)?;
-        }
-
-        Ok(())
-    }
-
-    /// Read an `FNameEntrySerialized` name batch from an archive
-    pub fn read_name_batch<R: ArchiveReader<impl PackageIndexTrait>>(
-        archive: &mut R,
-    ) -> Result<Vec<Self>, Error> {
-        let num_strings = archive.read_i32::<LE>()?;
-        if num_strings == 0 {
-            return Ok(Vec::new());
-        }
-
-        let _strings_length = archive.read_u32::<LE>()?;
-        let hash_version = archive.read_u64::<LE>()?;
-
-        let _hashes = match hash_version {
-            hash if hash == enums::HASH_VERSION_CITYHASH64 => {
-                let mut hashes = Vec::with_capacity(num_strings as usize);
-                for _ in 0..num_strings {
-                    hashes.push(archive.read_u64::<LE>()?); // cityhash64 of crc::to_lower_string
-                }
-                Ok(hashes)
-            }
-            _ => Err(Error::unimplemented(format!(
-                "Unimplemented name batch algorithm: {}",
-                hash_version
-            ))),
-        }?;
-
-        let headers = archive
-            .read_array_with_length(num_strings, |reader| SerializedNameHeader::read(reader))?;
-
-        let mut entries = Vec::with_capacity(num_strings as usize);
-        for header in headers {
-            entries.push(FNameEntrySerialized::new(
-                archive.read_fstring_len_noterm(header.len, header.is_wide)?,
-            ));
-        }
-
-        Ok(entries)
-    }
-
-    /// Read an `FNameEntrySerialized` name batch from an archive using the old method
-    pub fn read_name_batch_old<R: ArchiveReader<impl PackageIndexTrait>>(
-        archive: &mut R,
-        length: usize,
-    ) -> Result<Vec<Self>, Error> {
-        let mut entries = Vec::with_capacity(length);
-        for _ in 0..length {
-            let header = SerializedNameHeader::read(archive)?;
-            let name = FNameEntrySerialized::new(
-                archive.read_fstring_len_noterm(header.len, header.is_wide)?,
-            );
-        }
-
-        Ok(entries)
-    }
-}
-
 /// IoStore packge object index type
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(u16)]
 pub enum EPackageObjectIndexType {
     /// Export
@@ -236,11 +73,12 @@ pub enum EPackageObjectIndexType {
     /// Package import
     PackageImport,
     /// Null
+    #[default]
     Null,
 }
 
 /// IoStore package index
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct PackageObjectIndex {
     /// Id
     pub id: u64,
@@ -253,8 +91,6 @@ impl PackageObjectIndex {
     pub const INDEX_BITS: u64 = 62;
     /// Index mask
     pub const INDEX_MASK: u64 = (1u64 << Self::INDEX_BITS).overflowing_sub(1).0;
-    /// Type mask
-    pub const TYPE_MASK: u64 = !Self::INDEX_MASK;
     /// Type bit shift
     pub const TYPE_SHIFT: u64 = Self::INDEX_BITS;
 
@@ -268,9 +104,7 @@ impl PackageObjectIndex {
         let type_and_id = archive.read_u64::<LE>()?;
 
         let id = type_and_id & Self::INDEX_MASK;
-        let ty = EPackageObjectIndexType::try_from(
-            ((type_and_id >> Self::TYPE_SHIFT) & Self::TYPE_MASK) as u16,
-        )?;
+        let ty = EPackageObjectIndexType::try_from((type_and_id >> Self::TYPE_SHIFT) as u16)?;
 
         Ok(PackageObjectIndex { id, ty })
     }
@@ -286,15 +120,47 @@ impl PackageObjectIndex {
 
         Ok(())
     }
+
+    /// Check if this `PackageObjectIndex` is null
+    #[inline(always)]
+    pub fn is_null(&self) -> bool {
+        self.ty == EPackageObjectIndexType::Null
+    }
+
+    /// Check if this `PackageObjectIndex` is a package import
+    #[inline(always)]
+    pub fn is_package_import(&self) -> bool {
+        self.ty == EPackageObjectIndexType::PackageImport
+    }
+
+    /// Check if this `PackageObjectIndex` is a script import
+    #[inline(always)]
+    pub fn is_script_import(&self) -> bool {
+        self.ty == EPackageObjectIndexType::ScriptImport
+    }
+
+    /// Get this `PackageObjectIndex` as an export
+    #[inline(always)]
+    pub fn as_export(&self) -> u32 {
+        self.id as u32
+    }
+
+    /// Get `PackageObjectIndex` serialized size
+    #[inline(always)]
+    pub fn serialized_size() -> u64 {
+        size_of::<u64>() as u64
+    }
 }
 
 impl PackageIndexTrait for PackageObjectIndex {
+    #[inline(always)]
     fn is_import(&self) -> bool {
-        false
+        self.is_package_import() || self.is_script_import()
     }
 
+    #[inline(always)]
     fn is_export(&self) -> bool {
-        false
+        self.ty == EPackageObjectIndexType::Export
     }
 }
 
@@ -362,6 +228,54 @@ impl ScriptObjectEntry {
     }
 }
 
+/// IoStore bulk data map entry
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct BulkDataMapEntry {
+    /// Serialized offset
+    pub serial_offset: u64,
+    /// Duplicate serialized offset
+    pub dup_serial_offset: u64,
+    /// Serialized size
+    pub serial_size: u64,
+    /// Flags
+    pub flags: u32,
+    /// Padding
+    pub padding: u32,
+}
+
+impl BulkDataMapEntry {
+    /// Read `BulkDataMapEntry` from an archive
+    pub fn read<R: ArchiveReader<impl PackageIndexTrait>>(archive: &mut R) -> Result<Self, Error> {
+        let serial_offset = archive.read_u64::<LE>()?;
+        let dup_serial_offset = archive.read_u64::<LE>()?;
+        let serial_size = archive.read_u64::<LE>()?;
+        let flags = archive.read_u32::<LE>()?;
+        let padding = archive.read_u32::<LE>()?;
+
+        Ok(BulkDataMapEntry {
+            serial_offset,
+            dup_serial_offset,
+            serial_size,
+            flags,
+            padding,
+        })
+    }
+
+    /// Write `BulkDataMapEntry` to an archive
+    pub fn write<W: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        archive: &mut W,
+    ) -> Result<(), Error> {
+        archive.write_u64::<LE>(self.serial_offset)?;
+        archive.write_u64::<LE>(self.dup_serial_offset)?;
+        archive.write_u64::<LE>(self.serial_size)?;
+        archive.write_u32::<LE>(self.flags)?;
+        archive.write_u32::<LE>(self.padding)?;
+
+        Ok(())
+    }
+}
+
 /// IoStore asset
 #[derive(FNameContainer)]
 pub struct IoAsset<C: Read + Seek> {
@@ -378,6 +292,9 @@ pub struct IoAsset<C: Read + Seek> {
     name_map: SharedResource<NameMap>,
     /// Asset name
     pub name: FName,
+    /// Export map
+    #[container_ignore]
+    pub export_map: Vec<IoStoreExportMapEntry>,
 }
 
 impl<C: Read + Seek> IoAsset<C> {
@@ -389,6 +306,7 @@ impl<C: Read + Seek> IoAsset<C> {
         global_data: SharedResource<IoGlobalData>,
         engine_version: EngineVersion,
         mappings: Option<Usmap>,
+        container_header: Option<&IoContainerHeader>,
     ) -> Result<Self, Error> {
         let use_event_driven_loader = bulk_data.is_some();
 
@@ -416,10 +334,11 @@ impl<C: Read + Seek> IoAsset<C> {
             global_data,
             name_map,
             name: FName::default(),
+            export_map: Vec::default(),
         };
 
         io_asset.set_engine_version(engine_version);
-        io_asset.parse_data()?;
+        io_asset.parse_data(container_header)?;
 
         Ok(io_asset)
     }
@@ -432,51 +351,172 @@ impl<C: Read + Seek> IoAsset<C> {
     }
 
     /// Parse asset data
-    fn parse_data(&mut self) -> Result<(), Error> {
-        if self.get_engine_version() >= EngineVersion::VER_UE5_0 {
-            let summary = ZenPackageSummary::read(self)?;
+    fn parse_data(&mut self, container_header: Option<&IoContainerHeader>) -> Result<(), Error> {
+        // todo < 5.0 support
+        let summary = ZenPackageSummary::read(self)?;
 
-            let export_count = (summary.export_bundle_entries_offset - summary.export_map_offset)
-                / size_of::<ExportMapEntry>() as i32;
-            let import_count = (summary.export_map_offset - summary.import_map_offset)
-                / size_of::<PackageObjectIndex>() as i32;
+        let export_count = (summary.export_bundle_entries_offset - summary.export_map_offset)
+            / IoStoreExportMapEntry::serialized_size() as i32;
+        let import_count = (summary.export_map_offset - summary.import_map_offset)
+            / PackageObjectIndex::serialized_size() as i32;
 
-            let package_summary = PackageFileSummary {
-                package_flags: summary.package_flags,
-                export_count,
-                import_count,
-                file_licensee_version: 0,
-                custom_versions: Vec::new(),
-                unversioned: true,
-            };
-            self.asset_data.summary = package_summary;
+        let package_summary = PackageFileSummary {
+            package_flags: summary.package_flags,
+            export_count,
+            import_count,
+            file_licensee_version: 0,
+            custom_versions: Vec::new(),
+            unversioned: true,
+        };
+        self.asset_data.summary = package_summary;
 
-            if summary.has_versioning_info {
-                let versioning_info = ZenPackageVersioningInfo::read(self)?;
-                self.asset_data.summary.file_licensee_version =
-                    versioning_info.file_licensee_version;
+        if summary.has_versioning_info {
+            let versioning_info = ZenPackageVersioningInfo::read(self)?;
+            self.asset_data.summary.file_licensee_version = versioning_info.file_licensee_version;
 
-                self.asset_data.object_version = versioning_info.object_version;
-                self.asset_data.object_version_ue5 = versioning_info.object_version_ue5;
+            self.asset_data.object_version = versioning_info.object_version;
+            self.asset_data.object_version_ue5 = versioning_info.object_version_ue5;
 
-                self.raw_reader.object_version = self.asset_data.object_version;
-                self.raw_reader.object_version_ue5 = self.asset_data.object_version_ue5;
+            self.raw_reader.object_version = self.asset_data.object_version;
+            self.raw_reader.object_version_ue5 = self.asset_data.object_version_ue5;
 
-                self.asset_data.summary.custom_versions = versioning_info.custom_versions;
+            self.asset_data.summary.custom_versions = versioning_info.custom_versions;
 
-                self.asset_data.summary.unversioned = false;
-            }
-
-            self.name_map = NameMap::from_name_batch(
-                &FNameEntrySerialized::read_name_batch(self)?
-                    .into_iter()
-                    .filter_map(|e| e.name)
-                    .collect::<Vec<_>>(),
-            );
-
-            self.name = self.mapped_name_to_fname(summary.name);
-        } else {
+            self.asset_data.summary.unversioned = false;
         }
+
+        self.name_map = NameMap::from_name_batch(
+            &FNameEntrySerialized::read_name_batch(self)?
+                .into_iter()
+                .filter_map(|e| e.name)
+                .collect::<Vec<_>>(),
+        );
+
+        self.name = self.mapped_name_to_fname(summary.name);
+
+        let store_entry = match container_header {
+            Some(container_header) => {
+                let package_id = self.name.get_content(PackageId::from_name);
+
+                container_header
+                    .main_segment
+                    .package_ids
+                    .iter()
+                    .position(|e| *e == package_id)
+                    .map(|e| container_header.main_segment.entries[e].clone())
+                    .or_else(|| {
+                        container_header.optional_segment.as_ref().and_then(|e| {
+                            e.package_ids
+                                .iter()
+                                .position(|i| *i == package_id)
+                                .map(|i| e.entries[i].clone())
+                        })
+                    })
+            }
+            None => None,
+        };
+
+        let bulk_data_map = match self.get_object_version_ue5() >= ObjectVersionUE5::DATA_RESOURCES
+        {
+            true => {
+                let size = self.read_u64::<LE>()?;
+                let count = (size as usize / size_of::<BulkDataMapEntry>()) as i32;
+                Some(self.read_array_with_length(count, BulkDataMapEntry::read)?)
+            }
+            false => None,
+        };
+
+        // imported public export hashes
+        self.set_position(summary.imported_public_export_hashes_offset as u64)?;
+
+        let imported_public_export_hashes = self.read_array_with_length(
+            (summary.import_map_offset - summary.imported_public_export_hashes_offset)
+                / size_of::<u64>() as i32,
+            |reader| Ok(reader.read_u64::<LE>()?),
+        )?;
+
+        // import map
+        self.set_position(summary.import_map_offset as u64)?;
+
+        let import_map = self.read_array_with_length(
+            self.asset_data.summary.import_count,
+            PackageObjectIndex::read,
+        )?;
+
+        // export map
+        self.set_position(summary.export_map_offset as u64)?;
+
+        self.export_map = self.read_array_with_length(
+            self.asset_data.summary.export_count,
+            IoStoreExportMapEntry::read,
+        )?;
+
+        // export bundle entries
+        self.set_position(summary.export_bundle_entries_offset as u64)?;
+
+        let export_bundle_entries = self.read_array_with_length(
+            self.asset_data.summary.export_count * 2,
+            ExportBundleEntry::read,
+        )?;
+
+        let export_bundle_headers = match summary.graph_data_offset {
+            Some(graph_data_offset) => {
+                // export bundle headers
+                self.set_position(graph_data_offset as u64)?;
+
+                let export_bundle_headers_count = store_entry
+                    .as_ref()
+                    .and_then(|e| e.export_bundle_count)
+                    .unwrap_or(1);
+
+                Some(self.read_array_with_length(
+                    export_bundle_headers_count,
+                    ExportBundleHeader::read,
+                )?)
+            }
+            None => None,
+        };
+
+        let imported_package_ids = store_entry
+            .map(|e| e.imported_packages.clone())
+            .unwrap_or_default();
+
+        // todo: attach ubulk/uptnl
+
+        match export_bundle_headers {
+            Some(headers) => {
+                for bundle in headers {
+                    let mut offset = summary.header_size as i64;
+
+                    for i in 0..bundle.entry_count {
+                        let entry = export_bundle_entries[(bundle.first_entry_index + i) as usize];
+
+                        if entry.command_type != EExportCommandType::Serialize {
+                            continue;
+                        }
+
+                        let export_map_entry =
+                            self.export_map[entry.local_export_index as usize].clone();
+                        let mut base_export =
+                            self.export_map_entry_to_base_export(export_map_entry)?;
+
+                        base_export.serial_offset = offset;
+                        let serial_size = base_export.serial_size;
+                        let next_starting = base_export.serial_offset + serial_size;
+
+                        let export = self.read_export(base_export, next_starting as u64)?;
+
+                        offset += serial_size;
+
+                        self.asset_data.exports.push(export);
+                    }
+                }
+            }
+            None => {
+                unimplemented!()
+            }
+        };
+
         Ok(())
     }
 
@@ -494,6 +534,65 @@ impl<C: Read + Seek> IoAsset<C> {
                 .get_mut()
                 .create_fname(mapped_name.index as i32, mapped_name.number as i32),
         }
+    }
+
+    /// Get [`ScriptObjectEntry`] from a [`PackageObjectIndex`]
+    pub fn get_script_import(&self, index: PackageObjectIndex) -> Option<ScriptObjectEntry> {
+        if !index.is_script_import() {
+            return None;
+        }
+
+        self.global_data
+            .get_ref()
+            .script_object_entries
+            .iter()
+            .find(|e| e.global_index == index)
+            .copied()
+    }
+
+    /// Get [`IoStoreExportMapEntry`] from a [`PackageObjectIndex`]
+    pub fn get_export_map_entry(
+        &self,
+        index: PackageObjectIndex,
+    ) -> Option<&IoStoreExportMapEntry> {
+        if !index.is_export() {
+            return None;
+        }
+
+        Some(&self.export_map[index.as_export() as usize])
+    }
+
+    /// Convert [`ExportMapEntry`] to [`BaseExport`]
+    pub fn export_map_entry_to_base_export(
+        &mut self,
+        entry: IoStoreExportMapEntry,
+    ) -> Result<BaseExport<PackageObjectIndex>, Error> {
+        let mut export = BaseExport::<PackageObjectIndex>::default();
+
+        export.serial_offset = entry.cooked_serial_offset as i64;
+        export.serial_size = entry.cooked_serial_size as i64;
+
+        export.object_name = self.mapped_name_to_fname(entry.object_name);
+        export.outer_index = entry.outer_index;
+        export.class_index = entry.class_index;
+        export.super_index = entry.super_index;
+        export.template_index = entry.template_index;
+
+        // todo: pre 5.0 support
+        export.public_export_hash = entry
+            .public_export_hash
+            .ok_or_else(|| Error::invalid_file("Pre 5.0 IoStore is not supported".to_string()))?;
+
+        export.object_flags = entry.object_flags;
+
+        export.not_for_client = entry
+            .filter_flags
+            .contains(EExportFilterFlags::NOT_FOR_CLIENT);
+        export.not_for_server = entry
+            .filter_flags
+            .contains(EExportFilterFlags::NOT_FOR_SERVER);
+
+        Ok(export)
     }
 }
 
@@ -589,12 +688,26 @@ impl<C: Read + Seek> ArchiveTrait<PackageObjectIndex> for IoAsset<C> {
         None
     }
 
-    fn get_object_name(&self, _: PackageObjectIndex) -> Option<FName> {
-        None
+    fn get_object_name(&mut self, index: PackageObjectIndex) -> Option<FName> {
+        self.get_script_import(index)
+            .map(|e| self.mapped_name_to_fname(e.object_name))
     }
 
     fn get_object_name_packageindex(&self, _: PackageIndex) -> Option<FName> {
         None
+    }
+
+    fn get_export_class_type(&mut self, index: PackageObjectIndex) -> Option<FName> {
+        if let Some(script_import) = self.get_script_import(index) {
+            return Some(self.mapped_name_to_fname(script_import.object_name));
+        }
+
+        if let Some(export) = self.get_export_map_entry(index) {
+            return Some(self.mapped_name_to_fname(export.object_name));
+        }
+
+        // todo: package import implementation
+        unimplemented!();
     }
 }
 
@@ -611,5 +724,15 @@ impl<C: Read + Seek> Read for IoAsset<C> {
 impl<C: Read + Seek> Seek for IoAsset<C> {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         self.raw_reader.seek(pos)
+    }
+}
+
+impl<C: Read + Seek> Debug for IoAsset<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IoAsset")
+            .field("asset_data", &self.asset_data)
+            .field("global_data", &self.global_data)
+            .field("name", &self.name)
+            .finish()
     }
 }

@@ -12,7 +12,9 @@ use unreal_asset_base::{
     types::PackageIndexTrait,
 };
 
-use crate::iostore::{enums::EZenPackageVersion, FMappedName};
+use crate::iostore::enums::EZenPackageVersion;
+
+use super::name::FMappedName;
 
 /// Zen package versioning info
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

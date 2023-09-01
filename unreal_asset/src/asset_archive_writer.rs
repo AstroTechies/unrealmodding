@@ -136,7 +136,7 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>> ArchiveT
             .map(|e| e.object_name)
     }
 
-    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+    fn get_object_name(&mut self, index: PackageIndex) -> Option<FName> {
         self.get_object_name_packageindex(index)
     }
 

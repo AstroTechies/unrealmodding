@@ -1,6 +1,7 @@
 //! IoStore exports
 
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use unreal_asset_base::{
     engine_version::EngineVersion,
     error::Error,
@@ -13,7 +14,7 @@ use super::{flags::EExportFilterFlags, FMappedName, PackageObjectIndex};
 
 /// IoStore export map entry
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct ExportMapEntry {
+pub struct IoStoreExportMapEntry {
     /// Cooked serialized offset
     pub cooked_serial_offset: u64,
     /// Cooked serialized size
@@ -40,9 +41,9 @@ pub struct ExportMapEntry {
     pub padding: [u8; 3],
 }
 
-impl ExportMapEntry {
-    /// Read `ExportMapEntry` from an archive
-    pub fn read<R: ArchiveReader<impl PackageIndexTrait>>(archive: &mut R) -> Result<Self, Error> {
+impl IoStoreExportMapEntry {
+    /// Read `IoStoreExportMapEntry` from an archive
+    pub fn read<R: ArchiveReader<PackageObjectIndex>>(archive: &mut R) -> Result<Self, Error> {
         let cooked_serial_offset = archive.read_u64::<LE>()?;
         let cooked_serial_size = archive.read_u64::<LE>()?;
 
@@ -71,7 +72,7 @@ impl ExportMapEntry {
         let mut padding = [0u8; 3];
         archive.read_exact(&mut padding)?;
 
-        Ok(ExportMapEntry {
+        Ok(IoStoreExportMapEntry {
             cooked_serial_offset,
             cooked_serial_size,
             object_name,
@@ -87,8 +88,8 @@ impl ExportMapEntry {
         })
     }
 
-    /// Write `ExportMapEntry` to an archive
-    pub fn write<W: ArchiveWriter<impl PackageIndexTrait>>(
+    /// Write `IoStoreExportMapEntry` to an archive
+    pub fn write<W: ArchiveWriter<PackageObjectIndex>>(
         &self,
         archive: &mut W,
     ) -> Result<(), Error> {
@@ -120,6 +121,95 @@ impl ExportMapEntry {
         archive.write_u8(self.filter_flags.bits())?;
 
         archive.write_all(&self.padding)?;
+        Ok(())
+    }
+
+    /// Get `IoStoreExportMapEntry` serialized size
+    #[inline(always)]
+    pub fn serialized_size() -> u64 {
+        72
+    }
+}
+
+/// IoStore export command type
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[repr(u32)]
+pub enum EExportCommandType {
+    /// Create
+    Create,
+    /// Serialize
+    Serialize,
+    /// Enum variant count
+    Count,
+}
+
+/// IoStore Export bundle entry
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct ExportBundleEntry {
+    /// Local export index
+    pub local_export_index: u32,
+    /// Command type
+    pub command_type: EExportCommandType,
+}
+
+impl ExportBundleEntry {
+    /// Read `ExportBundleEntry` from an archive
+    pub fn read<R: ArchiveReader<impl PackageIndexTrait>>(archive: &mut R) -> Result<Self, Error> {
+        let local_export_index = archive.read_u32::<LE>()?;
+        let command_type = EExportCommandType::try_from(archive.read_u32::<LE>()?)?;
+
+        Ok(ExportBundleEntry {
+            local_export_index,
+            command_type,
+        })
+    }
+
+    /// Write `ExportBundleEntry` to an archive
+    pub fn write<W: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        archive: &mut W,
+    ) -> Result<(), Error> {
+        archive.write_u32::<LE>(self.local_export_index)?;
+        archive.write_u32::<LE>(self.command_type as u32)?;
+
+        Ok(())
+    }
+}
+
+/// IoStore export bundle header
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct ExportBundleHeader {
+    /// Serialized offset
+    pub serial_offset: u64,
+    /// First entry index
+    pub first_entry_index: u32,
+    /// Entry count
+    pub entry_count: u32,
+}
+
+impl ExportBundleHeader {
+    /// Read `ExportBundleHeader` from an archive
+    pub fn read<R: ArchiveReader<impl PackageIndexTrait>>(archive: &mut R) -> Result<Self, Error> {
+        let serial_offset = archive.read_u64::<LE>()?;
+        let first_entry_index = archive.read_u32::<LE>()?;
+        let entry_count = archive.read_u32::<LE>()?;
+
+        Ok(ExportBundleHeader {
+            serial_offset,
+            first_entry_index,
+            entry_count,
+        })
+    }
+
+    /// Write `ExportBundleHeader` to an archive
+    pub fn write<W: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        archive: &mut W,
+    ) -> Result<(), Error> {
+        archive.write_u64::<LE>(self.serial_offset)?;
+        archive.write_u32::<LE>(self.first_entry_index)?;
+        archive.write_u32::<LE>(self.entry_count)?;
+
         Ok(())
     }
 }

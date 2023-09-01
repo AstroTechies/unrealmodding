@@ -125,7 +125,7 @@ impl<'parent_reader, 'asset, R: ArchiveReader<PackageIndex>> ArchiveTrait<Packag
         self.parent_reader.get_parent_class_export_name()
     }
 
-    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+    fn get_object_name(&mut self, index: PackageIndex) -> Option<FName> {
         self.parent_reader.get_object_name(index)
     }
 

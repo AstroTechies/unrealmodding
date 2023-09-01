@@ -603,7 +603,9 @@ impl<'a, C: Read + Seek> Asset<C> {
             .ok_or_else(|| Error::no_data("folder_name is None".to_string()))?;
 
         // read package flags
-        self.asset_data.summary.package_flags = EPackageFlags::from_bits(self.read_u32::<LE>()?)
+        let thing = self.read_u32::<LE>()?;
+        println!("{:x}", thing);
+        self.asset_data.summary.package_flags = EPackageFlags::from_bits(thing)
             .ok_or_else(|| Error::invalid_file("Invalid package flags".to_string()))?;
 
         // read name count and offset
@@ -1555,7 +1557,7 @@ impl<C: Read + Seek> ArchiveTrait<PackageIndex> for Asset<C> {
             .map(|e| e.object_name)
     }
 
-    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+    fn get_object_name(&mut self, index: PackageIndex) -> Option<FName> {
         self.get_object_name_packageindex(index)
     }
 

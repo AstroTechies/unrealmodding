@@ -5,6 +5,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 pub use fname::FName;
 
 pub mod movie;
+pub mod sha;
 pub mod vector;
 
 use std::hash::Hash;

@@ -1,6 +1,9 @@
 //! .utoc directory index
 
-use std::io::{Read, Seek, Write};
+use std::{
+    collections::HashMap,
+    io::{Read, Seek, Write},
+};
 
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use unreal_helpers::{UnrealReadExt, UnrealWriteExt};
@@ -156,6 +159,15 @@ impl IoStoreDirectoryIndex {
     /// Iterate every item in the directory index
     pub fn iter(&self, starting_index: u32, mut f: impl FnMut(u32, String)) {
         self.iter_impl(starting_index, String::default(), &mut f);
+    }
+
+    /// Build a directory index map
+    pub fn build_index_map(&self) -> HashMap<String, u32> {
+        let mut map = HashMap::new();
+        self.iter(Self::ROOT_INDEX, |index, name| {
+            map.insert(name, index);
+        });
+        map
     }
 
     fn iter_impl(

@@ -329,75 +329,70 @@ pub trait ExportReaderTrait<Index: PackageIndexTrait>:
         let mut new_map_value_overrides = IndexedMap::new();
         let new_array_overrides = IndexedMap::new();
 
-        let mut export: Export<Index> = export_class_type.get_content(|class| {
-            Ok::<Export<Index>, Error>(match class {
-                "Level" => LevelExport::from_base(&base_export, self)?.into(),
-                "World" => WorldExport::from_base(&base_export, self)?.into(),
-                "UserDefinedStruct" => {
-                    UserDefinedStructExport::from_base(&base_export, self)?.into()
-                }
-                "StringTable" => StringTableExport::from_base(&base_export, self)?.into(),
-                "Enum" | "UserDefinedEnum" => EnumExport::from_base(&base_export, self)?.into(),
-                "Function" => FunctionExport::from_base(&base_export, self)?.into(),
-                _ => {
-                    if export_class_type.ends_with("DataTable") {
-                        DataTableExport::from_base(&base_export, self)?.into()
-                    } else if export_class_type.ends_with("StringTable") {
-                        StringTableExport::from_base(&base_export, self)?.into()
-                    } else if export_class_type.ends_with("BlueprintGeneratedClass") {
-                        let class_export = ClassExport::from_base(&base_export, self)?;
+        let class = export_class_type.get_owned_content();
+        let mut export: Export<Index> = match class.as_str() {
+            "Level" => LevelExport::from_base(&base_export, self)?.into(),
+            "World" => WorldExport::from_base(&base_export, self)?.into(),
+            "UserDefinedStruct" => UserDefinedStructExport::from_base(&base_export, self)?.into(),
+            "StringTable" => StringTableExport::from_base(&base_export, self)?.into(),
+            "Enum" | "UserDefinedEnum" => EnumExport::from_base(&base_export, self)?.into(),
+            "Function" => FunctionExport::from_base(&base_export, self)?.into(),
+            _ => {
+                if export_class_type.ends_with("DataTable") {
+                    DataTableExport::from_base(&base_export, self)?.into()
+                } else if export_class_type.ends_with("StringTable") {
+                    StringTableExport::from_base(&base_export, self)?.into()
+                } else if export_class_type.ends_with("BlueprintGeneratedClass") {
+                    let class_export = ClassExport::from_base(&base_export, self)?;
 
-                        for entry in &class_export.struct_export.loaded_properties {
-                            if let FProperty::FMapProperty(map) = entry {
-                                let key_override = match &*map.key_prop {
-                                    FProperty::FStructProperty(struct_property) => {
-                                        match struct_property.struct_value.is_import() {
-                                            true => self
-                                                .get_object_name_packageindex(
-                                                    struct_property.struct_value,
-                                                )
-                                                .map(|e| e.get_owned_content()),
-                                            false => None,
-                                        }
+                    for entry in &class_export.struct_export.loaded_properties {
+                        if let FProperty::FMapProperty(map) = entry {
+                            let key_override = match &*map.key_prop {
+                                FProperty::FStructProperty(struct_property) => {
+                                    match struct_property.struct_value.is_import() {
+                                        true => self
+                                            .get_object_name_packageindex(
+                                                struct_property.struct_value,
+                                            )
+                                            .map(|e| e.get_owned_content()),
+                                        false => None,
                                     }
-                                    _ => None,
-                                };
-                                if let Some(key) = key_override {
-                                    new_map_key_overrides
-                                        .insert(map.generic_property.name.get_owned_content(), key);
                                 }
+                                _ => None,
+                            };
+                            if let Some(key) = key_override {
+                                new_map_key_overrides
+                                    .insert(map.generic_property.name.get_owned_content(), key);
+                            }
 
-                                let value_override = match &*map.value_prop {
-                                    FProperty::FStructProperty(struct_property) => {
-                                        match struct_property.struct_value.is_import() {
-                                            true => self
-                                                .get_object_name_packageindex(
-                                                    struct_property.struct_value,
-                                                )
-                                                .map(|e| e.get_owned_content()),
-                                            false => None,
-                                        }
+                            let value_override = match &*map.value_prop {
+                                FProperty::FStructProperty(struct_property) => {
+                                    match struct_property.struct_value.is_import() {
+                                        true => self
+                                            .get_object_name_packageindex(
+                                                struct_property.struct_value,
+                                            )
+                                            .map(|e| e.get_owned_content()),
+                                        false => None,
                                     }
-                                    _ => None,
-                                };
-
-                                if let Some(value) = value_override {
-                                    new_map_value_overrides.insert(
-                                        map.generic_property.name.get_owned_content(),
-                                        value,
-                                    );
                                 }
+                                _ => None,
+                            };
+
+                            if let Some(value) = value_override {
+                                new_map_value_overrides
+                                    .insert(map.generic_property.name.get_owned_content(), value);
                             }
                         }
-                        class_export.into()
-                    } else if export_class_type.ends_with("Property") {
-                        PropertyExport::from_base(&base_export, self)?.into()
-                    } else {
-                        NormalExport::from_base(&base_export, self)?.into()
                     }
+                    class_export.into()
+                } else if export_class_type.ends_with("Property") {
+                    PropertyExport::from_base(&base_export, self)?.into()
+                } else {
+                    NormalExport::from_base(&base_export, self)?.into()
                 }
-            })
-        })?;
+            }
+        };
 
         let extras_len = next_starting as i64 - self.position() as i64;
         if extras_len < 0 {

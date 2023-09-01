@@ -235,23 +235,15 @@ impl FNameError {
     }
 }
 
-/// Zen-specific error type
-#[derive(Error, Debug)]
-pub enum ZenError {
-    /// No mappings were provided before serialization
-    #[error("No mappings were provided before serialization")]
-    NoMappings,
-    /// Object version was not set before serialization
-    #[error("No engine version was set before serialization")]
-    NoObjectVersion,
-}
-
 /// IoStore error
 #[derive(Error, Debug)]
 pub enum IoStoreError {
     /// Invalid toc magic
     #[error("Invalid .utoc magic, got: {0:?}")]
     InvalidTocMagic([u8; 16]),
+    /// Invalid container header magic
+    #[error("Invalid IoStore container magic, got: {0:x}")]
+    InvalidContainerMagic(u32),
     /// Invalid header size
     #[error("Invalid .utoc header size, expected: {0}, got: {1}")]
     InvalidTocHeaderSize(u32, u32),
@@ -371,10 +363,6 @@ pub enum Error {
     /// Oodle library not initialized
     #[error("Oodle decompression library is not initialized")]
     OodleNotInitialized,
-
-    /// A `ZenError` occured
-    #[error(transparent)]
-    Zen(#[from] ZenError),
 }
 
 impl Error {

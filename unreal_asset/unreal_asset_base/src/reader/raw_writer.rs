@@ -17,7 +17,6 @@ use crate::types::{FName, PackageIndex, PackageIndexTrait};
 use crate::unversioned::Usmap;
 use crate::Error;
 
-
 /// A binary writer
 pub struct RawWriter<'cursor, Index: PackageIndexTrait, W: Write + Seek> {
     /// Writer cursor
@@ -120,7 +119,7 @@ impl<'cursor, Index: PackageIndexTrait, W: Write + Seek> ArchiveTrait<Index>
         None
     }
 
-    fn get_object_name(&self, _: Index) -> Option<FName> {
+    fn get_object_name(&mut self, _: Index) -> Option<FName> {
         None
     }
 

@@ -18,7 +18,6 @@ use crate::types::{FName, PackageIndex, PackageIndexTrait, SerializedNameHeader}
 use crate::unversioned::Usmap;
 use crate::Error;
 
-
 /// A binary reader
 pub struct RawReader<Index: PackageIndexTrait, C: Read + Seek> {
     /// Reader cursor
@@ -120,7 +119,7 @@ impl<Index: PackageIndexTrait, C: Read + Seek> ArchiveTrait<Index> for RawReader
         None
     }
 
-    fn get_object_name(&self, _: Index) -> Option<FName> {
+    fn get_object_name(&mut self, _: Index) -> Option<FName> {
         None
     }
 

@@ -1,8 +1,5 @@
 //! Base uasset export
 
-
-
-
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use unreal_asset_base::{
@@ -13,18 +10,6 @@ use unreal_asset_base::{
 };
 
 use crate::{ExportBaseTrait, ExportNormalTrait, ExportTrait};
-
-/// Export filter flags
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum EExportFilterFlags {
-    /// None
-    None,
-    /// This export should not be loaded on the client
-    NotForClient,
-    /// This export should not be loaded on the server
-    NotForServer,
-}
 
 /// Minimal information about an export
 #[derive(FNameContainer, Debug, Default, Clone, PartialEq, Eq, Hash)]
@@ -91,7 +76,10 @@ pub struct BaseExport<Index: PackageIndexTrait> {
 
 impl<Index: PackageIndexTrait> BaseExport<Index> {
     /// Gets class type for first ancestry parent
-    pub fn get_class_type_for_ancestry<Asset: ArchiveTrait<Index>>(&self, asset: &Asset) -> FName {
+    pub fn get_class_type_for_ancestry<Asset: ArchiveTrait<Index>>(
+        &self,
+        asset: &mut Asset,
+    ) -> FName {
         match self.class_index.is_import() {
             true => asset.get_object_name(self.class_index),
             false => asset.get_parent_class_export_name(),

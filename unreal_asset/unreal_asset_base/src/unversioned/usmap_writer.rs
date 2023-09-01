@@ -103,7 +103,7 @@ impl<'parent_writer, 'asset, W: ArchiveWriter<PackageIndex>> ArchiveTrait<Packag
         self.parent_writer.get_parent_class_export_name()
     }
 
-    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+    fn get_object_name(&mut self, index: PackageIndex) -> Option<FName> {
         self.parent_writer.get_object_name(index)
     }
 
