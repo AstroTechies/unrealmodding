@@ -1,5 +1,7 @@
 //! Cloth lod property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 use crate::vector_property::Vector4Property;
 
@@ -20,7 +22,9 @@ pub struct MeshToMeshVertData {
 
 impl MeshToMeshVertData {
     /// Read `MeshToMeshVertData` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let position_bary_coords_and_dist = Vector4Property::new(
             asset,
             asset
@@ -72,7 +76,10 @@ impl MeshToMeshVertData {
     }
 
     /// Write `MeshToMeshVertData` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<usize, Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<usize, Error> {
         let mut size = 0;
         size += self.position_bary_coords_and_dist.write(asset, false)?;
         size += self.normal_bary_coords_and_dist.write(asset, false)?;
@@ -108,7 +115,7 @@ pub struct ClothLodDataProperty {
 
 impl ClothLodDataProperty {
     /// Read a `ClothLodDataProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -175,7 +182,7 @@ impl PropertyDataTrait for ClothLodDataProperty {
 }
 
 impl PropertyTrait for ClothLodDataProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

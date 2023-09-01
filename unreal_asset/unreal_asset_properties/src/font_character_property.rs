@@ -1,5 +1,7 @@
 //! Font character property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Font character
@@ -21,7 +23,9 @@ pub struct FontCharacter {
 
 impl FontCharacter {
     /// Read a `FontCharacter` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         Ok(FontCharacter {
             start_u: asset.read_i32::<LE>()?,
             start_v: asset.read_i32::<LE>()?,
@@ -33,7 +37,10 @@ impl FontCharacter {
     }
 
     /// Write a `FontCharacter` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_i32::<LE>(self.start_u)?;
         asset.write_i32::<LE>(self.start_v)?;
         asset.write_i32::<LE>(self.size_u)?;
@@ -63,7 +70,7 @@ impl_property_data_trait!(FontCharacterProperty);
 
 impl FontCharacterProperty {
     /// Read a `FontCharacterProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -86,7 +93,7 @@ impl FontCharacterProperty {
 }
 
 impl PropertyTrait for FontCharacterProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

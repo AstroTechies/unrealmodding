@@ -4,6 +4,7 @@ use bitvec::prelude::*;
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::types::PackageIndexTrait;
 use crate::Error;
 
 /// Unversioned header fragment
@@ -51,12 +52,17 @@ impl UnversionedHeaderFragment {
     }
 
     /// Read an `UnversionedHeaderFragment` from an asset
-    pub fn read<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn read<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         Ok(UnversionedHeaderFragment::from(asset.read_u16::<LE>()?))
     }
 
     /// Write an `UnversionedHeaderFragment` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         let has_zero_mask = match self.has_zeros {
             true => UnversionedHeaderFragment::HAS_ZEROS_MASK,
             false => 0,
@@ -97,7 +103,7 @@ pub struct UnversionedHeader {
 
 impl UnversionedHeader {
     /// Loads zero mask data from an asset
-    fn load_zero_mask_data<Reader: ArchiveReader>(
+    fn load_zero_mask_data<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         num_bits: u16,
     ) -> Result<BitVec<u8, Lsb0>, Error> {
@@ -120,7 +126,9 @@ impl UnversionedHeader {
     }
 
     /// Read `UnversionedHeader` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Option<Self>, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Option<Self>, Error> {
         if !asset.has_unversioned_properties() {
             return Ok(None);
         }
@@ -173,7 +181,10 @@ impl UnversionedHeader {
     }
 
     /// Write `UnversionedHeader` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         if !asset.has_unversioned_properties() {
             return Ok(());
         }

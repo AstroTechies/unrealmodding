@@ -5,6 +5,7 @@ use std::mem::size_of;
 use byteorder::WriteBytesExt;
 
 use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::types::{PackageIndex};
 use crate::unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter};
 use crate::Error;
 
@@ -21,7 +22,9 @@ pub struct UsmapEnumPropertyData {
 
 impl UsmapEnumPropertyData {
     /// Read a `UsmapEnumPropertyData` from an asset
-    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
+    pub fn new<R: ArchiveReader<PackageIndex>>(
+        asset: &mut UsmapReader<'_, '_, R>,
+    ) -> Result<Self, Error> {
         let inner_property = UsmapPropertyData::new(asset)?;
         let name = asset.read_name()?;
 
@@ -33,7 +36,10 @@ impl UsmapEnumPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapEnumPropertyData {
-    fn write<W: ArchiveWriter>(&self, asset: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error> {
+    fn write<W: ArchiveWriter<PackageIndex>>(
+        &self,
+        asset: &mut UsmapWriter<'_, '_, W>,
+    ) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::EnumProperty as u8)?;
         let size = self.inner_property.write(asset)?;
         asset.write_name(&self.name)?;

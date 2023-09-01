@@ -11,14 +11,19 @@ pub struct MovieSceneSequenceId {
 
 impl MovieSceneSequenceId {
     /// Read a `MovieSceneSequenceId` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let value = asset.read_u32::<LE>()?;
 
         Ok(MovieSceneSequenceId { value })
     }
 
     /// Write a `MovieSceneSequenceId` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_u32::<LE>(self.value)?;
         Ok(())
     }
@@ -43,7 +48,7 @@ impl_property_data_trait!(MovieSceneSequenceIdProperty);
 
 impl MovieSceneSequenceIdProperty {
     /// Read a `MovieSceneSequenceIdProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -65,7 +70,7 @@ impl MovieSceneSequenceIdProperty {
 }
 
 impl PropertyTrait for MovieSceneSequenceIdProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

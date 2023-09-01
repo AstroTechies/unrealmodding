@@ -110,7 +110,7 @@ impl_property_data_trait!(NameProperty);
 
 impl StrProperty {
     /// Read a `StrProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -130,7 +130,7 @@ impl StrProperty {
 }
 
 impl PropertyTrait for StrProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -144,7 +144,7 @@ impl PropertyTrait for StrProperty {
 
 impl TextProperty {
     /// Read a `TextProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -223,7 +223,7 @@ impl TextProperty {
 }
 
 impl PropertyTrait for TextProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -292,7 +292,7 @@ impl PropertyTrait for TextProperty {
 
 impl NameProperty {
     /// Read a `NameProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -312,7 +312,7 @@ impl NameProperty {
 }
 
 impl PropertyTrait for NameProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

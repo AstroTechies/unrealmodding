@@ -1,5 +1,7 @@
 //! Enum property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Enum property
@@ -24,7 +26,7 @@ impl_property_data_trait!(EnumProperty);
 
 impl EnumProperty {
     /// Read an `EnumProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -96,7 +98,7 @@ impl EnumProperty {
 }
 
 impl PropertyTrait for EnumProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

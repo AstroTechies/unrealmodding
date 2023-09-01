@@ -11,7 +11,7 @@ use unreal_asset_base::{
     error::RegistryError,
     flags::EDependencyProperty,
     reader::{ArchiveReader, ArchiveWriter},
-    types::FName,
+    types::{FName, PackageIndexTrait},
     Error,
 };
 
@@ -32,7 +32,9 @@ type LoadedDependencyNodes = (Vec<DependsNode>, Vec<DependsNode>, BitVec<u32, Ls
 
 impl AssetIdentifier {
     /// Read an `AssetIdentifier` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let field_bits = asset.read_u8()?;
         let package_name = match (field_bits & (1 << 0)) != 0 {
             true => Some(asset.read_fname()?),
@@ -63,7 +65,10 @@ impl AssetIdentifier {
     }
 
     /// Write an `AssetIdentifier` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         #[allow(clippy::identity_op)]
         let field_bits = (self.package_name.is_some() as u8) << 0u8
             | (self.primary_asset_type.is_some() as u8) << 1u8
@@ -152,7 +157,7 @@ impl DependsNode {
     }
 
     /// Read `DependsNode` dependencies
-    fn read_dependencies<Reader: ArchiveReader>(
+    fn read_dependencies<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
         flag_set_width: i32,
@@ -235,7 +240,7 @@ impl DependsNode {
     }
 
     /// Write `DependsNode` dependencies
-    fn write_dependencies<Writer: ArchiveWriter>(
+    fn write_dependencies<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         writer: &mut Writer,
         flag_set_width: i32,
         flags: &BitVec<u32, Lsb0>,
@@ -294,7 +299,7 @@ impl DependsNode {
     }
 
     /// Read `DependsNode` dependencies without flags
-    fn read_dependencies_no_flags<Reader: ArchiveReader>(
+    fn read_dependencies_no_flags<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
     ) -> Result<Vec<DependsNode>, Error> {
@@ -334,7 +339,7 @@ impl DependsNode {
     }
 
     /// Write `DependsNode` dependencies without flags
-    fn write_dependencies_no_flags<Writer: ArchiveWriter>(
+    fn write_dependencies_no_flags<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         writer: &mut Writer,
         dependencies: &Vec<DependsNode>,
     ) -> Result<(), Error> {
@@ -363,7 +368,7 @@ impl DependsNode {
     }
 
     /// Load `DependsNode` dependencies
-    pub fn load_dependencies<Reader: ArchiveReader>(
+    pub fn load_dependencies<Reader: ArchiveReader<impl PackageIndexTrait>>(
         &mut self,
         asset: &mut Reader,
         preallocated_depends_node_buffer: &Vec<DependsNode>,
@@ -407,7 +412,7 @@ impl DependsNode {
     }
 
     /// Save `DependsNode` dependencies
-    pub fn save_dependencies<Writer: ArchiveWriter>(
+    pub fn save_dependencies<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         writer: &mut Writer,
     ) -> Result<(), Error> {
@@ -447,7 +452,7 @@ impl DependsNode {
     }
 
     /// Read `DependsNode` array
-    fn read_node_array<Reader: ArchiveReader>(
+    fn read_node_array<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         preallocated_depends_node_buffer: &[DependsNode],
         num: i32,
@@ -467,7 +472,7 @@ impl DependsNode {
     }
 
     /// Load `DependsNode` dependencies before flags
-    pub fn load_dependencies_before_flags<Reader: ArchiveReader>(
+    pub fn load_dependencies_before_flags<Reader: ArchiveReader<impl PackageIndexTrait>>(
         &mut self,
         asset: &mut Reader,
         preallocated_depends_node_buffer: &[DependsNode],
@@ -534,7 +539,7 @@ impl DependsNode {
     }
 
     /// Save `DependsNode` dependencies before flags
-    pub fn save_dependencies_before_flags<Writer: ArchiveWriter>(
+    pub fn save_dependencies_before_flags<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         writer: &mut Writer,
     ) -> Result<(), Error> {

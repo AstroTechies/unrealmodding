@@ -1,6 +1,6 @@
 //! Color properties
 
-use unreal_asset_base::types::vector::Color;
+use unreal_asset_base::types::{vector::Color, PackageIndexTrait};
 
 use crate::property_prelude::*;
 
@@ -40,7 +40,7 @@ impl_property_data_trait!(LinearColorProperty);
 
 impl ColorProperty {
     /// Read a `ColorProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -60,7 +60,7 @@ impl ColorProperty {
 }
 
 impl PropertyTrait for ColorProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -73,7 +73,7 @@ impl PropertyTrait for ColorProperty {
 
 impl LinearColorProperty {
     /// Read a `LinearColorProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -98,7 +98,7 @@ impl LinearColorProperty {
 }
 
 impl PropertyTrait for LinearColorProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

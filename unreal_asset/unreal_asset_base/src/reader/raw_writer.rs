@@ -1,6 +1,7 @@
 //! Binary archive writer
 
 use std::io::{self, Seek, Write};
+use std::marker::PhantomData;
 
 use unreal_helpers::{Guid, UnrealWriteExt};
 
@@ -12,13 +13,13 @@ use crate::reader::{
     archive_trait::{ArchiveTrait, ArchiveType},
     ArchiveWriter,
 };
-use crate::types::{FName, PackageIndex};
+use crate::types::{FName, PackageIndex, PackageIndexTrait};
 use crate::unversioned::Usmap;
 use crate::Error;
-use crate::Import;
+
 
 /// A binary writer
-pub struct RawWriter<'cursor, W: Write + Seek> {
+pub struct RawWriter<'cursor, Index: PackageIndexTrait, W: Write + Seek> {
     /// Writer cursor
     cursor: &'cursor mut W,
     /// Object version
@@ -31,9 +32,11 @@ pub struct RawWriter<'cursor, W: Write + Seek> {
     name_map: SharedResource<NameMap>,
     /// Empty map
     empty_map: IndexedMap<String, String>,
+    /// Marker
+    _marker: PhantomData<Index>,
 }
 
-impl<'cursor, W: Write + Seek> RawWriter<'cursor, W> {
+impl<'cursor, Index: PackageIndexTrait, W: Write + Seek> RawWriter<'cursor, Index, W> {
     /// Create a new instance of `RawWriter` with the specified object versions
     pub fn new(
         cursor: &'cursor mut W,
@@ -49,11 +52,14 @@ impl<'cursor, W: Write + Seek> RawWriter<'cursor, W> {
             use_event_driven_loader,
             name_map,
             empty_map: IndexedMap::new(),
+            _marker: PhantomData,
         }
     }
 }
 
-impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
+impl<'cursor, Index: PackageIndexTrait, W: Write + Seek> ArchiveTrait<Index>
+    for RawWriter<'cursor, Index, W>
+{
     #[inline(always)]
     fn get_archive_type(&self) -> ArchiveType {
         ArchiveType::Raw
@@ -114,12 +120,18 @@ impl<'cursor, W: Write + Seek> ArchiveTrait for RawWriter<'cursor, W> {
         None
     }
 
-    fn get_import(&self, _: PackageIndex) -> Option<Import> {
+    fn get_object_name(&self, _: Index) -> Option<FName> {
+        None
+    }
+
+    fn get_object_name_packageindex(&self, _: PackageIndex) -> Option<FName> {
         None
     }
 }
 
-impl<'cursor, W: Write + Seek> ArchiveWriter for RawWriter<'cursor, W> {
+impl<'cursor, Index: PackageIndexTrait, W: Write + Seek> ArchiveWriter<Index>
+    for RawWriter<'cursor, Index, W>
+{
     fn write_fstring(&mut self, value: Option<&str>) -> Result<usize, Error> {
         Ok(self.cursor.write_fstring(value)?)
     }
@@ -133,7 +145,7 @@ impl<'cursor, W: Write + Seek> ArchiveWriter for RawWriter<'cursor, W> {
     }
 }
 
-impl<'cursor, W: Write + Seek> Write for RawWriter<'cursor, W> {
+impl<'cursor, Index: PackageIndexTrait, W: Write + Seek> Write for RawWriter<'cursor, Index, W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.cursor.write(buf)
     }
@@ -143,7 +155,7 @@ impl<'cursor, W: Write + Seek> Write for RawWriter<'cursor, W> {
     }
 }
 
-impl<'cursor, W: Write + Seek> Seek for RawWriter<'cursor, W> {
+impl<'cursor, Index: PackageIndexTrait, W: Write + Seek> Seek for RawWriter<'cursor, Index, W> {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
         self.cursor.seek(pos)
     }

@@ -5,6 +5,7 @@ use std::mem::size_of;
 use byteorder::WriteBytesExt;
 
 use crate::reader::{ArchiveReader, ArchiveWriter};
+use crate::types::{PackageIndex};
 use crate::unversioned::{usmap_reader::UsmapReader, usmap_writer::UsmapWriter};
 use crate::Error;
 
@@ -19,7 +20,9 @@ pub struct UsmapSetPropertyData {
 
 impl UsmapSetPropertyData {
     /// Read a `UsmapSetPropertyData` from an asset
-    pub fn new<R: ArchiveReader>(asset: &mut UsmapReader<'_, '_, R>) -> Result<Self, Error> {
+    pub fn new<R: ArchiveReader<PackageIndex>>(
+        asset: &mut UsmapReader<'_, '_, R>,
+    ) -> Result<Self, Error> {
         let inner_type = UsmapPropertyData::new(asset)?;
 
         Ok(UsmapSetPropertyData {
@@ -29,7 +32,10 @@ impl UsmapSetPropertyData {
 }
 
 impl UsmapPropertyDataTrait for UsmapSetPropertyData {
-    fn write<W: ArchiveWriter>(&self, asset: &mut UsmapWriter<'_, '_, W>) -> Result<usize, Error> {
+    fn write<W: ArchiveWriter<PackageIndex>>(
+        &self,
+        asset: &mut UsmapWriter<'_, '_, W>,
+    ) -> Result<usize, Error> {
         asset.write_u8(EPropertyType::SetProperty as u8)?;
         let size = self.inner_type.write(asset)?;
         Ok(size + size_of::<u8>())

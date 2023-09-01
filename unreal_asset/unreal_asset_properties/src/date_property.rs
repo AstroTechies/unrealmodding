@@ -1,5 +1,7 @@
 //! Date properties
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Time span property
@@ -36,7 +38,7 @@ impl_property_data_trait!(DateTimeProperty);
 
 impl TimeSpanProperty {
     /// Read a `TimeSpanProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -59,7 +61,7 @@ simple_property_write!(TimeSpanProperty, write_i64, ticks, i64);
 
 impl DateTimeProperty {
     /// Read a `DateTimeProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,

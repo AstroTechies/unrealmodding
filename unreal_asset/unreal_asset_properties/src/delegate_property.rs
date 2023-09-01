@@ -1,5 +1,7 @@
 //! Delegate properties
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Delegate
@@ -37,7 +39,7 @@ impl_property_data_trait!(DelegateProperty);
 
 impl DelegateProperty {
     /// Read a `DelegateProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -61,7 +63,7 @@ impl DelegateProperty {
 }
 
 impl PropertyTrait for DelegateProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -95,7 +97,7 @@ macro_rules! impl_multicast {
         impl_property_data_trait!($property_name);
         impl $property_name {
             /// Read a `$property_name` from an asset
-            pub fn new<Reader: ArchiveReader>(
+            pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
                 asset: &mut Reader,
                 name: FName,
                 ancestry: Ancestry,
@@ -125,7 +127,7 @@ macro_rules! impl_multicast {
         }
 
         impl PropertyTrait for $property_name {
-            fn write<Writer: ArchiveWriter>(
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
                 &self,
                 asset: &mut Writer,
                 include_header: bool,

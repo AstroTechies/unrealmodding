@@ -20,7 +20,7 @@ pub struct MovieSceneFloatValue {
 
 impl MovieSceneFloatValue {
     /// Read a `MovieSceneFloatValue` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         clang_win64: bool,
     ) -> Result<Self, Error> {
@@ -38,7 +38,10 @@ impl MovieSceneFloatValue {
     }
 
     /// Write a `MovieSceneFloatValue` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_f32::<LE>(self.value.0)?;
         self.tangent.write(asset)?;
         asset.write_i8(self.interp_mode as i8)?;
@@ -66,7 +69,7 @@ impl_property_data_trait!(MovieSceneFloatValueProperty);
 
 impl MovieSceneFloatValueProperty {
     /// Read a `MovieSceneFloatValueProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -89,7 +92,7 @@ impl MovieSceneFloatValueProperty {
 }
 
 impl PropertyTrait for MovieSceneFloatValueProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

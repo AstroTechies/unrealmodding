@@ -5,7 +5,11 @@ use std::io::SeekFrom;
 use byteorder::{ReadBytesExt, LE};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use unreal_asset_base::{reader::ArchiveReader, types::FName, Error};
+use unreal_asset_base::{
+    reader::ArchiveReader,
+    types::{FName, PackageIndexTrait},
+    Error,
+};
 
 /// Value type
 #[repr(u32)]
@@ -40,7 +44,9 @@ const INDEX_BITS: u32 = 32 - TYPE_BITS;
 
 impl ValueId {
     /// Read a `ValueId` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let id = asset.read_u32::<LE>()?;
         let value_type = EValueType::try_from((id << INDEX_BITS) >> INDEX_BITS)?;
         let index = id as i32 >> TYPE_BITS;
@@ -59,7 +65,9 @@ pub struct NumberedPair {
 
 impl NumberedPair {
     /// Read a `NumberedPair` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let key = asset.read_fname()?;
         let value = ValueId::new(asset)?;
 
@@ -77,7 +85,9 @@ pub struct NumberlessPair {
 
 impl NumberlessPair {
     /// Read a `NumberlessPair` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let key = asset.read_u32::<LE>()?;
         let value = ValueId::new(asset)?;
 
@@ -97,7 +107,9 @@ pub struct NumberlessExportPath {
 
 impl NumberlessExportPath {
     /// Read a `NumberlessExportPath` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let class = asset.read_u32::<LE>()?;
         let object = asset.read_u32::<LE>()?;
         let package = asset.read_u32::<LE>()?;
@@ -122,7 +134,9 @@ pub struct AssetRegistryExportPath {
 
 impl AssetRegistryExportPath {
     /// Read an `AssetRegistryExportPath` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let class = asset.read_fname()?;
         let object = asset.read_fname()?;
         let package = asset.read_fname()?;
@@ -180,7 +194,9 @@ impl Store {
     }
 
     /// Read a `Store` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let magic = asset.read_u32::<LE>()?;
         let order = Store::get_load_order(magic)?;
 

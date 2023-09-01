@@ -5,6 +5,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use unreal_asset_base::{
     containers::IndexedMap,
     reader::{ArchiveReader, ArchiveWriter},
+    types::PackageIndexTrait,
     Error, FNameContainer,
 };
 
@@ -13,10 +14,10 @@ use crate::ExportTrait;
 use crate::{BaseExport, NormalExport};
 
 /// String table export
-#[derive(FNameContainer, Debug, Clone, Default, PartialEq, Eq)]
-pub struct StringTableExport {
+#[derive(FNameContainer, Debug, Clone, PartialEq, Eq)]
+pub struct StringTableExport<Index: PackageIndexTrait> {
     /// Base normal export
-    pub normal_export: NormalExport,
+    pub normal_export: NormalExport<Index>,
     /// String table namespace
     pub namespace: Option<String>,
     /// String table
@@ -25,10 +26,10 @@ pub struct StringTableExport {
 
 implement_get!(StringTableExport);
 
-impl StringTableExport {
+impl<Index: PackageIndexTrait> StringTableExport<Index> {
     /// Read a `StringTableExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
@@ -57,8 +58,8 @@ impl StringTableExport {
     }
 }
 
-impl ExportTrait for StringTableExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for StringTableExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
         asset.write_i32::<LE>(0)?;
 

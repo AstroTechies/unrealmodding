@@ -20,7 +20,7 @@ impl_property_data_trait!(RawStructProperty);
 
 impl RawStructProperty {
     /// Read a `RawStructProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -44,7 +44,7 @@ impl RawStructProperty {
 }
 
 impl PropertyTrait for RawStructProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

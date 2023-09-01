@@ -11,7 +11,7 @@ use unreal_asset_base::{
     enums::{EArrayDim, ELifetimeCondition},
     flags::EPropertyFlags,
     reader::{ArchiveReader, ArchiveWriter},
-    types::{FName, PackageIndex},
+    types::{FName, PackageIndex, PackageIndexTrait},
     Error, FNameContainer,
 };
 
@@ -26,7 +26,7 @@ macro_rules! parse_simple_property {
 
         impl $prop_name {
             /// Read a `$prop_name` from an asset
-            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: UGenericProperty::new(asset)?
                 })
@@ -34,7 +34,7 @@ macro_rules! parse_simple_property {
         }
 
         impl UPropertyTrait for $prop_name {
-            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 Ok(())
             }
@@ -63,7 +63,7 @@ macro_rules! parse_simple_property {
 
         impl $prop_name {
             /// Read a `$prop_name` from an asset
-            pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+            pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(asset: &mut Reader) -> Result<Self, Error> {
                 Ok($prop_name {
                     generic_property: UGenericProperty::new(asset)?,
                     $(
@@ -74,7 +74,7 @@ macro_rules! parse_simple_property {
         }
 
         impl UPropertyTrait for $prop_name {
-            fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(&self, asset: &mut Writer) -> Result<(), Error> {
                 self.generic_property.write(asset)?;
                 $(
                     asset.write_i32::<LE>(self.$field_name.index)?;
@@ -89,7 +89,10 @@ macro_rules! parse_simple_property {
 #[enum_dispatch]
 pub trait UPropertyTrait: Debug + Clone + PartialEq + Eq + Hash {
     /// Write `UProperty` to an asset
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error>;
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error>;
 }
 
 /// UProperty
@@ -159,7 +162,7 @@ impl Eq for UProperty {}
 
 impl UProperty {
     /// Read a `UProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         serialized_type: FName,
     ) -> Result<Self, Error> {
@@ -240,7 +243,9 @@ pub struct UBoolProperty {
 
 impl UField {
     /// Read a `UField` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let next = match asset
             .get_custom_version::<FFrameworkObjectVersion>()
             .version
@@ -253,7 +258,10 @@ impl UField {
     }
 
     /// Write a `UField` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         if asset
             .get_custom_version::<FFrameworkObjectVersion>()
             .version
@@ -276,7 +284,9 @@ impl UField {
 
 impl UGenericProperty {
     /// Read a `UGenericProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let u_field = UField::new(asset)?;
 
         let array_dim: EArrayDim = asset.read_i32::<LE>()?.try_into()?;
@@ -303,7 +313,10 @@ impl UGenericProperty {
 }
 
 impl UPropertyTrait for UGenericProperty {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.u_field.write(asset)?;
         asset.write_i32::<LE>(self.array_dim.into())?;
         asset.write_u64::<LE>(self.property_flags.bits())?;
@@ -324,7 +337,9 @@ impl UPropertyTrait for UGenericProperty {
 
 impl UBoolProperty {
     /// Read a `UBoolProeprty` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let generic_property = UGenericProperty::new(asset)?;
 
         let element_size = asset.read_u8()?;
@@ -339,7 +354,10 @@ impl UBoolProperty {
 }
 
 impl UPropertyTrait for UBoolProperty {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.generic_property.write(asset)?;
         asset.write_u8(self.element_size)?;
         asset.write_bool(self.native_bool)?;

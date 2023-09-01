@@ -84,7 +84,7 @@ impl IndexFileModVersion {
 }
 
 pub(crate) fn gather_index_files(
-    data: &mut ModLoaderAppData,
+    data: &ModLoaderAppData,
     filter: &[String],
 ) -> HashMap<String, DownloadInfo> {
     //let mut index_files: HashMap<String, DownloadInfo> = HashMap::new();

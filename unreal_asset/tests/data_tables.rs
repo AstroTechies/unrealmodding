@@ -34,7 +34,7 @@ fn data_tables() -> Result<(), Error> {
     shared::verify_binary_equality(TEST_ASSET, None, &mut asset)?;
     assert!(shared::verify_all_exports_parsed(&asset));
 
-    let data_table_export: &mut DataTableExport =
+    let data_table_export: &mut DataTableExport<_> =
         cast!(Export, DataTableExport, &mut asset.asset_data.exports[0])
             .expect("First export is not a DataTableExport");
 
@@ -71,7 +71,7 @@ fn data_tables() -> Result<(), Error> {
     assert!(shared::verify_all_exports_parsed(&parsed_back));
     assert!(parsed_back.asset_data.exports.len() == 1);
 
-    let data_table_export: &DataTableExport =
+    let data_table_export: &DataTableExport<_> =
         cast!(Export, DataTableExport, &parsed_back.asset_data.exports[0])
             .expect("First export is not a DataTableExport after serializing and deserializing");
 

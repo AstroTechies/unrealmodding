@@ -8,6 +8,8 @@ use crate::{
     reader::{ArchiveReader, ArchiveWriter},
 };
 
+use super::PackageIndexTrait;
+
 /// Frame number
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FrameNumber {
@@ -76,7 +78,9 @@ pub struct FFrameNumberRangeBound {
 
 impl FFrameNumberRangeBound {
     /// Read a `FFrameNumberRangeBound` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let ty: ERangeBoundTypes = ERangeBoundTypes::try_from(asset.read_i8()?)?;
         let value = FrameNumber::new(asset.read_i32::<LE>()?);
 
@@ -84,7 +88,10 @@ impl FFrameNumberRangeBound {
     }
 
     /// Write a `FFrameNumberRangeBound` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_i8(self.ty as i8)?;
         asset.write_i32::<LE>(self.value.value)?;
         Ok(())
@@ -102,7 +109,9 @@ pub struct FFrameNumberRange {
 
 impl FFrameNumberRange {
     /// Read a `FFrameNumberRange` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let lower_bound = FFrameNumberRangeBound::new(asset)?;
         let upper_bound = FFrameNumberRangeBound::new(asset)?;
 
@@ -113,7 +122,10 @@ impl FFrameNumberRange {
     }
 
     /// Write a `FFrameNumberRange` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.lower_bound.write(asset)?;
         self.upper_bound.write(asset)?;
         Ok(())

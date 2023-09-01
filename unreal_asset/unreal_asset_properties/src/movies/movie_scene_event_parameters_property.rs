@@ -13,7 +13,9 @@ pub struct MovieSceneEventParameters {
 
 impl MovieSceneEventParameters {
     /// Read `MovieSceneEventParameters` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let struct_type = SoftObjectPath::new(asset)?;
 
         let struct_bytes_length = asset.read_i32::<LE>()?;
@@ -27,7 +29,10 @@ impl MovieSceneEventParameters {
     }
 
     /// Write `MovieSceneEventParameters` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.struct_type.write(asset)?;
 
         asset.write_i32::<LE>(self.struct_bytes.len() as i32)?;
@@ -55,7 +60,7 @@ impl_property_data_trait!(MovieSceneEventParametersProperty);
 
 impl MovieSceneEventParametersProperty {
     /// Read `MovieSceneEventParametersProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -76,7 +81,7 @@ impl MovieSceneEventParametersProperty {
 }
 
 impl PropertyTrait for MovieSceneEventParametersProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

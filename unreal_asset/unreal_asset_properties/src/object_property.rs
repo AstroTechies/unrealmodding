@@ -58,7 +58,9 @@ impl TopLevelAssetPath {
     }
 
     /// Read a `TopLevelAssetPath` from an asset
-    pub fn read<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn read<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let package_name = match asset.get_object_version_ue5()
             >= ObjectVersionUE5::FSOFTOBJECTPATH_REMOVE_ASSET_PATH_FNAMES
         {
@@ -74,7 +76,10 @@ impl TopLevelAssetPath {
     }
 
     /// Write a `TopLevelAssetPath` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         if asset.get_object_version_ue5()
             >= ObjectVersionUE5::FSOFTOBJECTPATH_REMOVE_ASSET_PATH_FNAMES
         {
@@ -102,7 +107,9 @@ pub struct SoftObjectPath {
 
 impl SoftObjectPath {
     /// Read a `SoftObjectPath` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let asset_path = TopLevelAssetPath::read(asset)?;
         let sub_path_string = asset.read_fstring()?;
 
@@ -113,7 +120,10 @@ impl SoftObjectPath {
     }
 
     /// Write a `SoftObjectPath` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         self.asset_path.write(asset)?;
         asset.write_fstring(self.sub_path_string.as_deref())?;
 
@@ -139,7 +149,7 @@ impl_property_data_trait!(SoftObjectProperty);
 
 impl ObjectProperty {
     /// Read an `ObjectProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -159,7 +169,7 @@ impl ObjectProperty {
 }
 
 impl PropertyTrait for ObjectProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -172,7 +182,7 @@ impl PropertyTrait for ObjectProperty {
 
 impl AssetObjectProperty {
     /// Read an `AssetObjectProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -192,7 +202,7 @@ impl AssetObjectProperty {
 }
 
 impl PropertyTrait for AssetObjectProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -204,7 +214,7 @@ impl PropertyTrait for AssetObjectProperty {
 
 impl SoftObjectProperty {
     /// Read a `SoftObjectProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -225,7 +235,7 @@ impl SoftObjectProperty {
 }
 
 impl PropertyTrait for SoftObjectProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

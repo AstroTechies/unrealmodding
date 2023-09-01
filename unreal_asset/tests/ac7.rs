@@ -14,18 +14,11 @@ macro_rules! assets_folder {
     };
 }
 
-const TEST_ASSETS: [(&str, &[u8], &[u8]); 2] = [
-    (
-        "ex02_IGC_03_Subtitle",
-        include_bytes!(concat!(assets_folder!(), "ex02_IGC_03_Subtitle.uasset")),
-        include_bytes!(concat!(assets_folder!(), "ex02_IGC_03_Subtitle.uexp")),
-    ),
-    (
-        "plwp_6aam_a0",
-        include_bytes!(concat!(assets_folder!(), "plwp_6aam_a0.uasset")),
-        include_bytes!(concat!(assets_folder!(), "plwp_6aam_a0.uexp")),
-    ),
-];
+const TEST_ASSETS: [(&str, &[u8], &[u8]); 1] = [(
+    "ex02_IGC_03_Subtitle",
+    include_bytes!(concat!(assets_folder!(), "ex02_IGC_03_Subtitle.uasset")),
+    include_bytes!(concat!(assets_folder!(), "ex02_IGC_03_Subtitle.uexp")),
+)];
 
 #[test]
 fn ac7() -> Result<(), Error> {

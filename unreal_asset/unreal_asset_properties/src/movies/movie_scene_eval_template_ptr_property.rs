@@ -1,5 +1,7 @@
 //! Movie scene evaluation template pointer property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Movie scene evaluation template pointer property
@@ -20,7 +22,7 @@ impl_property_data_trait!(MovieSceneEvalTemplatePtrProperty);
 
 impl MovieSceneEvalTemplatePtrProperty {
     /// Read a `MovieSceneEvalTemplatePtrProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -65,7 +67,7 @@ impl MovieSceneEvalTemplatePtrProperty {
 }
 
 impl PropertyTrait for MovieSceneEvalTemplatePtrProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

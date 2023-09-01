@@ -12,11 +12,11 @@ use crate::enums::ECustomVersionSerializationFormat;
 use crate::error::{Error, FNameError};
 use crate::object_version::ObjectVersion;
 use crate::reader::ArchiveTrait;
-use crate::types::{FName, SerializedNameHeader};
+use crate::types::{FName, PackageIndexTrait, SerializedNameHeader};
 use crate::Guid;
 
 /// A trait that allows reading from an archive in an asset-specific way
-pub trait ArchiveReader: ArchiveTrait + Read {
+pub trait ArchiveReader<Index: PackageIndexTrait>: ArchiveTrait<Index> + Read {
     /// Read a `Guid` property
     fn read_property_guid(&mut self) -> Result<Option<Guid>, Error> {
         if self.get_object_version() >= ObjectVersion::VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG {
@@ -188,7 +188,7 @@ pub trait ArchiveReader: ArchiveTrait + Read {
     /// use unreal_asset::reader::asset_reader::ArchiveReader;
     /// use byteorder::LE;
     ///
-    /// let reader: ArchiveReader = ...;
+    /// let reader: ArchiveReader<impl PackageIndexTrait> = ...;
     /// let ints = reader.read_array_with_length(12, |e| e.read_i32::<LE>()?)?;
     /// ```
     fn read_array_with_length<T>(
@@ -227,40 +227,32 @@ pub trait ArchiveReader: ArchiveTrait + Read {
     fn read_bool(&mut self) -> io::Result<bool>;
 }
 
-/// A trait that allows for quick implementation of [`ArchiveReader`] as a passthrough trait for the underlying archive
-pub trait PassthroughArchiveReader: ArchiveTrait + Read {
-    /// Passthrough archive reader type
-    type Passthrough: ArchiveReader;
-    /// Get the passthrough archive reader
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough;
-}
+/// A macro that allows for quick implementation of [`ArchiveReader`] as a passthrough for the underlying archive
+#[macro_export]
+macro_rules! passthrough_archive_reader {
+    ($passthrough:ident) => {
+        #[inline(always)]
+        fn read_fstring(&mut self) -> Result<Option<String>, Error> {
+            self.$passthrough.read_fstring()
+        }
 
-impl<Reader, Passthrough> ArchiveReader for Passthrough
-where
-    Reader: ArchiveReader,
-    Passthrough: PassthroughArchiveReader<Passthrough = Reader>,
-{
-    #[inline(always)]
-    fn read_fstring(&mut self) -> Result<Option<String>, Error> {
-        self.get_passthrough().read_fstring()
-    }
+        #[inline(always)]
+        fn read_fstring_name_header(
+            &mut self,
+            serialized_name_header: $crate::types::SerializedNameHeader,
+        ) -> Result<Option<String>, Error> {
+            self.$passthrough
+                .read_fstring_name_header(serialized_name_header)
+        }
 
-    #[inline(always)]
-    fn read_fstring_name_header(
-        &mut self,
-        serialized_name_header: SerializedNameHeader,
-    ) -> Result<Option<String>, Error> {
-        self.get_passthrough()
-            .read_fstring_name_header(serialized_name_header)
-    }
+        #[inline(always)]
+        fn read_guid(&mut self) -> std::io::Result<unreal_helpers::Guid> {
+            self.$passthrough.read_guid()
+        }
 
-    #[inline(always)]
-    fn read_guid(&mut self) -> io::Result<Guid> {
-        self.get_passthrough().read_guid()
-    }
-
-    #[inline(always)]
-    fn read_bool(&mut self) -> io::Result<bool> {
-        self.get_passthrough().read_bool()
-    }
+        #[inline(always)]
+        fn read_bool(&mut self) -> std::io::Result<bool> {
+            self.$passthrough.read_bool()
+        }
+    };
 }

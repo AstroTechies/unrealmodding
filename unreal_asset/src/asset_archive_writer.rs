@@ -9,34 +9,35 @@ use unreal_asset_base::{
     engine_version::EngineVersion,
     flags::EPackageFlags,
     object_version::{ObjectVersion, ObjectVersionUE5},
-    reader::{ArchiveTrait, ArchiveType, ArchiveWriter, PassthroughArchiveWriter},
-    types::{FName, PackageIndex},
+    passthrough_archive_writer,
+    reader::{ArchiveTrait, ArchiveType, ArchiveWriter},
+    types::{FName, PackageIndex, PackageIndexTrait},
     unversioned::Usmap,
-    Import,
+    Error, Import,
 };
 use unreal_asset_exports::Export;
 
 use crate::asset_data::AssetData;
 
-/// Archive that can be used to write an asset
-pub struct AssetArchiveWriter<'parent_writer, 'asset, ParentWriter: ArchiveWriter> {
+/// Archive that can be used to write UAsset data
+pub struct AssetArchiveWriter<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>> {
     /// Parent writer for this writer
     writer: &'parent_writer mut ParentWriter,
     /// Asset data
-    asset_data: &'asset AssetData,
+    asset_data: &'asset AssetData<PackageIndex>,
     /// Asset imports
     imports: &'asset [Import],
     /// Asset name map
     name_map: SharedResource<NameMap>,
 }
 
-impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter>
+impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>>
     AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
 {
     /// Create a new `AssetArchiveWriter` instance
     pub fn new(
         parent_writer: &'parent_writer mut ParentWriter,
-        asset_data: &'asset AssetData,
+        asset_data: &'asset AssetData<PackageIndex>,
         imports: &'asset [Import],
         name_map: SharedResource<NameMap>,
     ) -> Self {
@@ -47,9 +48,23 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter>
             name_map,
         }
     }
+
+    /// Get an [`Import`] from this `AssetArchiveWriter`
+    pub fn get_import(&self, index: PackageIndex) -> Option<Import> {
+        if !index.is_import() {
+            return None;
+        }
+
+        let index = -index.index - 1;
+        if index < 0 || index > self.imports.len() as i32 {
+            return None;
+        }
+
+        Some(self.imports[index as usize].clone())
+    }
 }
 
-impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
+impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>> ArchiveTrait<PackageIndex>
     for AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
 {
     #[inline(always)]
@@ -66,6 +81,7 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
 
     fn has_unversioned_properties(&self) -> bool {
         self.asset_data
+            .summary
             .package_flags
             .contains(EPackageFlags::PKG_UNVERSIONED_PROPERTIES)
     }
@@ -124,32 +140,22 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> ArchiveTrait
             .map(|e| e.object_name)
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<Import> {
-        if !index.is_import() {
-            return None;
-        }
+    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+        self.get_object_name_packageindex(index)
+    }
 
-        let index = -index.index - 1;
-        if index < 0 || index > self.imports.len() as i32 {
-            return None;
-        }
-
-        Some(self.imports[index as usize].clone())
+    fn get_object_name_packageindex(&self, index: PackageIndex) -> Option<FName> {
+        self.get_import(index).map(|e| e.object_name)
     }
 }
 
-impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> PassthroughArchiveWriter
+impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>> ArchiveWriter<PackageIndex>
     for AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
 {
-    type Passthrough = ParentWriter;
-
-    #[inline(always)]
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        self.writer
-    }
+    passthrough_archive_writer!(writer);
 }
 
-impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> Write
+impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>> Write
     for AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
 {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
@@ -161,7 +167,7 @@ impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> Write
     }
 }
 
-impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter> Seek
+impl<'parent_writer, 'asset, ParentWriter: ArchiveWriter<PackageIndex>> Seek
     for AssetArchiveWriter<'parent_writer, 'asset, ParentWriter>
 {
     fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {

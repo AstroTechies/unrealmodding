@@ -70,3 +70,41 @@ pub enum ECustomVersionSerializationFormat {
     #[default]
     Optimized,
 }
+
+/// Zen package version
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[repr(u32)]
+pub enum EZenPackageVersion {
+    /// Initial
+    Initial,
+    /// Data resource table
+    DataResourceTable,
+    /// Imported package names
+    ImportedPackageNames,
+
+    /// Latest
+    Latest,
+    /// Latest plus one
+    LatestPlusOne,
+}
+
+/// IoStore container header version
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, TryFromPrimitive, IntoPrimitive,
+)]
+#[repr(u32)]
+pub enum EIoContainerHeaderVersion {
+    /// Initial
+    Initial,
+    /// Localized packages
+    LocalizedPackages,
+    /// Optional segment packages
+    OptionalSegmentPackages,
+    /// No export info
+    NoExportInfo,
+
+    /// Latest
+    Latest,
+    /// Latest plus one
+    LatestPlusOne,
+}

@@ -7,7 +7,7 @@ use unreal_asset_base::{
     custom_version::FAssetRegistryVersionType,
     flags::EPackageFlags,
     reader::{ArchiveReader, ArchiveWriter},
-    types::FName,
+    types::{FName, PackageIndexTrait},
     Error,
 };
 
@@ -24,7 +24,9 @@ pub struct TopLevelAssetPath {
 
 impl TopLevelAssetPath {
     /// Read a `TopLevelAssetPath` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let package_name = asset.read_fname()?;
         let asset_name = asset.read_fname()?;
 
@@ -35,7 +37,10 @@ impl TopLevelAssetPath {
     }
 
     /// Write a `TopLevelAssetPath` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         writer.write_fname(&self.package_name)?;
         writer.write_fname(&self.asset_name)?;
         Ok(())
@@ -74,7 +79,7 @@ pub struct AssetData {
 
 impl AssetData {
     /// Read `AssetData` tags
-    fn read_tags<Reader: ArchiveReader>(
+    fn read_tags<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
     ) -> Result<IndexedMap<FName, Option<String>>, Error> {
         let size = asset.read_i32::<LE>()?;
@@ -87,7 +92,7 @@ impl AssetData {
     }
 
     /// Write `AssetData` tags
-    fn write_tags<Writer: ArchiveWriter>(
+    fn write_tags<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         asset: &mut Writer,
         tags_and_values: &IndexedMap<FName, Option<String>>,
     ) -> Result<(), Error> {
@@ -100,7 +105,7 @@ impl AssetData {
     }
 
     /// Read `AssetData` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         version: FAssetRegistryVersionType,
     ) -> Result<Self, Error> {
@@ -168,7 +173,10 @@ impl AssetData {
     }
 
     /// Write `AssetData` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         writer.write_fname(&self.object_path)?;
         writer.write_fname(&self.package_path)?;
 

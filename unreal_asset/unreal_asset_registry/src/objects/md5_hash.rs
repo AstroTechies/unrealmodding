@@ -4,6 +4,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},
+    types::PackageIndexTrait,
     Error,
 };
 
@@ -16,7 +17,9 @@ pub struct FMD5Hash {
 
 impl FMD5Hash {
     /// Read a `FMD5Hash` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let mut hash = None;
 
         let has_hash = asset.read_u32::<LE>()?;
@@ -30,7 +33,10 @@ impl FMD5Hash {
     }
 
     /// Write a `FMD5Hash` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, writer: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        writer: &mut Writer,
+    ) -> Result<(), Error> {
         if let Some(hash) = &self.hash {
             writer.write_u32::<LE>(1)?;
             writer.write_all(hash)?;

@@ -39,7 +39,7 @@ fn custom_serialization_structs_in_map() -> Result<(), Error> {
     let export_two = asset
         .get_export(PackageIndex::new(2))
         .ok_or_else(|| Error::no_data("Export two doesn't exist".to_string()))?;
-    let export_two: &NormalExport = export_two
+    let export_two: &NormalExport<_> = export_two
         .get_normal_export()
         .ok_or_else(|| Error::invalid_file("Export two is not NormalExport".to_string()))?;
 

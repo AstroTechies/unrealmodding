@@ -1,5 +1,7 @@
 //! Unique network id property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 /// Unique network id
@@ -29,7 +31,7 @@ impl_property_data_trait!(UniqueNetIdProperty);
 
 impl UniqueNetIdProperty {
     /// Read a `UniqueNetIdProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -59,7 +61,7 @@ impl UniqueNetIdProperty {
 }
 
 impl PropertyTrait for UniqueNetIdProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

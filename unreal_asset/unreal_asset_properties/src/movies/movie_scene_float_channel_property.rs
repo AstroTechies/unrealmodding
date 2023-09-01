@@ -35,7 +35,9 @@ pub struct MovieSceneFloatChannel {
 
 impl MovieSceneFloatChannel {
     /// Read a `MovieSceneFloatChannel` from an asset
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         let pre_infinity_extrap: RichCurveExtrapolation =
             RichCurveExtrapolation::try_from(asset.read_u8()?)?;
         let post_infinity_extrap: RichCurveExtrapolation =
@@ -77,7 +79,10 @@ impl MovieSceneFloatChannel {
     }
 
     /// Write a `MovieSceneFloatChannel` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_u8(self.pre_infinity_extrap as u8)?;
         asset.write_u8(self.post_infinity_extrap as u8)?;
 
@@ -127,7 +132,7 @@ impl_property_data_trait!(MovieSceneFloatChannelProperty);
 
 impl MovieSceneFloatChannelProperty {
     /// Read a `MovieSceneFloatChannelProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -149,7 +154,7 @@ impl MovieSceneFloatChannelProperty {
 }
 
 impl PropertyTrait for MovieSceneFloatChannelProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

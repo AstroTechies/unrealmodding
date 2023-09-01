@@ -1,5 +1,7 @@
 //! Movie scene evaluation field entity tree property
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 
 use super::movie_scene_evaluation::MovieSceneEvaluationFieldEntityTree;
@@ -23,7 +25,7 @@ impl_property_data_trait!(MovieSceneEvaluationFieldEntityTreeProperty);
 
 impl MovieSceneEvaluationFieldEntityTreeProperty {
     /// Read a `MovieSceneEvaluationFieldEntityTreeProperty` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         name: FName,
         ancestry: Ancestry,
@@ -45,7 +47,7 @@ impl MovieSceneEvaluationFieldEntityTreeProperty {
 }
 
 impl PropertyTrait for MovieSceneEvaluationFieldEntityTreeProperty {
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,

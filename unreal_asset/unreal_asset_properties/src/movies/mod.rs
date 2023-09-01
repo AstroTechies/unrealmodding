@@ -1,5 +1,7 @@
 //! Unreal movies
 
+use unreal_asset_base::types::PackageIndexTrait;
+
 use crate::property_prelude::*;
 use crate::rich_curve_key_property::RichCurveTangentWeightMode;
 
@@ -40,7 +42,7 @@ pub struct MovieSceneTangentData {
 
 impl MovieSceneTangentData {
     /// Read `MovieSceneTangentData` from an asset
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         clang_win64: bool,
     ) -> Result<Self, Error> {
@@ -65,7 +67,10 @@ impl MovieSceneTangentData {
     }
 
     /// Write `MovieSceneTangentData` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         asset.write_f32::<LE>(self.arrive_tangent.0)?;
         asset.write_f32::<LE>(self.leave_tangent.0)?;
         asset.write_f32::<LE>(self.arrive_tangent_weight.0)?;

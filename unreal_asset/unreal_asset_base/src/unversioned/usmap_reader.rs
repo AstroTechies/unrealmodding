@@ -11,18 +11,18 @@ use crate::{
     engine_version::EngineVersion,
     error::{Error, UsmapError},
     object_version::{ObjectVersion, ObjectVersionUE5},
+    passthrough_archive_reader,
     reader::{
-        archive_reader::{ArchiveReader, PassthroughArchiveReader},
+        archive_reader::ArchiveReader,
         archive_trait::{ArchiveTrait, ArchiveType},
     },
     types::{FName, PackageIndex},
-    Import,
 };
 
 use super::Usmap;
 
 /// Usmap file reader
-pub struct UsmapReader<'parent_reader, 'asset, R: ArchiveReader> {
+pub struct UsmapReader<'parent_reader, 'asset, R: ArchiveReader<PackageIndex>> {
     /// Parent reader
     parent_reader: &'parent_reader mut R,
     /// Name map
@@ -31,7 +31,9 @@ pub struct UsmapReader<'parent_reader, 'asset, R: ArchiveReader> {
     custom_versions: &'asset [CustomVersion],
 }
 
-impl<'parent_reader, 'asset, R: ArchiveReader> UsmapReader<'parent_reader, 'asset, R> {
+impl<'parent_reader, 'asset, R: ArchiveReader<PackageIndex>>
+    UsmapReader<'parent_reader, 'asset, R>
+{
     /// Create a new `UsmapReader` instance
     pub fn new(
         parent_reader: &'parent_reader mut R,
@@ -57,7 +59,7 @@ impl<'parent_reader, 'asset, R: ArchiveReader> UsmapReader<'parent_reader, 'asse
     }
 }
 
-impl<'parent_reader, 'asset, R: ArchiveReader> ArchiveTrait
+impl<'parent_reader, 'asset, R: ArchiveReader<PackageIndex>> ArchiveTrait<PackageIndex>
     for UsmapReader<'parent_reader, 'asset, R>
 {
     fn get_archive_type(&self) -> ArchiveType {
@@ -123,28 +125,32 @@ impl<'parent_reader, 'asset, R: ArchiveReader> ArchiveTrait
         self.parent_reader.get_parent_class_export_name()
     }
 
-    fn get_import(&self, index: PackageIndex) -> Option<Import> {
-        self.parent_reader.get_import(index)
+    fn get_object_name(&self, index: PackageIndex) -> Option<FName> {
+        self.parent_reader.get_object_name(index)
+    }
+
+    fn get_object_name_packageindex(&self, index: PackageIndex) -> Option<FName> {
+        self.parent_reader.get_object_name_packageindex(index)
     }
 }
 
-impl<'parent_reader, 'asset, R: ArchiveReader> PassthroughArchiveReader
+impl<'parent_reader, 'asset, R: ArchiveReader<PackageIndex>> ArchiveReader<PackageIndex>
     for UsmapReader<'parent_reader, 'asset, R>
 {
-    type Passthrough = R;
-
-    fn get_passthrough(&mut self) -> &mut Self::Passthrough {
-        self.parent_reader
-    }
+    passthrough_archive_reader!(parent_reader);
 }
 
-impl<'parent_reader, 'asset, R: ArchiveReader> Read for UsmapReader<'parent_reader, 'asset, R> {
+impl<'parent_reader, 'asset, R: ArchiveReader<PackageIndex>> Read
+    for UsmapReader<'parent_reader, 'asset, R>
+{
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.parent_reader.read(buf)
     }
 }
 
-impl<'parent_reader, 'asset, R: ArchiveReader> Seek for UsmapReader<'parent_reader, 'asset, R> {
+impl<'parent_reader, 'asset, R: ArchiveReader<PackageIndex>> Seek
+    for UsmapReader<'parent_reader, 'asset, R>
+{
     fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
         self.parent_reader.seek(pos)
     }

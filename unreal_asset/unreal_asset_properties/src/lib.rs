@@ -14,6 +14,7 @@ use enum_dispatch::enum_dispatch;
 
 // macro reexports
 pub use unreal_asset_base::types::FName;
+use unreal_asset_base::types::PackageIndexTrait;
 pub use unreal_asset_base::unversioned::Ancestry;
 pub use unreal_asset_base::Guid;
 
@@ -150,7 +151,7 @@ mod property_prelude {
     pub use unreal_asset_base::reader::{ArchiveReader, ArchiveWriter};
     pub use unreal_asset_base::types::{
         fname::{FName, ToSerializedName},
-        PackageIndex,
+        PackageIndex, PackageIndexTrait,
     };
     pub use unreal_asset_base::unversioned::{
         header::UnversionedHeader,
@@ -199,7 +200,7 @@ macro_rules! optional_guid_write {
 macro_rules! simple_property_write {
     ($property_name:ident, $write_func:ident, $value_name:ident, $value_type:ty) => {
         impl PropertyTrait for $property_name {
-            fn write<Writer: ArchiveWriter>(
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
                 &self,
                 asset: &mut Writer,
                 include_header: bool,
@@ -326,7 +327,7 @@ pub trait PropertyDataTrait {
 #[enum_dispatch]
 pub trait PropertyTrait: PropertyDataTrait + Debug + Hash + Clone + PartialEq + Eq {
     /// Write property to an asset
-    fn write<Writer: ArchiveWriter>(
+    fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         &self,
         asset: &mut Writer,
         include_header: bool,
@@ -518,7 +519,7 @@ pub enum Property {
 
 impl Property {
     /// Tries to read a property from an ArchiveReader
-    pub fn new<Reader: ArchiveReader>(
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         ancestry: Ancestry,
         unversioned_header: Option<&mut UnversionedHeader>,
@@ -623,7 +624,7 @@ impl Property {
 
     /// Tries to read a property from an ArchiveReader while specified a type and length
     #[allow(clippy::too_many_arguments)]
-    pub fn from_type<Reader: ArchiveReader>(
+    pub fn from_type<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
         type_name: &FName,
         name: FName,
@@ -1327,7 +1328,7 @@ impl Property {
     }
 
     /// Writes a property to an ArchiveWriter
-    pub fn write<Writer: ArchiveWriter>(
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         property: &Property,
         asset: &mut Writer,
         include_header: bool,
@@ -1469,8 +1470,8 @@ property_inner_serialized_name! {
 }
 
 /// Generate property unversioned header
-pub fn generate_unversioned_header<W: ArchiveWriter>(
-    archive: &mut W,
+pub fn generate_unversioned_header<W: ArchiveWriter<impl PackageIndexTrait>>(
+    archive: &W,
     properties: &[Property],
     parent_name: &FName,
 ) -> Result<Option<(UnversionedHeader, Vec<Property>)>, Error> {
@@ -1494,7 +1495,9 @@ pub fn generate_unversioned_header<W: ArchiveWriter>(
             property.get_ancestry(),
             property.get_duplication_index() as u32,
         ) else {
-            return property.get_name().get_content(|name| Err(PropertyError::no_mapping(name, property.get_ancestry()).into()));
+            return property.get_name().get_content(|name| {
+                Err(PropertyError::no_mapping(name, property.get_ancestry()).into())
+            });
         };
 
         if matches!(property, Property::EmptyProperty(_)) {

@@ -19,7 +19,9 @@ impl Default for SoftObjectPathPropertyValue {
 
 impl SoftObjectPathPropertyValue {
     /// Create a new  `SoftObjectPathPropertyValue` instance
-    pub fn new<Reader: ArchiveReader>(asset: &mut Reader) -> Result<Self, Error> {
+    pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
+        asset: &mut Reader,
+    ) -> Result<Self, Error> {
         match asset.get_object_version() < ObjectVersion::VER_UE4_ADDED_SOFT_OBJECT_PATH {
             true => Ok(Self::Old(asset.read_fstring()?)),
             false => Ok(Self::New(SoftObjectPath::new(asset)?)),
@@ -27,7 +29,10 @@ impl SoftObjectPathPropertyValue {
     }
 
     /// Write `SoftObjectPathPropertyValue` to an asset
-    pub fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+    pub fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
+        &self,
+        asset: &mut Writer,
+    ) -> Result<(), Error> {
         match self {
             Self::Old(e) => {
                 asset.write_fstring(e.as_deref())?;
@@ -109,7 +114,7 @@ macro_rules! impl_soft_path_property {
     ($property_name:ident) => {
         impl $property_name {
             /// Read `$property_name` from an asset
-            pub fn new<Reader: ArchiveReader>(
+            pub fn new<Reader: ArchiveReader<impl PackageIndexTrait>>(
                 asset: &mut Reader,
                 name: FName,
                 ancestry: Ancestry,
@@ -131,7 +136,7 @@ macro_rules! impl_soft_path_property {
         }
 
         impl PropertyTrait for $property_name {
-            fn write<Writer: ArchiveWriter>(
+            fn write<Writer: ArchiveWriter<impl PackageIndexTrait>>(
                 &self,
                 asset: &mut Writer,
                 include_header: bool,

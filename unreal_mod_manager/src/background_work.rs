@@ -638,7 +638,7 @@ where
                     *background_thread_data.last_integration_time.lock() = Instant::now();
 
                     // update config file
-                    write_config(&mut background_thread_data.data.lock());
+                    write_config(&background_thread_data.data.lock());
 
                     Ok(warnings)
                 };
@@ -710,7 +710,7 @@ where
             }
             BackgroundThreadMessage::WriteConfig => {
                 // update config file
-                write_config(&mut background_thread_data.data.lock());
+                write_config(&background_thread_data.data.lock());
             }
             BackgroundThreadMessage::Exit => {
                 break;

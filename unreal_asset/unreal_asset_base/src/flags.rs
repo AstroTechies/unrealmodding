@@ -480,6 +480,12 @@ impl Default for EObjectFlags {
     }
 }
 
+impl Default for EPackageFlags {
+    fn default() -> Self {
+        Self::PKG_NONE
+    }
+}
+
 impl Default for EPropertyFlags {
     fn default() -> Self {
         Self::CPF_NONE

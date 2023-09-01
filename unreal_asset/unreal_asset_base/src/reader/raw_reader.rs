@@ -1,6 +1,7 @@
 //! Binary archive reader
 
 use std::io::{self, Read, Seek};
+use std::marker::PhantomData;
 
 use unreal_helpers::{read_ext::read_fstring_len, Guid, UnrealReadExt};
 
@@ -12,13 +13,13 @@ use crate::reader::{
     archive_trait::{ArchiveTrait, ArchiveType},
     ArchiveReader,
 };
-use crate::types::{FName, PackageIndex, SerializedNameHeader};
+use crate::types::{FName, PackageIndex, PackageIndexTrait, SerializedNameHeader};
 use crate::unversioned::Usmap;
 use crate::Error;
-use crate::Import;
+
 
 /// A binary reader
-pub struct RawReader<C: Read + Seek> {
+pub struct RawReader<Index: PackageIndexTrait, C: Read + Seek> {
     /// Reader cursor
     cursor: Chain<C>,
     /// Object version
@@ -31,9 +32,12 @@ pub struct RawReader<C: Read + Seek> {
     pub name_map: SharedResource<NameMap>,
     /// Empty map
     empty_map: IndexedMap<String, String>,
+
+    /// Marker
+    _marker: PhantomData<Index>,
 }
 
-impl<C: Read + Seek> RawReader<C> {
+impl<Index: PackageIndexTrait, C: Read + Seek> RawReader<Index, C> {
     /// Create a new instance of `RawReader` with the specified object versions and a name map
     pub fn new(
         cursor: Chain<C>,
@@ -49,11 +53,12 @@ impl<C: Read + Seek> RawReader<C> {
             use_event_driven_loader,
             name_map,
             empty_map: IndexedMap::new(),
+            _marker: PhantomData,
         }
     }
 }
 
-impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
+impl<Index: PackageIndexTrait, C: Read + Seek> ArchiveTrait<Index> for RawReader<Index, C> {
     #[inline(always)]
     fn get_archive_type(&self) -> ArchiveType {
         ArchiveType::Raw
@@ -114,12 +119,16 @@ impl<C: Read + Seek> ArchiveTrait for RawReader<C> {
         None
     }
 
-    fn get_import(&self, _: PackageIndex) -> Option<Import> {
+    fn get_object_name(&self, _: Index) -> Option<FName> {
+        None
+    }
+
+    fn get_object_name_packageindex(&self, _: PackageIndex) -> Option<FName> {
         None
     }
 }
 
-impl<C: Read + Seek> ArchiveReader for RawReader<C> {
+impl<Index: PackageIndexTrait, C: Read + Seek> ArchiveReader<Index> for RawReader<Index, C> {
     fn read_fstring(&mut self) -> Result<Option<String>, Error> {
         Ok(self.cursor.read_fstring()?)
     }
@@ -148,14 +157,14 @@ impl<C: Read + Seek> ArchiveReader for RawReader<C> {
     }
 }
 
-impl<C: Read + Seek> Read for RawReader<C> {
+impl<Index: PackageIndexTrait, C: Read + Seek> Read for RawReader<Index, C> {
     #[inline(always)]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.cursor.read(buf)
     }
 }
 
-impl<C: Read + Seek> Seek for RawReader<C> {
+impl<Index: PackageIndexTrait, C: Read + Seek> Seek for RawReader<Index, C> {
     #[inline(always)]
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
         self.cursor.seek(pos)

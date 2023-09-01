@@ -4,6 +4,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 use unreal_asset_base::{
     reader::{ArchiveReader, ArchiveWriter},
+    types::PackageIndexTrait,
     Error, FNameContainer,
 };
 
@@ -16,19 +17,19 @@ use crate::{BaseExport, NormalExport};
 ///
 /// This is a `UProperty` export
 #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PropertyExport {
+pub struct PropertyExport<Index: PackageIndexTrait> {
     /// Base normal export
-    pub normal_export: NormalExport,
+    pub normal_export: NormalExport<Index>,
     /// Property
     pub property: UProperty,
 }
 
 implement_get!(PropertyExport);
 
-impl PropertyExport {
+impl<Index: PackageIndexTrait> PropertyExport<Index> {
     /// Read a `PropertyExport` from an asset
-    pub fn from_base<Reader: ArchiveReader>(
-        base: &BaseExport,
+    pub fn from_base<Reader: ArchiveReader<Index>>(
+        base: &BaseExport<Index>,
         asset: &mut Reader,
     ) -> Result<Self, Error> {
         let normal_export = NormalExport::from_base(base, asset)?;
@@ -47,8 +48,8 @@ impl PropertyExport {
     }
 }
 
-impl ExportTrait for PropertyExport {
-    fn write<Writer: ArchiveWriter>(&self, asset: &mut Writer) -> Result<(), Error> {
+impl<Index: PackageIndexTrait> ExportTrait<Index> for PropertyExport<Index> {
+    fn write<Writer: ArchiveWriter<Index>>(&self, asset: &mut Writer) -> Result<(), Error> {
         self.normal_export.write(asset)?;
         asset.write_i32::<LE>(0)?;
         self.property.write(asset)?;
