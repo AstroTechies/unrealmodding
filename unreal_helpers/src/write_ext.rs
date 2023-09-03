@@ -1,5 +1,6 @@
 //! Extension for anything that implements `Write` to more easily write Unreal data formats.
 
+use std::error::Error;
 use std::io::{self, Write};
 use std::mem::size_of;
 
@@ -15,11 +16,11 @@ pub trait UnrealWriteExt {
     /// Write an array of type `T` by running the provided function for
     /// each element of the provided array which serializes `T` into the writer.
     /// The length of the array will be written at the start as an `i32`.
-    fn write_array<T>(
+    fn write_array<T, E: Error + From<io::Error>>(
         &mut self,
         array: &[T],
-        f: impl FnMut(&mut Self, &T) -> io::Result<()>,
-    ) -> io::Result<()>;
+        f: impl FnMut(&mut Self, &T) -> Result<(), E>,
+    ) -> Result<(), E>;
 
     /// Write a guid.
     #[cfg(feature = "guid")]
@@ -37,11 +38,11 @@ impl<W: Write> UnrealWriteExt for W {
         })
     }
 
-    fn write_array<T>(
+    fn write_array<T, E: Error + From<io::Error>>(
         &mut self,
         array: &[T],
-        mut f: impl FnMut(&mut Self, &T) -> io::Result<()>,
-    ) -> io::Result<()> {
+        mut f: impl FnMut(&mut Self, &T) -> Result<(), E>,
+    ) -> Result<(), E> {
         self.write_i32::<LE>(array.len() as i32)?;
         for value in array {
             f(self, value)?;
