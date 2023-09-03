@@ -132,7 +132,9 @@ impl IoStoreExportMapEntry {
 }
 
 /// IoStore export command type
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, TryFromPrimitive, IntoPrimitive,
+)]
 #[repr(u32)]
 pub enum EExportCommandType {
     /// Create

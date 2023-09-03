@@ -43,6 +43,7 @@ use self::{
     exports::{EExportCommandType, ExportBundleEntry, ExportBundleHeader, IoStoreExportMapEntry},
     flags::EExportFilterFlags,
     global::IoGlobalData,
+    graph_data::IoStoreGraphData,
     name::{EMappedNameType, FMappedName, FNameEntrySerialized},
     package_id::PackageId,
     zen::{ZenPackageSummary, ZenPackageVersioningInfo},
@@ -55,6 +56,7 @@ pub mod encryption;
 pub mod exports;
 pub mod flags;
 pub mod global;
+pub mod graph_data;
 pub mod name;
 pub mod package_id;
 pub mod package_store_entry;
@@ -295,6 +297,9 @@ pub struct IoAsset<C: Read + Seek> {
     /// Export map
     #[container_ignore]
     pub export_map: Vec<IoStoreExportMapEntry>,
+    /// Graph data
+    #[container_ignore]
+    pub graph_data: Option<IoStoreGraphData>,
 }
 
 impl<C: Read + Seek> IoAsset<C> {
@@ -335,6 +340,7 @@ impl<C: Read + Seek> IoAsset<C> {
             name_map,
             name: FName::default(),
             export_map: Vec::default(),
+            graph_data: None,
         };
 
         io_asset.set_engine_version(engine_version);
@@ -459,9 +465,15 @@ impl<C: Read + Seek> IoAsset<C> {
             ExportBundleEntry::read,
         )?;
 
-        let export_bundle_headers = match summary.graph_data_offset {
+        let imported_package_ids = store_entry
+            .as_ref()
+            .map(|e| e.imported_packages.clone())
+            .unwrap_or_default();
+
+        let graph_data = match summary.graph_data_offset {
             Some(graph_data_offset) => {
                 // export bundle headers
+
                 self.set_position(graph_data_offset as u64)?;
 
                 let export_bundle_headers_count = store_entry
@@ -469,23 +481,20 @@ impl<C: Read + Seek> IoAsset<C> {
                     .and_then(|e| e.export_bundle_count)
                     .unwrap_or(1);
 
-                Some(self.read_array_with_length(
+                Some(IoStoreGraphData::read(
+                    self,
                     export_bundle_headers_count,
-                    ExportBundleHeader::read,
+                    &imported_package_ids,
                 )?)
             }
             None => None,
         };
 
-        let imported_package_ids = store_entry
-            .map(|e| e.imported_packages.clone())
-            .unwrap_or_default();
-
         // todo: attach ubulk/uptnl
 
-        match export_bundle_headers {
-            Some(headers) => {
-                for bundle in headers {
+        match graph_data {
+            Some(ref graph_data) => {
+                for bundle in &graph_data.export_bundle_headers {
                     let mut offset = summary.header_size as i64;
 
                     for i in 0..bundle.entry_count {
@@ -516,6 +525,8 @@ impl<C: Read + Seek> IoAsset<C> {
                 unimplemented!()
             }
         };
+
+        self.graph_data = graph_data;
 
         Ok(())
     }
@@ -733,6 +744,7 @@ impl<C: Read + Seek> Debug for IoAsset<C> {
             .field("asset_data", &self.asset_data)
             .field("global_data", &self.global_data)
             .field("name", &self.name)
+            .field("graph_data", &self.graph_data)
             .finish()
     }
 }
