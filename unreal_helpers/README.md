@@ -3,7 +3,7 @@
 [![Documentation](https://docs.rs/unreal_helpers/badge.svg)](https://docs.rs/unreal_helpers/)
 [![Crates.io](https://img.shields.io/crates/v/unreal_helpers.svg)](https://crates.io/crates/unreal_helpers)
 [![Build status](https://github.com/AstroTechies/unrealmodding/workflows/CI/badge.svg)](https://github.com/AstroTechies/unrealmodding/actions?query=workflow%3ACI)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE-MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
 The `unreal_helpers` crate is a Rust library that implements common functionality for reading Unreal Engine files.
 

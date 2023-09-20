@@ -3,7 +3,7 @@
 [![Documentation](https://docs.rs/unreal_pak/badge.svg)](https://docs.rs/unreal_pak/)
 [![Crates.io](https://img.shields.io/crates/v/unreal_pak.svg)](https://crates.io/crates/unreal_pak)
 [![Build status](https://github.com/AstroTechies/unrealmodding/workflows/CI/badge.svg)](https://github.com/AstroTechies/unrealmodding/actions?query=workflow%3ACI)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE-MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
 Library crate for working with Unreal Engine .pak files.
 
