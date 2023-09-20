@@ -4,6 +4,9 @@ version.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage = "https://github.com/AstroTechies/unrealmodding/tree/main/dll_injector"
+documentation = "https://docs.rs/dll_injector"
 edition = "2021"
 
 [target.'cfg(windows)'.dependencies]
