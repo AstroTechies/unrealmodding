@@ -9,13 +9,11 @@ The `unreal_helpers` crate is a Rust library that implements common functionalit
 
 ## Documentation
 
-Crate documentation is published to
-[docs.rs/unreal_helpers](https://docs.rs/unreal_helpers/).
+Crate documentation is published to [docs.rs/unreal_helpers](https://docs.rs/unreal_helpers/).
 
 ## Usage
 
-The crate can be added to a Rust project as a dependency by running the command
-`cargo add unreal_helpers`.
+The crate can be added to a Rust project as a dependency by running the command `cargo add unreal_helpers`.
 
 ## Features
 
