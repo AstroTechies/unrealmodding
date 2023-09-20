@@ -1,16 +1,22 @@
 # unreal_asset
 
-The unreal_asset crate is a Rust library that allows parsing of Unreal Engine binary asset files.
+[![Documentation](https://docs.rs/unreal_asset/badge.svg)](https://docs.rs/unreal_asset/)
+[![Crates.io](https://img.shields.io/crates/v/unreal_asset.svg)](https://crates.io/crates/unreal_asset)
+[![Build status](https://github.com/AstroTechies/unrealmodding/workflows/CI/badge.svg)](https://github.com/AstroTechies/unrealmodding/actions?query=workflow%3ACI)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE-MIT)
+
+The `unreal_asset` crate is a Rust library that allows parsing of Unreal Engine binary asset files.
 
 ## Documentation
 
-Crate documentation is published to
-[docs.rs/unreal_asset](https://docs.rs/unreal_asset/).
+Crate documentation is published to [docs.rs/unreal_asset](https://docs.rs/unreal_asset/).
 
 ## Unreal Engine binary asset files
 
 Unreal Engine binary asset files are usually stored with the following extensions:
-* `.uasset` - The file that has asset metadata as well as some information, if the game is built without split bulk data files, then it also contains all of asset data.
+
+* `.uasset` - The file that has asset metadata as well as some information, if the game is built without split bulk
+  data files, then it also contains all of asset data.
 * `.uexp` - If the game is built with split bulk data files, it contains binary data related to components, etc.
 * `.umap` - Same as `.uasset` but for maps/levels.
 * `.usmap` - Mapping files for reading unversioned assets.
@@ -19,8 +25,7 @@ These files are what stores most of the game's assets and what you might want to
 
 ## Usage
 
-The crate can be added to a Rust project as a dependency by running the command
-`cargo add unreal_asset`.
+The crate can be added to a Rust project as a dependency by running the command `cargo add unreal_asset`.
 
 ## Features
 
