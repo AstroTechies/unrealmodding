@@ -4,7 +4,8 @@ version.workspace = true
 authors.workspace = true
 description = "Exports implementations for unreal_asset"
 license.workspace = true
-homepage.workspace = true
+repository.workspace = true
+homepage = "https://github.com/AstroTechies/unrealmodding/tree/main/unreal_asset/unreal_asset_exports"
 documentation = "https://docs.rs/unreal_asset_exports"
 edition = "2021"
 

@@ -4,7 +4,8 @@ version.workspace = true
 authors.workspace = true
 description = "Asset registry implementations for unreal_asset"
 license.workspace = true
-homepage.workspace = true
+repository.workspace = true
+homepage = "https://github.com/AstroTechies/unrealmodding/tree/main/unreal_asset/unreal_asset_registry"
 documentation = "https://docs.rs/unreal_asset_registry"
 edition = "2021"
 

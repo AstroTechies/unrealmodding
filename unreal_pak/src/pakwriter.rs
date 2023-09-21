@@ -12,19 +12,21 @@ use crate::pakversion::PakVersion;
 
 /// An Unreal pak file writer which allows incrementally writing data.
 /// Good for working with very large files, but it has restrictions when it
-/// comes to writing files. For a more flexible alternative see \<insert doc link\> PakMemory
+/// comes to writing files. For a more flexible alternative see [`PakMemory`].
+///
+/// [`PakMemory`]: crate::pakmemory::PakMemory
 #[derive(Debug)]
 pub struct PakWriter<W>
 where
     W: Write + Seek,
 {
-    /// version of the pak file format this one is using
+    /// Version of the pak file format this one is using
     pub pak_version: PakVersion,
-    /// mount point (Unreal stuff)
+    /// Mount point. Typically `../../../`.
     pub mount_point: String,
-    /// the compression method preferred for this file
+    /// Compression method preferred for this file
     compression: CompressionMethods,
-    /// the compression block size
+    /// Compression block size
     pub block_size: u32,
     entries: BTreeMap<String, Header>,
     writer: W,

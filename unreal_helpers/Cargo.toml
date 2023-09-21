@@ -4,7 +4,8 @@ version.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
-homepage.workspace = true
+repository.workspace = true
+homepage = "https://github.com/AstroTechies/unrealmodding/tree/main/unreal_helpers"
 documentation = "https://docs.rs/unreal_helpers"
 edition = "2021"
 
