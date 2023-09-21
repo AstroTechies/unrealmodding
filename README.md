@@ -14,7 +14,7 @@ This repo contrains multiple user facing crates for working with Unreal Engine f
 [![Documentation](https://docs.rs/unreal_asset/badge.svg)](https://docs.rs/unreal_asset/)
 [![Crates.io](https://img.shields.io/crates/v/unreal_asset.svg)](https://crates.io/crates/unreal_asset)
 
-This core crate allows for parsing of Unreal asset binary files. It is internally split into multiple sub crates to
+This core crate allows for parsing of Unreal asset binary files. It is internally split into multiple sub-crates to
 improve compile times.
 
 ### [unreal_mod_manager](./unreal_mod_manager/)
