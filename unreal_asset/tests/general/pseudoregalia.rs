@@ -15,7 +15,7 @@ macro_rules! assets_folder {
     };
 }
 
-const TEST_ASSETS: [(&[u8], &[u8]); 3] = [
+const TEST_ASSETS: [(&[u8], &[u8]); 4] = [
     (
         include_bytes!(concat!(assets_folder!(), "Zone_Library.umap")),
         include_bytes!(concat!(assets_folder!(), "Zone_Library.uexp")),
@@ -27,6 +27,10 @@ const TEST_ASSETS: [(&[u8], &[u8]); 3] = [
     (
         include_bytes!(concat!(assets_folder!(), "BP_PlayerGoatMain.uasset")),
         include_bytes!(concat!(assets_folder!(), "BP_PlayerGoatMain.uexp")),
+    ),
+    (
+        include_bytes!(concat!(assets_folder!(), "UI_HUD.uasset")),
+        include_bytes!(concat!(assets_folder!(), "UI_HUD.uexp")),
     ),
 ];
 
