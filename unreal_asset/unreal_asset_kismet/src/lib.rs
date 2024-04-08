@@ -505,24 +505,24 @@ macro_rules! implement_value_expression {
 pub struct FScriptText {
     /// Literal type
     #[container_ignore]
-    text_literal_type: EBlueprintTextLiteralType,
+    pub text_literal_type: EBlueprintTextLiteralType,
     /// Localized source
-    localized_source: Option<KismetExpression>,
+    pub localized_source: Option<KismetExpression>,
     /// Localized key
-    localized_key: Option<KismetExpression>,
+    pub localized_key: Option<KismetExpression>,
     /// Localized namespace
-    localized_namespace: Option<KismetExpression>,
+    pub localized_namespace: Option<KismetExpression>,
     /// Invariant literal string
-    invariant_literal_string: Option<KismetExpression>,
+    pub invariant_literal_string: Option<KismetExpression>,
     /// Literal string
-    literal_string: Option<KismetExpression>,
+    pub literal_string: Option<KismetExpression>,
     /// String table asset this text is localized from
     #[container_ignore]
-    string_table_asset: Option<PackageIndex>,
+    pub string_table_asset: Option<PackageIndex>,
     /// String table id in the string table asset
-    string_table_id: Option<KismetExpression>,
+    pub string_table_id: Option<KismetExpression>,
     /// String table key in the string table asset
-    string_table_key: Option<KismetExpression>,
+    pub string_table_key: Option<KismetExpression>,
 }
 
 impl FScriptText {
