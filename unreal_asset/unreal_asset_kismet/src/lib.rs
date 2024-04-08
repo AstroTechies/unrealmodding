@@ -380,7 +380,7 @@ macro_rules! declare_expression {
             $v:ident: $t:ty
         ),*
     ) => {
-        /// $name
+        #[doc = stringify!($name)]
         #[derive(FNameContainer, Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $name {
             /// Kismet token
