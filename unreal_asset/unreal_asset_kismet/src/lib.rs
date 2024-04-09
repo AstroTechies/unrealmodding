@@ -223,15 +223,70 @@ pub enum EExprToken {
 }
 
 /// Kismet cast token
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+pub enum CastToken {
+    /// Old kismet cast token
+    Old(OldCastToken),
+    /// New kismet cast token
+    New(NewCastToken),
+}
+
+/// Old kismet cast token
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
-pub enum ECastToken {
+pub enum OldCastToken {
     /// Cast object to interface
     ObjectToInterface = 0x46,
     /// Cast object to bool
     ObjectToBool = 0x47,
     /// Cast interface to bool
     InterfaceToBool = 0x49,
+    /// Max
+    Max = 0xFF,
+}
+
+/// New kismet cast token
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
+pub enum NewCastToken {
+    /// Cast object to interface
+    ObjectToInterface = 0x00,
+    /// Cast object to bool
+    ObjectToBool = 0x01,
+    /// Cast interface to bool
+    InterfaceToBool = 0x02,
+    /// Cast double to float
+    DoubleToFloat = 0x03,
+    /// Cast double to float array
+    DoubleToFloatArray = 0x04,
+    /// Cast double to float set
+    DoubleToFloatSet = 0x05,
+    /// Cast float to double
+    FloatToDouble = 0x06,
+    /// Cast float to double array
+    FloatToDoubleArray = 0x07,
+    /// Cast float to double set
+    FloatToDoubleSet = 0x08,
+    /// Cast vec2 to vec3
+    VectorToVector3f = 0x09,
+    /// Cast vec3 to vec
+    Vector3fToVector = 0x0A,
+    /// Cast float to double keys map
+    FloatToDoubleKeysMap = 0x0B,
+    /// Cast double to float keys map
+    DoubleToFloatKeysMap = 0x0C,
+    /// Cast float to double values map
+    FloatToDoubleValuesMap = 0x0D,
+    /// Cast double to float values map
+    DoubleToFloatValuesMap = 0x0E,
+    /// Cast float to double keys float to double values map
+    FloatToDoubleKeysFloatToDoubleValuesMap = 0x0F,
+    /// Cast double to float keys float to double values map
+    DoubleToFloatKeysFloatToDoubleValuesMap = 0x10,
+    /// Cast double to float keys double to float values map
+    DoubleToFloatKeysDoubleToFloatValuesMap = 0x11,
+    /// Cast float to double keys double to float values map
+    FloatToDoubleKeysDoubleToFloatValuesMap = 0x12,
     /// Max
     Max = 0xFF,
 }
@@ -2576,7 +2631,7 @@ declare_expression!(
     ExPrimitiveCast,
     /// Conversion type
     #[container_ignore]
-    conversion_type: ECastToken,
+    conversion_type: CastToken,
     /// Cast target
     target: Box<KismetExpression>
 );
@@ -2587,7 +2642,12 @@ impl ExPrimitiveCast {
     ) -> Result<Self, Error> {
         Ok(ExPrimitiveCast {
             token: EExprToken::ExPrimitiveCast,
-            conversion_type: asset.read_u8()?.try_into()?,
+            conversion_type: match asset.get_object_version_ue5()
+                >= ObjectVersionUE5::LARGE_WORLD_COORDINATES
+            {
+                true => CastToken::New(asset.read_u8()?.try_into()?),
+                false => CastToken::Old(asset.read_u8()?.try_into()?),
+            },
             target: Box::new(KismetExpression::new(asset)?),
         })
     }
@@ -2598,7 +2658,10 @@ impl KismetExpressionTrait for ExPrimitiveCast {
         asset: &mut Writer,
     ) -> Result<usize, Error> {
         let mut offset = size_of::<u8>();
-        asset.write_u8(self.conversion_type.into())?;
+        asset.write_u8(match self.conversion_type {
+            CastToken::Old(token) => token.into(),
+            CastToken::New(token) => token.into(),
+        })?;
         offset += KismetExpression::write(self.target.as_ref(), asset)?;
         Ok(offset)
     }
