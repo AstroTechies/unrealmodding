@@ -36,6 +36,8 @@ impl<C: Read + Seek> Chain<C> {
 }
 
 impl<C: Read + Seek> Read for Chain<C> {
+    // this is an implementation of read so clippy complaining about use of read is stupid
+    #[allow(clippy::unused_io_amount)]
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         match self.second.as_mut() {
             Some(sec) => {
