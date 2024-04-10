@@ -116,9 +116,9 @@ impl PackageIndexTrait for PackageIndex {
     }
 }
 
-impl ToString for PackageIndex {
-    fn to_string(&self) -> String {
-        self.index.to_string()
+impl std::fmt::Display for PackageIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.index)
     }
 }
 

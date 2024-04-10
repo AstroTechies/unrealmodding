@@ -35,14 +35,14 @@ impl CompressionMethod {
     }
 }
 
-impl ToString for CompressionMethod {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for CompressionMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CompressionMethod::None => String::from("None"),
-            CompressionMethod::Zlib => String::from("Zlib"),
-            CompressionMethod::Gzip => String::from("Gzip"),
-            CompressionMethod::Lz4 => String::from("LZ4"),
-            CompressionMethod::Unknown(e) => e.to_string(),
+            CompressionMethod::None => f.write_str("None"),
+            CompressionMethod::Zlib => f.write_str("Zlib"),
+            CompressionMethod::Gzip => f.write_str("Gzip"),
+            CompressionMethod::Lz4 => f.write_str("LZ4"),
+            CompressionMethod::Unknown(e) => write!(f, "{e}"),
         }
     }
 }

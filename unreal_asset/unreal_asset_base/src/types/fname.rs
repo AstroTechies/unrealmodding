@@ -243,11 +243,6 @@ impl std::cmp::PartialEq<&str> for FName {
     }
 }
 
-impl std::cmp::PartialEq<String> for FName {
-    fn eq(&self, other: &String) -> bool {
-        self == other
-    }
-}
 /// A trait that can be implemented for structs that contain an FName
 ///
 /// This trait will be typically used to traverse the whole asset FName tree

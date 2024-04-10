@@ -129,7 +129,7 @@ impl PropertyTrait for EnumProperty {
                         Some(value) => info
                             .iter()
                             .enumerate()
-                            .find(|(_, e)| value == *e)
+                            .find(|(_, e)| value == e.as_str())
                             .map(|(index, _)| index as u8)
                             .ok_or_else(|| {
                                 Error::invalid_file(

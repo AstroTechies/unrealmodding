@@ -90,39 +90,39 @@ pub enum EPropertyType {
     Unknown = 0xFF,
 }
 
-impl ToString for EPropertyType {
-    fn to_string(&self) -> String {
-        match *self {
-            EPropertyType::ByteProperty => "ByteProperty".to_string(),
-            EPropertyType::BoolProperty => "BoolProperty".to_string(),
-            EPropertyType::IntProperty => "IntProperty".to_string(),
-            EPropertyType::FloatProperty => "FloatProperty".to_string(),
-            EPropertyType::ObjectProperty => "ObjectProperty".to_string(),
-            EPropertyType::NameProperty => "NameProperty".to_string(),
-            EPropertyType::DelegateProperty => "DelegateProperty".to_string(),
-            EPropertyType::DoubleProperty => "DoubleProperty".to_string(),
-            EPropertyType::ArrayProperty => "ArrayProperty".to_string(),
-            EPropertyType::StructProperty => "StructProperty".to_string(),
-            EPropertyType::StrProperty => "StrProperty".to_string(),
-            EPropertyType::TextProperty => "TextProperty".to_string(),
-            EPropertyType::InterfaceProperty => "InterfaceProperty".to_string(),
-            EPropertyType::MulticastDelegateProperty => "MulticastDelegateProperty".to_string(),
-            EPropertyType::WeakObjectProperty => "WeakObjectProperty".to_string(),
-            EPropertyType::LazyObjectProperty => "LazyObjectProperty".to_string(),
-            EPropertyType::AssetObjectProperty => "AssetObjectProperty".to_string(),
-            EPropertyType::SoftObjectProperty => "SoftObjectProperty".to_string(),
-            EPropertyType::UInt64Property => "UInt64Property".to_string(),
-            EPropertyType::UInt32Property => "UInt32Property".to_string(),
-            EPropertyType::UInt16Property => "UInt16Property".to_string(),
-            EPropertyType::Int64Property => "Int64Property".to_string(),
-            EPropertyType::Int16Property => "Int16Property".to_string(),
-            EPropertyType::Int8Property => "Int8Property".to_string(),
-            EPropertyType::MapProperty => "MapProperty".to_string(),
-            EPropertyType::SetProperty => "SetProperty".to_string(),
-            EPropertyType::EnumProperty => "EnumProperty".to_string(),
-            EPropertyType::FieldPathProperty => "FieldPathProperty".to_string(),
-            EPropertyType::Unknown => "Unknown".to_string(),
-        }
+impl std::fmt::Display for EPropertyType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match *self {
+            EPropertyType::ByteProperty => "ByteProperty",
+            EPropertyType::BoolProperty => "BoolProperty",
+            EPropertyType::IntProperty => "IntProperty",
+            EPropertyType::FloatProperty => "FloatProperty",
+            EPropertyType::ObjectProperty => "ObjectProperty",
+            EPropertyType::NameProperty => "NameProperty",
+            EPropertyType::DelegateProperty => "DelegateProperty",
+            EPropertyType::DoubleProperty => "DoubleProperty",
+            EPropertyType::ArrayProperty => "ArrayProperty",
+            EPropertyType::StructProperty => "StructProperty",
+            EPropertyType::StrProperty => "StrProperty",
+            EPropertyType::TextProperty => "TextProperty",
+            EPropertyType::InterfaceProperty => "InterfaceProperty",
+            EPropertyType::MulticastDelegateProperty => "MulticastDelegateProperty",
+            EPropertyType::WeakObjectProperty => "WeakObjectProperty",
+            EPropertyType::LazyObjectProperty => "LazyObjectProperty",
+            EPropertyType::AssetObjectProperty => "AssetObjectProperty",
+            EPropertyType::SoftObjectProperty => "SoftObjectProperty",
+            EPropertyType::UInt64Property => "UInt64Property",
+            EPropertyType::UInt32Property => "UInt32Property",
+            EPropertyType::UInt16Property => "UInt16Property",
+            EPropertyType::Int64Property => "Int64Property",
+            EPropertyType::Int16Property => "Int16Property",
+            EPropertyType::Int8Property => "Int8Property",
+            EPropertyType::MapProperty => "MapProperty",
+            EPropertyType::SetProperty => "SetProperty",
+            EPropertyType::EnumProperty => "EnumProperty",
+            EPropertyType::FieldPathProperty => "FieldPathProperty",
+            EPropertyType::Unknown => "Unknown",
+        })
     }
 }
 

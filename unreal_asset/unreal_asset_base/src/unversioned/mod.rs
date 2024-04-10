@@ -220,13 +220,9 @@ impl Usmap {
         }
 
         // this name is not an actual property name, but an array index
-        let Ok(_) = property_name.get_content(|name| name.parse::<u32>()) else {
-            return None;
-        };
+        let _ = property_name.get_content(|name| name.parse::<u32>());
 
-        let Some(parent) = ancestry.get_parent() else {
-            return None;
-        };
+        let parent = ancestry.get_parent()?;
 
         self.get_property_with_duplication_index(
             parent,
