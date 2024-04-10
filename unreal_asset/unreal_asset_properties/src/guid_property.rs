@@ -1,7 +1,5 @@
 //! Guid property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Guid property

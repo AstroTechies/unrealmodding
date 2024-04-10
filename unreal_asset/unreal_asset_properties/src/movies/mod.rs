@@ -1,7 +1,5 @@
 //! Unreal movies
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 use crate::rich_curve_key_property::RichCurveTangentWeightMode;
 

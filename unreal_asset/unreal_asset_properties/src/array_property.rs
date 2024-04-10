@@ -1,7 +1,5 @@
 //! Array property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Array property

@@ -1,7 +1,5 @@
 //! Font data property
 
-use unreal_asset_base::custom_version::FEditorObjectVersion;
-
 use crate::property_prelude::*;
 
 /// Font hinting

@@ -1,7 +1,5 @@
 //! Font character property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Font character

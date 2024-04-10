@@ -1,7 +1,5 @@
 //! Float range property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Float range property

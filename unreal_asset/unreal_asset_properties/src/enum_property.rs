@@ -1,7 +1,5 @@
 //! Enum property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Enum property

@@ -1,7 +1,5 @@
 //! Empty unversioned property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Empty unversioned property

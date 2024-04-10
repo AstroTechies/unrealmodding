@@ -4,7 +4,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 use unreal_asset_base::types::movie::FFrameNumberRange;
-use unreal_asset_base::types::PackageIndexTrait;
 
 use crate::property_prelude::*;
 

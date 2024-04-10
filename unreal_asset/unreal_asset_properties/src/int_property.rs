@@ -1,7 +1,5 @@
 //! Int properties
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Implement a simple integer property
