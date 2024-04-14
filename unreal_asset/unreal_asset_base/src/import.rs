@@ -18,6 +18,8 @@ pub struct Import {
     pub outer_index: PackageIndex,
     /// Object name
     pub object_name: FName,
+    /// Package name
+    pub package_name: Option<FName>,
     /// Is the import optional
     pub optional: bool,
 }
@@ -34,6 +36,7 @@ impl Import {
         class_name: FName,
         outer_index: PackageIndex,
         object_name: FName,
+        package_name: Option<FName>,
         optional: bool,
     ) -> Self {
         Import {
@@ -41,6 +44,7 @@ impl Import {
             class_name,
             object_name,
             outer_index,
+            package_name,
             optional,
         }
     }
