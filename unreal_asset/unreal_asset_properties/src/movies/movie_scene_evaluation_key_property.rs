@@ -1,7 +1,5 @@
 //! Movie scene evaluation key property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 use super::movie_scene_sequence_id_property::MovieSceneSequenceId;

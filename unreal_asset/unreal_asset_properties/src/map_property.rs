@@ -2,7 +2,7 @@
 
 use std::hash::Hash;
 
-use unreal_asset_base::{containers::indexed_map::IndexedMap, types::PackageIndexTrait};
+use unreal_asset_base::containers::indexed_map::IndexedMap;
 
 use crate::property_prelude::*;
 

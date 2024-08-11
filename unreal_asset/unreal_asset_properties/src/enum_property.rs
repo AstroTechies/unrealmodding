@@ -1,7 +1,5 @@
 //! Enum property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Enum property
@@ -131,7 +129,7 @@ impl PropertyTrait for EnumProperty {
                         Some(value) => info
                             .iter()
                             .enumerate()
-                            .find(|(_, e)| value == *e)
+                            .find(|(_, e)| value == e.as_str())
                             .map(|(index, _)| index as u8)
                             .ok_or_else(|| {
                                 Error::invalid_file(

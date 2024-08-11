@@ -50,6 +50,7 @@ fn download_release(out_dir: &Path) {
         .write(true)
         .read(true)
         .create(true)
+        .truncate(true)
         .open(project_dir.join(file_name))
         .expect("Could not open file");
 

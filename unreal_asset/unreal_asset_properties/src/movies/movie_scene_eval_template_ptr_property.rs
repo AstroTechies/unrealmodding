@@ -1,7 +1,5 @@
 //! Movie scene evaluation template pointer property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Movie scene evaluation template pointer property

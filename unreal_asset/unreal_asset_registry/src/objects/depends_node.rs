@@ -159,7 +159,7 @@ impl DependsNode {
     /// Read `DependsNode` dependencies
     fn read_dependencies<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
-        preallocated_depends_node_buffer: &Vec<DependsNode>,
+        preallocated_depends_node_buffer: &[DependsNode],
         flag_set_width: i32,
     ) -> Result<LoadedDependencyNodes, Error> {
         let mut sort_indexes = Vec::new();
@@ -244,8 +244,8 @@ impl DependsNode {
         writer: &mut Writer,
         flag_set_width: i32,
         flags: &BitVec<u32, Lsb0>,
-        hard_dependencies: &Vec<DependsNode>,
-        soft_dependencies: &Vec<DependsNode>,
+        hard_dependencies: &[DependsNode],
+        soft_dependencies: &[DependsNode],
     ) -> Result<(), Error> {
         let dependencies_length = hard_dependencies.len() as i32 + soft_dependencies.len() as i32;
         let mut out_flag_bits = BitVec::<u32, Lsb0>::new();
@@ -301,7 +301,7 @@ impl DependsNode {
     /// Read `DependsNode` dependencies without flags
     fn read_dependencies_no_flags<Reader: ArchiveReader<impl PackageIndexTrait>>(
         asset: &mut Reader,
-        preallocated_depends_node_buffer: &Vec<DependsNode>,
+        preallocated_depends_node_buffer: &[DependsNode],
     ) -> Result<Vec<DependsNode>, Error> {
         let mut pointer_dependencies = Vec::new();
         let in_dependencies = asset.read_array(|asset: &mut Reader| Ok(asset.read_i32::<LE>()?))?;
@@ -341,7 +341,7 @@ impl DependsNode {
     /// Write `DependsNode` dependencies without flags
     fn write_dependencies_no_flags<Writer: ArchiveWriter<impl PackageIndexTrait>>(
         writer: &mut Writer,
-        dependencies: &Vec<DependsNode>,
+        dependencies: &[DependsNode],
     ) -> Result<(), Error> {
         writer.write_i32::<LE>(dependencies.len() as i32)?;
         for dependency in dependencies {
@@ -371,7 +371,7 @@ impl DependsNode {
     pub fn load_dependencies<Reader: ArchiveReader<impl PackageIndexTrait>>(
         &mut self,
         asset: &mut Reader,
-        preallocated_depends_node_buffer: &Vec<DependsNode>,
+        preallocated_depends_node_buffer: &[DependsNode],
     ) -> Result<(), Error> {
         let identifier = AssetIdentifier::new(asset)?;
 

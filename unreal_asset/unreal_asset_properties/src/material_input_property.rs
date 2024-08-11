@@ -1,7 +1,5 @@
 //! Material input property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::color_property::ColorProperty;
 use crate::property_prelude::*;
 use crate::vector_property::{Vector2DProperty, VectorProperty};

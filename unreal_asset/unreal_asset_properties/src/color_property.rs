@@ -1,6 +1,6 @@
 //! Color properties
 
-use unreal_asset_base::types::{vector::Color, PackageIndexTrait};
+use unreal_asset_base::types::vector::Color;
 
 use crate::property_prelude::*;
 

@@ -86,6 +86,7 @@ fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Erro
         .write(true)
         .read(true)
         .create(true)
+        .truncate(true)
         .open(&loader_file_path)?;
     loader_asset.download(&mut loader_file)?;
 
@@ -93,6 +94,7 @@ fn download(mod_loader_dir: &PathBuf) -> Result<(PathBuf, PathBuf), Box<dyn Erro
         .write(true)
         .read(true)
         .create(true)
+        .truncate(true)
         .open(&proxy_file_path)?;
     proxy_asset.download(&mut proxy_file)?;
 

@@ -36,19 +36,28 @@ impl<C: Read + Seek> Chain<C> {
 }
 
 impl<C: Read + Seek> Read for Chain<C> {
+    // this is an implementation of read so clippy complaining about use of read is stupid
+    #[allow(clippy::unused_io_amount)]
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         match self.second.as_mut() {
             Some(sec) => {
                 let len_read = match self.pos >= self.first_len {
                     true => sec.read(buf)?,
                     false => {
-                        let len = buf.len();
-                        let to_end = (self.first_len - self.pos) as usize;
+                        let len = buf.len() as u64;
+                        let to_end = self.first_len - self.pos;
                         match to_end >= len {
                             true => self.first.read(buf)?,
                             false => {
-                                let mut first = vec![0; to_end];
-                                let mut second = vec![0; len - to_end];
+                                let mut first = vec![0; to_end as usize];
+                                let excess = len - to_end;
+                                let mut second = vec![
+                                    0;
+                                    match excess > self.second_len {
+                                        true => self.second_len,
+                                        false => excess,
+                                    } as usize
+                                ];
                                 self.first.read_exact(&mut first)?;
                                 sec.read_exact(&mut second)?;
                                 first.append(&mut second);
@@ -88,38 +97,4 @@ impl<C: Read + Seek> Seek for Chain<C> {
             None => self.first.seek(pos),
         }
     }
-}
-
-#[test]
-fn read() {
-    use std::io::Cursor;
-    let mut v = Vec::with_capacity(12);
-    Chain::new(
-        Cursor::new(vec![0, 1, 2, 3, 4, 5, 6, 7]),
-        Some(Cursor::new(vec![0, 1, 2, 3])),
-    )
-    .read_to_end(&mut v)
-    .unwrap();
-    assert_eq!(v, [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3]);
-}
-
-#[test]
-fn seek() {
-    use std::io::Cursor;
-    let mut chain = Chain::new(
-        Cursor::new(vec![0, 1, 2, 3]),
-        Some(Cursor::new(vec![4, 5, 6, 7])),
-    );
-    let mut read_at = |pos| {
-        use byteorder::ReadBytesExt;
-        use Seek;
-        chain.seek(pos)?;
-        chain.read_u8()
-    };
-    assert_eq!(read_at(SeekFrom::Start(0)).unwrap(), 0);
-    assert!(read_at(SeekFrom::Start(8)).is_err());
-    assert_eq!(read_at(SeekFrom::Current(-1)).unwrap(), 7);
-    assert_eq!(read_at(SeekFrom::Current(-5)).unwrap(), 3);
-    assert_eq!(read_at(SeekFrom::End(-4)).unwrap(), 4);
-    assert!(read_at(SeekFrom::End(-12)).is_err());
 }

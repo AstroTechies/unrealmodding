@@ -105,6 +105,7 @@ impl unreal_cpp_bootstrapper::CppLoaderInstallExtension<ModLoaderWarning> for Pr
         let file = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
+            .truncate(true)
             .open(registry_path)?;
 
         let mut writer = std::io::BufWriter::new(file);

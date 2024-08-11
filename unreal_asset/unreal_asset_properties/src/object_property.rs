@@ -1,7 +1,5 @@
 //! Object properties
 
-use unreal_asset_base::object_version::ObjectVersionUE5;
-
 use crate::property_prelude::*;
 
 /// Object property

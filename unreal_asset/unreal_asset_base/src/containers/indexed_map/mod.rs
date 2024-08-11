@@ -695,11 +695,7 @@ where
     /// references to it, the Some((index, key, value)) pair is returned,
     /// otherwise, None is returned.
     pub fn remove_by_index(&mut self, index: usize) -> Option<(usize, K, V)> {
-        let Some(store_place) = self.index_map.get(&index) else {
-            return None;
-        };
-
-        self.remove_by_store_place(*store_place)
+        self.remove_by_store_place(*self.index_map.get(&index)?)
     }
 
     /// Removes a value by key
@@ -711,11 +707,7 @@ where
         KeyItem<K>: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
     {
-        let Some(store_place) = self.key_map.get(key) else {
-            return None;
-        };
-
-        self.remove_by_store_place(*store_place)
+        self.remove_by_store_place(*self.key_map.get(key)?)
     }
 
     pub fn contains_key(&self, key: &K) -> bool {

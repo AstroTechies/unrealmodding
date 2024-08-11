@@ -191,7 +191,7 @@ fn bake_mod_data(asset: &mut Asset<Cursor<&[u8]>>, mods: &Vec<Metadata>) -> Resu
     let tab = data_table_export
         .table
         .data
-        .get(0)
+        .first()
         .ok_or_else(IntegrationError::corrupted_starter_pak)?;
     let struct_type = tab.struct_type.clone();
     let columns: Vec<FName> = tab.value.iter().map(|e| e.get_name()).collect();

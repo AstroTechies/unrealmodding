@@ -1,7 +1,5 @@
 //! Cloth lod property
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 use crate::vector_property::Vector4Property;
 

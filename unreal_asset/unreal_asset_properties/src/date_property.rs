@@ -1,7 +1,5 @@
 //! Date properties
 
-use unreal_asset_base::types::PackageIndexTrait;
-
 use crate::property_prelude::*;
 
 /// Time span property

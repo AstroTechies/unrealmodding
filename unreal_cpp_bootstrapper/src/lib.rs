@@ -60,6 +60,7 @@ pub fn bootstrap(
             let mut file = OpenOptions::new()
                 .create(true)
                 .write(true)
+                .truncate(true)
                 .read(true)
                 .open(path)?;
 
