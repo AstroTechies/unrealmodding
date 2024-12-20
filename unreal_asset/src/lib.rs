@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 #![allow(non_upper_case_globals)]
+#![allow(elided_named_lifetimes)]
+#![allow(clippy::needless_lifetimes)]
 
 //! This crate is used for parsing Unreal Engine uasset files
 //!

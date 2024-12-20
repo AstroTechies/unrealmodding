@@ -32,8 +32,8 @@ unreal_mod_metadata.workspace = true
 unreal_pak.workspace = true
 
 directories = "4.0.1"
-eframe = "0.21.3"
-egui_extras = "0.21.0"
+eframe = "0.29.1"
+egui_extras = "0.29.1"
 lazy_static.workspace = true
 log.workspace = true
 open = "3.2.0"
@@ -48,7 +48,7 @@ steamlocate = "1.1.1"
 sha2 = "0.10.6"
 tempfile = { version = "3.4.0", optional = true }
 hex = "0.4.3"
-egui_commonmark = { version = "0.7.0", git = "https://github.com/localcc/egui_commonmark", branch = "rescale_fix" }
+egui_commonmark = "0.18.0"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.11.0"

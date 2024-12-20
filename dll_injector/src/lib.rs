@@ -1,3 +1,5 @@
+#![allow(clippy::missing_transmute_annotations)]
+
 #[cfg(windows)]
 use std::mem::{size_of, transmute};
 #[cfg(windows)]

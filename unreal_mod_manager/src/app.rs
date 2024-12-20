@@ -17,6 +17,7 @@ use log::info;
 use parking_lot::Mutex;
 use semver::Version;
 
+use crate::egui::ViewportCommand;
 use crate::background_work::BackgroundThreadMessage;
 use crate::error::{ModLoaderError, ModLoaderWarning};
 use crate::game_mod::{GameMod, SelectedVersion};
@@ -234,6 +235,16 @@ impl App for ModLoaderApp {
             }
         }
 
+        if ctx.input(|i| i.viewport().close_requested()) {
+            let _ = self.background_tx.send(BackgroundThreadMessage::Exit);
+
+            if self.ready_exit.load(Ordering::Acquire) {
+                info!("Exiting...");
+            }
+    
+            self.ready_exit.load(Ordering::Acquire);
+        }
+
         if darken_background {
             self.darken_background(ctx);
         }
@@ -253,18 +264,8 @@ impl App for ModLoaderApp {
 
         // when background thread is ready to exit kill app by ending main thread
         if self.ready_exit.load(Ordering::Acquire) {
-            frame.close();
+            ctx.send_viewport_cmd(ViewportCommand::Close);
         }
-    }
-
-    fn on_close_event(&mut self) -> bool {
-        let _ = self.background_tx.send(BackgroundThreadMessage::Exit);
-
-        if self.ready_exit.load(Ordering::Acquire) {
-            info!("Exiting...");
-        }
-
-        self.ready_exit.load(Ordering::Acquire)
     }
 }
 
@@ -438,7 +439,7 @@ impl ModLoaderApp {
 
     // this is just an associated function to avoid upsetting the borrow checker
     fn show_version_select(ui: &mut egui::Ui, game_mod: &mut GameMod) {
-        egui::ComboBox::from_id_source(&game_mod.name)
+        egui::ComboBox::from_id_salt(&game_mod.name)
             .selected_text(format!("{}", game_mod.selected_version))
             .width(112.0)
             .show_ui(ui, |ui| {
@@ -685,7 +686,8 @@ impl ModLoaderApp {
 
                         strip.cell(|ui| {
                             ui.heading("Changelog");
-                            CommonMarkViewer::new("update_viewer").show_scrollable(
+                            CommonMarkViewer::new().show_scrollable(
+                                "update_viewer",
                                 ui,
                                 &mut self.markdown_cache,
                                 &newer_update.changelog,
@@ -737,6 +739,7 @@ impl ModLoaderApp {
             });
     }
 
+    #[allow(unused_variables)]
     fn show_error(&self, ctx: &egui::Context, frame: &mut Frame, error: &ModLoaderError) {
         egui::Window::new("Critical Error")
             .resizable(false)
@@ -754,7 +757,7 @@ impl ModLoaderApp {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                     ui.style_mut().spacing.button_padding = egui::vec2(6.0, 6.0);
                     if ui.button("Quit").clicked() {
-                        frame.close();
+                        ctx.send_viewport_cmd(ViewportCommand::Close);
                     }
                 });
             });
@@ -1019,7 +1022,8 @@ impl ModLoaderApp {
                     });
 
                 egui::CentralPanel::default().show_inside(ui, |ui| {
-                    CommonMarkViewer::new("viewer").show_scrollable(
+                    CommonMarkViewer::new().show_scrollable(
+                        "viewer",
                         ui,
                         &mut self.markdown_cache,
                         &self.about_text,
