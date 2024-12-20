@@ -174,6 +174,7 @@ impl Usmap {
     }
 
     /// Gets all usmap mappings for a given schema
+    #[allow(elided_named_lifetimes)]
     pub fn get_all_properties<'name>(
         &'name self,
         mut schema_name: &'name str,

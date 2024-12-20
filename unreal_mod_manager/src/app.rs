@@ -439,7 +439,7 @@ impl ModLoaderApp {
 
     // this is just an associated function to avoid upsetting the borrow checker
     fn show_version_select(ui: &mut egui::Ui, game_mod: &mut GameMod) {
-        egui::ComboBox::from_id_source(&game_mod.name)
+        egui::ComboBox::from_id_salt(&game_mod.name)
             .selected_text(format!("{}", game_mod.selected_version))
             .width(112.0)
             .show_ui(ui, |ui| {
@@ -739,6 +739,7 @@ impl ModLoaderApp {
             });
     }
 
+    #[allow(unused_variables)]
     fn show_error(&self, ctx: &egui::Context, frame: &mut Frame, error: &ModLoaderError) {
         egui::Window::new("Critical Error")
             .resizable(false)
