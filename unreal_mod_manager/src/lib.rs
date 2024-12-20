@@ -215,23 +215,18 @@ where
             error!("Failed to start background thread");
             panic!();
         });
-
-    let icon_data = match icon_data {
-        Some(data) => Some(eframe::IconData {
-            rgba: data.data.to_vec(),
-            width: data.width,
-            height: data.height,
-        }),
-        None => None,
-    };
-
     // run the GUI app
+
+    let icon_data_unwrapped = icon_data.unwrap();
+
     eframe::run_native(
         app.window_title.clone().as_str(),
         eframe::NativeOptions {
-            follow_system_theme: true,
-            initial_window_size: Some(eframe::egui::vec2(660.0, 600.0)),
-            icon_data,
+            viewport: egui::ViewportBuilder::default().with_icon(egui::IconData {
+                rgba: icon_data_unwrapped.data.to_vec(),
+                width: icon_data_unwrapped.width,
+                height: icon_data_unwrapped.height,
+            }).with_inner_size([660.0, 600.0]),
             ..eframe::NativeOptions::default()
         },
         Box::new(|cc| {
@@ -243,7 +238,11 @@ where
 
             cc.egui_ctx.set_style(egui::Style::default());
 
-            Box::new(app)
+            cc.egui_ctx.options_mut(|options| {
+                options.theme_preference = crate::egui::ThemePreference::System;
+            });
+
+            Ok(Box::new(app))
         }),
     )
     .unwrap_or_else(|_| {
