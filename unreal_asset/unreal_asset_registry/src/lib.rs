@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 #![allow(non_upper_case_globals)]
+#![allow(elided_named_lifetimes)]
+#![allow(clippy::needless_lifetimes)]
 
 //! Unreal Asset Registry
 //!
@@ -310,6 +312,7 @@ impl AssetRegistryState {
             for name in name_map.get_ref().get_name_map_index_list() {
                 writer.write_fstring(Some(name))?;
 
+                #[allow(clippy::single_match)]
                 match writer.get_object_version() >= ObjectVersion::VER_UE4_NAME_HASHES_SERIALIZED {
                     true => {
                         let hash = crc::generate_hash(name);

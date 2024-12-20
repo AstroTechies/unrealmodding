@@ -1,3 +1,8 @@
+#![allow(unexpected_cfgs)]
+#![allow(elided_named_lifetimes)]
+#![allow(clippy::needless_lifetimes)]
+#![allow(clippy::zombie_processes)]
+
 use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::path::PathBuf;

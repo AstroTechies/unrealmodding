@@ -1,6 +1,8 @@
 #![deny(missing_docs)]
 #![allow(non_upper_case_globals)]
 #![allow(unexpected_cfgs)]
+#![allow(elided_named_lifetimes)]
+#![allow(clippy::needless_lifetimes)]
 
 //! unreal_asset crate base members
 

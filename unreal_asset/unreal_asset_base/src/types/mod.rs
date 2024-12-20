@@ -122,13 +122,13 @@ impl std::fmt::Display for PackageIndex {
     }
 }
 
-/// Create a Guid from 4 u32 values
+// /// Create a Guid from 4 u32 values
 // #[rustfmt::skip]
 // pub const fn new_guid(a: u32, b: u32, c: u32, d: u32) -> Guid {
 //     Guid
 // }
 
-/// Create a default Guid filled with all zeros
+// /// Create a default Guid filled with all zeros
 // pub fn default_guid() -> Guid {
 //     new_guid(0, 0, 0, 0)
 // }
