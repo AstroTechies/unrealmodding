@@ -445,7 +445,7 @@ impl ModLoaderApp {
             .show_ui(ui, |ui| {
                 // for when there is an Index file show force latest version, this to diecrtly indicate that there
                 // is the possibility of an auto update vie an index file.
-                if game_mod.download.is_some() {
+                if game_mod.download.is_some() && game_mod.download.as_ref().unwrap().download_mode == unreal_mod_metadata::DownloadMode::IndexFile {
                     let latest_version = game_mod.latest_version.clone().unwrap();
                     ui.selectable_value(
                         &mut game_mod.selected_version,

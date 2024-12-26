@@ -91,7 +91,7 @@ pub(crate) fn gather_index_files(
 
     data.game_mods
         .iter()
-        .filter(|(mod_id, _)| filter.contains(mod_id))
+        .filter(|(mod_id, game_mod)| filter.contains(mod_id) && game_mod.download.is_some() && game_mod.download.as_ref().unwrap().download_mode == unreal_mod_metadata::DownloadMode::IndexFile)
         .filter_map(|(mod_id, game_mod)| {
             game_mod
                 .download
