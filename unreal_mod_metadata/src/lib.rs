@@ -51,12 +51,15 @@ impl std::fmt::Display for SyncMode {
 pub enum DownloadMode {
     #[serde(rename = "index_file")]
     IndexFile,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct DownloadInfo {
     #[serde(rename = "type")]
     pub download_mode: DownloadMode,
+    #[serde(default)]
     pub url: String,
 }
 
