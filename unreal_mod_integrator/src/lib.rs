@@ -318,10 +318,6 @@ fn bake_integrator_data(
     integrator_version: String,
     refuse_mismatched_connections: bool,
 ) -> Result<(), Error> {
-    if asset.asset_data.exports.len() != 4 {
-        return Err(IntegrationError::corrupted_starter_pak().into());
-    }
-
     let properties: Vec<Property> = Vec::from([
         StrProperty {
             name: asset.add_fname("IntegratorVersion"),

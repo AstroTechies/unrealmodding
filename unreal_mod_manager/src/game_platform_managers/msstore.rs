@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::cell::RefCell;
 use std::fs;
 use std::io::Read;
@@ -17,6 +19,7 @@ pub struct MsStoreInstallManager {
 
     winstore_vendor_id: &'static str,
     game_name: &'static str,
+    winstore_game_name_for_boot: &'static str,
     state_game_name: &'static str,
 }
 
@@ -25,6 +28,7 @@ impl MsStoreInstallManager {
     pub fn new(
         winstore_vendor_id: &'static str,
         game_name: &'static str,
+        winstore_game_name_for_boot: &'static str,
         state_game_name: &'static str,
     ) -> Self {
         MsStoreInstallManager {
@@ -33,6 +37,7 @@ impl MsStoreInstallManager {
             game_build: RefCell::new(None),
             winstore_vendor_id,
             game_name,
+            winstore_game_name_for_boot,
             state_game_name,
         }
     }
@@ -107,7 +112,7 @@ impl InstallManager for MsStoreInstallManager {
         if let Some(store_info) = store_info {
             open::that(format!(
                 "shell:appsFolder\\{}!{}",
-                store_info.runtime_id, self.game_name
+                store_info.runtime_id, self.winstore_game_name_for_boot
             ))?;
         } else {
             return Err(ModLoaderWarning::winstore_error());
