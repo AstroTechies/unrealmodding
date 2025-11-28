@@ -1,3 +1,4 @@
+#![allow(mismatched_lifetime_syntaxes)]
 //! PakFile data structure for reading large pak files
 
 use std::collections::BTreeMap;

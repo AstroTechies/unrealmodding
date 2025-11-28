@@ -14,7 +14,7 @@ fn main() {
     #[cfg(feature = "no_bulk_data")]
     compile_error!("no_bulk_data feature is not supported yet.");
 
-    #[cfg(not(any(feature = "ue4_23", feature = "ue4_24", feature = "ue4_25")))]
+    #[cfg(not(any(feature = "ue4_23", feature = "ue4_24", feature = "ue4_25", feature = "ue4_27")))]
     compile_error!("No UE version feature enabled.");
 
     let out_dir = PathBuf::from(&env::var_os("OUT_DIR").expect("Failed to read OUT_DIR"));
@@ -38,6 +38,8 @@ fn download_release(out_dir: &Path) {
 
     let release = github_helpers::get_latest_release(ASSET_REPO).unwrap();
 
+    #[cfg(all(feature = "ue4_27", not(feature = "no_bulk_data")))]
+    let file_name = "ue4_27.zip";
     #[cfg(all(feature = "ue4_23", not(feature = "no_bulk_data")))]
     let file_name = "ue4_23.zip";
 

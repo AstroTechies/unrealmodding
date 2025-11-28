@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![allow(non_upper_case_globals)]
-#![allow(elided_named_lifetimes)]
+#![allow(mismatched_lifetime_syntaxes)]
 #![allow(clippy::needless_lifetimes)]
 
 //! Unreal Asset Registry

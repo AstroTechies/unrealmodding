@@ -8,6 +8,9 @@ use crate::Error;
 #[cfg(feature = "ue4_23")]
 mod ue4_23;
 
+#[cfg(feature = "ue4_27")]
+mod ue4_27;
+
 #[allow(unused_variables)]
 #[allow(clippy::ptr_arg)]
 pub fn handle_persistent_actors(
@@ -20,6 +23,15 @@ pub fn handle_persistent_actors(
 ) -> Result<(), Error> {
     #[cfg(feature = "ue4_23")]
     ue4_23::persistent_actors::handle_persistent_actors(
+        game_name,
+        map_paths,
+        integrated_pak,
+        game_paks,
+        mod_paks,
+        persistent_actor_arrays,
+    )?;
+    #[cfg(feature = "ue4_27")]
+    ue4_27::persistent_actors::handle_persistent_actors(
         game_name,
         map_paths,
         integrated_pak,

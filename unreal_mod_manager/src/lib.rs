@@ -1,5 +1,5 @@
 #![allow(unexpected_cfgs)]
-#![allow(elided_named_lifetimes)]
+#![allow(mismatched_lifetime_syntaxes)]
 #![allow(clippy::needless_lifetimes)]
 #![allow(clippy::zombie_processes)]
 
