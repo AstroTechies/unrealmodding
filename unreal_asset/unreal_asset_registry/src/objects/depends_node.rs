@@ -1,3 +1,4 @@
+#![allow(clippy::manual_div_ceil)]
 //! Asset bundle depends node
 
 use bitvec::{order::Lsb0, prelude::BitVec};

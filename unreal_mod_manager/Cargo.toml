@@ -17,8 +17,9 @@ cpp_loader_gui = ["cpp_loader", "unreal_cpp_bootstrapper?/gui"]
 # If you want support for other ue versions, you can make a pull request with the support added,
 # or make an issue asking for a specific ue version to be supported.
 ue4_23 = ["unreal_mod_integrator/ue4_23"]
+ue4_27 = ["unreal_mod_integrator/ue4_27"]
 
-default = ["ue4_23"]
+default = ["ue4_27"]
 
 [dependencies]
 dll_injector.workspace = true

@@ -1,3 +1,4 @@
+#![allow(clippy::manual_div_ceil)]
 //! Unversioned .usmap header
 
 use bitvec::prelude::*;

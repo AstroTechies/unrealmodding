@@ -15,6 +15,7 @@ no_bulk_data = []
 # If you want support for other ue versions, you can make a pull request with the support added,
 # or make an issue asking for a specific ue version to be supported.
 ue4_23 = []
+ue4_27 = []
 
 [dependencies]
 unreal_asset.workspace = true
