@@ -1,3 +1,5 @@
+#![allow(clippy::io_other_error)]
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufReader, Cursor, ErrorKind};

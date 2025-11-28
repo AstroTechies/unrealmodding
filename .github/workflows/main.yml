@@ -50,19 +50,19 @@ jobs:
           args: -p unreal_helpers --all-features
 
       - uses: actions-rs/clippy-check@v1
-        name: Clippy check ue 4.23 w/bulk
+        name: Clippy check ue 4.27 w/bulk
         env:
           USE_PREBUILT_ASSETS: 1
           USE_PRECOMPILED_CPP_LOADER: 1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --features "ue4_23" -- -D warnings
+          args: --features "ue4_27" -- -D warnings
 
       - uses: actions-rs/clippy-check@v1
-        name: Clippy check ue 4.23 w/bulk w/cpp_loader
+        name: Clippy check ue 4.27 w/bulk w/cpp_loader
         env:
           USE_PREBUILT_ASSETS: 1
           USE_PRECOMPILED_CPP_LOADER: 1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --features "ue4_23,cpp_loader" -- -D warnings
+          args: --features "ue4_27,cpp_loader" -- -D warnings

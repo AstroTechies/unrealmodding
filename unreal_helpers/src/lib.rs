@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![allow(clippy::doc_overindented_list_items)]
 
 //! Various small functions to make working with Unreal data formats easier.
 //!
