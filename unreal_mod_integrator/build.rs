@@ -1,4 +1,5 @@
 #![allow(unexpected_cfgs)]
+#![allow(unused_variables)]
 
 use std::env;
 use std::fs::{self, OpenOptions};

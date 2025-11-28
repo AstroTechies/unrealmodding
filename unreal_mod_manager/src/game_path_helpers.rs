@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use std::path::PathBuf;
 
 use directories::BaseDirs;
@@ -94,7 +96,7 @@ pub fn determine_installed_mods_path_winstore(
     store_info: &MsStoreInfo,
     game_name: &str,
 ) -> Option<PathBuf> {
-    let package_path = determine_game_package_path_winstore(store_info)?;
+    /*let package_path = determine_game_package_path_winstore(store_info)?;
     let base_path = Some(
         package_path
             .join("LocalState")
@@ -102,6 +104,16 @@ pub fn determine_installed_mods_path_winstore(
             .join("Saved")
             .join("Paks"),
     );
+    trace!("base_path: {:?}", base_path);*/
+    let base_dirs = BaseDirs::new();
+    if base_dirs.is_none() {
+        warn!("Could not determine base directory");
+        return None;
+    }
+    let base_dirs = base_dirs.unwrap();
+
+    let data_dir = base_dirs.data_local_dir();
+    let base_path = Some(data_dir.join(game_name).join("Saved").join("Paks"));
     trace!("base_path: {:?}", base_path);
 
     base_path
