@@ -880,6 +880,14 @@ impl<'a, C: Read + Seek> Asset<C> {
                 let class_name = self.read_fname()?;
                 let outer_index = PackageIndex::new(self.read_i32::<LE>()?);
                 let object_name = self.read_fname()?;
+
+                let package_name = match self.get_object_version()
+                    >= ObjectVersion::VER_UE4_NON_OUTER_PACKAGE_IMPORT
+                {
+                    true => Some(self.read_fname()?),
+                    false => None,
+                };
+
                 let optional =
                     match self.get_object_version_ue5() >= ObjectVersionUE5::OPTIONAL_RESOURCES {
                         true => self.read_i32::<LE>()? == 1,
@@ -891,6 +899,7 @@ impl<'a, C: Read + Seek> Asset<C> {
                     class_name,
                     outer_index,
                     object_name,
+                    package_name,
                     optional,
                 );
                 self.imports.push(import);
