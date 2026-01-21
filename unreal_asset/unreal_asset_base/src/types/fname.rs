@@ -141,7 +141,19 @@ impl FName {
 
     /// Get this `FName`'s content as a `String`
     pub fn get_owned_content(&self) -> String {
-        self.get_content(str::to_string)
+        // Get access to this `FName`'s content as a string, along with it's instance number
+        let name = self.get_content(str::to_string);
+        let number = self.get_number();
+
+        // If the instance number is 0, just return the content string
+        // If the instance number is not 0, return the content string along with the instance index
+        if number == 0 {
+            name.clone()
+        }
+        else {
+            let instanceIndex = number - 1;
+            name.clone() + "_" + &instanceIndex.to_string()
+        }
     }
 
     /// Checks if an `FName`'s content ends with the given `&str`
