@@ -12,6 +12,8 @@ use crate::{FileToProcess, ModLoaderAppData};
 
 use super::verify::{self, MOD_FILENAME_REGEX};
 
+const OUTDATED_SOURCE_URLS: &[&str] = &["astromod.space", "astroneermods.space", "atenfyr.com/ams-archive"];
+
 #[derive(Debug)]
 pub(crate) struct ReadData(String, Metadata);
 
@@ -54,6 +56,15 @@ pub(crate) fn read_pak_files(
             // check that filename generally matches
             if !verify::verify_mod_file_name(&file_name) {
                 return Err(ModLoaderWarning::invalid_mod_file_name(file_name));
+            }
+
+            // check that homepage doesn't contain outdated source URL
+            if let Some(ref homepage) = metadata.homepage {
+                let homepage_lower = homepage.to_lowercase();
+                if OUTDATED_SOURCE_URLS.iter().any(|banned| homepage_lower.contains(banned))
+                {
+                    return Err(ModLoaderWarning::outdated_source(file_name));
+                }
             }
 
             let file_name_parts = MOD_FILENAME_REGEX
