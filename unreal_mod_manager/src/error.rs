@@ -105,6 +105,7 @@ pub enum ModLoaderWarningKind {
 
     MissingMetadata,
     InvalidMetadata,
+    OutdatedSource,
     InvalidModId,
     InvalidModFileName,
     InvalidVersion,
@@ -173,6 +174,12 @@ impl ModLoaderWarning {
     pub fn invalid_metadata(mod_id: String) -> Self {
         ModLoaderWarning {
             kind: ModLoaderWarningKind::InvalidMetadata,
+            mod_id: Some(mod_id),
+        }
+    }
+    pub fn outdated_source(mod_id: String) -> Self {
+        ModLoaderWarning {
+            kind: ModLoaderWarningKind::OutdatedSource,
             mod_id: Some(mod_id),
         }
     }
@@ -259,6 +266,7 @@ impl fmt::Display for ModLoaderWarning {
 
             ModLoaderWarningKind::MissingMetadata => format!("{mod_name}Missing metadata"),
             ModLoaderWarningKind::InvalidMetadata => format!("{mod_name}Invalid metadata"),
+            ModLoaderWarningKind::OutdatedSource => format!("{mod_name}mod was obtained from an outdated source (e.g. astroneermods.space) and cannot be loaded in-game"),
             ModLoaderWarningKind::InvalidModId => format!("{mod_name}Invalid mod ID"),
             ModLoaderWarningKind::InvalidModFileName => {
                 format!("{mod_name}Invalid mod file name")
