@@ -125,6 +125,23 @@ impl App for ModLoaderApp {
                             if ui.button("About").clicked() {
                                 self.about_open.set(true);
                             }
+                            if ui.button("Install mod").clicked()
+                            {
+                                if let Some(paths) = rfd::FileDialog::new().add_filter(".pak Files", &["pak"]).add_filter("All Files", &["*"]).pick_files()
+                                {
+                                    let files_to_import = paths
+                                        .into_iter()
+                                        .map(|path| FileToProcess::new(path, true))
+                                        .collect::<Vec<_>>();
+
+                                    let _ = self
+                                        .background_tx
+                                        .send(BackgroundThreadMessage::Import(files_to_import));
+                                    let _ = self
+                                        .background_tx
+                                        .send(BackgroundThreadMessage::integrate());
+                                }
+                            }
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                 ui.label(format!("Version: {}", self.modloader_version));
                             });
@@ -510,7 +527,7 @@ impl ModLoaderApp {
                 ui.label(egui::RichText::new("Press DEL to remove this mod.").size(12.0));
             }
             None => {
-                ui.label("Drop a .pak file onto this window to install the mod.");
+                ui.label("Drag-and-drop a .pak file onto this window (or click \"Install mod\") to install the mod.");
                 ui.label("To enable/disable mods click the checkbox to the left of the mod name.");
                 ui.label("Then press \"Play\" to start the game with mods.");
                 ui.label(egui::RichText::new("").size(5.0));
