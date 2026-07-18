@@ -23,7 +23,12 @@ fn main() {
     let project_dir = out_dir.join("ModIntegrator");
     fs::remove_dir_all(project_dir).unwrap_or(());
 
-    let use_prebuilt = env::var_os("USE_PREBUILT_ASSETS").is_some();
+    // for 4.23/4.27 feature, use USE_PREBUILT_ASSETS environment variable (default 1)
+    // else always cook now
+    #[cfg(any(feature = "ue4_23", feature = "ue4_27"))]
+    let use_prebuilt = env::var_os("USE_PREBUILT_ASSETS").map(|e| e == "1").unwrap_or(true);
+    #[cfg(not(any(feature = "ue4_23", feature = "ue4_27")))]
+    let use_prebuilt = false;
 
     if use_prebuilt {
         download_release(&out_dir);

@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let use_prebuilt = env::var_os("USE_PRECOMPILED_CPP_LOADER")
         .map(|e| e == "1")
-        .unwrap_or(false);
+        .unwrap_or(true);
 
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
