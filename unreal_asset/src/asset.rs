@@ -565,7 +565,10 @@ impl<'a, C: Read + Seek> Asset<C> {
         }
 
         if self.legacy_file_version <= -8 {
-            let object_version_ue5: ObjectVersionUE5 = self.read_i32::<LE>()?.try_into()?;
+            let ue5_ver_raw = self.read_i32::<LE>()?;
+            let object_version_ue5: ObjectVersionUE5 = ue5_ver_raw
+                .try_into()
+                .unwrap_or(ObjectVersionUE5::UNKNOWN);
             if object_version_ue5 > ObjectVersionUE5::UNKNOWN {
                 self.asset_data.object_version_ue5 = object_version_ue5;
             }
@@ -670,9 +673,12 @@ impl<'a, C: Read + Seek> Asset<C> {
         self.compression_flags = self.read_u32::<LE>()?;
         let compression_block_count = self.read_u32::<LE>()?;
         if compression_block_count > 0 {
-            return Err(Error::invalid_file(
-                "Compression block count is not zero".to_string(),
-            ));
+            // UE4.27 cooked assets may have compressed chunks - skip them
+            // Each FCompressedChunk is 16 bytes (2x i64: UncompressedOffset + UncompressedSize)
+            for _i in 0..compression_block_count {
+                self.read_i64::<LE>()?;
+                self.read_i64::<LE>()?;
+            }
         }
 
         self.package_source = self.read_u32::<LE>()?;
